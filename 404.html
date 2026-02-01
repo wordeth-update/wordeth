@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page Not Found | Wordeth</title>
+            <link rel="icon" type="image/png" href="images/logo.png">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <style>
+        .error-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 2rem;
+            background: var(--gradient-primary);
+        }
+
+        .error-logo {
+            width: 200px;
+            margin-bottom: 2rem;
+            animation: pulse 2s infinite;
+        }
+
+        .error-code {
+            font-size: 8rem;
+            font-weight: bold;
+            color: var(--mint);
+            margin-bottom: 1rem;
+            text-shadow: 0 0 20px rgba(150, 197, 176, 0.5);
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .error-message {
+            font-size: 2rem;
+            color: white;
+            margin-bottom: 2rem;
+            animation: fadeIn 0.6s ease-out 0.2s both;
+        }
+
+        .error-description {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.8);
+            max-width: 600px;
+            margin-bottom: 3rem;
+            animation: fadeIn 0.6s ease-out 0.4s both;
+        }
+
+        .home-button {
+            background: var(--mint);
+            color: var(--black);
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            text-decoration: none;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+            animation: fadeIn 0.6s ease-out 0.6s both;
+        }
+
+        .home-button:hover {
+            background: var(--purple-accent);
+            color: white;
+            transform: translateY(-3px);
+        }
+
+        .lyrics-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.1;
+            overflow: hidden;
+        }
+
+        .floating-lyric {
+            position: absolute;
+            color: var(--mint);
+            font-size: 1rem;
+            white-space: nowrap;
+            animation: floatAcross 20s linear infinite;
+        }
+
+        @keyframes floatAcross {
+            from {
+                transform: translateX(-100%);
+            }
+            to {
+                transform: translateX(100vw);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .error-code {
+                font-size: 6rem;
+            }
+
+            .error-message {
+                font-size: 1.5rem;
+            }
+
+            .error-description {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+                    <img src="images/logo.png" alt="Wordeth Logo" class="error-logo">
+        <h1 class="error-code">404</h1>
+        <h2 class="error-message">Page Not Found</h2>
+        <p class="error-description">
+            Looks like this track isn't in our playlist. Don't worry though,
+            we've got plenty of other hits for you to discover.
+        </p>
+        <a href="/" class="home-button">Back to Homepage</a>
+    </div>
+
+    <div class="lyrics-background" id="lyricsBackground"></div>
+
+    <script>
+        // Add floating lyrics in the background
+        const lyrics = [
+            "One Dance",
+            "Hotline Bling",
+            "God's Plan",
+            "Bad Liar",
+            "Shape of You",
+            "All I Can Think About Is You",
+            "I Feel It Coming"
+        ];
+
+        const background = document.getElementById('lyricsBackground');
+
+        function createFloatingLyric() {
+            const lyric = document.createElement('div');
+            lyric.className = 'floating-lyric';
+            lyric.textContent = lyrics[Math.floor(Math.random() * lyrics.length)];
+            lyric.style.top = `${Math.random() * 100}%`;
+            lyric.style.animationDuration = `${15 + Math.random() * 10}s`;
+            background.appendChild(lyric);
+
+            lyric.addEventListener('animationend', () => {
+                lyric.remove();
+            });
+        }
+
+        // Create initial lyrics
+        for (let i = 0; i < 10; i++) {
+            createFloatingLyric();
+        }
+
+        // Continue adding lyrics
+        setInterval(createFloatingLyric, 2000);
+    </script>
+</body>
+</html> 

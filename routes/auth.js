@@ -1,0 +1,141 @@
+const express = require('express');
+const router = express.Router();
+const jwt = require('jsonwebtoken');
+const { body, validationResult } = require('express-validator');
+const User = require('../models/User');
+const passport = require('passport');
+require('../config/passport');
+
+// Traditional sign up
+router.post('/signup', [
+    body('name').trim().isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
+    body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const { name, email, password } = req.body;
+        
+        // Check if user already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: 'User already exists with this email' });
+        }
+
+        const user = new User({ name, email, password });
+        await user.save();
+
+        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { 
+            expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
+        });
+        
+        res.status(201).json({ token, user: user.getPublicProfile() });
+    } catch (error) {
+        console.error('Signup error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Traditional sign in
+router.post('/signin', [
+    body('email').isEmail().normalizeEmail(),
+    body('password').isLength({ min: 6 })
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const { email, password } = req.body;
+        const user = await User.findOne({ email });
+
+        if (!user || !(await user.comparePassword(password))) {
+            return res.status(401).json({ message: 'Invalid email or password' });
+        }
+
+        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { 
+            expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
+        });
+        res.json({ token, user: user.getPublicProfile() });
+    } catch (error) {
+        console.error('Signin error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Social authentication routes
+router.get('/twitter', passport.authenticate('twitter'));
+
+router.get('/twitter/callback', 
+    passport.authenticate('twitter', { failureRedirect: '/signin.html' }),
+    async (req, res) => {
+        try {
+            const token = jwt.sign({ userId: req.user._id }, process.env.JWT_SECRET, { 
+                expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
+            });
+            res.redirect(`${process.env.CLIENT_URL}/auth-callback.html?token=${token}`);
+        } catch (error) {
+            res.redirect('/signin.html?error=auth_failed');
+        }
+    }
+);
+
+router.get('/instagram', passport.authenticate('instagram'));
+
+router.get('/instagram/callback', 
+    passport.authenticate('instagram', { failureRedirect: '/signin.html' }),
+    async (req, res) => {
+        try {
+            const token = jwt.sign({ userId: req.user._id }, process.env.JWT_SECRET, { 
+                expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
+            });
+            res.redirect(`${process.env.CLIENT_URL}/auth-callback.html?token=${token}`);
+        } catch (error) {
+            res.redirect('/signin.html?error=auth_failed');
+        }
+    }
+);
+
+router.get('/facebook', passport.authenticate('facebook', { scope: ['email'] }));
+
+router.get('/facebook/callback', 
+    passport.authenticate('facebook', { failureRedirect: '/signin.html' }),
+    async (req, res) => {
+        try {
+            const token = jwt.sign({ userId: req.user._id }, process.env.JWT_SECRET, { 
+                expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
+            });
+            res.redirect(`${process.env.CLIENT_URL}/auth-callback.html?token=${token}`);
+        } catch (error) {
+            res.redirect('/signin.html?error=auth_failed');
+        }
+    }
+);
+
+// Verify token
+router.get('/verify', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        if (!token) {
+            return res.status(401).json({ message: 'No token provided' });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await User.findById(decoded.userId);
+        
+        if (!user) {
+            return res.status(401).json({ message: 'Invalid token' });
+        }
+
+        res.json({ user: user.getPublicProfile() });
+    } catch (error) {
+        res.status(401).json({ message: 'Invalid token' });
+    }
+});
+
+module.exports = router; 

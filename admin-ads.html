@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ad Management - Wordeth</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/advertising.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .admin-container {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 80px auto 0;
+            min-height: calc(100vh - 80px);
+        }
+
+        .admin-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 3rem 0;
+            background: linear-gradient(135deg, rgba(95, 14, 130, 0.1) 0%, rgba(117, 91, 105, 0.1) 100%);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .admin-header h1 {
+            color: var(--mint);
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(152, 251, 152, 0.3);
+        }
+
+        .admin-header p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .admin-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--mint);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .admin-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 1rem;
+            justify-content: center;
+        }
+
+        .admin-tab {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .admin-tab::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .admin-tab:hover::before {
+            left: 100%;
+        }
+
+        .admin-tab.active {
+            background: linear-gradient(135deg, var(--mint) 0%, #7dd87d 100%);
+            color: var(--black);
+            box-shadow: 0 4px 15px rgba(152, 251, 152, 0.3);
+        }
+
+        .admin-tab:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .admin-tab.active:hover {
+            background: linear-gradient(135deg, var(--mint) 0%, #7dd87d 100%);
+        }
+
+        .admin-content {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 2.5rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-label {
+            display: block;
+            color: var(--mint);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--mint);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 20px rgba(152, 251, 152, 0.2);
+        }
+
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .form-select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 12px center;
+            background-repeat: no-repeat;
+            background-size: 16px;
+            padding-right: 40px;
+        }
+
+        .image-upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .image-upload-area:hover {
+            border-color: var(--mint);
+            background: rgba(152, 251, 152, 0.1);
+        }
+
+        .image-upload-area.dragover {
+            border-color: var(--mint);
+            background: rgba(152, 251, 152, 0.2);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--mint);
+            margin-bottom: 1rem;
+        }
+
+        .upload-text {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-hint {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+        }
+
+        .image-preview {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .targeting-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .targeting-tag {
+            background: rgba(95, 14, 130, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(95, 14, 130, 0.5);
+        }
+
+        .targeting-tag:hover {
+            background: rgba(95, 14, 130, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .targeting-tag.selected {
+            background: var(--mint);
+            color: var(--black);
+            border-color: var(--mint);
+            box-shadow: 0 4px 15px rgba(152, 251, 152, 0.3);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--mint) 0%, #7dd87d 100%);
+            color: var(--black);
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 1rem;
+            box-shadow: 0 4px 15px rgba(152, 251, 152, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(152, 251, 152, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: none;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .ads-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .ad-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ad-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--mint), #7dd87d);
+        }
+
+        .ad-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .ad-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .ad-status {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .ad-status.active {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .ad-status.inactive {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .ad-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--mint);
+            margin-bottom: 0.5rem;
+        }
+
+        .ad-description {
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .ad-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .metric {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--mint);
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-label {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .ad-actions {
+            display: flex;
+            gap: 0.8rem;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.8rem;
+        }
+
+        .analytics-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .analytics-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .analytics-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--mint), #7dd87d);
+        }
+
+        .analytics-card:hover {
+            transform: translateY(-3px);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .analytics-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--mint);
+            margin-bottom: 0.5rem;
+        }
+
+        .analytics-label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            color: var(--mint);
+            margin-bottom: 1.5rem;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .admin-tabs {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .ads-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .admin-header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">
+                <img src="assets/logo.svg" alt="Wordeth" class="logo">
+            </a>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="lyrics.html">Lyrics</a>
+                <a href="video-rooms.html">Video Rooms</a>
+                <a href="merch.html">Merch</a>
+                <a href="articles.html">Articles</a>
+            </div>
+            <div class="nav-actions">
+                <a href="signin.html" class="btn-signin">Sign In</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1><i class="fas fa-chart-line"></i> Ad Management Platform</h1>
+            <p>Create, manage, and track your advertising campaigns on Wordeth</p>
+            
+            <div class="admin-stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalAds">0</div>
+                    <div class="stat-label">Active Ads</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalImpressions">0</div>
+                    <div class="stat-label">Total Impressions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalClicks">0</div>
+                    <div class="stat-label">Total Clicks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalRevenue">$0</div>
+                    <div class="stat-label">Total Revenue</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-tabs">
+            <button class="admin-tab active" data-tab="create">
+                <i class="fas fa-plus-circle"></i> Create Ad
+            </button>
+            <button class="admin-tab" data-tab="manage">
+                <i class="fas fa-cogs"></i> Manage Ads
+            </button>
+            <button class="admin-tab" data-tab="analytics">
+                <i class="fas fa-chart-bar"></i> Analytics
+            </button>
+        </div>
+
+        <div class="admin-content">
+            <!-- Create Ad Tab -->
+            <div id="create" class="tab-content active">
+                <h2 class="section-title">Create New Advertisement</h2>
+                <form id="createAdForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Ad Type</label>
+                            <select class="form-input form-select" name="type" required>
+                                <option value="">Select Ad Type</option>
+                                <option value="in_video">In-Video Banner</option>
+                                <option value="interstitial">Interstitial</option>
+                                <option value="hero">Hero Banner</option>
+                                <option value="skyscraper">Skyscraper</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Category</label>
+                            <select class="form-input form-select" name="category" required>
+                                <option value="">Select Category</option>
+                                <option value="ice cream">Ice Cream</option>
+                                <option value="car">Automotive</option>
+                                <option value="fashion">Fashion</option>
+                                <option value="tech">Technology</option>
+                                <option value="music">Music</option>
+                                <option value="entertainment">Entertainment</option>
+                                <option value="food">Food & Dining</option>
+                                <option value="drink">Beverages</option>
+                                <option value="finance">Finance</option>
+                                <option value="dating">Dating</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Ad Title</label>
+                            <input type="text" class="form-input" name="title" placeholder="Enter ad title" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">CPM Rate ($)</label>
+                            <input type="number" class="form-input" name="cpm" placeholder="2.50" step="0.01" min="0" required>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-input form-textarea" name="description" placeholder="Enter ad description" required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Landing Page URL</label>
+                            <input type="url" class="form-input" name="link" placeholder="https://example.com" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Image Upload</label>
+                            <div class="image-upload-area" id="imageUploadArea">
+                                <div class="upload-icon">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                </div>
+                                <div class="upload-text">Click to upload or drag & drop</div>
+                                <div class="upload-hint">PNG, JPG up to 5MB</div>
+                                <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                                <img id="imagePreview" class="image-preview">
+                            </div>
+                            <input type="hidden" name="image" id="imageUrlInput">
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label class="form-label">Targeting Keywords</label>
+                            <div class="targeting-tags">
+                                <span class="targeting-tag" data-keyword="dessert">dessert</span>
+                                <span class="targeting-tag" data-keyword="sweet">sweet</span>
+                                <span class="targeting-tag" data-keyword="treat">treat</span>
+                                <span class="targeting-tag" data-keyword="automotive">automotive</span>
+                                <span class="targeting-tag" data-keyword="vehicle">vehicle</span>
+                                <span class="targeting-tag" data-keyword="driving">driving</span>
+                                <span class="targeting-tag" data-keyword="style">style</span>
+                                <span class="targeting-tag" data-keyword="fashion">fashion</span>
+                                <span class="targeting-tag" data-keyword="trendy">trendy</span>
+                                <span class="targeting-tag" data-keyword="technology">technology</span>
+                                <span class="targeting-tag" data-keyword="innovation">innovation</span>
+                                <span class="targeting-tag" data-keyword="smart">smart</span>
+                                <span class="targeting-tag" data-keyword="music">music</span>
+                                <span class="targeting-tag" data-keyword="instrument">instrument</span>
+                                <span class="targeting-tag" data-keyword="gear">gear</span>
+                                <span class="targeting-tag" data-keyword="musician">musician</span>
+                                <span class="targeting-tag" data-keyword="concert">concert</span>
+                                <span class="targeting-tag" data-keyword="live">live</span>
+                                <span class="targeting-tag" data-keyword="tickets">tickets</span>
+                            </div>
+                            <input type="hidden" name="targeting" id="targetingInput">
+                        </div>
+                    </div>
+
+                    <div style="text-align: center;">
+                        <button type="submit" class="btn">
+                            <i class="fas fa-rocket"></i> Create Advertisement
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Manage Ads Tab -->
+            <div id="manage" class="tab-content">
+                <h2 class="section-title">Manage Your Ads</h2>
+                <div id="adsGrid" class="ads-grid">
+                    <!-- Ads will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div id="analytics" class="tab-content">
+                <h2 class="section-title">Campaign Analytics</h2>
+                <div class="analytics-summary">
+                    <div class="analytics-card">
+                        <div class="analytics-value" id="analyticsImpressions">0</div>
+                        <div class="analytics-label">Total Impressions</div>
+                    </div>
+                    <div class="analytics-card">
+                        <div class="analytics-value" id="analyticsClicks">0</div>
+                        <div class="analytics-label">Total Clicks</div>
+                    </div>
+                    <div class="analytics-card">
+                        <div class="analytics-value" id="analyticsCTR">0%</div>
+                        <div class="analytics-label">Avg. CTR</div>
+                    </div>
+                    <div class="analytics-card">
+                        <div class="analytics-value" id="analyticsRevenue">$0</div>
+                        <div class="analytics-label">Total Revenue</div>
+                    </div>
+                </div>
+                <div id="adPerformanceGrid" class="ads-grid">
+                    <!-- Individual ad performance will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/admin-ads.js"></script>
+</body>
+</html>

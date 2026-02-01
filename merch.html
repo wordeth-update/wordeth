@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customize Merch - Wordeth</title>
+            <link rel="icon" type="image/png" href="images/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <style>
+        .merch-container {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 80px auto 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .product-preview {
+            background: var(--purple-dark);
+            border-radius: 15px;
+            padding: 2rem;
+            position: sticky;
+            top: 100px;
+        }
+
+        .preview-canvas {
+            width: 100%;
+            aspect-ratio: 1;
+            background: white;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preview-canvas img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .draggable-text {
+            position: absolute;
+            cursor: move;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 5px;
+            border-radius: 3px;
+            user-select: none;
+        }
+
+        .customization-panel {
+            background: var(--purple-dark);
+            border-radius: 15px;
+            padding: 2rem;
+        }
+
+        .product-selector {
+            margin-bottom: 2rem;
+        }
+
+        .product-types {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .product-type {
+            background: var(--purple-light);
+            border: none;
+            color: white;
+            padding: 1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .product-type.active {
+            background: var(--mint);
+            color: var(--black);
+        }
+
+        .customization-options {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .option-group {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 10px;
+        }
+
+        .option-group h3 {
+            color: var(--mint);
+            margin-bottom: 1rem;
+        }
+
+        .color-options {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .color-option {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .color-option:hover {
+            transform: scale(1.1);
+        }
+
+        .color-option.active {
+            border-color: var(--mint);
+        }
+
+        .size-options {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .size-option {
+            padding: 0.5rem 1rem;
+            background: var(--purple-light);
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .size-option.active {
+            background: var(--mint);
+            color: var(--black);
+        }
+
+        .text-input {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            margin-bottom: 1rem;
+        }
+
+        .font-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.5rem;
+        }
+
+        .font-option {
+            padding: 0.5rem;
+            background: var(--purple-light);
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .font-option.active {
+            background: var(--mint);
+            color: var(--black);
+        }
+
+        .buy-button {
+            width: 100%;
+            padding: 1rem;
+            background: var(--mint);
+            color: var(--black);
+            border: none;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 2rem;
+        }
+
+        .buy-button:hover {
+            background: var(--purple-accent);
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .merch-container {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+            }
+
+            .product-preview {
+                position: static;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="main-nav">
+        <div class="nav-logo">
+            <a href="/">
+                <img src="images/logo.png" alt="Wordeth Logo" class="logo">
+            </a>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="lyrics.html">Lyrics</a>
+            <a href="articles.html">Articles</a>
+            <a href="merch.html" class="active">Merchandise</a>
+            <a href="video-rooms.html">Community</a>
+        </div>
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="Search merchandise...">
+            <button class="search-button">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+        <button class="nav-signin-btn">Sign In</button>
+        <button class="menu-toggle" id="menuToggle">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </nav>
+    
+    <!-- Mobile Menu Dropdown -->
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-content">
+            <div class="mobile-menu-header">
+                <img src="images/logo.png" alt="Wordeth Logo" class="mobile-logo">
+                <button class="mobile-menu-close" id="mobileMenuClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mobile-menu-links">
+                <a href="index.html" class="mobile-menu-link">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="lyrics.html" class="mobile-menu-link">
+                    <i class="fas fa-music"></i>
+                    <span>Lyrics</span>
+                </a>
+                <a href="articles.html" class="mobile-menu-link">
+                    <i class="fas fa-newspaper"></i>
+                    <span>Articles</span>
+                </a>
+                <a href="merch.html" class="mobile-menu-link">
+                    <i class="fas fa-tshirt"></i>
+                    <span>Merchandise</span>
+                </a>
+                <a href="video-rooms.html" class="mobile-menu-link">
+                    <i class="fas fa-video"></i>
+                    <span>Community</span>
+                </a>
+            </div>
+            <div class="mobile-menu-search">
+                <input type="text" placeholder="Search..." class="mobile-search-input">
+                <button class="mobile-search-btn">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <div class="mobile-menu-auth">
+                <button class="mobile-signin-btn">
+                    <i class="fas fa-user"></i>
+                    <span>Sign In</span>
+                </button>
+            </div>
+        </div>
+    </div>
+        <div class="nav-logo">
+            <a href="/">
+                <img src="images/logo.png" alt="Wordeth Logo" class="logo">
+            </a>
+        </div>
+        <button class="menu-toggle" id="menuToggle">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+    <div class="merch-container">
+        <div class="product-preview">
+            <div class="preview-canvas">
+                <img src="assets/products/tshirt-white.svg" alt="T-Shirt Preview" id="productImage">
+                <div class="draggable-text" id="customText">Your Text Here</div>
+            </div>
+        </div>
+
+        <div class="customization-panel">
+            <div class="product-selector">
+                <h2>Select Product</h2>
+                <div class="product-types">
+                    <button class="product-type active">T-Shirt</button>
+                    <button class="product-type">Hat</button>
+                    <button class="product-type">Beanie</button>
+                    <button class="product-type">Tote</button>
+                </div>
+            </div>
+
+            <div class="customization-options">
+                <div class="option-group">
+                    <h3>Product Color</h3>
+                    <div class="color-options">
+                        <div class="color-option active" style="background: white;" data-color="white"></div>
+                        <div class="color-option" style="background: black;" data-color="black"></div>
+                        <div class="color-option" style="background: #96C5B0;" data-color="mint"></div>
+                        <div class="color-option" style="background: #5F0E82;" data-color="purple"></div>
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <h3>Size</h3>
+                    <div class="size-options">
+                        <button class="size-option">S</button>
+                        <button class="size-option">M</button>
+                        <button class="size-option active">L</button>
+                        <button class="size-option">XL</button>
+                        <button class="size-option">2XL</button>
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <h3>Your Text</h3>
+                    <input type="text" class="text-input" id="textInput" placeholder="Enter your lyrics here..." value="Your Text Here">
+                    <div class="font-options">
+                        <button class="font-option active" data-font="Arial">Arial</button>
+                        <button class="font-option" data-font="Times New Roman">Times</button>
+                        <button class="font-option" data-font="Courier New">Courier</button>
+                        <button class="font-option" data-font="Georgia">Georgia</button>
+                    </div>
+                </div>
+
+                <button class="buy-button">Buy Now - $29.99</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Draggable Text Functionality
+        const draggableText = document.getElementById('customText');
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
+
+        draggableText.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', dragEnd);
+
+        function dragStart(e) {
+            initialX = e.clientX - xOffset;
+            initialY = e.clientY - yOffset;
+
+            if (e.target === draggableText) {
+                isDragging = true;
+            }
+        }
+
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+
+                xOffset = currentX;
+                yOffset = currentY;
+
+                setTranslate(currentX, currentY, draggableText);
+            }
+        }
+
+        function setTranslate(xPos, yPos, el) {
+            el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
+        }
+
+        function dragEnd(e) {
+            initialX = currentX;
+            initialY = currentY;
+            isDragging = false;
+        }
+
+        // Customization Options
+        const textInput = document.getElementById('textInput');
+        const productTypes = document.querySelectorAll('.product-type');
+        const colorOptions = document.querySelectorAll('.color-option');
+        const sizeOptions = document.querySelectorAll('.size-option');
+        const fontOptions = document.querySelectorAll('.font-option');
+
+        textInput.addEventListener('input', (e) => {
+            draggableText.textContent = e.target.value;
+        });
+
+        productTypes.forEach(type => {
+            type.addEventListener('click', () => {
+                productTypes.forEach(t => t.classList.remove('active'));
+                type.classList.add('active');
+                // Update product image based on product type
+                const productName = type.textContent.toLowerCase().replace('-', '');
+                const productImages = {
+                    't-shirt': 'tshirt-white',
+                    'hat': 'hat',
+                    'beanie': 'beanie',
+                    'tote': 'tote'
+                };
+                const imageName = productImages[productName] || 'tshirt-white';
+                document.getElementById('productImage').src = `assets/products/${imageName}.svg`;
+            });
+        });
+
+        colorOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                colorOptions.forEach(o => o.classList.remove('active'));
+                option.classList.add('active');
+                // Update product image based on color
+                const color = option.getAttribute('data-color');
+                document.getElementById('productImage').src = `assets/products/tshirt-${color}.svg`;
+            });
+        });
+
+        sizeOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                sizeOptions.forEach(o => o.classList.remove('active'));
+                option.classList.add('active');
+            });
+        });
+
+        fontOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                fontOptions.forEach(o => o.classList.remove('active'));
+                option.classList.add('active');
+                const font = option.getAttribute('data-font');
+                draggableText.style.fontFamily = font;
+            });
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo - Wordeth Ads SDK Integration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 3rem;
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .content h2 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-size: 2rem;
+        }
+        
+        .content p {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+        
+        .feature {
+            background: #f8f9fa;
+            padding: 2rem;
+            border-radius: 15px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .feature h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        
+        .stat {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .cta {
+            text-align: center;
+            margin: 3rem 0;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        .footer {
+            text-align: center;
+            color: white;
+            opacity: 0.8;
+            margin-top: 3rem;
+        }
+        
+        /* Ad slot styling for demo */
+        .wordeth-ad-slot {
+            margin: 2rem 0;
+            min-height: 200px;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            font-style: italic;
+        }
+        
+        .wordeth-ad-slot-banner {
+            height: 90px;
+        }
+        
+        .wordeth-ad-slot-interstitial {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            z-index: 1000;
+        }
+        
+        .wordeth-ad-slot-skyscraper {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 160px;
+            height: 600px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .content {
+                padding: 2rem;
+            }
+            
+            .wordeth-ad-slot-skyscraper {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Wordeth Ads SDK Demo</h1>
+            <p>See how easy it is to integrate contextual advertising on any website</p>
+        </div>
+        
+        <div class="content">
+            <h2>One Line Integration</h2>
+            <p>Add contextual advertising to any website with just a few lines of code:</p>
+            
+            <div class="code-block">
+&lt;script src="https://cdn.wordeth.com/wordeth-ads-sdk.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+    const wordethAds = new WordethAds({
+        siteId: 'demo-site-123',
+        apiUrl: 'https://api.wordeth.com/ads'
+    });
+    wordethAds.init();
+&lt;/script&gt;
+            </div>
+            
+            <div class="features">
+                <div class="feature">
+                    <h3>🎯 Contextual Targeting</h3>
+                    <p>Ads automatically match your content and user behavior for higher engagement rates.</p>
+                </div>
+                <div class="feature">
+                    <h3>📊 Real-time Analytics</h3>
+                    <p>Track impressions, clicks, and revenue with detailed performance metrics.</p>
+                </div>
+                <div class="feature">
+                    <h3>🔒 Privacy Compliant</h3>
+                    <p>GDPR-ready with cookie consent and transparent data collection.</p>
+                </div>
+                <div class="feature">
+                    <h3>📱 Mobile Optimized</h3>
+                    <p>Responsive ad units that work perfectly on all devices and screen sizes.</p>
+                </div>
+                <div class="feature">
+                    <h3>⚡ Lightweight</h3>
+                    <p>Minimal impact on page load times with optimized performance.</p>
+                </div>
+                <div class="feature">
+                    <h3>💰 Revenue Sharing</h3>
+                    <p>Earn money from every ad impression with competitive CPM rates.</p>
+                </div>
+            </div>
+            
+            <h2>Ad Placement Examples</h2>
+            <p>Below you can see different ad placements in action:</p>
+            
+            <!-- Banner Ad Slot -->
+            <div class="wordeth-ad-slot wordeth-ad-slot-banner">
+                Banner Ad Slot (728x90)
+            </div>
+            
+            <!-- Interstitial Ad Slot -->
+            <div class="wordeth-ad-slot wordeth-ad-slot-interstitial" style="display: none;">
+                Interstitial Ad Slot (300x250)
+            </div>
+            
+            <!-- Skyscraper Ad Slot -->
+            <div class="wordeth-ad-slot wordeth-ad-slot-skyscraper">
+                Skyscraper Ad Slot (160x600)
+            </div>
+            
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value" id="demoImpressions">0</div>
+                    <div class="stat-label">Impressions</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="demoClicks">0</div>
+                    <div class="stat-label">Clicks</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="demoCTR">0%</div>
+                    <div class="stat-label">CTR</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="demoRevenue">$0</div>
+                    <div class="stat-label">Revenue</div>
+                </div>
+            </div>
+            
+            <div class="cta">
+                <a href="https://wordeth.com/ads" class="btn">Get Started with Wordeth Ads</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2024 Wordeth. All rights reserved. | <a href="#" style="color: white;">Privacy Policy</a> | <a href="#" style="color: white;">Terms of Service</a></p>
+        </div>
+    </div>
+    
+    <!-- Wordeth Ads SDK Integration -->
+    <script src="js/wordeth-ads-sdk.js"></script>
+    <script>
+        // Initialize Wordeth Ads SDK
+        const wordethAds = new WordethAds({
+            siteId: 'demo-external-site',
+            apiUrl: 'http://localhost:3000/api/ads',
+            adTypes: ['banner', 'interstitial', 'skyscraper'],
+            autoInject: true
+        });
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            wordethAds.init();
+            
+            // Update demo stats every 5 seconds
+            setInterval(() => {
+                const stats = wordethAds.getStats();
+                document.getElementById('demoImpressions').textContent = stats.impressions;
+                document.getElementById('demoClicks').textContent = stats.clicks;
+                document.getElementById('demoCTR').textContent = stats.impressions > 0 ? 
+                    ((stats.clicks / stats.impressions) * 100).toFixed(1) + '%' : '0%';
+                document.getElementById('demoRevenue').textContent = '$' + 
+                    ((stats.impressions / 1000) * 2.5).toFixed(2);
+            }, 5000);
+        });
+        
+        // Listen for ad events
+        window.addEventListener('wordethAdsReady', (event) => {
+            console.log('Wordeth Ads SDK ready:', event.detail);
+        });
+    </script>
+</body>
+</html>
+

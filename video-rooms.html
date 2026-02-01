@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Rooms - Wordeth</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/video-rooms.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="main-nav">
+        <div class="nav-logo">
+            <a href="/">
+                <img src="images/logo.png" alt="Wordeth Logo" class="logo">
+            </a>
+        </div>
+        <div class="nav-links">
+            <a href="video-rooms.html" class="active">Video Rooms</a>
+            <a href="lyrics.html">Lyrics</a>
+            <a href="merch.html">Merch</a>
+        </div>
+        <div class="search-container">
+            <input type="text" placeholder="Search a song..." class="search-input">
+            <button class="search-button">
+                <img src="assets/mic-icon.svg" alt="Search" class="mic-icon">
+            </button>
+        </div>
+        <div class="nav-auth">
+            <button class="nav-signin-btn">Sign In</button>
+        </div>
+        <button class="menu-toggle" id="menuToggle">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </nav>
+    
+    <!-- Mobile Menu Dropdown -->
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-content">
+            <div class="mobile-menu-header">
+                <img src="images/logo.png" alt="Wordeth Logo" class="mobile-logo">
+                <button class="mobile-menu-close" id="mobileMenuClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mobile-menu-links">
+                <a href="index.html" class="mobile-menu-link">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="lyrics.html" class="mobile-menu-link">
+                    <i class="fas fa-music"></i>
+                    <span>Lyrics</span>
+                </a>
+                <a href="articles.html" class="mobile-menu-link">
+                    <i class="fas fa-newspaper"></i>
+                    <span>Articles</span>
+                </a>
+                <a href="merch.html" class="mobile-menu-link">
+                    <i class="fas fa-tshirt"></i>
+                    <span>Merchandise</span>
+                </a>
+                <a href="video-rooms.html" class="mobile-menu-link">
+                    <i class="fas fa-video"></i>
+                    <span>Community</span>
+                </a>
+            </div>
+            <div class="mobile-menu-search">
+                <input type="text" placeholder="Search..." class="mobile-search-input">
+                <button class="mobile-search-btn">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <div class="mobile-menu-auth">
+                <button class="mobile-signin-btn">
+                    <i class="fas fa-user"></i>
+                    <span>Sign In</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <main class="video-rooms-container">
+        <!-- Room Selection View -->
+        <div class="room-selection" id="room-selection">
+            <div class="hero-section">
+                <div class="hero-content">
+                    <h1 class="hero-title">
+                        <span class="gradient-text">Connect</span> Through Music
+                    </h1>
+                    <p class="hero-subtitle">Join live video discussions about your favorite songs, discover new music, and connect with fellow music lovers in real-time.</p>
+                    <div class="hero-stats">
+                        <div class="stat-item">
+                            <div class="stat-number">1,247</div>
+                            <div class="stat-label">Active Users</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">89</div>
+                            <div class="stat-label">Live Rooms</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">2.3K</div>
+                            <div class="stat-label">Discussions Today</div>
+                        </div>
+                    </div>
+                    <button class="create-room-btn" id="create-room">
+                        <i class="fas fa-plus"></i>
+                        Create New Room
+                    </button>
+                </div>
+                <div class="hero-visual">
+                    <div class="floating-cards">
+                        <div class="floating-card card-1">
+                            <i class="fas fa-music"></i>
+                            <span>Hip-Hop</span>
+                        </div>
+                        <div class="floating-card card-2">
+                            <i class="fas fa-guitar"></i>
+                            <span>Rock</span>
+                        </div>
+                        <div class="floating-card card-3">
+                            <i class="fas fa-headphones"></i>
+                            <span>Pop</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rooms-section">
+                <div class="section-header">
+                    <h2>Live Music Rooms</h2>
+                    <div class="filter-tabs">
+                        <button class="filter-tab active" data-filter="all">All</button>
+                        <button class="filter-tab" data-filter="hip-hop">Hip-Hop</button>
+                        <button class="filter-tab" data-filter="rock">Rock</button>
+                        <button class="filter-tab" data-filter="pop">Pop</button>
+                        <button class="filter-tab" data-filter="jazz">Jazz</button>
+                    </div>
+                </div>
+
+                <div class="rooms-grid">
+                    <!-- Active rooms will be populated here -->
+                    <div class="room-card featured" data-room-id="room1" data-genre="hip-hop">
+                        <div class="room-badge">
+                            <i class="fas fa-fire"></i>
+                            <span>Trending</span>
+                        </div>
+                        <div class="room-preview">
+                            <div class="participants-preview">
+                                <div class="participant-avatar">
+                                    <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face" alt="User">
+                                    <div class="speaking-indicator"></div>
+                                </div>
+                                <div class="participant-avatar">
+                                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face" alt="User">
+                                </div>
+                                <div class="participant-avatar">
+                                    <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face" alt="User">
+                                </div>
+                                <div class="more-participants">+2</div>
+                            </div>
+                            <div class="room-info">
+                                <div class="room-genre">
+                                    <i class="fas fa-music"></i>
+                                    <span>Hip-Hop</span>
+                                </div>
+                                <h3>Hip-Hop Classics Deep Dive</h3>
+                                <p class="room-topic">Analyzing "Lose Yourself" by Eminem - The psychology behind the lyrics</p>
+                                <div class="room-stats">
+                                    <span class="stat">
+                                        <i class="fas fa-users"></i>
+                                        5/8
+                                    </span>
+                                    <span class="stat">
+                                        <i class="fas fa-clock"></i>
+                                        23 min
+                                    </span>
+                                    <span class="stat">
+                                        <i class="fas fa-comments"></i>
+                                        47
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="room-actions">
+                            <button class="join-room-btn primary">
+                                <i class="fas fa-play"></i>
+                                Join Room
+                            </button>
+                            <button class="preview-btn">
+                                <i class="fas fa-eye"></i>
+                                Preview
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="room-card" data-room-id="room2" data-genre="rock">
+                        <div class="room-preview">
+                            <div class="participants-preview">
+                                <div class="participant-avatar">
+                                    <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face" alt="User">
+                                </div>
+                                <div class="participant-avatar">
+                                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face" alt="User">
+                                </div>
+                                <div class="participant-avatar">
+                                    <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face" alt="User">
+                                </div>
+                            </div>
+                            <div class="room-info">
+                                <div class="room-genre">
+                                    <i class="fas fa-guitar"></i>
+                                    <span>Rock</span>
+                                </div>
+                                <h3>Rock Legends Unplugged</h3>
+                                <p class="room-topic">Queen's "Bohemian Rhapsody" - Breaking down the masterpiece</p>
+                                <div class="room-stats">
+                                    <span class="stat">
+                                        <i class="fas fa-users"></i>
+                                        3/6
+                                    </span>
+                                    <span class="stat">
+                                        <i class="fas fa-clock"></i>
+                                        15 min
+                                    </span>
+                                    <span class="stat">
+                                        <i class="fas fa-comments"></i>
+                                        23
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="room-actions">
+                            <button class="join-room-btn primary">
+                                <i class="fas fa-play"></i>
+                                Join Room
+                            </button>
+                            <button class="preview-btn">
+                                <i class="fas fa-eye"></i>
+                                Preview
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="room-card" data-room-id="room3" data-genre="pop">
+                        <div class="room-preview">
+                            <div class="participants-preview">
+                                <div class="participant-avatar">
+                                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face" alt="User">
+                                </div>
+                                <div class="participant-avatar">
+                                    <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face" alt="User">
+                                </div>
+                            </div>
+                            <div class="room-info">
+                                <div class="room-genre">
+                                    <i class="fas fa-headphones"></i>
+                                    <span>Pop</span>
+                                </div>
+                                <h3>Pop Culture & Music</h3>
+                                <p class="room-topic">Taylor Swift's evolution as a songwriter</p>
+                                <div class="room-stats">
+                                    <span class="stat">
+                                        <i class="fas fa-users"></i>
+                                        2/4
+                                    </span>
+                                    <span class="stat">
+                                        <i class="fas fa-clock"></i>
+                                        8 min
+                                    </span>
+                                    <span class="stat">
+                                        <i class="fas fa-comments"></i>
+                                        12
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="room-actions">
+                            <button class="join-room-btn primary">
+                                <i class="fas fa-play"></i>
+                                Join Room
+                            </button>
+                            <button class="preview-btn">
+                                <i class="fas fa-eye"></i>
+                                Preview
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="friends-section">
+                <div class="section-header">
+                    <h2>Friends' Rooms</h2>
+                    <button class="refresh-btn">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <div class="friends-list">
+                    <div class="friend-room">
+                        <div class="friend-avatar">
+                            <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face" alt="Friend">
+                            <div class="online-indicator"></div>
+                        </div>
+                        <div class="friend-info">
+                            <h4>Sarah's Music Corner</h4>
+                            <p>Pop Hits Discussion • 4 participants</p>
+                            <div class="friend-status">
+                                <span class="status-dot"></span>
+                                <span>Live now</span>
+                            </div>
+                        </div>
+                        <div class="friend-actions">
+                            <button class="knock-btn" title="Knock to join">
+                                <i class="fas fa-hand-paper"></i>
+                            </button>
+                            <button class="join-friend-btn">
+                                <i class="fas fa-play"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Video Room View -->
+        <div class="video-room hidden" id="video-room">
+            <div class="room-header">
+                <div class="room-title">
+                    <h2 id="room-name" class="editable-title">Hip-Hop Classics Deep Dive</h2>
+                    <div class="topic-container">
+                        <p id="current-song" class="editable-topic">Currently discussing: "Lose Yourself" by Eminem</p>
+                        <button class="edit-topic-btn" id="edit-topic">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="room-actions">
+                    <button class="action-btn" id="add-users">
+                        <i class="fas fa-user-plus"></i>
+                        Add Users
+                    </button>
+                    <button class="action-btn" id="filters-btn">
+                        <i class="fas fa-magic"></i>
+                        Filters
+                    </button>
+                    <button class="action-btn" id="replay-btn">
+                        <i class="fas fa-history"></i>
+                        Replay
+                    </button>
+                    <button class="action-btn leave-room" id="leave-room">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Leave
+                    </button>
+                </div>
+            </div>
+
+            <div class="room-main">
+                <div class="video-section">
+                    <div class="video-grid" id="video-grid">
+                        <div class="video-wrapper main-video">
+                            <video id="local-video" autoplay muted playsinline></video>
+                            <div class="participant-info">
+                                <span class="participant-name">You</span>
+                                <div class="participant-status">
+                                    <span class="status-indicator speaking" title="Speaking"></span>
+                                    <button class="hand-raise-indicator hidden" title="Hand Raised">
+                                        <i class="fas fa-hand-paper"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="video-controls">
+                                <button class="filter-btn" data-filter="none">
+                                    <i class="fas fa-magic"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Remote participants will be added dynamically -->
+                    </div>
+                </div>
+
+                <div class="chat-section" id="chat-section">
+                    <div class="chat-header">
+                        <h3>Room Chat</h3>
+                        <div class="chat-participants">
+                            <span id="participant-count">3 participants</span>
+                        </div>
+                    </div>
+                    <div class="chat-messages" id="chat-messages">
+                        <!-- Chat messages will appear here -->
+                    </div>
+                    <div class="chat-input-container">
+                        <input type="text" id="chat-input" placeholder="Type a message..." maxlength="200">
+                        <button id="send-message">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="room-controls">
+                <button class="control-btn" id="toggle-audio">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <button class="control-btn" id="toggle-video">
+                    <i class="fas fa-video"></i>
+                </button>
+                <button class="control-btn" id="viewer-mode" title="Switch to viewer mode">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="control-btn" id="raise-hand" title="Raise hand to speak">
+                    <i class="fas fa-hand-paper"></i>
+                </button>
+                <button class="control-btn" id="share-screen">
+                    <i class="fas fa-desktop"></i>
+                </button>
+                <button class="control-btn" id="toggle-chat">
+                    <i class="fas fa-comment"></i>
+                </button>
+                <button class="control-btn danger" id="end-call">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Room Creation Modal -->
+        <div class="modal" id="create-room-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Create New Room</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <form id="create-room-form">
+                    <div class="form-group">
+                        <label for="room-name-input">Room Name</label>
+                        <input type="text" id="room-name-input" name="room-name-input" placeholder="Enter room name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="room-genre">Genre</label>
+                        <select id="room-genre" name="room-genre" required>
+                            <option value="">Select genre</option>
+                            <option value="hip-hop">Hip-Hop</option>
+                            <option value="rock">Rock</option>
+                            <option value="pop">Pop</option>
+                            <option value="jazz">Jazz</option>
+                            <option value="electronic">Electronic</option>
+                            <option value="r&b">R&B</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="initial-song">Starting Song (Optional)</label>
+                        <input type="text" id="initial-song" name="initial-song" placeholder="Song title by Artist">
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="private-room" name="private-room">
+                            Make room private (friends only)
+                        </label>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="cancel-btn">Cancel</button>
+                        <button type="submit" class="create-btn">Create Room</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Enhanced Add Users Modal with Phone Number Support -->
+        <div class="modal" id="add-users-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Add Users to Room</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="user-search">
+                    <input type="text" id="user-search-input" placeholder="Search by username, ID, or phone number...">
+                    <button id="search-users">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                <div class="search-results" id="search-results">
+                    <!-- Search results will appear here -->
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn close-modal">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters Modal -->
+        <div class="modal" id="filters-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Video Filters</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="filters-grid">
+                    <button class="filter-option active" data-filter="none">
+                        <div class="filter-preview"></div>
+                        <span>None</span>
+                    </button>
+                    <button class="filter-option" data-filter="blur">
+                        <div class="filter-preview blur"></div>
+                        <span>Blur</span>
+                    </button>
+                    <button class="filter-option" data-filter="sepia">
+                        <div class="filter-preview sepia"></div>
+                        <span>Sepia</span>
+                    </button>
+                    <button class="filter-option" data-filter="grayscale">
+                        <div class="filter-preview grayscale"></div>
+                        <span>Grayscale</span>
+                    </button>
+                    <button class="filter-option" data-filter="vintage">
+                        <div class="filter-preview vintage"></div>
+                        <span>Vintage</span>
+                    </button>
+                    <button class="filter-option" data-filter="neon">
+                        <div class="filter-preview neon"></div>
+                        <span>Neon</span>
+                    </button>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn close-modal">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Replay Modal -->
+        <div class="modal" id="replay-modal">
+            <div class="modal-content replay-content">
+                <div class="modal-header">
+                    <h3>Room Replays</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="replay-list">
+                    <!-- Replay items will be populated here -->
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn close-modal">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Topic Edit Modal -->
+        <div class="modal" id="topic-edit-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Edit Topic</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <form id="topic-edit-form">
+                    <div class="form-group">
+                        <label for="topic-input">Discussion Topic</label>
+                        <input type="text" id="topic-input" placeholder="What song are you discussing?" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="cancel-btn close-modal">Cancel</button>
+                        <button type="submit" class="create-btn">Update Topic</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/video-rooms.js"></script>
+</body>
+</html> 

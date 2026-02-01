@@ -1,0 +1,489 @@
+/* Wordeth Advertising System Styles - Scoped to prevent conflicts */
+
+/* Ad Base Styles - Scoped */
+.wordeth-ad-unit {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.wordeth-ad-unit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.wordeth-ad-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Ad Header - Scoped */
+.wordeth-ad-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: linear-gradient(90deg, #5F0E82 0%, #755B69 100%);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.wordeth-ad-label {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.wordeth-ad-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.2s ease;
+}
+
+.wordeth-ad-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Ad Body - Scoped */
+.wordeth-ad-body {
+    padding: 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.wordeth-ad-image {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.wordeth-ad-text {
+    flex: 1;
+}
+
+.wordeth-ad-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 0 0 8px 0;
+    line-height: 1.3;
+}
+
+.wordeth-ad-description {
+    font-size: 14px;
+    color: #6c757d;
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* Ad Link - Scoped */
+.wordeth-ad-link {
+    display: inline-block;
+    background: linear-gradient(135deg, #5F0E82 0%, #755B69 100%);
+    color: white;
+    text-decoration: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-weight: 600;
+    text-align: center;
+    transition: all 0.3s ease;
+    margin: 0 16px 16px 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 12px;
+}
+
+.wordeth-ad-link:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(95, 14, 130, 0.3);
+    color: white;
+    text-decoration: none;
+}
+
+/* In-Video Ad Styles - Scoped */
+.in-video-ad-slot {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 280px;
+    max-width: 30vw;
+    z-index: 1000;
+    opacity: 0.9;
+    transition: opacity 0.3s ease;
+}
+
+.in-video-ad-slot:hover {
+    opacity: 1;
+}
+
+.wordeth-ad-in_video {
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.wordeth-ad-in_video .wordeth-ad-header {
+    background: rgba(95, 14, 130, 0.9);
+}
+
+.wordeth-ad-in_video .wordeth-ad-title {
+    color: white;
+    font-size: 14px;
+}
+
+.wordeth-ad-in_video .wordeth-ad-description {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 12px;
+}
+
+.wordeth-ad-in_video .wordeth-ad-link {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    margin: 0 12px 12px 12px;
+    padding: 8px 16px;
+    font-size: 11px;
+}
+
+/* Interstitial Ad Styles - Scoped */
+.interstitial-ad-slot {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px;
+    max-width: 90vw;
+    z-index: 9999;
+    display: none;
+}
+
+.interstitial-ad-slot.show {
+    display: block;
+    animation: wordethSlideIn 0.3s ease;
+}
+
+@keyframes wordethSlideIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+.wordeth-ad-interstitial {
+    background: white;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* Hero Ad Styles - Scoped */
+.hero-ad-slot {
+    margin: 20px 0;
+    width: 100%;
+}
+
+.wordeth-ad-hero {
+    background: linear-gradient(135deg, #5F0E82 0%, #755B69 100%);
+    color: white;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    padding: 0;
+}
+
+.wordeth-ad-hero .wordeth-ad-header {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.wordeth-ad-hero .wordeth-ad-body {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+    padding: 24px;
+}
+
+.wordeth-ad-hero .wordeth-ad-image {
+    width: 120px;
+    height: 120px;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.wordeth-ad-hero .wordeth-ad-title {
+    color: white;
+    font-size: 24px;
+    margin-bottom: 12px;
+}
+
+.wordeth-ad-hero .wordeth-ad-description {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 16px;
+}
+
+.wordeth-ad-hero .wordeth-ad-link {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    margin: 0 24px 24px 24px;
+    padding: 16px 32px;
+    font-size: 14px;
+}
+
+/* Skyscraper Ad Styles - Scoped */
+.skyscraper-ad-slot {
+    width: 160px;
+    margin: 20px 0;
+}
+
+.wordeth-ad-skyscraper {
+    min-height: 600px;
+    display: flex;
+    flex-direction: column;
+}
+
+.wordeth-ad-skyscraper .wordeth-ad-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.wordeth-ad-skyscraper .wordeth-ad-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.wordeth-ad-skyscraper .wordeth-ad-title {
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.wordeth-ad-skyscraper .wordeth-ad-description {
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.wordeth-ad-skyscraper .wordeth-ad-link {
+    margin: 0 16px 16px 16px;
+    padding: 10px 20px;
+    font-size: 11px;
+}
+
+/* Responsive Design - Scoped */
+@media (max-width: 768px) {
+    .in-video-ad-slot {
+        width: 200px;
+        top: 10px;
+        right: 10px;
+    }
+    
+    .wordeth-ad-in_video .wordeth-ad-title {
+        font-size: 12px;
+    }
+    
+    .wordeth-ad-in_video .wordeth-ad-description {
+        font-size: 10px;
+    }
+    
+    .wordeth-ad-hero .wordeth-ad-body {
+        flex-direction: column;
+        text-align: center;
+        gap: 16px;
+    }
+    
+    .wordeth-ad-hero .wordeth-ad-image {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .wordeth-ad-hero .wordeth-ad-title {
+        font-size: 18px;
+    }
+    
+    .wordeth-ad-hero .wordeth-ad-description {
+        font-size: 14px;
+    }
+    
+    .skyscraper-ad-slot {
+        width: 100%;
+        max-width: 300px;
+        margin: 20px auto;
+    }
+    
+    .wordeth-ad-skyscraper {
+        min-height: 400px;
+    }
+}
+
+@media (max-width: 480px) {
+    .interstitial-ad-slot {
+        width: 95vw;
+    }
+    
+    .wordeth-ad-interstitial .wordeth-ad-body {
+        padding: 12px;
+    }
+    
+    .wordeth-ad-interstitial .wordeth-ad-title {
+        font-size: 14px;
+    }
+    
+    .wordeth-ad-interstitial .wordeth-ad-description {
+        font-size: 12px;
+    }
+    
+    .wordeth-ad-interstitial .wordeth-ad-link {
+        margin: 0 12px 12px 12px;
+        padding: 10px 20px;
+        font-size: 11px;
+    }
+}
+
+/* Ad Loading States - Scoped */
+.wordeth-ad-unit.loading {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: wordethLoading 1.5s infinite;
+}
+
+@keyframes wordethLoading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Ad Performance Metrics - Scoped */
+.wordeth-ad-metrics {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.wordeth-ad-unit:hover .wordeth-ad-metrics {
+    opacity: 1;
+}
+
+/* Cookie Consent Banner - Scoped */
+.wordeth-cookie-consent-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    color: white;
+    padding: 20px;
+    z-index: 10000;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+    display: none;
+}
+
+.wordeth-cookie-consent-banner.show {
+    display: block;
+    animation: wordethSlideUp 0.3s ease;
+}
+
+@keyframes wordethSlideUp {
+    from {
+        transform: translateY(100%);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
+
+.wordeth-cookie-consent-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.wordeth-cookie-consent-text {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.wordeth-cookie-consent-buttons {
+    display: flex;
+    gap: 12px;
+}
+
+.wordeth-cookie-consent-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 25px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.wordeth-cookie-consent-btn.accept {
+    background: #27ae60;
+    color: white;
+}
+
+.wordeth-cookie-consent-btn.accept:hover {
+    background: #229954;
+    transform: translateY(-1px);
+}
+
+.wordeth-cookie-consent-btn.decline {
+    background: transparent;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.wordeth-cookie-consent-btn.decline:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 768px) {
+    .wordeth-cookie-consent-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 16px;
+    }
+    
+    .wordeth-cookie-consent-buttons {
+        width: 100%;
+        justify-content: center;
+    }
+}

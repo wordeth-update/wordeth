@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication - Wordeth</title>
+    <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .auth-callback {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #5F0E82;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 2rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .success-message {
+            color: #96C5B0;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .error-message {
+            color: #e74c3c;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-callback">
+        <div class="loading-spinner"></div>
+        <div id="message">Completing authentication...</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            const error = urlParams.get('error');
+            
+            const messageDiv = document.getElementById('message');
+            
+            if (error) {
+                messageDiv.className = 'error-message';
+                messageDiv.textContent = 'Authentication failed. Please try again.';
+                setTimeout(() => {
+                    window.location.href = '/signin.html';
+                }, 3000);
+            } else if (token) {
+                // Store the token
+                localStorage.setItem('authToken', token);
+                
+                messageDiv.className = 'success-message';
+                messageDiv.textContent = 'Authentication successful! Redirecting...';
+                
+                // Redirect to main page
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            } else {
+                messageDiv.className = 'error-message';
+                messageDiv.textContent = 'Invalid authentication response.';
+                setTimeout(() => {
+                    window.location.href = '/signin.html';
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lyrics - Wordeth</title>
+            <link rel="icon" type="image/png" href="images/logo.png">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/lyrics.css">
+    <link rel="stylesheet" href="css/advertising.css">
+    <style>
+        .lyrics-container {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 80px auto 0;
+        }
+
+        .search-hero {
+            text-align: center;
+            margin-bottom: 4rem;
+            padding: 3rem 0;
+        }
+
+        .search-hero h1 {
+            color: var(--mint);
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .search-hero p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+        }
+
+        /* Override the main CSS search-container */
+        .lyrics-search-container {
+            position: relative;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 50px;
+            padding: 5px;
+            box-shadow: 0 8px 32px rgba(152, 251, 152, 0.3);
+            border: 2px solid var(--mint);
+        }
+
+        .lyrics-search-input {
+            width: 100%;
+            padding: 1.2rem 1.5rem;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 45px;
+            background: transparent;
+            color: var(--black);
+            outline: none;
+            font-weight: 500;
+        }
+
+        .lyrics-search-input::placeholder {
+            color: rgba(0, 0, 0, 0.6);
+            font-weight: 400;
+        }
+
+        .lyrics-search-input:focus {
+            outline: none;
+        }
+
+        .lyrics-search-button {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--mint);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .lyrics-search-button:hover {
+            background: var(--purple-accent);
+            transform: translateY(-50%) scale(1.05);
+            box-shadow: 0 6px 20px rgba(95, 14, 130, 0.4);
+        }
+
+        .lyrics-search-button i {
+            color: var(--black);
+            font-size: 1.2rem;
+        }
+
+        .popular-searches {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+        }
+
+        .popular-tag {
+            background: var(--purple-light);
+            color: white;
+            padding: 0.6rem 1.2rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .popular-tag:hover {
+            background: var(--mint);
+            color: var(--black);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(152, 251, 152, 0.3);
+        }
+
+        .results-section {
+            margin-top: 3rem;
+        }
+
+        .results-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .results-header h2 {
+            color: var(--mint);
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .results-header p {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .song-card {
+            background: var(--purple-dark);
+            border-radius: 15px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .song-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-color: var(--mint);
+        }
+
+        .song-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .song-info {
+            padding: 1.5rem;
+        }
+
+        .song-title {
+            color: var(--mint);
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .song-artist {
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+
+        .song-release {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .view-lyrics {
+            display: inline-block;
+            background: var(--mint);
+            color: var(--black);
+            padding: 0.7rem 1.5rem;
+            border-radius: 25px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .view-lyrics:hover {
+            background: var(--purple-accent);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .loading {
+            text-align: center;
+            color: var(--mint);
+            font-size: 1.2rem;
+            padding: 2rem;
+        }
+
+        .no-results {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            padding: 3rem;
+        }
+
+        .no-results h3 {
+            color: var(--mint);
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .lyrics-container {
+                padding: 1rem;
+            }
+
+            .search-hero h1 {
+                font-size: 2rem;
+            }
+
+            .search-hero p {
+                font-size: 1rem;
+            }
+
+            .lyrics-search-input {
+                font-size: 1rem;
+                padding: 1rem 1.2rem;
+            }
+
+            .popular-searches {
+                gap: 0.5rem;
+            }
+
+            .popular-tag {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="main-nav">
+        <div class="nav-logo">
+            <a href="/">
+                <img src="images/logo.png" alt="Wordeth Logo" class="logo">
+            </a>
+        </div>
+        <div class="nav-links">
+            <a href="video-rooms.html">Video Rooms</a>
+            <a href="lyrics.html" class="active">Lyrics</a>
+            <a href="merch.html">Merch</a>
+        </div>
+        <div class="nav-auth">
+            <button class="nav-signin-btn">Sign In</button>
+        </div>
+        <button class="menu-toggle" id="menuToggle">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </nav>
+    
+    <!-- Mobile Menu Dropdown -->
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-content">
+            <div class="mobile-menu-header">
+                <img src="images/logo.png" alt="Wordeth Logo" class="mobile-logo">
+                <button class="mobile-menu-close" id="mobileMenuClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mobile-menu-links">
+                <a href="index.html" class="mobile-menu-link">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="lyrics.html" class="mobile-menu-link">
+                    <i class="fas fa-music"></i>
+                    <span>Lyrics</span>
+                </a>
+                <a href="articles.html" class="mobile-menu-link">
+                    <i class="fas fa-newspaper"></i>
+                    <span>Articles</span>
+                </a>
+                <a href="merch.html" class="mobile-menu-link">
+                    <i class="fas fa-tshirt"></i>
+                    <span>Merchandise</span>
+                </a>
+                <a href="video-rooms.html" class="mobile-menu-link">
+                    <i class="fas fa-video"></i>
+                    <span>Community</span>
+                </a>
+            </div>
+            <div class="mobile-menu-search">
+                <input type="text" placeholder="Search..." class="mobile-search-input">
+                <button class="mobile-search-btn">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <div class="mobile-menu-auth">
+                <button class="mobile-signin-btn">
+                    <i class="fas fa-user"></i>
+                    <span>Sign In</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <main class="lyrics-container">
+        <!-- Hero Search Section -->
+        <section class="search-hero">
+            <h1>Find Lyrics to Your Favorite Songs</h1>
+            <p>Discover the words behind the music. Search for any song and get instant access to lyrics, artist information, and more.</p>
+            
+            <div class="lyrics-search-container">
+                <input type="text" id="lyrics-search" class="lyrics-search-input" placeholder="Search for a song, artist, or album...">
+                <button class="lyrics-search-button" id="search-btn">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+
+            <div class="popular-searches">
+                <div class="popular-tag" data-search="Bohemian Rhapsody">Bohemian Rhapsody</div>
+                <div class="popular-tag" data-search="Lose Yourself">Lose Yourself</div>
+                <div class="popular-tag" data-search="Imagine">Imagine</div>
+                <div class="popular-tag" data-search="Hotel California">Hotel California</div>
+                <div class="popular-tag" data-search="Stairway to Heaven">Stairway to Heaven</div>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="results-section" id="results-section" style="display: none;">
+            <div class="results-header">
+                <h2 id="results-title">Search Results</h2>
+                <p id="results-subtitle">Found songs matching your search</p>
+            </div>
+            
+            <div class="results-grid" id="results-grid">
+                <!-- Results will be populated here -->
+            </div>
+        </section>
+
+        <!-- Loading State -->
+        <div class="loading" id="loading" style="display: none;">
+            <i class="fas fa-spinner fa-spin"></i> Searching for lyrics...
+        </div>
+
+        <!-- No Results State -->
+        <div class="no-results" id="no-results" style="display: none;">
+            <h3>No songs found</h3>
+            <p>Try searching for a different song or artist</p>
+        </div>
+
+        <!-- Lyrics Modal -->
+        <div class="lyrics-modal" id="lyrics-modal">
+            <div class="modal-overlay" id="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modal-song-title"></h2>
+                    <p id="modal-song-artist"></p>
+                    <button class="close-modal" id="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="song-info-modal">
+                        <img id="modal-song-image" src="" alt="Album cover">
+                        <div class="song-details">
+                            <p id="modal-song-album"></p>
+                            <p id="modal-song-release"></p>
+                        </div>
+                    </div>
+                    <div class="lyrics-content">
+                        <h3>Lyrics</h3>
+                        <div id="modal-lyrics-text" class="lyrics-text"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="start-discussion-btn">
+                        <i class="fas fa-video"></i> Start Video Discussion
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="js/lyrics.js"></script>
+    <script src="js/advertising.js"></script>
+</body>
+</html> 
