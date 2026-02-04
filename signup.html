@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In - Wordeth</title>
-            <link rel="icon" type="image/png" href="images/logo.png">
+    <title>Sign Up - Wordeth</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/auth.css">
     <link rel="stylesheet" href="css/enhanced.css">
@@ -26,47 +26,36 @@
 
     <main class="auth-container">
         <div class="auth-box">
-            <h1>Welcome Back</h1>
-            <p class="auth-subtitle">Sign in to continue your musical journey</p>
+            <h1>Join Wordeth</h1>
+            <p class="auth-subtitle">Create an account to start your musical journey</p>
 
-            <div class="social-auth-buttons">
-                <button class="social-auth-btn x">
-                    <i class="fab fa-twitter"></i>
-                    <span>Continue with X</span>
-                </button>
-                <button class="social-auth-btn instagram">
-                    <i class="fab fa-instagram"></i>
-                    <span>Continue with Instagram</span>
-                </button>
-                <button class="social-auth-btn facebook">
-                    <i class="fab fa-facebook-f"></i>
-                    <span>Continue with Facebook</span>
-                </button>
-            </div>
-
-            <div class="divider">
-                <span>or</span>
-            </div>
-
-            <form id="signin-form" class="auth-form">
+            <form id="signup-form" class="auth-form">
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" name="name" required minlength="2">
+                </div>
                 <div class="form-group">
                     <label for="email">Email</label>
                     <input type="email" id="email" name="email" required>
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required>
-                    <a href="/forgot-password" class="forgot-password">Forgot Password?</a>
+                    <input type="password" id="password" name="password" required minlength="6">
+                    <small class="form-hint">At least 6 characters</small>
                 </div>
-                <button type="submit" class="submit-btn">Sign In</button>
+                <div class="form-group">
+                    <label for="confirm-password">Confirm Password</label>
+                    <input type="password" id="confirm-password" name="confirm-password" required>
+                </div>
+                <button type="submit" class="submit-btn">Create Account</button>
             </form>
 
             <p class="auth-switch">
-                Don't have an account? <a href="/signup.html">Sign Up</a>
+                Already have an account? <a href="/signin.html">Sign In</a>
             </p>
         </div>
     </main>
 
     <script src="js/auth.js"></script>
 </body>
-</html> 
+</html>
