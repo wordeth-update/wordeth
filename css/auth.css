@@ -1,15 +1,19 @@
 .auth-container {
     min-height: calc(100vh - 80px);
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 2rem;
+    padding-top: 2rem;
+    padding-bottom: 4rem;
     margin-top: 80px;
+    overflow-y: auto;
 }
 
 .auth-box {
     background: var(--purple-dark);
     border-radius: 15px;
+    margin-bottom: 2rem;
     padding: 2.5rem;
     width: 100%;
     max-width: 480px;
@@ -147,6 +151,29 @@
 .submit-btn:hover {
     background: var(--white);
     transform: scale(1.02);
+}
+
+.submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.error-message {
+    background: rgba(220, 53, 69, 0.2);
+    border: 1px solid #dc3545;
+    color: #ff6b7a;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.form-hint {
+    display: block;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
 }
 
 .auth-switch {
