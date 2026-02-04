@@ -594,6 +594,13 @@
                             <p id="karaoke-song-artist">Artist Name</p>
                         </div>
                     </div>
+                    <!-- YouTube Audio Player (hidden visual, audio only) -->
+                    <div class="karaoke-audio-container">
+                        <div id="youtube-player"></div>
+                        <div class="audio-status" id="audio-status">
+                            <i class="fas fa-music"></i> <span>Loading audio...</span>
+                        </div>
+                    </div>
                     <div class="karaoke-lyrics-container" id="karaoke-lyrics-container">
                         <div class="lyrics-scroll" id="lyrics-scroll">
                             <!-- Lyrics will be loaded here -->
@@ -620,6 +627,7 @@
         </div>
     </main>
 
+    <script src="https://www.youtube.com/iframe_api"></script>
     <script src="js/audio-rooms.js"></script>
 </body>
 </html> 

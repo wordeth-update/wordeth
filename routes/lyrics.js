@@ -7,34 +7,80 @@ const auth = require('../middleware/auth');
 const GENIUS_BASE_URL = 'https://api.genius.com';
 const GENIUS_ACCESS_TOKEN = process.env.GENIUS_ACCESS_TOKEN;
 
+// Artist name variations for better search results
+const artistVariations = {
+    'ti': ['T.I.', 'TI', 'T.I', 'Tip'],
+    't.i.': ['T.I.', 'TI', 'T.I', 'Tip'],
+    't.i': ['T.I.', 'TI', 'T.I.', 'Tip'],
+    'tip': ['T.I.', 'TI', 'Tip'],
+    'jayz': ['Jay-Z', 'Jay Z', 'Jigga'],
+    'jay-z': ['Jay-Z', 'Jay Z', 'Jigga'],
+    'jay z': ['Jay-Z', 'Jay Z', 'Jigga'],
+    'emcee': ['MC', 'Emcee'],
+    'mc': ['MC', 'Emcee'],
+    'biggie': ['The Notorious B.I.G.', 'Biggie Smalls', 'Biggie'],
+    'notorious big': ['The Notorious B.I.G.', 'Biggie Smalls'],
+    '2pac': ['2Pac', 'Tupac', 'Tupac Shakur'],
+    'tupac': ['2Pac', 'Tupac', 'Tupac Shakur'],
+    'asap': ['A$AP', 'ASAP'],
+    'a$ap': ['A$AP', 'ASAP']
+};
+
 // Search for songs
 router.get('/search', async (req, res) => {
     try {
-        const { q } = req.query;
+        let { q } = req.query;
         
         if (!q || q.length < 2) {
             return res.status(400).json({ message: 'Search query must be at least 2 characters' });
         }
 
-        const response = await axios.get(`${GENIUS_BASE_URL}/search`, {
-            headers: {
-                'Authorization': `Bearer ${GENIUS_ACCESS_TOKEN}`
-            },
-            params: {
-                q: q
+        // Check if the query matches any artist variations
+        const lowerQuery = q.toLowerCase().trim();
+        let searchQueries = [q];
+        
+        // Check for artist variations at the start of the query
+        for (const [key, variations] of Object.entries(artistVariations)) {
+            if (lowerQuery.startsWith(key + ' ') || lowerQuery === key) {
+                const rest = lowerQuery.slice(key.length);
+                searchQueries = variations.map(v => v + rest);
+                break;
             }
-        });
+        }
 
-        const hits = response.data.response.hits.map(hit => ({
-            id: hit.result.id,
-            title: hit.result.title,
-            artist: hit.result.primary_artist.name,
-            image: hit.result.song_art_image_url,
-            url: hit.result.url,
-            release_date: hit.result.release_date_for_display
-        }));
+        // Try each search query until we get results
+        let allHits = [];
+        
+        for (const searchQuery of searchQueries) {
+            try {
+                const response = await axios.get(`${GENIUS_BASE_URL}/search`, {
+                    headers: {
+                        'Authorization': `Bearer ${GENIUS_ACCESS_TOKEN}`
+                    },
+                    params: {
+                        q: searchQuery
+                    }
+                });
 
-        res.json({ hits });
+                const hits = response.data.response.hits.map(hit => ({
+                    id: hit.result.id,
+                    title: hit.result.title,
+                    artist: hit.result.primary_artist.name,
+                    image: hit.result.song_art_image_url,
+                    url: hit.result.url,
+                    release_date: hit.result.release_date_for_display
+                }));
+
+                if (hits.length > 0) {
+                    allHits = hits;
+                    break; // Found results, stop searching
+                }
+            } catch (err) {
+                console.log(`Search variation failed: ${searchQuery}`);
+            }
+        }
+
+        res.json({ hits: allHits });
     } catch (error) {
         console.error('Genius search error:', error);
         res.status(500).json({ message: 'Error searching for songs' });
@@ -239,6 +285,73 @@ router.get('/trending', async (req, res) => {
     } catch (error) {
         console.error('Genius trending error:', error);
         res.status(500).json({ message: 'Error fetching trending songs' });
+    }
+});
+
+// YouTube search for karaoke audio
+router.get('/youtube-search', async (req, res) => {
+    try {
+        const { q } = req.query;
+        if (!q) {
+            return res.status(400).json({ message: 'Search query required' });
+        }
+
+        // Use YouTube's search via Invidious API (privacy-respecting YouTube frontend)
+        // Invidious instances provide a free API without requiring API keys
+        const instances = [
+            'https://inv.nadeko.net',
+            'https://invidious.snopyta.org',
+            'https://invidious.kavin.rocks'
+        ];
+        
+        let videoId = null;
+        
+        for (const instance of instances) {
+            try {
+                const searchUrl = `${instance}/api/v1/search?q=${encodeURIComponent(q)}&type=video`;
+                const response = await axios.get(searchUrl, { timeout: 5000 });
+                
+                if (response.data && response.data.length > 0) {
+                    // Get the first video result
+                    const video = response.data[0];
+                    videoId = video.videoId;
+                    break;
+                }
+            } catch (instanceError) {
+                console.log(`Invidious instance ${instance} failed, trying next...`);
+                continue;
+            }
+        }
+        
+        // Fallback: scrape YouTube search results page
+        if (!videoId) {
+            try {
+                const ytSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
+                const response = await axios.get(ytSearchUrl, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    },
+                    timeout: 5000
+                });
+                
+                // Extract video ID from response
+                const videoIdMatch = response.data.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
+                if (videoIdMatch) {
+                    videoId = videoIdMatch[1];
+                }
+            } catch (ytError) {
+                console.log('YouTube direct search failed:', ytError.message);
+            }
+        }
+        
+        if (videoId) {
+            res.json({ videoId });
+        } else {
+            res.json({ videoId: null, message: 'No video found' });
+        }
+    } catch (error) {
+        console.error('YouTube search error:', error);
+        res.status(500).json({ message: 'Error searching YouTube' });
     }
 });
 

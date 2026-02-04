@@ -24,6 +24,12 @@ class AudioRoomsManager {
         this.currentLyricIndex = 0;
         this.karaokeLyrics = [];
         
+        // YouTube player state
+        this.youtubePlayer = null;
+        this.youtubeReady = false;
+        this.currentVideoId = null;
+        this.initYouTubePlayer();
+        
         this.initializeElements();
         this.setupEventListeners();
         this.connectToServer();
@@ -1262,6 +1268,9 @@ class AudioRoomsManager {
             albumArt.onerror = () => { albumArt.src = 'https://via.placeholder.com/70?text=Album'; };
         }
         
+        // Load YouTube audio in parallel with lyrics
+        this.loadYouTubeAudio(artist, title);
+        
         // Load lyrics
         try {
             const response = await fetch(`/api/lyrics/lyrics/${songId}`);
@@ -1340,10 +1349,18 @@ class AudioRoomsManager {
             this.karaokeActive = false;
             clearInterval(this.karaokeInterval);
             if (icon) icon.className = 'fas fa-play';
+            // Pause YouTube
+            if (this.youtubePlayer && this.youtubeReady) {
+                this.youtubePlayer.pauseVideo();
+            }
         } else {
             // Play
             this.karaokeActive = true;
             if (icon) icon.className = 'fas fa-pause';
+            // Play YouTube
+            if (this.youtubePlayer && this.youtubeReady && this.currentVideoId) {
+                this.youtubePlayer.playVideo();
+            }
             this.startLyricScrolling();
         }
     }
@@ -1416,6 +1433,11 @@ class AudioRoomsManager {
         const icon = playPauseBtn?.querySelector('i');
         if (icon) icon.className = 'fas fa-play';
         
+        // Stop YouTube playback
+        if (this.youtubePlayer && this.youtubeReady) {
+            this.youtubePlayer.stopVideo();
+        }
+        
         // Reset to beginning
         this.currentLyricIndex = 0;
         this.updateLyricHighlight();
@@ -1425,6 +1447,156 @@ class AudioRoomsManager {
         if (lyricsContainer) {
             lyricsContainer.style.transform = 'translateY(0)';
         }
+    }
+    
+    // YouTube Player Integration
+    initYouTubePlayer() {
+        // YouTube API will call onYouTubeIframeAPIReady when ready
+        window.onYouTubeIframeAPIReady = () => {
+            this.createYouTubePlayer();
+        };
+        
+        // If API already loaded
+        if (window.YT && window.YT.Player) {
+            this.createYouTubePlayer();
+        }
+    }
+    
+    createYouTubePlayer() {
+        const playerContainer = document.getElementById('youtube-player');
+        if (!playerContainer) return;
+        
+        this.youtubePlayer = new YT.Player('youtube-player', {
+            height: '113',
+            width: '200',
+            playerVars: {
+                'autoplay': 0,
+                'controls': 0,
+                'disablekb': 1,
+                'modestbranding': 1,
+                'rel': 0,
+                'showinfo': 0
+            },
+            events: {
+                'onReady': () => {
+                    this.youtubeReady = true;
+                    this.updateAudioStatus('ready', 'Ready to play');
+                },
+                'onStateChange': (event) => this.onYouTubeStateChange(event),
+                'onError': (event) => this.onYouTubeError(event)
+            }
+        });
+    }
+    
+    onYouTubeStateChange(event) {
+        const statusEl = document.getElementById('audio-status');
+        
+        switch (event.data) {
+            case YT.PlayerState.PLAYING:
+                this.updateAudioStatus('playing', 'Playing');
+                // Start lyrics sync if not already running
+                if (!this.karaokeActive) {
+                    this.karaokeActive = true;
+                    const playPauseBtn = document.getElementById('karaoke-play-pause');
+                    const icon = playPauseBtn?.querySelector('i');
+                    if (icon) icon.className = 'fas fa-pause';
+                    this.startLyricScrolling();
+                }
+                break;
+            case YT.PlayerState.PAUSED:
+                this.updateAudioStatus('ready', 'Paused');
+                if (this.karaokeActive) {
+                    this.karaokeActive = false;
+                    clearInterval(this.karaokeInterval);
+                    const playPauseBtn = document.getElementById('karaoke-play-pause');
+                    const icon = playPauseBtn?.querySelector('i');
+                    if (icon) icon.className = 'fas fa-play';
+                }
+                break;
+            case YT.PlayerState.ENDED:
+                this.updateAudioStatus('ready', 'Finished');
+                this.stopKaraoke();
+                break;
+            case YT.PlayerState.BUFFERING:
+                this.updateAudioStatus('playing', 'Buffering...');
+                break;
+        }
+    }
+    
+    onYouTubeError(event) {
+        console.error('YouTube error:', event.data);
+        this.updateAudioStatus('error', 'Audio unavailable');
+    }
+    
+    updateAudioStatus(state, message) {
+        const statusEl = document.getElementById('audio-status');
+        if (statusEl) {
+            statusEl.className = `audio-status ${state}`;
+            statusEl.querySelector('span').textContent = message;
+        }
+    }
+    
+    async searchYouTubeAudio(artist, title) {
+        try {
+            const query = `${artist} ${title} official audio`;
+            const response = await fetch(`/api/lyrics/youtube-search?q=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            
+            if (data.videoId) {
+                return data.videoId;
+            }
+            return null;
+        } catch (error) {
+            console.error('YouTube search error:', error);
+            return null;
+        }
+    }
+    
+    async loadYouTubeAudio(artist, title) {
+        this.updateAudioStatus('playing', 'Finding audio...');
+        
+        // Wait for YouTube API to be ready (with timeout)
+        if (!this.youtubeReady) {
+            this.updateAudioStatus('playing', 'Loading player...');
+            const ready = await this.waitForYouTubeReady(10000); // 10 second timeout
+            if (!ready) {
+                this.updateAudioStatus('error', 'Player not ready');
+                return false;
+            }
+        }
+        
+        const videoId = await this.searchYouTubeAudio(artist, title);
+        
+        if (videoId && this.youtubePlayer && this.youtubeReady) {
+            this.currentVideoId = videoId;
+            this.youtubePlayer.loadVideoById(videoId);
+            this.youtubePlayer.pauseVideo(); // Load but don't auto-play
+            this.updateAudioStatus('ready', 'Audio loaded - Press play');
+            return true;
+        } else {
+            this.updateAudioStatus('error', 'No audio found');
+            return false;
+        }
+    }
+    
+    waitForYouTubeReady(timeout = 10000) {
+        return new Promise((resolve) => {
+            if (this.youtubeReady) {
+                resolve(true);
+                return;
+            }
+            
+            const startTime = Date.now();
+            const checkReady = setInterval(() => {
+                if (this.youtubeReady) {
+                    clearInterval(checkReady);
+                    resolve(true);
+                } else if (Date.now() - startTime > timeout) {
+                    clearInterval(checkReady);
+                    resolve(false);
+                }
+            }, 100);
+        });
     }
 }
 
