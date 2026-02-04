@@ -29,7 +29,7 @@ if (signinForm) {
             if (response.ok) {
                 localStorage.setItem('authToken', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
-                window.location.href = '/profile.html';
+                window.location.href = '/';
             } else {
                 throw new Error(data.message || 'Sign in failed');
             }
@@ -74,7 +74,7 @@ if (signupForm) {
             if (response.ok) {
                 localStorage.setItem('authToken', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
-                window.location.href = '/profile.html';
+                window.location.href = '/';
             } else {
                 throw new Error(data.message || data.errors?.[0]?.msg || 'Sign up failed');
             }
@@ -119,7 +119,7 @@ function checkAuth() {
     const token = localStorage.getItem('authToken');
     const path = window.location.pathname;
     if (token && (path === '/signin.html' || path === '/signup.html')) {
-        window.location.href = '/profile.html';
+        window.location.href = '/';
     }
 }
 
