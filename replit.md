@@ -2,7 +2,7 @@
 
 ## Overview
 Wordeth is a social music experience platform that allows users to:
-- Search and view song lyrics (powered by Genius API)
+- Search and view song lyrics (powered by Musixmatch API)
 - Join live audio discussions called "Verses" (Twitter Spaces / Clubhouse style)
 - Customize and order merchandise
 - Read and discuss music articles
@@ -33,8 +33,8 @@ The application is fully functional and ready for use. It runs on Node.js with E
   - Enforcement check when joining rooms - locked rooms reject new joins
   - System chat messages notify participants of lock state changes
 - **Karaoke Mode**: Members can perform mini karaoke sessions with scrolling lyrics
-  - Search for songs using Genius API integration
-  - Dual lyrics API: LRCLIB (synced) + Lyrics.ovh (fallback)
+  - Search for songs using Musixmatch API integration
+  - Multi-source lyrics: Musixmatch (primary) + LRCLIB (synced) + Lyrics.ovh (fallback)
   - YouTube audio integration for music playback during karaoke
   - Scrolling lyrics display with active line highlighting
   - Play/pause/restart controls synced with YouTube player
@@ -117,7 +117,8 @@ The application is fully functional and ready for use. It runs on Node.js with E
 - `NODE_ENV` - Environment mode (development)
 
 ### Optional (for full features)
-- `GENIUS_ACCESS_TOKEN` - For lyrics search (configured)
+- `MUSIXMATCH_API_KEY` - For lyrics search (configured)
+- `GENIUS_ACCESS_TOKEN` - For additional metadata (optional fallback)
 - `MONGODB_URI_PROD` - MongoDB Atlas connection
 - Social OAuth credentials (Twitter, Instagram, Facebook)
 
@@ -129,4 +130,4 @@ The server runs automatically via the "Wordeth Server" workflow on port 5000.
 
 ## Notes
 - MongoDB Atlas connected and fully operational
-- Lyrics search requires Genius API token for full functionality (now configured)
+- Lyrics search powered by Musixmatch API with LRCLIB/Lyrics.ovh fallbacks for synced lyrics

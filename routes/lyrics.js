@@ -3,9 +3,10 @@ const router = express.Router();
 const axios = require('axios');
 const auth = require('../middleware/auth');
 
-// Genius API configuration
-const GENIUS_BASE_URL = 'https://api.genius.com';
-const GENIUS_ACCESS_TOKEN = process.env.GENIUS_ACCESS_TOKEN;
+// Musixmatch API configuration
+const MUSIXMATCH_BASE_URL = 'https://api.musixmatch.com/ws/1.1';
+const MUSIXMATCH_API_KEY = process.env.MUSIXMATCH_API_KEY;
+const MUSIXMATCH_TIMEOUT = 10000;
 
 // Artist name variations for better search results
 const artistVariations = {
@@ -26,9 +27,13 @@ const artistVariations = {
     'a$ap': ['A$AP', 'ASAP']
 };
 
-// Search for songs
+// Search for songs using Musixmatch
 router.get('/search', async (req, res) => {
     try {
+        if (!MUSIXMATCH_API_KEY) {
+            return res.status(500).json({ message: 'Lyrics service not configured' });
+        }
+
         let { q } = req.query;
         
         if (!q || q.length < 2) {
@@ -53,94 +58,149 @@ router.get('/search', async (req, res) => {
         
         for (const searchQuery of searchQueries) {
             try {
-                const response = await axios.get(`${GENIUS_BASE_URL}/search`, {
-                    headers: {
-                        'Authorization': `Bearer ${GENIUS_ACCESS_TOKEN}`
-                    },
+                const response = await axios.get(`${MUSIXMATCH_BASE_URL}/track.search`, {
                     params: {
-                        q: searchQuery
-                    }
+                        apikey: MUSIXMATCH_API_KEY,
+                        q: searchQuery,
+                        page_size: 20,
+                        page: 1,
+                        s_track_rating: 'desc'
+                    },
+                    timeout: MUSIXMATCH_TIMEOUT
                 });
 
-                const hits = response.data.response.hits.map(hit => ({
-                    id: hit.result.id,
-                    title: hit.result.title,
-                    artist: hit.result.primary_artist.name,
-                    image: hit.result.song_art_image_url,
-                    url: hit.result.url,
-                    release_date: hit.result.release_date_for_display
-                }));
+                if (response.data.message.header.status_code === 200) {
+                    const tracks = response.data.message.body.track_list;
+                    const hits = tracks.map(item => ({
+                        id: item.track.track_id,
+                        title: item.track.track_name,
+                        artist: item.track.artist_name,
+                        album: item.track.album_name,
+                        image: item.track.album_coverart_500x500 || item.track.album_coverart_350x350 || item.track.album_coverart_100x100 || null,
+                        url: item.track.track_share_url,
+                        release_date: item.track.first_release_date ? new Date(item.track.first_release_date).toLocaleDateString() : null,
+                        has_lyrics: item.track.has_lyrics === 1,
+                        explicit: item.track.explicit === 1,
+                        genres: item.track.primary_genres?.music_genre_list?.map(g => g.music_genre.music_genre_name) || []
+                    }));
 
-                if (hits.length > 0) {
-                    allHits = hits;
-                    break; // Found results, stop searching
+                    if (hits.length > 0) {
+                        allHits = hits;
+                        break;
+                    }
                 }
             } catch (err) {
-                console.log(`Search variation failed: ${searchQuery}`);
+                console.log(`Search variation failed: ${searchQuery}`, err.message);
             }
         }
 
         res.json({ hits: allHits });
     } catch (error) {
-        console.error('Genius search error:', error);
+        console.error('Musixmatch search error:', error);
         res.status(500).json({ message: 'Error searching for songs' });
     }
 });
 
-// Get song details and lyrics
+// Get song details
 router.get('/song/:id', async (req, res) => {
     try {
+        if (!MUSIXMATCH_API_KEY) {
+            return res.status(500).json({ message: 'Lyrics service not configured' });
+        }
+
         const { id } = req.params;
 
-        // Get song details from Genius API
-        const songResponse = await axios.get(`${GENIUS_BASE_URL}/songs/${id}`, {
-            headers: {
-                'Authorization': `Bearer ${GENIUS_ACCESS_TOKEN}`
-            }
+        // Get track details from Musixmatch
+        const trackResponse = await axios.get(`${MUSIXMATCH_BASE_URL}/track.get`, {
+            params: {
+                apikey: MUSIXMATCH_API_KEY,
+                track_id: id
+            },
+            timeout: MUSIXMATCH_TIMEOUT
         });
 
-        const song = songResponse.data.response.song;
+        if (trackResponse.data.message.header.status_code !== 200) {
+            return res.status(404).json({ message: 'Song not found' });
+        }
+
+        const track = trackResponse.data.message.body.track;
         
         const songData = {
-            id: song.id,
-            title: song.title,
-            artist: song.primary_artist.name,
-            image: song.song_art_image_url,
-            url: song.url,
-            release_date: song.release_date_for_display,
-            lyrics: 'Lyrics available at: ' + song.url,
-            album: song.album?.name || null,
-            featured_artists: song.featured_artists?.map(artist => artist.name) || []
+            id: track.track_id,
+            title: track.track_name,
+            artist: track.artist_name,
+            artist_id: track.artist_id,
+            album: track.album_name,
+            album_id: track.album_id,
+            image: track.album_coverart_500x500 || track.album_coverart_350x350 || track.album_coverart_100x100 || null,
+            url: track.track_share_url,
+            release_date: track.first_release_date ? new Date(track.first_release_date).toLocaleDateString() : null,
+            has_lyrics: track.has_lyrics === 1,
+            explicit: track.explicit === 1,
+            genres: track.primary_genres?.music_genre_list?.map(g => g.music_genre.music_genre_name) || [],
+            lyrics: 'Use the lyrics endpoint to get full lyrics'
         };
 
         res.json(songData);
     } catch (error) {
-        console.error('Genius song error:', error);
+        console.error('Musixmatch song error:', error);
         res.status(500).json({ message: 'Error fetching song details' });
     }
 });
 
-// Get lyrics content for a song using multiple APIs
+// Get lyrics content for a song
 router.get('/lyrics/:id', async (req, res) => {
     try {
+        if (!MUSIXMATCH_API_KEY) {
+            return res.status(500).json({ message: 'Lyrics service not configured' });
+        }
+
         const { id } = req.params;
 
-        // First get song details from Genius API for artist/title info
-        const songResponse = await axios.get(`${GENIUS_BASE_URL}/songs/${id}`, {
-            headers: {
-                'Authorization': `Bearer ${GENIUS_ACCESS_TOKEN}`
-            }
+        // First get track details from Musixmatch
+        const trackResponse = await axios.get(`${MUSIXMATCH_BASE_URL}/track.get`, {
+            params: {
+                apikey: MUSIXMATCH_API_KEY,
+                track_id: id
+            },
+            timeout: MUSIXMATCH_TIMEOUT
         });
 
-        const song = songResponse.data.response.song;
-        const artist = song.primary_artist.name;
-        const title = song.title;
+        if (trackResponse.data.message.header.status_code !== 200) {
+            return res.status(404).json({ message: 'Song not found' });
+        }
+
+        const track = trackResponse.data.message.body.track;
+        const artist = track.artist_name;
+        const title = track.track_name;
 
         let lyrics = '';
         let syncedLyrics = null;
         let source = 'none';
 
-        // Try LRCLIB first (provides synced lyrics for karaoke)
+        // Try Musixmatch lyrics first
+        try {
+            const lyricsResponse = await axios.get(`${MUSIXMATCH_BASE_URL}/track.lyrics.get`, {
+                params: {
+                    apikey: MUSIXMATCH_API_KEY,
+                    track_id: id
+                },
+                timeout: MUSIXMATCH_TIMEOUT
+            });
+
+            if (lyricsResponse.data.message.header.status_code === 200 && 
+                lyricsResponse.data.message.body.lyrics) {
+                const lyricsData = lyricsResponse.data.message.body.lyrics;
+                if (lyricsData.lyrics_body && lyricsData.lyrics_body.length > 50) {
+                    lyrics = lyricsData.lyrics_body;
+                    source = 'musixmatch';
+                }
+            }
+        } catch (mxmError) {
+            console.log('Musixmatch lyrics lookup failed:', mxmError.message);
+        }
+
+        // Try LRCLIB for synced lyrics (for karaoke feature)
         try {
             const lrclibResponse = await axios.get('https://lrclib.net/api/get', {
                 params: {
@@ -157,22 +217,24 @@ router.get('/lyrics/:id', async (req, res) => {
                 // Prefer synced lyrics if available
                 if (lrclibResponse.data.syncedLyrics) {
                     syncedLyrics = lrclibResponse.data.syncedLyrics;
-                    // Also extract plain text from synced lyrics
-                    lyrics = lrclibResponse.data.syncedLyrics
-                        .split('\n')
-                        .map(line => line.replace(/^\[\d{2}:\d{2}\.\d{2,3}\]\s*/, ''))
-                        .join('\n');
-                    source = 'lrclib-synced';
-                } else if (lrclibResponse.data.plainLyrics) {
+                    // If we don't have lyrics yet, extract from synced
+                    if (!lyrics || lyrics.length < 50) {
+                        lyrics = lrclibResponse.data.syncedLyrics
+                            .split('\n')
+                            .map(line => line.replace(/^\[\d{2}:\d{2}\.\d{2,3}\]\s*/, ''))
+                            .join('\n');
+                        source = 'lrclib-synced';
+                    }
+                } else if (lrclibResponse.data.plainLyrics && (!lyrics || lyrics.length < 50)) {
                     lyrics = lrclibResponse.data.plainLyrics;
                     source = 'lrclib';
                 }
             }
         } catch (lrclibError) {
-            console.log('LRCLIB lookup failed, trying Lyrics.ovh:', lrclibError.message);
+            console.log('LRCLIB lookup failed:', lrclibError.message);
         }
 
-        // Fallback to Lyrics.ovh if LRCLIB didn't work
+        // Fallback to Lyrics.ovh if still no lyrics
         if (!lyrics || lyrics.length < 50) {
             try {
                 const lyricsOvhResponse = await axios.get(
@@ -189,8 +251,10 @@ router.get('/lyrics/:id', async (req, res) => {
             }
         }
         
-        // If we found lyrics, clean them up
+        // Clean up lyrics if we found them
         if (lyrics) {
+            // Remove Musixmatch copyright notice if present
+            lyrics = lyrics.replace(/\*{7}[\s\S]*?This Lyrics is NOT for Commercial use[\s\S]*?\*{7}/gi, '').trim();
             // Remove script tags
             lyrics = lyrics.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
             // Remove style tags
@@ -220,35 +284,30 @@ router.get('/lyrics/:id', async (req, res) => {
                           .replace(/&ndash;/g, '–');
             // Clean up extra whitespace
             lyrics = lyrics.replace(/\n\s*\n/g, '\n\n')
-                          .replace(/^\s+|\s+$/g, '') // trim
-                          .replace(/\n{3,}/g, '\n\n'); // max 2 consecutive line breaks
+                          .replace(/^\s+|\s+$/g, '')
+                          .replace(/\n{3,}/g, '\n\n');
         }
         
         // Final fallback if no lyrics found
         if (!lyrics || lyrics.length < 50) {
             source = 'unavailable';
-            lyrics = `Lyrics not available for "${title}" by ${artist}.\n\nVisit Genius for the full lyrics.`;
+            lyrics = `Lyrics not available for "${title}" by ${artist}.\n\nVisit the song page for more information.`;
         }
         
         res.json({
-            id: song.id,
+            id: track.track_id,
             title: title,
             artist: artist,
-            image: song.song_art_image_url,
-            url: song.url,
-            release_date: song.release_date_for_display,
+            image: track.album_coverart_500x500 || track.album_coverart_350x350 || track.album_coverart_100x100 || null,
+            url: track.track_share_url,
+            release_date: track.first_release_date ? new Date(track.first_release_date).toLocaleDateString() : null,
             lyrics: lyrics,
             syncedLyrics: syncedLyrics,
             source: source,
-            album: song.album?.name || null,
-            album_image: song.album?.cover_art_url || song.song_art_image_url,
-            featured_artists: song.featured_artists?.map(artist => artist.name) || [],
-            producer_artists: song.producer_artists?.map(artist => artist.name) || [],
-            writer_artists: song.writer_artists?.map(artist => artist.name) || [],
-            description: song.description?.plain || null,
-            language: song.language || null,
-            genres: song.genres?.map(genre => genre.name) || [],
-            tags: song.tags?.map(tag => tag.name) || []
+            album: track.album_name || null,
+            album_image: track.album_coverart_500x500 || track.album_coverart_350x350 || null,
+            explicit: track.explicit === 1,
+            genres: track.primary_genres?.music_genre_list?.map(g => g.music_genre.music_genre_name) || []
         });
 
     } catch (error) {
@@ -260,30 +319,42 @@ router.get('/lyrics/:id', async (req, res) => {
     }
 });
 
-// Get trending songs
+// Get trending/chart songs using Musixmatch
 router.get('/trending', async (req, res) => {
     try {
-        const response = await axios.get(`${GENIUS_BASE_URL}/songs/chart`, {
-            headers: {
-                'Authorization': `Bearer ${GENIUS_ACCESS_TOKEN}`
-            },
+        if (!MUSIXMATCH_API_KEY) {
+            return res.status(500).json({ message: 'Lyrics service not configured' });
+        }
+
+        const response = await axios.get(`${MUSIXMATCH_BASE_URL}/chart.tracks.get`, {
             params: {
-                time_period: 'day',
-                chart_genre: 'all'
-            }
+                apikey: MUSIXMATCH_API_KEY,
+                page: 1,
+                page_size: 20,
+                country: 'us',
+                f_has_lyrics: 1
+            },
+            timeout: MUSIXMATCH_TIMEOUT
         });
 
-        const songs = response.data.response.chart_items.map(item => ({
-            id: item.item.id,
-            title: item.item.title,
-            artist: item.item.primary_artist.name,
-            image: item.item.song_art_image_url,
-            url: item.item.url
+        if (response.data.message.header.status_code !== 200) {
+            return res.status(500).json({ message: 'Error fetching trending songs' });
+        }
+
+        const tracks = response.data.message.body.track_list;
+        const songs = tracks.map(item => ({
+            id: item.track.track_id,
+            title: item.track.track_name,
+            artist: item.track.artist_name,
+            album: item.track.album_name,
+            image: item.track.album_coverart_500x500 || item.track.album_coverart_350x350 || item.track.album_coverart_100x100 || null,
+            url: item.track.track_share_url,
+            has_lyrics: item.track.has_lyrics === 1
         }));
 
         res.json({ songs });
     } catch (error) {
-        console.error('Genius trending error:', error);
+        console.error('Musixmatch trending error:', error);
         res.status(500).json({ message: 'Error fetching trending songs' });
     }
 });
@@ -297,7 +368,6 @@ router.get('/youtube-search', async (req, res) => {
         }
 
         // Use YouTube's search via Invidious API (privacy-respecting YouTube frontend)
-        // Invidious instances provide a free API without requiring API keys
         const instances = [
             'https://inv.nadeko.net',
             'https://invidious.snopyta.org',
@@ -312,7 +382,6 @@ router.get('/youtube-search', async (req, res) => {
                 const response = await axios.get(searchUrl, { timeout: 5000 });
                 
                 if (response.data && response.data.length > 0) {
-                    // Get the first video result
                     const video = response.data[0];
                     videoId = video.videoId;
                     break;
@@ -334,7 +403,6 @@ router.get('/youtube-search', async (req, res) => {
                     timeout: 5000
                 });
                 
-                // Extract video ID from response
                 const videoIdMatch = response.data.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
                 if (videoIdMatch) {
                     videoId = videoIdMatch[1];
