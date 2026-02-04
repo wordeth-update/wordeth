@@ -582,7 +582,7 @@ section {
     grid-column: 1 / -1;
 }
 
-/* Override specific card positions from video-rooms.css */
+/* Override specific card positions from audio-rooms.css */
 .card-1, .card-2, .card-3 {
     position: relative !important;
     top: auto !important;

@@ -3,7 +3,7 @@
 ## Overview
 Wordeth is a social music experience platform that allows users to:
 - Search and view song lyrics (powered by Genius API)
-- Join live video discussions about music
+- Join live audio discussions about music (Twitter Spaces / Clubhouse style)
 - Customize and order merchandise
 - Read and discuss music articles
 - Connect with other music enthusiasts
@@ -12,15 +12,20 @@ Wordeth is a social music experience platform that allows users to:
 The application is fully functional and ready for use. It runs on Node.js with Express.js backend.
 
 ## Recent Changes (February 2026)
+- **MAJOR PIVOT**: Converted from video rooms to audio rooms (Twitter Spaces / Clubhouse style)
+- Renamed video-rooms.html to audio-rooms.html with new audio-focused UI
+- Updated all navigation across the site to reference Audio Rooms
+- Added speaker stage with animated speaking indicators
+- Added listeners section with hand-raise functionality
 - Configured server to bind to port 5000 for Replit compatibility
 - Added trust proxy setting for rate limiting behind Replit proxy
 - Updated Content Security Policy to allow Google Fonts
 - Created SVG product images for merchandise customization
 - Added navigation links to signin page
 - Fixed CORS configuration for Replit proxy compatibility
-- **UI Polish**: Improved layout flow across all pages - fixed floating cards in video-rooms hero to use proper CSS grid, aligned cards uniformly, consistent two-column hero layouts
-- **Navigation Consistency**: Updated all desktop and mobile menus to use unified structure (Video Rooms, Lyrics, Merch) with Sign In button
-- **Enhanced CSS**: Added css/enhanced.css with modern typography (Inter/Poppins), smooth transitions, refined border-radius, and better visual hierarchy
+- **UI Polish**: Improved layout flow across all pages - CSS grid layouts, aligned cards uniformly
+- **Navigation Consistency**: Updated all desktop and mobile menus to use unified structure (Audio Rooms, Lyrics, Merch) with Sign In button
+- **Enhanced CSS**: Added css/enhanced.css with modern typography (Inter/Poppins), smooth transitions, refined border-radius
 
 ## Project Architecture
 
@@ -37,14 +42,14 @@ The application is fully functional and ready for use. It runs on Node.js with E
 ### Frontend (Static HTML/CSS/JS)
 - `index.html` - Main landing page
 - `lyrics.html` - Lyrics search interface
-- `video-rooms.html` - Live video discussion rooms
+- `audio-rooms.html` - Live audio discussion rooms (Twitter Spaces style)
 - `merch.html` - Merchandise customizer
 - `articles.html` - Music articles
 - `signin.html` - Authentication page
 
 ### Assets
-- `css/` - Stylesheets
-- `js/` - Frontend JavaScript
+- `css/` - Stylesheets (audio-rooms.css, enhanced.css, styles.css)
+- `js/` - Frontend JavaScript (audio-rooms.js)
 - `images/` - Logo and static images
 - `assets/products/` - Product SVG images
 
@@ -80,7 +85,7 @@ The application is fully functional and ready for use. It runs on Node.js with E
 - `NODE_ENV` - Environment mode (development)
 
 ### Optional (for full features)
-- `GENIUS_ACCESS_TOKEN` - For lyrics search
+- `GENIUS_ACCESS_TOKEN` - For lyrics search (configured)
 - `MONGODB_URI_PROD` - MongoDB Atlas connection
 - Social OAuth credentials (Twitter, Instagram, Facebook)
 
@@ -88,9 +93,9 @@ The application is fully functional and ready for use. It runs on Node.js with E
 The server runs automatically via the "Wordeth Server" workflow on port 5000.
 
 ## User Preferences
-- None documented yet
+- Audio rooms preferred over video rooms (Twitter Spaces / Clubhouse style)
 
 ## Notes
 - Currently runs in demo mode without MongoDB (uses in-memory storage)
 - To enable full database features, configure MongoDB Atlas
-- Lyrics search requires Genius API token for full functionality
+- Lyrics search requires Genius API token for full functionality (now configured)

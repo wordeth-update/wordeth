@@ -1,17 +1,15 @@
-// Video Rooms JavaScript - Enhanced Houseparty-style functionality with Phone Number Support
+// Audio Rooms JavaScript - Twitter Spaces / Clubhouse style functionality
 
-class VideoRoomsManager {
+class AudioRoomsManager {
     constructor() {
         this.currentRoom = null;
         this.localStream = null;
         this.peerConnections = new Map();
         this.socket = null;
         this.isAudioMuted = false;
-        this.isVideoMuted = false;
-        this.isViewerMode = false;
+        this.isSpeaker = false;
         this.handRaised = false;
         this.chatVisible = true;
-        this.currentFilter = 'none';
         this.chatMessages = [];
         this.replays = [];
         this.currentFilterTab = 'all';
@@ -26,20 +24,19 @@ class VideoRoomsManager {
     initializeElements() {
         // Main containers
         this.roomSelection = document.getElementById('room-selection');
-        this.videoRoom = document.getElementById('video-room');
+        this.audioRoom = document.getElementById('audio-room');
         
         // Modals
         this.createRoomModal = document.getElementById('create-room-modal');
         this.createRoomForm = document.getElementById('create-room-form');
         this.addUsersModal = document.getElementById('add-users-modal');
-        this.filtersModal = document.getElementById('filters-modal');
         this.replayModal = document.getElementById('replay-modal');
         this.topicEditModal = document.getElementById('topic-edit-modal');
         this.topicEditForm = document.getElementById('topic-edit-form');
         
-        // Video elements
-        this.localVideo = document.getElementById('local-video');
-        this.videoGrid = document.getElementById('video-grid');
+        // Audio elements (speakers stage and listeners)
+        this.speakersStage = document.getElementById('speakers-stage');
+        this.listenersGrid = document.getElementById('listeners-grid');
         
         // Chat elements
         this.chatSection = document.getElementById('chat-section');
@@ -51,17 +48,13 @@ class VideoRoomsManager {
         // Control buttons
         this.createRoomBtn = document.getElementById('create-room');
         this.toggleAudioBtn = document.getElementById('toggle-audio');
-        this.toggleVideoBtn = document.getElementById('toggle-video');
-        this.viewerModeBtn = document.getElementById('viewer-mode');
         this.raiseHandBtn = document.getElementById('raise-hand');
-        this.shareScreenBtn = document.getElementById('share-screen');
         this.toggleChatBtn = document.getElementById('toggle-chat');
-        this.endCallBtn = document.getElementById('end-call');
-        this.leaveRoomBtn = document.getElementById('leave-room');
+        this.shareMusicBtn = document.getElementById('share-music');
+        this.leaveRoomBtn = document.getElementById('leave-room-btn');
         
         // Action buttons
         this.addUsersBtn = document.getElementById('add-users');
-        this.filtersBtn = document.getElementById('filters-btn');
         this.replayBtn = document.getElementById('replay-btn');
         this.editTopicBtn = document.getElementById('edit-topic');
     }
@@ -97,17 +90,13 @@ class VideoRoomsManager {
 
         // Room controls
         this.toggleAudioBtn?.addEventListener('click', () => this.toggleAudio());
-        this.toggleVideoBtn?.addEventListener('click', () => this.toggleVideo());
-        this.viewerModeBtn?.addEventListener('click', () => this.toggleViewerMode());
         this.raiseHandBtn?.addEventListener('click', () => this.toggleHandRaise());
-        this.shareScreenBtn?.addEventListener('click', () => this.shareScreen());
         this.toggleChatBtn?.addEventListener('click', () => this.toggleChat());
-        this.endCallBtn?.addEventListener('click', () => this.leaveRoom());
+        this.shareMusicBtn?.addEventListener('click', () => this.shareMusic());
         this.leaveRoomBtn?.addEventListener('click', () => this.leaveRoom());
 
         // Action buttons
         this.addUsersBtn?.addEventListener('click', () => this.showAddUsersModal());
-        this.filtersBtn?.addEventListener('click', () => this.showFiltersModal());
         this.replayBtn?.addEventListener('click', () => this.showReplayModal());
 
         // Chat functionality
@@ -142,14 +131,8 @@ class VideoRoomsManager {
             this.refreshFriendsRooms();
         });
 
-        // Filter selection and other delegated events
+        // Delegated click events for room actions
         document.addEventListener('click', (e) => {
-            if (e.target.closest('.filter-option')) {
-                const filterOption = e.target.closest('.filter-option');
-                const filter = filterOption.dataset.filter;
-                this.selectFilter(filter);
-            }
-
             if (e.target.classList.contains('join-room-btn')) {
                 const roomId = e.target.closest('.room-card').dataset.roomId;
                 this.joinRoom(roomId);
@@ -399,10 +382,6 @@ class VideoRoomsManager {
         this.addUsersModal?.classList.add('active');
     }
 
-    showFiltersModal() {
-        this.filtersModal?.classList.add('active');
-    }
-
     showReplayModal() {
         this.loadReplayList();
         this.replayModal?.classList.add('active');
@@ -548,30 +527,6 @@ class VideoRoomsManager {
         console.log('SMS Content:', message);
     }
 
-    // Filter Management
-    selectFilter(filter) {
-        this.currentFilter = filter;
-        
-        document.querySelectorAll('.filter-option').forEach(option => {
-            option.classList.remove('active');
-        });
-        const filterOption = document.querySelector(`[data-filter="${filter}"]`);
-        filterOption?.classList.add('active');
-        
-        this.applyVideoFilter(this.localVideo, filter);
-        this.hideAllModals();
-    }
-
-    applyVideoFilter(video, filter) {
-        if (!video) return;
-        
-        video.classList.remove('filter-blur', 'filter-sepia', 'filter-grayscale', 'filter-vintage', 'filter-neon');
-        
-        if (filter !== 'none') {
-            video.classList.add(`filter-${filter}`);
-        }
-    }
-
     // Chat Management
     toggleChat() {
         this.chatVisible = !this.chatVisible;
@@ -639,20 +594,25 @@ class VideoRoomsManager {
         }
     }
 
-    // Viewer Mode Management
-    toggleViewerMode() {
-        this.isViewerMode = !this.isViewerMode;
-        this.videoRoom?.classList.toggle('viewer-mode', this.isViewerMode);
-        this.viewerModeBtn?.classList.toggle('viewer-mode', this.isViewerMode);
+    // Listener Mode Management (for audio rooms - listener vs speaker)
+    toggleListenerMode() {
+        this.isSpeaker = !this.isSpeaker;
+        this.audioRoom?.classList.toggle('speaker-mode', this.isSpeaker);
         
-        if (this.isViewerMode) {
+        if (!this.isSpeaker) {
+            // Mute audio when becoming listener
             if (this.localStream) {
-                this.localStream.getTracks().forEach(track => track.stop());
+                const audioTrack = this.localStream.getAudioTracks()[0];
+                if (audioTrack) audioTrack.enabled = false;
             }
-            this.addChatMessage('System', 'You are now in viewer mode', true);
+            this.addChatMessage('System', 'You are now listening', true);
         } else {
-            this.initializeMedia();
-            this.addChatMessage('System', 'You are now participating', true);
+            // Enable audio when becoming speaker
+            if (this.localStream) {
+                const audioTrack = this.localStream.getAudioTracks()[0];
+                if (audioTrack) audioTrack.enabled = true;
+            }
+            this.addChatMessage('System', 'You are now a speaker', true);
         }
     }
 
@@ -735,12 +695,12 @@ class VideoRoomsManager {
 
     async joinRoom(roomId) {
         try {
-            if (!this.isViewerMode) {
+            if (this.isSpeaker) {
                 await this.initializeMedia();
             }
             
             if (this.roomSelection) this.roomSelection.style.display = 'none';
-            this.videoRoom?.classList.remove('hidden');
+            this.audioRoom?.classList.remove('hidden');
             
             this.currentRoom = roomId;
             this.updateRoomInfo(roomId);
@@ -749,24 +709,20 @@ class VideoRoomsManager {
             
         } catch (error) {
             console.error('Error joining room:', error);
-            alert('Failed to join room. Please check your camera and microphone permissions.');
+            alert('Failed to join room. Please check your microphone permissions.');
         }
     }
 
     async initializeMedia() {
         try {
+            // Audio-only for audio rooms (Twitter Spaces style)
             this.localStream = await navigator.mediaDevices.getUserMedia({
-                video: true,
+                video: false,
                 audio: true
             });
             
-            if (this.localVideo) {
-                this.localVideo.srcObject = this.localStream;
-                this.applyVideoFilter(this.localVideo, this.currentFilter);
-            }
-            
         } catch (error) {
-            console.error('Error accessing media devices:', error);
+            console.error('Error accessing audio device:', error);
             throw error;
         }
     }
@@ -801,57 +757,10 @@ class VideoRoomsManager {
         }
     }
 
-    toggleVideo() {
-        if (this.localStream) {
-            const videoTrack = this.localStream.getVideoTracks()[0];
-            if (videoTrack) {
-                videoTrack.enabled = !videoTrack.enabled;
-                this.isVideoMuted = !videoTrack.enabled;
-                
-                this.toggleVideoBtn?.classList.toggle('muted', this.isVideoMuted);
-                if (this.toggleVideoBtn) {
-                    this.toggleVideoBtn.innerHTML = this.isVideoMuted ? 
-                        '<i class="fas fa-video-slash"></i>' : 
-                        '<i class="fas fa-video"></i>';
-                }
-            }
-        }
-    }
-
-    async shareScreen() {
-        try {
-            const screenStream = await navigator.mediaDevices.getDisplayMedia({
-                video: true,
-                audio: true
-            });
-            
-            const videoTrack = screenStream.getVideoTracks()[0];
-            const sender = this.peerConnections.values().next().value?.getSenders().find(
-                s => s.track && s.track.kind === 'video'
-            );
-            
-            if (sender) {
-                await sender.replaceTrack(videoTrack);
-            }
-            
-            videoTrack.onended = () => {
-                this.stopScreenShare();
-            };
-            
-        } catch (error) {
-            console.error('Error sharing screen:', error);
-        }
-    }
-
-    stopScreenShare() {
-        const videoTrack = this.localStream?.getVideoTracks()[0];
-        const sender = this.peerConnections.values().next().value?.getSenders().find(
-            s => s.track && s.track.kind === 'video'
-        );
-        
-        if (sender && videoTrack) {
-            sender.replaceTrack(videoTrack);
-        }
+    shareMusic() {
+        // Open a song search modal or share current song being discussed
+        console.log('Share music functionality - search for a song to share');
+        // This could integrate with the lyrics search API
     }
 
     knockOnRoom(friendRoom) {
@@ -872,12 +781,11 @@ class VideoRoomsManager {
         this.peerConnections.forEach(pc => pc.close());
         this.peerConnections.clear();
         
-        this.isViewerMode = false;
+        this.isSpeaker = false;
         this.handRaised = false;
-        this.currentFilter = 'none';
         this.chatVisible = true;
         
-        this.videoRoom?.classList.add('hidden');
+        this.audioRoom?.classList.add('hidden');
         if (this.roomSelection) this.roomSelection.style.display = 'block';
         this.currentRoom = null;
         
@@ -886,48 +794,57 @@ class VideoRoomsManager {
         this.loadActiveRooms();
     }
 
-    addRemoteParticipant(participantId, name, stream) {
-        const videoWrapper = document.createElement('div');
-        videoWrapper.className = 'video-wrapper';
-        videoWrapper.setAttribute('data-participant-id', participantId);
-        videoWrapper.innerHTML = `
-            <video autoplay playsinline></video>
-            <div class="participant-info">
-                <span class="participant-name">${name}</span>
-                <div class="participant-status">
-                    <span class="status-indicator" title="Listening"></span>
-                    <button class="hand-raise-indicator hidden" title="Hand Raised">
-                        <i class="fas fa-hand-paper"></i>
-                    </button>
-                </div>
+    addRemoteSpeaker(participantId, name, stream, isSpeaking = false) {
+        const speakerAvatar = document.createElement('div');
+        speakerAvatar.className = 'speaker-avatar';
+        speakerAvatar.setAttribute('data-participant-id', participantId);
+        speakerAvatar.innerHTML = `
+            <div class="avatar-ring ${isSpeaking ? 'speaking' : ''}">
+                <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face" alt="${name}">
             </div>
-            <div class="video-controls">
-                <button class="filter-btn" data-filter="none">
-                    <i class="fas fa-magic"></i>
-                </button>
+            <div class="speaker-info">
+                <span class="speaker-name">${name}</span>
+                <span class="speaker-role">Speaker</span>
+            </div>
+            <div class="speaker-status">
+                <i class="fas fa-microphone"></i>
             </div>
         `;
         
-        const video = videoWrapper.querySelector('video');
-        if (video) video.srcObject = stream;
+        // Store audio stream for audio processing
+        speakerAvatar.audioStream = stream;
         
-        this.videoGrid?.appendChild(videoWrapper);
+        this.speakersStage?.appendChild(speakerAvatar);
         
-        return videoWrapper;
+        return speakerAvatar;
+    }
+
+    addRemoteListener(participantId, name, handRaised = false) {
+        const listenerAvatar = document.createElement('div');
+        listenerAvatar.className = `listener-avatar ${handRaised ? 'hand-raised' : ''}`;
+        listenerAvatar.setAttribute('data-participant-id', participantId);
+        listenerAvatar.innerHTML = `
+            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face" alt="${name}">
+        `;
+        listenerAvatar.title = name;
+        
+        this.listenersGrid?.appendChild(listenerAvatar);
+        
+        return listenerAvatar;
     }
 
     removeRemoteParticipant(participantId) {
-        const videoWrapper = document.querySelector(`[data-participant-id="${participantId}"]`);
-        if (videoWrapper) {
-            videoWrapper.remove();
+        const participant = document.querySelector(`[data-participant-id="${participantId}"]`);
+        if (participant) {
+            participant.remove();
         }
     }
 }
 
-// Initialize video rooms manager when DOM is loaded
+// Initialize audio rooms manager when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    const videoRoomsManager = new VideoRoomsManager();
-    window.videoRoomsManager = videoRoomsManager;
+    const audioRoomsManager = new AudioRoomsManager();
+    window.audioRoomsManager = audioRoomsManager;
 });
 
 // Handle page parameters (if joining via direct link)
@@ -936,7 +853,7 @@ const roomToJoin = urlParams.get('room');
 if (roomToJoin) {
     document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
-            window.videoRoomsManager?.joinRoom(roomToJoin);
+            window.audioRoomsManager?.joinRoom(roomToJoin);
         }, 1000);
     });
 } 

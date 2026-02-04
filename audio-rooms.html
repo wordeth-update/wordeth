@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Rooms - Wordeth</title>
+    <title>Audio Rooms - Wordeth</title>
     <link rel="icon" type="image/png" href="images/logo.png">
     <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/video-rooms.css">
+    <link rel="stylesheet" href="css/audio-rooms.css">
     <link rel="stylesheet" href="css/enhanced.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -18,7 +18,7 @@
             </a>
         </div>
         <div class="nav-links">
-            <a href="video-rooms.html" class="active">Video Rooms</a>
+            <a href="audio-rooms.html" class="active">Audio Rooms</a>
             <a href="lyrics.html">Lyrics</a>
             <a href="merch.html">Merch</a>
         </div>
@@ -48,9 +48,9 @@
                 </button>
             </div>
             <div class="mobile-menu-links">
-                <a href="video-rooms.html" class="mobile-menu-link active">
-                    <i class="fas fa-video"></i>
-                    <span>Video Rooms</span>
+                <a href="audio-rooms.html" class="mobile-menu-link active">
+                    <i class="fas fa-headphones"></i>
+                    <span>Audio Rooms</span>
                 </a>
                 <a href="lyrics.html" class="mobile-menu-link">
                     <i class="fas fa-music"></i>
@@ -76,7 +76,7 @@
         </div>
     </div>
 
-    <main class="video-rooms-container">
+    <main class="audio-rooms-container">
         <!-- Room Selection View -->
         <div class="room-selection" id="room-selection">
             <div class="hero-section">
@@ -84,7 +84,7 @@
                     <h1 class="hero-title">
                         <span class="gradient-text">Connect</span> Through Music
                     </h1>
-                    <p class="hero-subtitle">Join live video discussions about your favorite songs, discover new music, and connect with fellow music lovers in real-time.</p>
+                    <p class="hero-subtitle">Join live audio discussions about your favorite songs, discover new music, and connect with fellow music lovers in real-time. Like Twitter Spaces, but for music.</p>
                     <div class="hero-stats">
                         <div class="stat-item">
                             <div class="stat-number">1,247</div>
@@ -319,8 +319,8 @@
             </div>
         </div>
 
-        <!-- Video Room View -->
-        <div class="video-room hidden" id="video-room">
+        <!-- Audio Room View -->
+        <div class="audio-room hidden" id="audio-room">
             <div class="room-header">
                 <div class="room-title">
                     <h2 id="room-name" class="editable-title">Hip-Hop Classics Deep Dive</h2>
@@ -336,10 +336,6 @@
                         <i class="fas fa-user-plus"></i>
                         Add Users
                     </button>
-                    <button class="action-btn" id="filters-btn">
-                        <i class="fas fa-magic"></i>
-                        Filters
-                    </button>
                     <button class="action-btn" id="replay-btn">
                         <i class="fas fa-history"></i>
                         Replay
@@ -352,26 +348,27 @@
             </div>
 
             <div class="room-main">
-                <div class="video-section">
-                    <div class="video-grid" id="video-grid">
-                        <div class="video-wrapper main-video">
-                            <video id="local-video" autoplay muted playsinline></video>
-                            <div class="participant-info">
-                                <span class="participant-name">You</span>
-                                <div class="participant-status">
-                                    <span class="status-indicator speaking" title="Speaking"></span>
-                                    <button class="hand-raise-indicator hidden" title="Hand Raised">
-                                        <i class="fas fa-hand-paper"></i>
-                                    </button>
-                                </div>
+                <div class="audio-section">
+                    <div class="speakers-stage" id="speakers-stage">
+                        <div class="speaker-avatar main-speaker">
+                            <div class="avatar-ring speaking">
+                                <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face" alt="You">
                             </div>
-                            <div class="video-controls">
-                                <button class="filter-btn" data-filter="none">
-                                    <i class="fas fa-magic"></i>
-                                </button>
+                            <div class="speaker-info">
+                                <span class="speaker-name">You</span>
+                                <span class="speaker-role">Host</span>
+                            </div>
+                            <div class="speaker-status">
+                                <i class="fas fa-microphone"></i>
                             </div>
                         </div>
-                        <!-- Remote participants will be added dynamically -->
+                        <!-- Remote speakers will be added dynamically -->
+                    </div>
+                    <div class="listeners-section">
+                        <h4>Listeners</h4>
+                        <div class="listeners-grid" id="listeners-grid">
+                            <!-- Listeners will be added dynamically -->
+                        </div>
                     </div>
                 </div>
 
@@ -398,23 +395,17 @@
                 <button class="control-btn" id="toggle-audio">
                     <i class="fas fa-microphone"></i>
                 </button>
-                <button class="control-btn" id="toggle-video">
-                    <i class="fas fa-video"></i>
-                </button>
-                <button class="control-btn" id="viewer-mode" title="Switch to viewer mode">
-                    <i class="fas fa-eye"></i>
-                </button>
                 <button class="control-btn" id="raise-hand" title="Raise hand to speak">
                     <i class="fas fa-hand-paper"></i>
-                </button>
-                <button class="control-btn" id="share-screen">
-                    <i class="fas fa-desktop"></i>
                 </button>
                 <button class="control-btn" id="toggle-chat">
                     <i class="fas fa-comment"></i>
                 </button>
-                <button class="control-btn danger" id="end-call">
-                    <i class="fas fa-phone-slash"></i>
+                <button class="control-btn" id="share-music" title="Share a song">
+                    <i class="fas fa-music"></i>
+                </button>
+                <button class="control-btn danger" id="leave-room-btn">
+                    <i class="fas fa-sign-out-alt"></i>
                 </button>
             </div>
         </div>
@@ -483,45 +474,6 @@
             </div>
         </div>
 
-        <!-- Filters Modal -->
-        <div class="modal" id="filters-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Video Filters</h3>
-                    <button class="close-modal">&times;</button>
-                </div>
-                <div class="filters-grid">
-                    <button class="filter-option active" data-filter="none">
-                        <div class="filter-preview"></div>
-                        <span>None</span>
-                    </button>
-                    <button class="filter-option" data-filter="blur">
-                        <div class="filter-preview blur"></div>
-                        <span>Blur</span>
-                    </button>
-                    <button class="filter-option" data-filter="sepia">
-                        <div class="filter-preview sepia"></div>
-                        <span>Sepia</span>
-                    </button>
-                    <button class="filter-option" data-filter="grayscale">
-                        <div class="filter-preview grayscale"></div>
-                        <span>Grayscale</span>
-                    </button>
-                    <button class="filter-option" data-filter="vintage">
-                        <div class="filter-preview vintage"></div>
-                        <span>Vintage</span>
-                    </button>
-                    <button class="filter-option" data-filter="neon">
-                        <div class="filter-preview neon"></div>
-                        <span>Neon</span>
-                    </button>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="cancel-btn close-modal">Close</button>
-                </div>
-            </div>
-        </div>
-
         <!-- Replay Modal -->
         <div class="modal" id="replay-modal">
             <div class="modal-content replay-content">
@@ -559,6 +511,6 @@
         </div>
     </main>
 
-    <script src="js/video-rooms.js"></script>
+    <script src="js/audio-rooms.js"></script>
 </body>
 </html> 
