@@ -173,16 +173,7 @@ button, .btn, .cta-button, .video-cta-button {
 }
 
 /* Enhanced Video Preview Section */
-.video-preview-container {
-    background: linear-gradient(135deg, 
-        var(--purple-dark) 0%, 
-        rgba(95, 14, 130, 0.8) 50%, 
-        var(--purple-light) 100%);
-    border-radius: var(--radius-xl);
-    padding: 3rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: var(--shadow-soft);
-}
+/* Container styling moved to bottom of file to avoid conflicts */
 
 .video-preview-badge {
     background: rgba(255, 255, 255, 0.15);
@@ -816,12 +807,15 @@ section {
 
 /* Video preview section - homepage */
 .video-call-preview {
-    padding: 0 2rem;
+    padding: 4rem 2rem;
+    position: relative;
 }
 
 .video-preview-container {
     max-width: 1200px;
     margin: 0 auto;
+    position: relative;
+    z-index: 2;
 }
 
 .video-preview-content {
@@ -834,12 +828,32 @@ section {
 .video-preview-info {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
+}
+
+.video-preview-info h2,
+.video-preview-info h3,
+.video-preview-info p {
+    width: 100%;
 }
 
 .video-preview-visual {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+}
+
+.video-preview-image {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.video-preview-image img {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    display: block;
 }
 
 .video-features {
@@ -942,5 +956,31 @@ section {
     .section-header {
         flex-direction: column;
         align-items: flex-start;
+    }
+}
+
+/* Force correct homepage hero layout */
+.video-call-preview .video-preview-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: center;
+}
+
+.video-call-preview .video-preview-info {
+    display: block;
+}
+
+.video-call-preview .video-preview-visual {
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .video-call-preview .video-preview-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .video-call-preview .video-preview-visual {
+        order: -1;
     }
 }

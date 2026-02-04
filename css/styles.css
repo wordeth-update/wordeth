@@ -175,6 +175,10 @@ body {
 /* Main Content Styles */
 main {
     margin-top: 80px;
+    padding: 0;
+}
+
+main > section:not(.video-call-preview):not(.merch-preview):not(.articles-preview) {
     padding: 2rem;
 }
 
@@ -1466,10 +1470,6 @@ footer {
 .video-features {
     display: flex;
     gap: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
-    max-width: 1200px;
-    margin: 0 auto;
     margin-bottom: 2.5rem;
 }
 
@@ -1644,10 +1644,6 @@ footer {
     .video-preview-content {
         grid-template-columns: 1fr;
         gap: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
-    max-width: 1200px;
-    margin: 0 auto;
     }
     
     .video-preview-info h2 {
