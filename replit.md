@@ -127,6 +127,5 @@ The server runs automatically via the "Wordeth Server" workflow on port 5000.
 - Audio rooms preferred over video rooms (Twitter Spaces / Clubhouse style)
 
 ## Notes
-- Currently runs in demo mode without MongoDB (uses in-memory storage)
-- To enable full database features, configure MongoDB Atlas
+- MongoDB Atlas connected and fully operational
 - Lyrics search requires Genius API token for full functionality (now configured)

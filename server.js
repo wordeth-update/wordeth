@@ -49,11 +49,16 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Connect to MongoDB
-const mongoUri = process.env.NODE_ENV === 'production' 
-    ? process.env.MONGODB_URI_PROD 
-    : process.env.NODE_ENV === 'test'
-    ? (process.env.MONGODB_URI_TEST || process.env.MONGODB_URI)
-    : process.env.MONGODB_URI;
+let mongoUri;
+if (process.env.MONGODB_USERNAME && process.env.MONGODB_PASSWORD) {
+    mongoUri = `mongodb+srv://${process.env.MONGODB_USERNAME}:${encodeURIComponent(process.env.MONGODB_PASSWORD)}@wrdthcluster.3kkpz37.mongodb.net/wordeth?retryWrites=true&w=majority&appName=WrdthCluster`;
+} else if (process.env.NODE_ENV === 'production') {
+    mongoUri = process.env.MONGODB_URI_PROD;
+} else if (process.env.NODE_ENV === 'test') {
+    mongoUri = process.env.MONGODB_URI_TEST || process.env.MONGODB_URI;
+} else {
+    mongoUri = process.env.MONGODB_URI;
+}
 
 if (mongoUri && mongoUri !== 'mongodb://localhost:27017/wordeth') {
     mongoose.connect(mongoUri, {
