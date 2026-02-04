@@ -851,6 +851,17 @@
     transform: scale(1.1);
 }
 
+.control-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.control-btn.disabled:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--white);
+    transform: none;
+}
+
 .control-btn.danger {
     background: linear-gradient(135deg, #dc3545, #c82333);
 }

@@ -28,6 +28,8 @@ class AudioRoomsManager {
         this.youtubePlayer = null;
         this.youtubeReady = false;
         this.currentVideoId = null;
+        this.karaokeEnabled = false; // Host/moderator permission for karaoke
+        this.isRoomHost = false; // Track if current user created the room
         this.initYouTubePlayer();
         
         this.initializeElements();
@@ -126,6 +128,9 @@ class AudioRoomsManager {
         this.lockRoomBtn?.addEventListener('click', () => this.toggleRoomLock());
         this.audioFilterBtn?.addEventListener('click', () => this.showAudioFiltersModal());
         this.karaokeBtn?.addEventListener('click', () => this.showKaraokeModal());
+        
+        // Karaoke permission toggle (host/moderator only)
+        document.getElementById('karaoke-toggle-btn')?.addEventListener('click', () => this.toggleKaraokePermission());
         
         // Audio filter selection
         document.querySelectorAll('#audio-filters-modal .filter-option').forEach(btn => {
@@ -729,7 +734,8 @@ class AudioRoomsManager {
         try {
             const newRoom = await this.createRoomOnServer(roomData);
             this.hideAllModals();
-            this.joinRoom(newRoom.id);
+            this.isRoomHost = true; // Mark as host since we created the room
+            this.joinRoom(newRoom.id, true); // Pass isHost flag
         } catch (error) {
             console.error('Error creating room:', error);
             alert('Failed to create room. Please try again.');
@@ -743,7 +749,7 @@ class AudioRoomsManager {
         };
     }
 
-    async joinRoom(roomId) {
+    async joinRoom(roomId, isHost = false) {
         try {
             // Check if room is locked (door lock feature)
             const roomData = await this.checkRoomLockStatus(roomId);
@@ -751,6 +757,14 @@ class AudioRoomsManager {
                 alert('This room is currently locked. The host has prevented new participants from joining.');
                 return;
             }
+            
+            // Set host status
+            this.isRoomHost = isHost;
+            
+            // Reset karaoke state for new room
+            this.karaokeEnabled = isHost ? false : (roomData?.karaokeEnabled || false);
+            this.updateKaraokeButtonState();
+            this.updateHostControls();
             
             if (this.isSpeaker) {
                 await this.initializeMedia();
@@ -1165,7 +1179,81 @@ class AudioRoomsManager {
     // ==========================================
     
     showKaraokeModal() {
+        // Check if karaoke is enabled by host/moderator
+        if (!this.karaokeEnabled) {
+            this.addChatMessage('System', 'Karaoke is currently disabled. Ask the host to enable it.', true);
+            return;
+        }
         this.karaokeModal?.classList.add('active');
+        
+        // Retry YouTube player creation if not ready
+        if (!this.youtubeReady && window.YT && window.YT.Player) {
+            this.createYouTubePlayer();
+        }
+    }
+    
+    toggleKaraokePermission() {
+        // Only room host/creator can toggle karaoke permission
+        if (!this.isRoomHost) {
+            this.addChatMessage('System', 'Only the room host can enable/disable karaoke.', true);
+            return;
+        }
+        
+        this.karaokeEnabled = !this.karaokeEnabled;
+        
+        // Update button UI
+        const btn = document.getElementById('karaoke-toggle-btn');
+        const icon = btn?.querySelector('i');
+        const text = btn?.querySelector('.karaoke-toggle-text');
+        
+        if (this.karaokeEnabled) {
+            btn?.classList.add('active');
+            if (text) text.textContent = 'Karaoke: On';
+            this.addChatMessage('System', 'Karaoke mode enabled! Participants can now start karaoke sessions.', true);
+        } else {
+            btn?.classList.remove('active');
+            if (text) text.textContent = 'Karaoke: Off';
+            this.addChatMessage('System', 'Karaoke mode disabled.', true);
+        }
+        
+        // Notify other participants
+        this.notifyParticipants('karaoke-permission', { enabled: this.karaokeEnabled });
+        
+        // Update karaoke button visibility/state for all users
+        this.updateKaraokeButtonState();
+    }
+    
+    updateKaraokeButtonState() {
+        const karaokeBtn = document.getElementById('karaoke-btn');
+        if (karaokeBtn) {
+            if (this.karaokeEnabled) {
+                karaokeBtn.classList.remove('disabled');
+                karaokeBtn.title = 'Karaoke mode';
+            } else {
+                karaokeBtn.classList.add('disabled');
+                karaokeBtn.title = 'Karaoke disabled by host';
+            }
+        }
+    }
+    
+    updateHostControls() {
+        // Show/hide host-only controls based on isRoomHost status
+        const hostOnlyControls = [
+            document.getElementById('karaoke-toggle-btn'),
+            document.getElementById('lock-room-btn'),
+            document.getElementById('edit-topic')
+        ];
+        
+        hostOnlyControls.forEach(control => {
+            if (control) {
+                if (this.isRoomHost) {
+                    control.style.display = '';
+                    control.classList.remove('hidden');
+                } else {
+                    control.style.display = 'none';
+                }
+            }
+        });
     }
     
     async searchKaraokeSongs() {
@@ -1464,28 +1552,38 @@ class AudioRoomsManager {
     
     createYouTubePlayer() {
         const playerContainer = document.getElementById('youtube-player');
-        if (!playerContainer) return;
+        if (!playerContainer) {
+            console.log('YouTube player container not found, will retry when modal opens');
+            return;
+        }
         
-        this.youtubePlayer = new YT.Player('youtube-player', {
-            height: '113',
-            width: '200',
-            playerVars: {
-                'autoplay': 0,
-                'controls': 0,
-                'disablekb': 1,
-                'modestbranding': 1,
-                'rel': 0,
-                'showinfo': 0
-            },
-            events: {
-                'onReady': () => {
-                    this.youtubeReady = true;
-                    this.updateAudioStatus('ready', 'Ready to play');
+        try {
+            this.youtubePlayer = new YT.Player('youtube-player', {
+                height: '113',
+                width: '200',
+                playerVars: {
+                    'autoplay': 0,
+                    'controls': 1, // Enable controls for better UX
+                    'disablekb': 0,
+                    'modestbranding': 1,
+                    'rel': 0,
+                    'showinfo': 0,
+                    'fs': 0
                 },
-                'onStateChange': (event) => this.onYouTubeStateChange(event),
-                'onError': (event) => this.onYouTubeError(event)
-            }
-        });
+                events: {
+                    'onReady': () => {
+                        console.log('YouTube player ready');
+                        this.youtubeReady = true;
+                        this.updateAudioStatus('ready', 'Ready to play');
+                    },
+                    'onStateChange': (event) => this.onYouTubeStateChange(event),
+                    'onError': (event) => this.onYouTubeError(event)
+                }
+            });
+        } catch (error) {
+            console.error('Error creating YouTube player:', error);
+            this.updateAudioStatus('error', 'Player failed to load');
+        }
     }
     
     onYouTubeStateChange(event) {

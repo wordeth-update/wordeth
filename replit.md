@@ -40,6 +40,7 @@ The application is fully functional and ready for use. It runs on Node.js with E
   - Play/pause/restart controls synced with YouTube player
   - XSS-safe DOM-based rendering (no innerHTML for user data)
   - Artist name variations support (T.I., Jay-Z, 2Pac, A$AP, etc.)
+  - **Host permission control**: Only room host/moderator can enable karaoke for participants
 - **Audio Filters (Voice Effects)**: Fun voice transformation effects
   - Normal, Helium (high-pitched), Alien (robotic), Deep, Echo, Radio
   - Uses Web Audio API for real-time audio processing
