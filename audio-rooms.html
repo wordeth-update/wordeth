@@ -340,6 +340,10 @@
                         <i class="fas fa-compact-disc"></i>
                         <span class="karaoke-toggle-text">Karaoke: Off</span>
                     </button>
+                    <button class="action-btn" id="screenshare-toggle-btn" title="Enable/disable screen sharing for participants">
+                        <i class="fas fa-desktop"></i>
+                        <span class="screenshare-toggle-text">Share: Off</span>
+                    </button>
                     <button class="action-btn" id="add-users">
                         <i class="fas fa-user-plus"></i>
                         Add Users
@@ -356,6 +360,17 @@
             </div>
 
             <div class="room-main">
+                <!-- Screen Share Display Area -->
+                <div class="screenshare-container hidden" id="screenshare-container">
+                    <div class="screenshare-header">
+                        <span><i class="fas fa-desktop"></i> Screen Share</span>
+                        <button class="screenshare-stop-btn" id="screenshare-stop">
+                            <i class="fas fa-times"></i> Stop Sharing
+                        </button>
+                    </div>
+                    <video id="screenshare-video" autoplay playsinline></video>
+                </div>
+                
                 <div class="audio-section">
                     <div class="speakers-stage" id="speakers-stage">
                         <div class="speaker-avatar main-speaker">
@@ -408,6 +423,9 @@
                 </button>
                 <button class="control-btn" id="karaoke-btn" title="Karaoke mode">
                     <i class="fas fa-compact-disc"></i>
+                </button>
+                <button class="control-btn disabled" id="screenshare-btn" title="Screen share disabled by host">
+                    <i class="fas fa-desktop"></i>
                 </button>
                 <button class="control-btn" id="raise-hand" title="Raise hand to speak">
                     <i class="fas fa-hand-paper"></i>
@@ -598,7 +616,44 @@
                             <p id="karaoke-song-artist">Artist Name</p>
                         </div>
                     </div>
-                    <!-- YouTube Audio Player (hidden visual, audio only) -->
+                    
+                    <!-- Karaoke Video Camera Section -->
+                    <div class="karaoke-video-section">
+                        <div class="karaoke-video-container" id="karaoke-video-container">
+                            <video id="karaoke-video" autoplay playsinline muted></video>
+                            <div class="video-placeholder" id="video-placeholder">
+                                <i class="fas fa-video-slash"></i>
+                                <span>Camera off</span>
+                            </div>
+                        </div>
+                        <div class="karaoke-video-controls">
+                            <button class="video-control-btn" id="karaoke-camera-toggle" title="Toggle camera">
+                                <i class="fas fa-video"></i>
+                            </button>
+                            <div class="video-filter-selector">
+                                <button class="video-filter-btn active" data-filter="none" title="No filter">
+                                    <i class="fas fa-ban"></i>
+                                </button>
+                                <button class="video-filter-btn" data-filter="grayscale" title="B&W">
+                                    <i class="fas fa-adjust"></i>
+                                </button>
+                                <button class="video-filter-btn" data-filter="sepia" title="Vintage">
+                                    <i class="fas fa-film"></i>
+                                </button>
+                                <button class="video-filter-btn" data-filter="saturate" title="Vivid">
+                                    <i class="fas fa-sun"></i>
+                                </button>
+                                <button class="video-filter-btn" data-filter="hue-rotate" title="Psychedelic">
+                                    <i class="fas fa-palette"></i>
+                                </button>
+                                <button class="video-filter-btn" data-filter="blur" title="Soft focus">
+                                    <i class="fas fa-cloud"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- YouTube Audio Player -->
                     <div class="karaoke-audio-container">
                         <div id="youtube-player"></div>
                         <div class="audio-status" id="audio-status">

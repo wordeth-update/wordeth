@@ -30,6 +30,17 @@ class AudioRoomsManager {
         this.currentVideoId = null;
         this.karaokeEnabled = false; // Host/moderator permission for karaoke
         this.isRoomHost = false; // Track if current user created the room
+        
+        // Screen share state
+        this.screenshareEnabled = false;
+        this.screenshareStream = null;
+        this.isScreenSharing = false;
+        
+        // Karaoke video state
+        this.karaokeVideoStream = null;
+        this.karaokeVideoActive = false;
+        this.currentVideoFilter = 'none';
+        
         this.initYouTubePlayer();
         
         this.initializeElements();
@@ -131,6 +142,20 @@ class AudioRoomsManager {
         
         // Karaoke permission toggle (host/moderator only)
         document.getElementById('karaoke-toggle-btn')?.addEventListener('click', () => this.toggleKaraokePermission());
+        
+        // Screen share controls
+        document.getElementById('screenshare-toggle-btn')?.addEventListener('click', () => this.toggleScreensharePermission());
+        document.getElementById('screenshare-btn')?.addEventListener('click', () => this.startScreenShare());
+        document.getElementById('screenshare-stop')?.addEventListener('click', () => this.stopScreenShare());
+        
+        // Karaoke video controls
+        document.getElementById('karaoke-camera-toggle')?.addEventListener('click', () => this.toggleKaraokeCamera());
+        document.querySelectorAll('.video-filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const filter = e.currentTarget.dataset.filter;
+                this.setVideoFilter(filter);
+            });
+        });
         
         // Audio filter selection
         document.querySelectorAll('#audio-filters-modal .filter-option').forEach(btn => {
@@ -447,6 +472,11 @@ class AudioRoomsManager {
             modal.classList.remove('active');
         });
         
+        // Clean up karaoke camera when modal closes
+        if (this.karaokeVideoActive) {
+            this.stopKaraokeCamera();
+        }
+        
         // Reset forms and clear inputs
         this.createRoomForm?.reset();
         this.topicEditForm?.reset();
@@ -761,9 +791,11 @@ class AudioRoomsManager {
             // Set host status
             this.isRoomHost = isHost;
             
-            // Reset karaoke state for new room
+            // Reset karaoke and screen share state for new room
             this.karaokeEnabled = isHost ? false : (roomData?.karaokeEnabled || false);
+            this.screenshareEnabled = isHost ? false : (roomData?.screenshareEnabled || false);
             this.updateKaraokeButtonState();
+            this.updateScreenshareButtonState();
             this.updateHostControls();
             
             if (this.isSpeaker) {
@@ -1192,6 +1224,23 @@ class AudioRoomsManager {
         }
     }
     
+    stopKaraokeCamera() {
+        // Clean up camera when modal closes or room changes
+        if (this.karaokeVideoStream) {
+            this.karaokeVideoStream.getTracks().forEach(track => track.stop());
+            this.karaokeVideoStream = null;
+        }
+        
+        const videoEl = document.getElementById('karaoke-video');
+        const placeholder = document.getElementById('video-placeholder');
+        const cameraBtn = document.getElementById('karaoke-camera-toggle');
+        
+        if (videoEl) videoEl.srcObject = null;
+        placeholder?.classList.remove('hidden');
+        cameraBtn?.classList.remove('active');
+        this.karaokeVideoActive = false;
+    }
+    
     toggleKaraokePermission() {
         // Only room host/creator can toggle karaoke permission
         if (!this.isRoomHost) {
@@ -1240,6 +1289,7 @@ class AudioRoomsManager {
         // Show/hide host-only controls based on isRoomHost status
         const hostOnlyControls = [
             document.getElementById('karaoke-toggle-btn'),
+            document.getElementById('screenshare-toggle-btn'),
             document.getElementById('lock-room-btn'),
             document.getElementById('edit-topic')
         ];
@@ -1253,6 +1303,184 @@ class AudioRoomsManager {
                     control.style.display = 'none';
                 }
             }
+        });
+    }
+    
+    // ==========================================
+    // SCREEN SHARE FEATURE
+    // ==========================================
+    
+    toggleScreensharePermission() {
+        if (!this.isRoomHost) {
+            this.addChatMessage('System', 'Only the room host can enable/disable screen sharing.', true);
+            return;
+        }
+        
+        this.screenshareEnabled = !this.screenshareEnabled;
+        
+        const btn = document.getElementById('screenshare-toggle-btn');
+        const text = btn?.querySelector('.screenshare-toggle-text');
+        
+        if (this.screenshareEnabled) {
+            btn?.classList.add('active');
+            if (text) text.textContent = 'Share: On';
+            this.addChatMessage('System', 'Screen sharing enabled! Participants can now share their screen.', true);
+        } else {
+            btn?.classList.remove('active');
+            if (text) text.textContent = 'Share: Off';
+            this.addChatMessage('System', 'Screen sharing disabled.', true);
+            // Stop any active screen share
+            if (this.isScreenSharing) {
+                this.stopScreenShare();
+            }
+        }
+        
+        this.notifyParticipants('screenshare-permission', { enabled: this.screenshareEnabled });
+        this.updateScreenshareButtonState();
+    }
+    
+    updateScreenshareButtonState() {
+        const screenshareBtn = document.getElementById('screenshare-btn');
+        if (screenshareBtn) {
+            if (this.screenshareEnabled) {
+                screenshareBtn.classList.remove('disabled');
+                screenshareBtn.title = 'Share your screen';
+            } else {
+                screenshareBtn.classList.add('disabled');
+                screenshareBtn.title = 'Screen sharing disabled by host';
+            }
+        }
+    }
+    
+    async startScreenShare() {
+        if (!this.screenshareEnabled) {
+            this.addChatMessage('System', 'Screen sharing is disabled. Ask the host to enable it.', true);
+            return;
+        }
+        
+        if (this.isScreenSharing) {
+            this.stopScreenShare();
+            return;
+        }
+        
+        try {
+            this.screenshareStream = await navigator.mediaDevices.getDisplayMedia({
+                video: { cursor: 'always' },
+                audio: false
+            });
+            
+            const screenshareVideo = document.getElementById('screenshare-video');
+            const screenshareContainer = document.getElementById('screenshare-container');
+            const screenshareBtn = document.getElementById('screenshare-btn');
+            
+            if (screenshareVideo && this.screenshareStream) {
+                screenshareVideo.srcObject = this.screenshareStream;
+                screenshareContainer?.classList.remove('hidden');
+                screenshareBtn?.classList.add('sharing');
+                this.isScreenSharing = true;
+                
+                this.addChatMessage('System', 'You started sharing your screen.', true);
+                this.notifyParticipants('screenshare-start', { userId: 'currentUser' });
+                
+                // Handle when user stops sharing via browser UI
+                this.screenshareStream.getVideoTracks()[0].onended = () => {
+                    this.stopScreenShare();
+                };
+            }
+        } catch (error) {
+            console.error('Screen share error:', error);
+            if (error.name !== 'NotAllowedError') {
+                this.addChatMessage('System', 'Failed to start screen sharing.', true);
+            }
+        }
+    }
+    
+    stopScreenShare() {
+        if (this.screenshareStream) {
+            this.screenshareStream.getTracks().forEach(track => track.stop());
+            this.screenshareStream = null;
+        }
+        
+        const screenshareVideo = document.getElementById('screenshare-video');
+        const screenshareContainer = document.getElementById('screenshare-container');
+        const screenshareBtn = document.getElementById('screenshare-btn');
+        
+        if (screenshareVideo) {
+            screenshareVideo.srcObject = null;
+        }
+        screenshareContainer?.classList.add('hidden');
+        screenshareBtn?.classList.remove('sharing');
+        this.isScreenSharing = false;
+        
+        this.addChatMessage('System', 'Screen sharing stopped.', true);
+        this.notifyParticipants('screenshare-stop', { userId: 'currentUser' });
+    }
+    
+    // ==========================================
+    // KARAOKE VIDEO FEATURE
+    // ==========================================
+    
+    async toggleKaraokeCamera() {
+        // Check if karaoke is enabled
+        if (!this.karaokeEnabled) {
+            this.addChatMessage('System', 'Karaoke must be enabled by the host to use the camera.', true);
+            return;
+        }
+        
+        const cameraBtn = document.getElementById('karaoke-camera-toggle');
+        const videoEl = document.getElementById('karaoke-video');
+        const placeholder = document.getElementById('video-placeholder');
+        
+        if (this.karaokeVideoActive) {
+            // Stop camera
+            if (this.karaokeVideoStream) {
+                this.karaokeVideoStream.getTracks().forEach(track => track.stop());
+                this.karaokeVideoStream = null;
+            }
+            if (videoEl) videoEl.srcObject = null;
+            placeholder?.classList.remove('hidden');
+            cameraBtn?.classList.remove('active');
+            this.karaokeVideoActive = false;
+        } else {
+            // Start camera
+            try {
+                this.karaokeVideoStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: 320, height: 240 },
+                    audio: false
+                });
+                
+                if (videoEl && this.karaokeVideoStream) {
+                    videoEl.srcObject = this.karaokeVideoStream;
+                    placeholder?.classList.add('hidden');
+                    cameraBtn?.classList.add('active');
+                    this.karaokeVideoActive = true;
+                    
+                    // Apply current filter
+                    this.setVideoFilter(this.currentVideoFilter);
+                }
+            } catch (error) {
+                console.error('Camera error:', error);
+                this.addChatMessage('System', 'Could not access camera. Please check permissions.', true);
+            }
+        }
+    }
+    
+    setVideoFilter(filter) {
+        const videoEl = document.getElementById('karaoke-video');
+        
+        // Remove all filter classes
+        const filters = ['none', 'grayscale', 'sepia', 'saturate', 'hue-rotate', 'blur'];
+        filters.forEach(f => {
+            videoEl?.classList.remove(`filter-${f}`);
+        });
+        
+        // Add new filter class
+        videoEl?.classList.add(`filter-${filter}`);
+        this.currentVideoFilter = filter;
+        
+        // Update button states
+        document.querySelectorAll('.video-filter-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.filter === filter);
         });
     }
     

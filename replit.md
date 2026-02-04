@@ -46,6 +46,17 @@ The application is fully functional and ready for use. It runs on Node.js with E
   - Uses Web Audio API for real-time audio processing
   - Filters are routed to WebRTC stream for other participants to hear
   - Visual indicator on control button when filter is active
+- **Screen Share**: Participants can share their screen with the room
+  - Host permission control - only host can enable screen sharing
+  - Full-width display area with stop button
+  - Automatic cleanup when sharing is stopped
+  - WebRTC integration for sharing with participants
+- **Karaoke Video**: Video camera with filters for karaoke performances
+  - Toggle camera on/off during karaoke sessions
+  - 6 video filters: None, B&W, Vintage, Vivid, Psychedelic, Soft focus
+  - Mirror effect for natural selfie view
+  - Animated hue-rotate effect for psychedelic filter
+  - Visual indicator on control button when filter is active
 
 ## Project Architecture
 

@@ -2332,4 +2332,199 @@
     .lyrics-line.active {
         font-size: 1.2rem;
     }
+}
+
+/* ==========================================
+   SCREEN SHARE FEATURE
+   ========================================== */
+
+.screenshare-container {
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 16px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    border: 2px solid var(--purple-accent);
+}
+
+.screenshare-container.hidden {
+    display: none;
+}
+
+.screenshare-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, var(--purple-dark), var(--purple-accent));
+    color: var(--white);
+    font-weight: 600;
+}
+
+.screenshare-header i {
+    margin-right: 0.5rem;
+}
+
+.screenshare-stop-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: var(--white);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.85rem;
+}
+
+.screenshare-stop-btn:hover {
+    background: #dc3545;
+}
+
+#screenshare-video {
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+    background: #000;
+}
+
+.control-btn.sharing {
+    background: var(--purple-accent);
+    animation: pulse 1.5s infinite;
+}
+
+/* ==========================================
+   KARAOKE VIDEO FEATURE
+   ========================================== */
+
+.karaoke-video-section {
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.karaoke-video-container {
+    position: relative;
+    width: 200px;
+    height: 150px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+#karaoke-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1); /* Mirror effect */
+}
+
+.video-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.5);
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.video-placeholder.hidden {
+    display: none;
+}
+
+.video-placeholder i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.karaoke-video-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.video-control-btn {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--white);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1.1rem;
+}
+
+.video-control-btn:hover {
+    background: var(--mint);
+    color: var(--black);
+}
+
+.video-control-btn.active {
+    background: var(--mint);
+    color: var(--black);
+}
+
+.video-filter-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    max-width: 100px;
+}
+
+.video-filter-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--white);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.75rem;
+}
+
+.video-filter-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.video-filter-btn.active {
+    background: var(--purple-accent);
+    color: var(--white);
+}
+
+/* Video filter effects */
+#karaoke-video.filter-none {
+    filter: none;
+}
+
+#karaoke-video.filter-grayscale {
+    filter: grayscale(100%);
+}
+
+#karaoke-video.filter-sepia {
+    filter: sepia(80%);
+}
+
+#karaoke-video.filter-saturate {
+    filter: saturate(200%) contrast(1.1);
+}
+
+#karaoke-video.filter-hue-rotate {
+    filter: hue-rotate(90deg) saturate(150%);
+    animation: hue-shift 3s linear infinite;
+}
+
+#karaoke-video.filter-blur {
+    filter: blur(2px) brightness(1.1);
+}
+
+@keyframes hue-shift {
+    0% { filter: hue-rotate(0deg) saturate(150%); }
+    100% { filter: hue-rotate(360deg) saturate(150%); }
 } 
