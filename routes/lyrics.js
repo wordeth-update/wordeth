@@ -74,105 +74,72 @@ router.get('/song/:id', async (req, res) => {
     }
 });
 
-// Get lyrics content for a song
+// Get lyrics content for a song using multiple APIs
 router.get('/lyrics/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // First get the song URL from Genius API
+        // First get song details from Genius API for artist/title info
         const songResponse = await axios.get(`${GENIUS_BASE_URL}/songs/${id}`, {
             headers: {
                 'Authorization': `Bearer ${GENIUS_ACCESS_TOKEN}`
             }
         });
 
-        const songUrl = songResponse.data.response.song.url;
+        const song = songResponse.data.response.song;
+        const artist = song.primary_artist.name;
+        const title = song.title;
 
-        // Fetch the song page HTML
-        const pageResponse = await axios.get(songUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-        });
-
-        const html = pageResponse.data;
-
-        // Extract lyrics using more sophisticated patterns
         let lyrics = '';
-        
-        // Try multiple approaches to extract lyrics
-        const extractionMethods = [
-            // Method 1: Look for lyrics in specific containers
-            () => {
-                const patterns = [
-                    /<div[^>]*class="[^"]*Lyrics__Container[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-                    /<div[^>]*class="[^"]*lyrics[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-                    /<div[^>]*class="[^"]*Lyrics__Root[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-                    /<div[^>]*class="[^"]*SongPageGriddesktop__LyricsWrapper[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-                    /<div[^>]*class="[^"]*SongPageGriddesktop__Lyrics[^"]*"[^>]*>([\s\S]*?)<\/div>/gi
-                ];
-                
-                for (const pattern of patterns) {
-                    const matches = html.match(pattern);
-                    if (matches && matches.length > 0) {
-                        return matches.reduce((longest, current) => 
-                            current.length > longest.length ? current : longest
-                        );
-                    }
+        let syncedLyrics = null;
+        let source = 'none';
+
+        // Try LRCLIB first (provides synced lyrics for karaoke)
+        try {
+            const lrclibResponse = await axios.get('https://lrclib.net/api/get', {
+                params: {
+                    artist_name: artist,
+                    track_name: title
+                },
+                headers: {
+                    'User-Agent': 'Wordeth/1.0 (https://wordeth.replit.app)'
+                },
+                timeout: 5000
+            });
+
+            if (lrclibResponse.data) {
+                // Prefer synced lyrics if available
+                if (lrclibResponse.data.syncedLyrics) {
+                    syncedLyrics = lrclibResponse.data.syncedLyrics;
+                    // Also extract plain text from synced lyrics
+                    lyrics = lrclibResponse.data.syncedLyrics
+                        .split('\n')
+                        .map(line => line.replace(/^\[\d{2}:\d{2}\.\d{2,3}\]\s*/, ''))
+                        .join('\n');
+                    source = 'lrclib-synced';
+                } else if (lrclibResponse.data.plainLyrics) {
+                    lyrics = lrclibResponse.data.plainLyrics;
+                    source = 'lrclib';
                 }
-                return null;
-            },
-            
-            // Method 2: Look for lyrics in data attributes
-            () => {
-                const dataMatch = html.match(/data-lyrics-container="([^"]*)"[^>]*>([\s\S]*?)<\/div>/gi);
-                if (dataMatch) {
-                    return dataMatch.join('\n');
-                }
-                return null;
-            },
-            
-            // Method 3: Look for lyrics in specific sections
-            () => {
-                const sectionMatch = html.match(/<section[^>]*class="[^"]*lyrics[^"]*"[^>]*>([\s\S]*?)<\/section>/gi);
-                if (sectionMatch) {
-                    return sectionMatch.join('\n');
-                }
-                return null;
-            },
-            
-            // Method 4: Look for lyrics in article tags
-            () => {
-                const articleMatch = html.match(/<article[^>]*class="[^"]*lyrics[^"]*"[^>]*>([\s\S]*?)<\/article>/gi);
-                if (articleMatch) {
-                    return articleMatch.join('\n');
-                }
-                return null;
-            },
-            
-            // Method 5: Look for lyrics in main content areas
-            () => {
-                const mainMatch = html.match(/<main[^>]*>([\s\S]*?)<\/main>/gi);
-                if (mainMatch) {
-                    // Extract text content from main
-                    const mainContent = mainMatch.join('\n');
-                    // Look for text that looks like lyrics (multiple lines with line breaks)
-                    const lyricsPattern = /([A-Z][a-z\s]+(?:\n[A-Z][a-z\s]+){3,})/g;
-                    const lyricsMatches = mainContent.match(lyricsPattern);
-                    if (lyricsMatches) {
-                        return lyricsMatches.join('\n\n');
-                    }
-                }
-                return null;
             }
-        ];
-        
-        // Try each extraction method
-        for (const method of extractionMethods) {
-            const result = method();
-            if (result && result.length > 100) { // Ensure we got substantial content
-                lyrics = result;
-                break;
+        } catch (lrclibError) {
+            console.log('LRCLIB lookup failed, trying Lyrics.ovh:', lrclibError.message);
+        }
+
+        // Fallback to Lyrics.ovh if LRCLIB didn't work
+        if (!lyrics || lyrics.length < 50) {
+            try {
+                const lyricsOvhResponse = await axios.get(
+                    `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`,
+                    { timeout: 5000 }
+                );
+
+                if (lyricsOvhResponse.data && lyricsOvhResponse.data.lyrics) {
+                    lyrics = lyricsOvhResponse.data.lyrics;
+                    source = 'lyrics.ovh';
+                }
+            } catch (ovhError) {
+                console.log('Lyrics.ovh lookup failed:', ovhError.message);
             }
         }
         
@@ -211,50 +178,22 @@ router.get('/lyrics/:id', async (req, res) => {
                           .replace(/\n{3,}/g, '\n\n'); // max 2 consecutive line breaks
         }
         
-        // If we still don't have lyrics, try a fallback approach
-        if (!lyrics || lyrics.length < 50) {
-            // Look for any text that might be lyrics (multiple lines with proper formatting)
-            const textBlocks = html.match(/>([A-Z][^<]{20,})</g);
-            if (textBlocks) {
-                const potentialLyrics = textBlocks
-                    .map(block => block.replace(/^>|<$/g, '').trim())
-                    .filter(block => block.length > 20 && !block.includes('script') && !block.includes('style'))
-                    .slice(0, 10) // Take first 10 potential blocks
-                    .join('\n\n');
-                
-                if (potentialLyrics.length > 100) {
-                    lyrics = potentialLyrics;
-                }
-            }
-        }
-        
         // Final fallback if no lyrics found
         if (!lyrics || lyrics.length < 50) {
-            lyrics = `🎵 "${songResponse.data.response.song.title}" by ${songResponse.data.response.song.primary_artist.name}
-
-📖 We're working on displaying lyrics directly on our site!
-🔗 For now, click "View on Genius" below to see the complete lyrics with annotations and translations.
-
-💡 Genius provides:
-• Complete lyrics with proper formatting
-• Community annotations and explanations
-• Multiple translations available
-• Background information and context
-• Verified and accurate content
-
-🎶 We're continuously improving our lyrics display feature!`;
+            source = 'unavailable';
+            lyrics = `Lyrics not available for "${title}" by ${artist}.\n\nVisit Genius for the full lyrics.`;
         }
-
-        const song = songResponse.data.response.song;
         
         res.json({
             id: song.id,
-            title: song.title,
-            artist: song.primary_artist.name,
+            title: title,
+            artist: artist,
             image: song.song_art_image_url,
             url: song.url,
             release_date: song.release_date_for_display,
             lyrics: lyrics,
+            syncedLyrics: syncedLyrics,
+            source: source,
             album: song.album?.name || null,
             album_image: song.album?.cover_art_url || song.song_art_image_url,
             featured_artists: song.featured_artists?.map(artist => artist.name) || [],

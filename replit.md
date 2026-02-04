@@ -34,6 +34,7 @@ The application is fully functional and ready for use. It runs on Node.js with E
   - System chat messages notify participants of lock state changes
 - **Karaoke Mode**: Members can perform mini karaoke sessions with scrolling lyrics
   - Search for songs using Genius API integration
+  - Dual lyrics API: LRCLIB (synced) + Lyrics.ovh (fallback)
   - Scrolling lyrics display with active line highlighting
   - Play/pause/restart controls with progress bar
   - XSS-safe DOM-based rendering (no innerHTML for user data)
