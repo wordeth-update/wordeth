@@ -1201,8 +1201,9 @@ class AudioRoomsManager {
             item.dataset.songId = song.id;
             
             const img = document.createElement('img');
-            img.src = song.image || 'https://via.placeholder.com/50';
+            img.src = song.image || 'https://via.placeholder.com/50?text=Song';
             img.alt = this.sanitizeText(song.title);
+            img.onerror = () => { img.src = 'https://via.placeholder.com/50?text=Song'; };
             
             const info = document.createElement('div');
             info.className = 'karaoke-result-info';
@@ -1256,23 +1257,64 @@ class AudioRoomsManager {
         document.getElementById('karaoke-song-title').textContent = title;
         document.getElementById('karaoke-song-artist').textContent = artist;
         const albumArt = document.getElementById('karaoke-album-art');
-        if (albumArt) albumArt.src = image || 'https://via.placeholder.com/70';
+        if (albumArt) {
+            albumArt.src = image || 'https://via.placeholder.com/70';
+            albumArt.onerror = () => { albumArt.src = 'https://via.placeholder.com/70?text=Album'; };
+        }
         
         // Load lyrics
         try {
             const response = await fetch(`/api/lyrics/lyrics/${songId}`);
             const data = await response.json();
             
-            if (data.lyrics) {
+            if (data.lyrics && data.lyrics.length > 50) {
                 this.parseLyricsForKaraoke(data.lyrics);
                 this.addChatMessage('System', `Starting karaoke: "${title}" by ${artist}`, true);
             } else {
-                document.getElementById('lyrics-scroll').innerHTML = '<p class="lyrics-line">Lyrics not available for this song</p>';
+                // Use demo lyrics when real lyrics can't be fetched
+                this.useDemoLyrics(title, artist);
             }
         } catch (error) {
             console.error('Error loading lyrics:', error);
-            document.getElementById('lyrics-scroll').innerHTML = '<p class="lyrics-line">Could not load lyrics</p>';
+            // Use demo lyrics as fallback
+            this.useDemoLyrics(title, artist);
         }
+    }
+    
+    useDemoLyrics(title, artist) {
+        // Generate demo placeholder lyrics for karaoke practice
+        const demoLines = [
+            `[Intro]`,
+            ``,
+            `[Verse 1]`,
+            `This is a demo karaoke session`,
+            `For "${title}" by ${artist}`,
+            `The actual lyrics couldn't be loaded`,
+            `But you can still practice your performance!`,
+            ``,
+            `[Chorus]`,
+            `Sing along to your favorite song`,
+            `Let your voice be heard tonight`,
+            `Music brings us all together`,
+            `Everything will be alright`,
+            ``,
+            `[Verse 2]`,
+            `Keep on singing, don't stop now`,
+            `The rhythm flows through your veins`,
+            `Every note tells a story`,
+            `Every melody remains`,
+            ``,
+            `[Bridge]`,
+            `Take a breath and feel the beat`,
+            `Let the music set you free`,
+            ``,
+            `[Outro]`,
+            `Thank you for singing with us!`,
+            `Great performance!`
+        ];
+        
+        this.parseLyricsForKaraoke(demoLines.join('\n'));
+        this.addChatMessage('System', `Starting demo karaoke mode for "${title}"`, true);
     }
     
     parseLyricsForKaraoke(lyricsText) {
