@@ -3,7 +3,7 @@
 ## Overview
 Wordeth is a social music experience platform that allows users to:
 - Search and view song lyrics (powered by Genius API)
-- Join live audio discussions about music (Twitter Spaces / Clubhouse style)
+- Join live audio discussions called "Verses" (Twitter Spaces / Clubhouse style)
 - Customize and order merchandise
 - Read and discuss music articles
 - Connect with other music enthusiasts
@@ -12,9 +12,9 @@ Wordeth is a social music experience platform that allows users to:
 The application is fully functional and ready for use. It runs on Node.js with Express.js backend.
 
 ## Recent Changes (February 2026)
-- **MAJOR PIVOT**: Converted from video rooms to audio rooms (Twitter Spaces / Clubhouse style)
-- Renamed video-rooms.html to audio-rooms.html with new audio-focused UI
-- Updated all navigation across the site to reference Audio Rooms
+- **REBRANDING**: "Audio Rooms" renamed to "Verses" - con-verse, uni-verse, verse (lyrics)
+- Renamed audio-rooms.html to verses.html with verse-themed UI
+- Updated all navigation across the site to reference Verses
 - Added speaker stage with animated speaking indicators
 - Added listeners section with hand-raise functionality
 - Configured server to bind to port 5000 for Replit compatibility
@@ -73,14 +73,15 @@ The application is fully functional and ready for use. It runs on Node.js with E
 ### Frontend (Static HTML/CSS/JS)
 - `index.html` - Main landing page
 - `lyrics.html` - Lyrics search interface
-- `audio-rooms.html` - Live audio discussion rooms (Twitter Spaces style)
+- `verses.html` - Live audio discussion rooms called "Verses" (Twitter Spaces style)
 - `merch.html` - Merchandise customizer
 - `articles.html` - Music articles
 - `signin.html` - Authentication page
+- `signup.html` - User registration page
 
 ### Assets
-- `css/` - Stylesheets (audio-rooms.css, enhanced.css, styles.css)
-- `js/` - Frontend JavaScript (audio-rooms.js)
+- `css/` - Stylesheets (verses.css, enhanced.css, styles.css)
+- `js/` - Frontend JavaScript (verses.js)
 - `images/` - Logo and static images
 - `assets/products/` - Product SVG images
 
