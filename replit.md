@@ -27,6 +27,22 @@ The application is fully functional and ready for use. It runs on Node.js with E
 - **Navigation Consistency**: Updated all desktop and mobile menus to use unified structure (Audio Rooms, Lyrics, Merch) with Sign In button
 - **Enhanced CSS**: Added css/enhanced.css with modern typography (Inter/Poppins), smooth transitions, refined border-radius
 
+### NEW FEATURES (February 2026)
+- **Door Lock Feature**: Room hosts can lock/unlock rooms to prevent new participants from joining
+  - Lock button in room header with visual state indicator
+  - Enforcement check when joining rooms - locked rooms reject new joins
+  - System chat messages notify participants of lock state changes
+- **Karaoke Mode**: Members can perform mini karaoke sessions with scrolling lyrics
+  - Search for songs using Genius API integration
+  - Scrolling lyrics display with active line highlighting
+  - Play/pause/restart controls with progress bar
+  - XSS-safe DOM-based rendering (no innerHTML for user data)
+- **Audio Filters (Voice Effects)**: Fun voice transformation effects
+  - Normal, Helium (high-pitched), Alien (robotic), Deep, Echo, Radio
+  - Uses Web Audio API for real-time audio processing
+  - Filters are routed to WebRTC stream for other participants to hear
+  - Visual indicator on control button when filter is active
+
 ## Project Architecture
 
 ### Backend (Node.js/Express)

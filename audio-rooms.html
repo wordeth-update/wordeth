@@ -332,6 +332,10 @@
                     </div>
                 </div>
                 <div class="room-actions">
+                    <button class="action-btn" id="lock-room-btn" title="Lock room to prevent new joins">
+                        <i class="fas fa-unlock"></i>
+                        <span class="lock-text">Unlocked</span>
+                    </button>
                     <button class="action-btn" id="add-users">
                         <i class="fas fa-user-plus"></i>
                         Add Users
@@ -394,6 +398,12 @@
             <div class="room-controls">
                 <button class="control-btn" id="toggle-audio">
                     <i class="fas fa-microphone"></i>
+                </button>
+                <button class="control-btn" id="audio-filter-btn" title="Voice effects">
+                    <i class="fas fa-magic"></i>
+                </button>
+                <button class="control-btn" id="karaoke-btn" title="Karaoke mode">
+                    <i class="fas fa-compact-disc"></i>
                 </button>
                 <button class="control-btn" id="raise-hand" title="Raise hand to speak">
                     <i class="fas fa-hand-paper"></i>
@@ -507,6 +517,105 @@
                         <button type="submit" class="create-btn">Update Topic</button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- Audio Filters Modal -->
+        <div class="modal" id="audio-filters-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-magic"></i> Voice Effects</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <p class="modal-subtitle">Transform your voice with fun audio effects!</p>
+                <div class="audio-filters-grid">
+                    <button class="filter-option active" data-filter="normal">
+                        <div class="filter-icon"><i class="fas fa-user"></i></div>
+                        <span class="filter-name">Normal</span>
+                        <span class="filter-desc">Your natural voice</span>
+                    </button>
+                    <button class="filter-option" data-filter="helium">
+                        <div class="filter-icon"><i class="fas fa-wind"></i></div>
+                        <span class="filter-name">Helium</span>
+                        <span class="filter-desc">High-pitched & squeaky</span>
+                    </button>
+                    <button class="filter-option" data-filter="alien">
+                        <div class="filter-icon"><i class="fas fa-robot"></i></div>
+                        <span class="filter-name">Alien</span>
+                        <span class="filter-desc">Robotic & otherworldly</span>
+                    </button>
+                    <button class="filter-option" data-filter="deep">
+                        <div class="filter-icon"><i class="fas fa-mountain"></i></div>
+                        <span class="filter-name">Deep</span>
+                        <span class="filter-desc">Low & powerful</span>
+                    </button>
+                    <button class="filter-option" data-filter="echo">
+                        <div class="filter-icon"><i class="fas fa-wave-square"></i></div>
+                        <span class="filter-name">Echo</span>
+                        <span class="filter-desc">Reverberating sound</span>
+                    </button>
+                    <button class="filter-option" data-filter="radio">
+                        <div class="filter-icon"><i class="fas fa-broadcast-tower"></i></div>
+                        <span class="filter-name">Radio</span>
+                        <span class="filter-desc">Old-school broadcast</span>
+                    </button>
+                </div>
+                <div class="current-filter-display">
+                    <span>Active Effect:</span>
+                    <span id="current-filter-name" class="filter-badge">Normal</span>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn close-modal">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Karaoke Modal -->
+        <div class="modal karaoke-modal" id="karaoke-modal">
+            <div class="modal-content karaoke-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-compact-disc spinning"></i> Karaoke Mode</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="karaoke-search">
+                    <input type="text" id="karaoke-search-input" placeholder="Search for a song...">
+                    <button id="karaoke-search-btn">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                <div class="karaoke-results" id="karaoke-results">
+                    <p class="karaoke-hint">Search for a song to start your karaoke performance!</p>
+                </div>
+                <div class="karaoke-player hidden" id="karaoke-player">
+                    <div class="karaoke-now-playing">
+                        <img src="" alt="Album art" id="karaoke-album-art">
+                        <div class="karaoke-song-info">
+                            <h4 id="karaoke-song-title">Song Title</h4>
+                            <p id="karaoke-song-artist">Artist Name</p>
+                        </div>
+                    </div>
+                    <div class="karaoke-lyrics-container" id="karaoke-lyrics-container">
+                        <div class="lyrics-scroll" id="lyrics-scroll">
+                            <!-- Lyrics will be loaded here -->
+                        </div>
+                    </div>
+                    <div class="karaoke-controls">
+                        <button class="karaoke-control-btn" id="karaoke-restart">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                        <button class="karaoke-control-btn primary" id="karaoke-play-pause">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button class="karaoke-control-btn" id="karaoke-stop">
+                            <i class="fas fa-stop"></i>
+                        </button>
+                    </div>
+                    <div class="karaoke-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="karaoke-progress-fill"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </main>

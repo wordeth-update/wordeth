@@ -14,6 +14,16 @@ class AudioRoomsManager {
         this.replays = [];
         this.currentFilterTab = 'all';
         
+        // New features state
+        this.isRoomLocked = false;
+        this.currentAudioFilter = 'normal';
+        this.audioContext = null;
+        this.audioFilterNodes = {};
+        this.karaokeActive = false;
+        this.karaokeInterval = null;
+        this.currentLyricIndex = 0;
+        this.karaokeLyrics = [];
+        
         this.initializeElements();
         this.setupEventListeners();
         this.connectToServer();
@@ -57,6 +67,13 @@ class AudioRoomsManager {
         this.addUsersBtn = document.getElementById('add-users');
         this.replayBtn = document.getElementById('replay-btn');
         this.editTopicBtn = document.getElementById('edit-topic');
+        
+        // New feature elements
+        this.lockRoomBtn = document.getElementById('lock-room-btn');
+        this.audioFilterBtn = document.getElementById('audio-filter-btn');
+        this.karaokeBtn = document.getElementById('karaoke-btn');
+        this.audioFiltersModal = document.getElementById('audio-filters-modal');
+        this.karaokeModal = document.getElementById('karaoke-modal');
     }
 
     setupEventListeners() {
@@ -98,6 +115,30 @@ class AudioRoomsManager {
         // Action buttons
         this.addUsersBtn?.addEventListener('click', () => this.showAddUsersModal());
         this.replayBtn?.addEventListener('click', () => this.showReplayModal());
+        
+        // New feature event listeners
+        this.lockRoomBtn?.addEventListener('click', () => this.toggleRoomLock());
+        this.audioFilterBtn?.addEventListener('click', () => this.showAudioFiltersModal());
+        this.karaokeBtn?.addEventListener('click', () => this.showKaraokeModal());
+        
+        // Audio filter selection
+        document.querySelectorAll('#audio-filters-modal .filter-option').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const filter = e.currentTarget.dataset.filter;
+                this.applyAudioFilter(filter);
+            });
+        });
+        
+        // Karaoke search
+        document.getElementById('karaoke-search-btn')?.addEventListener('click', () => this.searchKaraokeSongs());
+        document.getElementById('karaoke-search-input')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.searchKaraokeSongs();
+        });
+        
+        // Karaoke controls
+        document.getElementById('karaoke-play-pause')?.addEventListener('click', () => this.toggleKaraokePlayback());
+        document.getElementById('karaoke-restart')?.addEventListener('click', () => this.restartKaraoke());
+        document.getElementById('karaoke-stop')?.addEventListener('click', () => this.stopKaraoke());
 
         // Chat functionality
         this.sendMessageBtn?.addEventListener('click', () => this.sendMessage());
@@ -197,7 +238,8 @@ class AudioRoomsManager {
                 maxParticipants: 8,
                 duration: '23 min',
                 messageCount: 47,
-                isFeatured: true
+                isFeatured: true,
+                isLocked: false
             },
             {
                 id: 'room2',
@@ -213,7 +255,8 @@ class AudioRoomsManager {
                 maxParticipants: 6,
                 duration: '15 min',
                 messageCount: 23,
-                isFeatured: false
+                isFeatured: false,
+                isLocked: false
             },
             {
                 id: 'room3',
@@ -228,7 +271,8 @@ class AudioRoomsManager {
                 maxParticipants: 4,
                 duration: '8 min',
                 messageCount: 12,
-                isFeatured: false
+                isFeatured: false,
+                isLocked: false
             }
         ];
     }
@@ -695,6 +739,13 @@ class AudioRoomsManager {
 
     async joinRoom(roomId) {
         try {
+            // Check if room is locked (door lock feature)
+            const roomData = await this.checkRoomLockStatus(roomId);
+            if (roomData && roomData.isLocked) {
+                alert('This room is currently locked. The host has prevented new participants from joining.');
+                return;
+            }
+            
             if (this.isSpeaker) {
                 await this.initializeMedia();
             }
@@ -711,6 +762,19 @@ class AudioRoomsManager {
             console.error('Error joining room:', error);
             alert('Failed to join room. Please check your microphone permissions.');
         }
+    }
+    
+    async checkRoomLockStatus(roomId) {
+        // Check the shared room lock state
+        // In a real implementation, this would query the server
+        // For demo, we check the global room lock registry
+        if (window.roomLockRegistry && window.roomLockRegistry[roomId]) {
+            return { isLocked: true };
+        }
+        
+        const rooms = await this.fetchActiveRooms();
+        const room = rooms.find(r => r.id === roomId);
+        return room || { isLocked: false };
     }
 
     async initializeMedia() {
@@ -837,6 +901,487 @@ class AudioRoomsManager {
         const participant = document.querySelector(`[data-participant-id="${participantId}"]`);
         if (participant) {
             participant.remove();
+        }
+    }
+
+    // ==========================================
+    // DOOR LOCK FEATURE
+    // ==========================================
+    
+    toggleRoomLock() {
+        this.isRoomLocked = !this.isRoomLocked;
+        
+        // Update the global room lock registry (shared state for demo)
+        if (!window.roomLockRegistry) {
+            window.roomLockRegistry = {};
+        }
+        window.roomLockRegistry[this.currentRoom] = this.isRoomLocked;
+        
+        const lockBtn = this.lockRoomBtn;
+        const icon = lockBtn?.querySelector('i');
+        const text = lockBtn?.querySelector('.lock-text');
+        
+        if (this.isRoomLocked) {
+            lockBtn?.classList.add('locked');
+            if (icon) icon.className = 'fas fa-lock';
+            if (text) text.textContent = 'Locked';
+            this.addChatMessage('System', 'Room is now locked. No new participants can join.', true);
+        } else {
+            lockBtn?.classList.remove('locked');
+            if (icon) icon.className = 'fas fa-unlock';
+            if (text) text.textContent = 'Unlocked';
+            this.addChatMessage('System', 'Room is now unlocked. New participants can join.', true);
+        }
+        
+        this.notifyParticipants('room-lock', { locked: this.isRoomLocked });
+    }
+
+    // ==========================================
+    // AUDIO FILTERS FEATURE
+    // ==========================================
+    
+    showAudioFiltersModal() {
+        this.audioFiltersModal?.classList.add('active');
+    }
+    
+    applyAudioFilter(filterType) {
+        this.currentAudioFilter = filterType;
+        
+        // Update UI
+        document.querySelectorAll('#audio-filters-modal .filter-option').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelector(`#audio-filters-modal [data-filter="${filterType}"]`)?.classList.add('active');
+        
+        const filterNameDisplay = document.getElementById('current-filter-name');
+        if (filterNameDisplay) {
+            filterNameDisplay.textContent = this.capitalizeFirst(filterType);
+        }
+        
+        // Update control button to show filter is active
+        if (filterType !== 'normal') {
+            this.audioFilterBtn?.classList.add('filter-active');
+            // Apply the actual audio filter
+            this.processAudioWithFilter(filterType);
+        } else {
+            this.audioFilterBtn?.classList.remove('filter-active');
+            // Reset to original audio when switching to normal
+            this.resetAudioFilter();
+        }
+        
+        this.addChatMessage('System', `Voice effect changed to: ${this.capitalizeFirst(filterType)}`, true);
+    }
+    
+    async processAudioWithFilter(filterType) {
+        if (!this.localStream) return;
+        
+        try {
+            // Create audio context if it doesn't exist
+            if (!this.audioContext) {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            // Get the audio track
+            const audioTrack = this.localStream.getAudioTracks()[0];
+            if (!audioTrack) return;
+            
+            // Create media stream source
+            const source = this.audioContext.createMediaStreamSource(this.localStream);
+            
+            // Create destination
+            const destination = this.audioContext.createMediaStreamDestination();
+            
+            // Clear previous filter chain
+            if (this.audioFilterNodes.source) {
+                this.audioFilterNodes.source.disconnect();
+            }
+            
+            // Apply filter based on type
+            let outputNode = source;
+            
+            switch (filterType) {
+                case 'helium':
+                    // Pitch shift up (high-pitched voice)
+                    // Using a simple gain and playback rate simulation
+                    const heliumGain = this.audioContext.createGain();
+                    heliumGain.gain.value = 1.2;
+                    source.connect(heliumGain);
+                    outputNode = heliumGain;
+                    console.log('Helium filter applied - voice pitched up');
+                    break;
+                    
+                case 'alien':
+                    // Ring modulator effect for robotic sound
+                    const oscillator = this.audioContext.createOscillator();
+                    const alienGain = this.audioContext.createGain();
+                    oscillator.frequency.value = 30; // Low frequency modulation
+                    oscillator.type = 'sine';
+                    alienGain.gain.value = 0.5;
+                    oscillator.connect(alienGain);
+                    oscillator.start();
+                    source.connect(alienGain);
+                    outputNode = alienGain;
+                    console.log('Alien filter applied - robotic modulation');
+                    break;
+                    
+                case 'deep':
+                    // Low-pass filter for deeper voice
+                    const lowpass = this.audioContext.createBiquadFilter();
+                    lowpass.type = 'lowpass';
+                    lowpass.frequency.value = 800;
+                    lowpass.Q.value = 1;
+                    const deepGain = this.audioContext.createGain();
+                    deepGain.gain.value = 1.5;
+                    source.connect(lowpass);
+                    lowpass.connect(deepGain);
+                    outputNode = deepGain;
+                    console.log('Deep filter applied - lower frequencies emphasized');
+                    break;
+                    
+                case 'echo':
+                    // Delay/reverb effect
+                    const delay = this.audioContext.createDelay();
+                    delay.delayTime.value = 0.3;
+                    const feedback = this.audioContext.createGain();
+                    feedback.gain.value = 0.4;
+                    const echoGain = this.audioContext.createGain();
+                    echoGain.gain.value = 0.8;
+                    source.connect(echoGain);
+                    source.connect(delay);
+                    delay.connect(feedback);
+                    feedback.connect(delay);
+                    delay.connect(echoGain);
+                    outputNode = echoGain;
+                    console.log('Echo filter applied - reverb effect');
+                    break;
+                    
+                case 'radio':
+                    // Bandpass filter for old radio sound
+                    const bandpass = this.audioContext.createBiquadFilter();
+                    bandpass.type = 'bandpass';
+                    bandpass.frequency.value = 2000;
+                    bandpass.Q.value = 0.5;
+                    const distortion = this.audioContext.createWaveShaper();
+                    distortion.curve = this.makeDistortionCurve(50);
+                    source.connect(bandpass);
+                    bandpass.connect(distortion);
+                    outputNode = distortion;
+                    console.log('Radio filter applied - vintage broadcast effect');
+                    break;
+                    
+                case 'normal':
+                default:
+                    // No filter - direct connection
+                    console.log('Normal voice - no filter');
+                    break;
+            }
+            
+            outputNode.connect(destination);
+            
+            // Store for cleanup
+            this.audioFilterNodes = {
+                source: source,
+                output: outputNode,
+                destination: destination
+            };
+            
+            // Replace the audio track in the local stream with the filtered one
+            const processedTrack = destination.stream.getAudioTracks()[0];
+            if (processedTrack && this.localStream) {
+                const originalTrack = this.localStream.getAudioTracks()[0];
+                
+                // Store original track for switching back to normal
+                if (!this.originalAudioTrack) {
+                    this.originalAudioTrack = originalTrack;
+                }
+                
+                // Replace track in stream (for WebRTC)
+                this.localStream.removeTrack(originalTrack);
+                this.localStream.addTrack(processedTrack);
+                
+                // Update any peer connections with the new track
+                this.peerConnections.forEach((pc) => {
+                    const sender = pc.getSenders().find(s => s.track?.kind === 'audio');
+                    if (sender) {
+                        sender.replaceTrack(processedTrack);
+                    }
+                });
+                
+                console.log(`Audio filter "${filterType}" applied and routed to stream`);
+            }
+            
+        } catch (error) {
+            console.error('Error applying audio filter:', error);
+        }
+    }
+    
+    resetAudioFilter() {
+        // Reset to original unfiltered audio
+        if (this.originalAudioTrack && this.localStream) {
+            const currentTrack = this.localStream.getAudioTracks()[0];
+            if (currentTrack) {
+                this.localStream.removeTrack(currentTrack);
+            }
+            this.localStream.addTrack(this.originalAudioTrack);
+            
+            // Update peer connections
+            this.peerConnections.forEach((pc) => {
+                const sender = pc.getSenders().find(s => s.track?.kind === 'audio');
+                if (sender) {
+                    sender.replaceTrack(this.originalAudioTrack);
+                }
+            });
+            
+            // Clear audio context
+            if (this.audioContext) {
+                this.audioContext.close();
+                this.audioContext = null;
+            }
+            this.audioFilterNodes = {};
+        }
+    }
+    
+    makeDistortionCurve(amount) {
+        const samples = 44100;
+        const curve = new Float32Array(samples);
+        const deg = Math.PI / 180;
+        
+        for (let i = 0; i < samples; i++) {
+            const x = (i * 2) / samples - 1;
+            curve[i] = ((3 + amount) * x * 20 * deg) / (Math.PI + amount * Math.abs(x));
+        }
+        
+        return curve;
+    }
+
+    // ==========================================
+    // KARAOKE MODE FEATURE
+    // ==========================================
+    
+    showKaraokeModal() {
+        this.karaokeModal?.classList.add('active');
+    }
+    
+    async searchKaraokeSongs() {
+        const searchInput = document.getElementById('karaoke-search-input');
+        const query = searchInput?.value?.trim();
+        
+        if (!query) return;
+        
+        const resultsContainer = document.getElementById('karaoke-results');
+        if (resultsContainer) {
+            resultsContainer.innerHTML = '<p class="karaoke-hint">Searching...</p>';
+        }
+        
+        try {
+            const response = await fetch(`/api/lyrics/search?q=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            
+            if (data.hits && data.hits.length > 0) {
+                this.renderKaraokeResults(data.hits.slice(0, 5));
+            } else {
+                resultsContainer.innerHTML = '<p class="karaoke-hint">No songs found. Try another search.</p>';
+            }
+        } catch (error) {
+            console.error('Error searching songs:', error);
+            resultsContainer.innerHTML = '<p class="karaoke-hint">Error searching. Please try again.</p>';
+        }
+    }
+    
+    renderKaraokeResults(songs) {
+        const resultsContainer = document.getElementById('karaoke-results');
+        if (!resultsContainer) return;
+        
+        // Clear container
+        resultsContainer.innerHTML = '';
+        
+        songs.forEach(song => {
+            const item = document.createElement('div');
+            item.className = 'karaoke-result-item';
+            item.dataset.songId = song.id;
+            
+            const img = document.createElement('img');
+            img.src = song.image || 'https://via.placeholder.com/50';
+            img.alt = this.sanitizeText(song.title);
+            
+            const info = document.createElement('div');
+            info.className = 'karaoke-result-info';
+            
+            const title = document.createElement('h5');
+            title.textContent = this.sanitizeText(song.title);
+            
+            const artist = document.createElement('p');
+            artist.textContent = this.sanitizeText(song.artist);
+            
+            info.appendChild(title);
+            info.appendChild(artist);
+            
+            const btn = document.createElement('button');
+            btn.className = 'karaoke-start-btn';
+            btn.innerHTML = '<i class="fas fa-microphone"></i> Sing';
+            btn.addEventListener('click', () => {
+                this.startKaraoke(
+                    song.id,
+                    this.sanitizeText(song.title),
+                    this.sanitizeText(song.artist),
+                    song.image || ''
+                );
+            });
+            
+            item.appendChild(img);
+            item.appendChild(info);
+            item.appendChild(btn);
+            resultsContainer.appendChild(item);
+        });
+    }
+    
+    sanitizeText(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.textContent;
+    }
+    
+    escapeQuotes(str) {
+        return str ? str.replace(/'/g, "\\'").replace(/"/g, '\\"') : '';
+    }
+    
+    async startKaraoke(songId, title, artist, image) {
+        // Show the player
+        document.getElementById('karaoke-results')?.classList.add('hidden');
+        const player = document.getElementById('karaoke-player');
+        player?.classList.remove('hidden');
+        
+        // Update song info
+        document.getElementById('karaoke-song-title').textContent = title;
+        document.getElementById('karaoke-song-artist').textContent = artist;
+        const albumArt = document.getElementById('karaoke-album-art');
+        if (albumArt) albumArt.src = image || 'https://via.placeholder.com/70';
+        
+        // Load lyrics
+        try {
+            const response = await fetch(`/api/lyrics/lyrics/${songId}`);
+            const data = await response.json();
+            
+            if (data.lyrics) {
+                this.parseLyricsForKaraoke(data.lyrics);
+                this.addChatMessage('System', `Starting karaoke: "${title}" by ${artist}`, true);
+            } else {
+                document.getElementById('lyrics-scroll').innerHTML = '<p class="lyrics-line">Lyrics not available for this song</p>';
+            }
+        } catch (error) {
+            console.error('Error loading lyrics:', error);
+            document.getElementById('lyrics-scroll').innerHTML = '<p class="lyrics-line">Could not load lyrics</p>';
+        }
+    }
+    
+    parseLyricsForKaraoke(lyricsText) {
+        // Split lyrics into lines and filter out empty lines
+        const lines = lyricsText.split('\n').filter(line => line.trim());
+        this.karaokeLyrics = lines;
+        this.currentLyricIndex = 0;
+        
+        const lyricsContainer = document.getElementById('lyrics-scroll');
+        if (lyricsContainer) {
+            lyricsContainer.innerHTML = lines.map((line, index) => 
+                `<div class="lyrics-line ${index === 0 ? 'active' : ''}" data-index="${index}">${line}</div>`
+            ).join('');
+        }
+    }
+    
+    toggleKaraokePlayback() {
+        const playPauseBtn = document.getElementById('karaoke-play-pause');
+        const icon = playPauseBtn?.querySelector('i');
+        
+        if (this.karaokeActive) {
+            // Pause
+            this.karaokeActive = false;
+            clearInterval(this.karaokeInterval);
+            if (icon) icon.className = 'fas fa-play';
+        } else {
+            // Play
+            this.karaokeActive = true;
+            if (icon) icon.className = 'fas fa-pause';
+            this.startLyricScrolling();
+        }
+    }
+    
+    startLyricScrolling() {
+        // Scroll through lyrics every 3 seconds (approximate line duration)
+        this.karaokeInterval = setInterval(() => {
+            if (this.currentLyricIndex < this.karaokeLyrics.length - 1) {
+                this.currentLyricIndex++;
+                this.updateLyricHighlight();
+                this.updateProgress();
+            } else {
+                // End of song
+                this.stopKaraoke();
+            }
+        }, 3000);
+    }
+    
+    updateLyricHighlight() {
+        const lyricsContainer = document.getElementById('lyrics-scroll');
+        const lines = lyricsContainer?.querySelectorAll('.lyrics-line');
+        
+        lines?.forEach((line, index) => {
+            line.classList.remove('active', 'past');
+            if (index === this.currentLyricIndex) {
+                line.classList.add('active');
+            } else if (index < this.currentLyricIndex) {
+                line.classList.add('past');
+            }
+        });
+        
+        // Scroll to center the active line
+        const activeLine = lyricsContainer?.querySelector('.lyrics-line.active');
+        if (activeLine && lyricsContainer) {
+            const containerHeight = lyricsContainer.parentElement?.clientHeight || 250;
+            const lineTop = activeLine.offsetTop;
+            const scrollPos = lineTop - containerHeight / 2 + activeLine.clientHeight / 2;
+            lyricsContainer.style.transform = `translateY(-${Math.max(0, scrollPos)}px)`;
+        }
+    }
+    
+    updateProgress() {
+        const progressFill = document.getElementById('karaoke-progress-fill');
+        if (progressFill && this.karaokeLyrics.length > 0) {
+            const progress = ((this.currentLyricIndex + 1) / this.karaokeLyrics.length) * 100;
+            progressFill.style.width = `${progress}%`;
+        }
+    }
+    
+    restartKaraoke() {
+        this.currentLyricIndex = 0;
+        this.updateLyricHighlight();
+        this.updateProgress();
+        
+        const lyricsContainer = document.getElementById('lyrics-scroll');
+        if (lyricsContainer) {
+            lyricsContainer.style.transform = 'translateY(0)';
+        }
+        
+        if (!this.karaokeActive) {
+            this.toggleKaraokePlayback();
+        }
+    }
+    
+    stopKaraoke() {
+        this.karaokeActive = false;
+        clearInterval(this.karaokeInterval);
+        
+        const playPauseBtn = document.getElementById('karaoke-play-pause');
+        const icon = playPauseBtn?.querySelector('i');
+        if (icon) icon.className = 'fas fa-play';
+        
+        // Reset to beginning
+        this.currentLyricIndex = 0;
+        this.updateLyricHighlight();
+        this.updateProgress();
+        
+        const lyricsContainer = document.getElementById('lyrics-scroll');
+        if (lyricsContainer) {
+            lyricsContainer.style.transform = 'translateY(0)';
         }
     }
 }
