@@ -1728,8 +1728,9 @@ class AudioRoomsManager {
     }
     
     updateLyricHighlight() {
-        const lyricsContainer = document.getElementById('lyrics-scroll');
-        const lines = lyricsContainer?.querySelectorAll('.lyrics-line');
+        const lyricsScroll = document.getElementById('lyrics-scroll');
+        const container = document.getElementById('karaoke-lyrics-container');
+        const lines = lyricsScroll?.querySelectorAll('.lyrics-line');
         
         lines?.forEach((line, index) => {
             line.classList.remove('active', 'past');
@@ -1740,13 +1741,10 @@ class AudioRoomsManager {
             }
         });
         
-        // Scroll to center the active line
-        const activeLine = lyricsContainer?.querySelector('.lyrics-line.active');
-        if (activeLine && lyricsContainer) {
-            const containerHeight = lyricsContainer.parentElement?.clientHeight || 250;
-            const lineTop = activeLine.offsetTop;
-            const scrollPos = lineTop - containerHeight / 2 + activeLine.clientHeight / 2;
-            lyricsContainer.style.transform = `translateY(-${Math.max(0, scrollPos)}px)`;
+        // Scroll the active line into view
+        const activeLine = lyricsScroll?.querySelector('.lyrics-line.active');
+        if (activeLine && container) {
+            activeLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     }
     
@@ -1763,9 +1761,9 @@ class AudioRoomsManager {
         this.updateLyricHighlight();
         this.updateProgress();
         
-        const lyricsContainer = document.getElementById('lyrics-scroll');
-        if (lyricsContainer) {
-            lyricsContainer.style.transform = 'translateY(0)';
+        const container = document.getElementById('karaoke-lyrics-container');
+        if (container) {
+            container.scrollTop = 0;
         }
         
         if (!this.karaokeActive) {
@@ -1791,9 +1789,9 @@ class AudioRoomsManager {
         this.updateLyricHighlight();
         this.updateProgress();
         
-        const lyricsContainer = document.getElementById('lyrics-scroll');
-        if (lyricsContainer) {
-            lyricsContainer.style.transform = 'translateY(0)';
+        const container = document.getElementById('karaoke-lyrics-container');
+        if (container) {
+            container.scrollTop = 0;
         }
     }
     
@@ -1810,7 +1808,24 @@ class AudioRoomsManager {
         if (window.YT && window.YT.Player) {
             this.ytApiReady = true;
             this.createYouTubePlayer();
+        } else {
+            // Dynamically load YouTube API if not present
+            this.loadYouTubeAPI();
         }
+    }
+    
+    loadYouTubeAPI() {
+        // Check if script already exists
+        if (document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+            return;
+        }
+        
+        const tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        tag.async = true;
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        console.log('YouTube API script injected');
     }
     
     createYouTubePlayer() {

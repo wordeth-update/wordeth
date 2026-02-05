@@ -2208,35 +2208,30 @@
     background: rgba(0, 0, 0, 0.4);
     border-radius: 16px;
     padding: 1.5rem;
-    height: 250px;
-    overflow: hidden;
+    height: 300px;
+    overflow-y: auto;
+    overflow-x: hidden;
     position: relative;
+    scroll-behavior: smooth;
 }
 
-.karaoke-lyrics-container::before,
-.karaoke-lyrics-container::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 50px;
-    pointer-events: none;
-    z-index: 2;
+.karaoke-lyrics-container::-webkit-scrollbar {
+    width: 6px;
 }
 
-.karaoke-lyrics-container::before {
-    top: 0;
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent);
+.karaoke-lyrics-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
 }
 
-.karaoke-lyrics-container::after {
-    bottom: 0;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+.karaoke-lyrics-container::-webkit-scrollbar-thumb {
+    background: var(--mint);
+    border-radius: 3px;
 }
 
 .lyrics-scroll {
     text-align: center;
-    transition: transform 0.5s ease;
+    padding-bottom: 100px;
 }
 
 .lyrics-line {
