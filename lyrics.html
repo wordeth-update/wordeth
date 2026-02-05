@@ -373,23 +373,29 @@
         <!-- Lyrics Modal -->
         <div class="lyrics-modal" id="lyrics-modal">
             <div class="modal-overlay" id="modal-overlay"></div>
-            <div class="modal-content">
+            <div class="modal-content modal-with-sidebar">
                 <div class="modal-header">
                     <h2 id="modal-song-title"></h2>
                     <p id="modal-song-artist"></p>
                     <button class="close-modal" id="close-modal">&times;</button>
                 </div>
-                <div class="modal-body">
-                    <div class="song-info-modal">
-                        <img id="modal-song-image" src="" alt="Album cover">
-                        <div class="song-details">
-                            <p id="modal-song-album"></p>
-                            <p id="modal-song-release"></p>
+                <div class="modal-body-wrapper">
+                    <div class="modal-body">
+                        <div class="song-info-modal">
+                            <img id="modal-song-image" src="" alt="Album cover">
+                            <div class="song-details">
+                                <p id="modal-song-album"></p>
+                                <p id="modal-song-release"></p>
+                            </div>
                         </div>
+                        <div class="lyrics-content">
+                            <h3>Lyrics</h3>
+                            <div id="modal-lyrics-text" class="lyrics-text"></div>
+                        </div>
+                        <div class="lyrics-ad-banner lyrics-bottom-ad hidden" id="modal-bottom-ad"></div>
                     </div>
-                    <div class="lyrics-content">
-                        <h3>Lyrics</h3>
-                        <div id="modal-lyrics-text" class="lyrics-text"></div>
+                    <div class="modal-sidebar-ad" id="modal-sidebar-ad-container">
+                        <div class="lyrics-ad-banner sidebar-ad hidden" id="modal-sidebar-ad"></div>
                     </div>
                 </div>
                 <div class="modal-footer">

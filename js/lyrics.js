@@ -19,6 +19,8 @@ const modalSongImage = document.getElementById('modal-song-image');
 const modalSongAlbum = document.getElementById('modal-song-album');
 const modalSongRelease = document.getElementById('modal-song-release');
 const modalLyricsText = document.getElementById('modal-lyrics-text');
+const modalSidebarAd = document.getElementById('modal-sidebar-ad');
+const modalBottomAd = document.getElementById('modal-bottom-ad');
 
 // Search state
 let searchTimeout;
@@ -175,6 +177,9 @@ async function showLyricsModal(songId) {
 
         lyricsModal.style.display = 'block';
         document.body.style.overflow = 'hidden';
+        
+        // Fetch and display modal ads based on song title/artist
+        fetchModalAds(song.title, song.artist);
     } catch (error) {
         console.error('Error fetching lyrics:', error);
         hideLoading();
@@ -410,6 +415,54 @@ function trackAdClick(adId) {
 function hideAds() {
     if (headerAdContainer) headerAdContainer.classList.add('hidden');
     if (footerAdContainer) footerAdContainer.classList.add('hidden');
+}
+
+function hideModalAds() {
+    if (modalSidebarAd) modalSidebarAd.classList.add('hidden');
+    if (modalBottomAd) modalBottomAd.classList.add('hidden');
+}
+
+async function fetchModalAds(title, artist) {
+    hideModalAds();
+    
+    try {
+        const query = `${title} ${artist}`.trim();
+        if (!query) return;
+        
+        const response = await fetch(`/api/ads/match-modal?q=${encodeURIComponent(query)}`);
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        
+        if (data.ads.sidebar) {
+            displayModalAd(modalSidebarAd, data.ads.sidebar);
+        }
+        if (data.ads.bottom) {
+            displayModalAd(modalBottomAd, data.ads.bottom);
+        }
+    } catch (error) {
+        console.log('Modal ad fetch skipped:', error.message);
+    }
+}
+
+function displayModalAd(container, ad) {
+    if (!container || !ad) return;
+    
+    const adId = ad.id;
+    container.innerHTML = `
+        <span class="lyrics-ad-label">Ad</span>
+        <a href="${escapeHtml(ad.linkUrl)}" target="_blank" rel="noopener" data-ad-id="${escapeHtml(String(adId))}">
+            <img src="${escapeHtml(ad.imageUrl)}" alt="${escapeHtml(ad.title)}" onerror="this.parentElement.parentElement.classList.add('hidden')">
+        </a>
+    `;
+    
+    const link = container.querySelector('a');
+    if (link) {
+        link.addEventListener('click', () => trackAdClick(adId));
+    }
+    
+    container.classList.remove('hidden');
+    trackAdImpression(adId);
 }
 
 // Initialize when DOM is loaded

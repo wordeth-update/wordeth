@@ -320,6 +320,44 @@ router.get('/match', async (req, res) => {
     }
 });
 
+router.get('/match-modal', async (req, res) => {
+    try {
+        const { q } = req.query;
+
+        if (!q) {
+            return res.json({ ads: { sidebar: null, bottom: null } });
+        }
+
+        const sidebarAds = await Ad.findMatchingAds(q, 'sidebar');
+        const bottomAds = await Ad.findMatchingAds(q, 'lyrics-bottom');
+
+        const sidebarAd = sidebarAds.length > 0 ? sidebarAds[0] : null;
+        const bottomAd = bottomAds.length > 0 ? bottomAds[0] : null;
+
+        res.json({
+            ads: {
+                sidebar: sidebarAd ? {
+                    id: sidebarAd._id,
+                    title: sidebarAd.title,
+                    imageUrl: sidebarAd.imageUrl,
+                    linkUrl: sidebarAd.linkUrl,
+                    size: sidebarAd.size
+                } : null,
+                bottom: bottomAd ? {
+                    id: bottomAd._id,
+                    title: bottomAd.title,
+                    imageUrl: bottomAd.imageUrl,
+                    linkUrl: bottomAd.linkUrl,
+                    size: bottomAd.size
+                } : null
+            }
+        });
+    } catch (error) {
+        console.error('Modal ad match error:', error);
+        res.json({ ads: { sidebar: null, bottom: null } });
+    }
+});
+
 router.post('/impression/:adId', async (req, res) => {
     try {
         const { adId } = req.params;

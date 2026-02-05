@@ -25,6 +25,65 @@
     margin-bottom: 1rem;
 }
 
+.lyrics-ad-banner.sidebar-ad {
+    width: 300px;
+    min-height: 250px;
+    margin: 0;
+    position: sticky;
+    top: 1rem;
+}
+
+.lyrics-ad-banner.lyrics-bottom-ad {
+    margin-top: 2rem;
+    margin-bottom: 0;
+}
+
+.modal-with-sidebar {
+    max-width: 1100px !important;
+}
+
+.modal-body-wrapper {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0 2rem 2rem;
+}
+
+.modal-body-wrapper .modal-body {
+    flex: 1;
+    padding: 0;
+    min-width: 0;
+}
+
+.modal-sidebar-ad {
+    width: 320px;
+    flex-shrink: 0;
+    padding-top: 0.5rem;
+}
+
+@media (max-width: 992px) {
+    .modal-with-sidebar {
+        max-width: 800px !important;
+    }
+    
+    .modal-body-wrapper {
+        flex-direction: column;
+        padding: 0 1.5rem 1.5rem;
+    }
+    
+    .modal-sidebar-ad {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+    
+    .lyrics-ad-banner.sidebar-ad {
+        width: 100%;
+        max-width: 300px;
+        min-height: auto;
+        position: static;
+    }
+}
+
 .lyrics-ad-banner.hidden {
     display: none;
 }

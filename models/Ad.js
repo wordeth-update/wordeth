@@ -25,7 +25,7 @@ const adSchema = new mongoose.Schema({
     },
     placement: {
         type: String,
-        enum: ['header', 'footer', 'sidebar'],
+        enum: ['header', 'footer', 'sidebar', 'lyrics-bottom'],
         default: 'header'
     },
     size: {
