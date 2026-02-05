@@ -8,6 +8,10 @@ const MUSIXMATCH_BASE_URL = 'https://api.musixmatch.com/ws/1.1';
 const MUSIXMATCH_API_KEY = process.env.MUSIXMATCH_API_KEY;
 const MUSIXMATCH_TIMEOUT = 10000;
 
+// YouTube Data API configuration
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
+const YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3/search';
+
 // Deezer API for album artwork fallback (no auth required)
 const DEEZER_BASE_URL = 'https://api.deezer.com';
 
@@ -597,6 +601,47 @@ router.get('/artist/:id/tracks', async (req, res) => {
     } catch (error) {
         console.error('Error fetching artist tracks:', error);
         res.status(500).json({ message: 'Error fetching artist tracks' });
+    }
+});
+
+// YouTube video search for karaoke audio
+router.get('/youtube-search', async (req, res) => {
+    try {
+        const { q } = req.query;
+        
+        if (!q) {
+            return res.status(400).json({ error: 'Search query required' });
+        }
+        
+        if (!YOUTUBE_API_KEY) {
+            console.log('YouTube API key not configured');
+            return res.json({ videoId: null, error: 'YouTube API not configured' });
+        }
+        
+        const response = await axios.get(YOUTUBE_API_URL, {
+            params: {
+                part: 'snippet',
+                q: q,
+                type: 'video',
+                videoCategoryId: '10', // Music category
+                maxResults: 1,
+                key: YOUTUBE_API_KEY
+            },
+            timeout: 10000
+        });
+        
+        if (response.data.items && response.data.items.length > 0) {
+            const videoId = response.data.items[0].id.videoId;
+            return res.json({ 
+                videoId,
+                title: response.data.items[0].snippet.title
+            });
+        }
+        
+        res.json({ videoId: null });
+    } catch (error) {
+        console.error('YouTube search error:', error.response?.data || error.message);
+        res.json({ videoId: null, error: 'Search failed' });
     }
 });
 
