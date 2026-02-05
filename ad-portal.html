@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordeth Ad Portal - Self-Serve Advertising</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/ads.css">
+</head>
+<body>
+    <nav class="portal-nav">
+        <div class="nav-brand">
+            <a href="index.html"><img src="images/wordeth-logo.svg" alt="Wordeth" class="logo"></a>
+            <span class="portal-badge">AD PORTAL</span>
+        </div>
+        <div class="nav-links">
+            <a href="ad-docs.html" class="nav-link"><i class="fas fa-book"></i> Documentation</a>
+            <span id="userInfo" style="display: none;">
+                <span id="companyName"></span>
+                <button onclick="logout()" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+            </span>
+        </div>
+    </nav>
+
+    <div id="authSection">
+        <div class="auth-container">
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">Sign In</button>
+                <button class="auth-tab" data-tab="register">Create Account</button>
+            </div>
+
+            <form id="loginForm" class="auth-form active">
+                <h2>Welcome Back</h2>
+                <p class="auth-subtitle">Sign in to manage your ads</p>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" required>
+                </div>
+                <button type="submit" class="btn-primary">Sign In</button>
+                <p id="loginError" class="error-message"></p>
+            </form>
+
+            <form id="registerForm" class="auth-form">
+                <h2>Create Account</h2>
+                <p class="auth-subtitle">Start advertising on Wordeth</p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Company Name</label>
+                        <input type="text" name="companyName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Name</label>
+                        <input type="text" name="contactName" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" required minlength="8">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Phone (optional)</label>
+                        <input type="tel" name="phone">
+                    </div>
+                    <div class="form-group">
+                        <label>Website (optional)</label>
+                        <input type="url" name="website" placeholder="https://">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary">Create Account</button>
+                <p id="registerError" class="error-message"></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="portalSection" style="display: none;">
+        <div class="portal-container">
+            <aside class="sidebar">
+                <ul class="sidebar-menu">
+                    <li class="active" data-tab="my-ads"><i class="fas fa-ad"></i> My Ads</li>
+                    <li data-tab="create-ad"><i class="fas fa-plus-circle"></i> Create Ad</li>
+                    <li data-tab="account"><i class="fas fa-user"></i> Account</li>
+                </ul>
+                <div class="sidebar-help">
+                    <a href="ad-docs.html"><i class="fas fa-question-circle"></i> Help & Documentation</a>
+                </div>
+            </aside>
+
+            <main class="portal-main">
+                <section id="my-ads-tab" class="tab-content active">
+                    <div class="section-header">
+                        <h2>My Ads</h2>
+                        <button onclick="showTab('create-ad')" class="btn-secondary"><i class="fas fa-plus"></i> Create New Ad</button>
+                    </div>
+                    <div id="myAdsList" class="ads-list"></div>
+                    <p id="noAds" class="empty-message" style="display: none;">
+                        You haven't created any ads yet. <a href="#" onclick="showTab('create-ad'); return false;">Create your first ad</a>
+                    </p>
+                </section>
+
+                <section id="create-ad-tab" class="tab-content">
+                    <h2>Create New Ad</h2>
+                    <div class="info-banner">
+                        <i class="fas fa-info-circle"></i>
+                        <p>Ads are reviewed before going live. Most ads are approved within 24 hours.</p>
+                    </div>
+
+                    <form id="createAdForm" class="ad-form">
+                        <div class="form-group">
+                            <label>Ad Title <span class="required">*</span></label>
+                            <input type="text" name="title" required maxlength="100" placeholder="Your brand or campaign name">
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea name="description" maxlength="200" placeholder="Brief description (optional)"></textarea>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Ad Placement & Size</h3>
+                            <div class="placement-options">
+                                <label class="placement-option">
+                                    <input type="radio" name="placement" value="header" checked>
+                                    <div class="placement-card">
+                                        <i class="fas fa-arrow-up"></i>
+                                        <span>Header</span>
+                                        <small>Top of search results</small>
+                                    </div>
+                                </label>
+                                <label class="placement-option">
+                                    <input type="radio" name="placement" value="footer">
+                                    <div class="placement-card">
+                                        <i class="fas fa-arrow-down"></i>
+                                        <span>Footer</span>
+                                        <small>Bottom of search results</small>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label>Size <span class="required">*</span></label>
+                                <select name="size" required>
+                                    <option value="728x90">Desktop: Leaderboard (728x90 pixels)</option>
+                                    <option value="320x50">Mobile: Banner (320x50 pixels)</option>
+                                </select>
+                                <small>Upload an image that exactly matches these dimensions</small>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Creative</h3>
+                            <div class="form-group">
+                                <label>Image URL <span class="required">*</span></label>
+                                <input type="url" name="imageUrl" required placeholder="https://your-domain.com/ad-image.jpg" id="imageUrlInput">
+                                <small>Host your image on your website or use an image hosting service</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Click-through URL <span class="required">*</span></label>
+                                <input type="url" name="linkUrl" required placeholder="https://your-website.com/landing-page">
+                            </div>
+                            <div class="form-group preview-group">
+                                <label>Preview</label>
+                                <div id="adPreview" class="ad-preview">
+                                    <p>Enter image URL above to see preview</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Targeting Keywords</h3>
+                            <p class="section-description">Enter up to 25 keywords that relate to your product or service. Your ad will show when users search for lyrics containing these terms.</p>
+                            <div class="form-group">
+                                <label>Keywords (comma-separated)</label>
+                                <textarea name="keywords" id="keywordsInput" placeholder="ice cream, dessert, summer, frozen treats, sweet"></textarea>
+                                <div class="keyword-count"><span id="keywordCount">0</span>/25 keywords</div>
+                            </div>
+                            <div class="keyword-tips">
+                                <h4><i class="fas fa-lightbulb"></i> Keyword Tips</h4>
+                                <ul>
+                                    <li>Use words that might appear in song lyrics or artist/song names</li>
+                                    <li>Include product names, related terms, and themes</li>
+                                    <li>Think about what music fans might search for</li>
+                                    <li>Example: An ice cream brand could use "ice cream, summer, sweet, cold, treat, dessert"</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary btn-large">Submit Ad for Review</button>
+                    </form>
+                </section>
+
+                <section id="account-tab" class="tab-content">
+                    <h2>Account Settings</h2>
+                    <div id="accountInfo" class="account-info"></div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/ad-portal.js"></script>
+</body>
+</html>

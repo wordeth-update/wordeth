@@ -70,11 +70,8 @@ async function performSearch(query) {
             currentSearchResults = data.hits;
             showResults(data.hits, query);
             
-            // Trigger contextual ads based on search
-            const adTargets = analyzeSearchForAds(query, data.hits[0]);
-            if (adTargets.length > 0 && window.wordethAds) {
-                window.wordethAds.triggerContextualAds(adTargets);
-            }
+            // Fetch and display keyword-matched ads
+            fetchMatchingAds(query);
         } else {
             showNoResults();
         }
@@ -132,6 +129,7 @@ function showResults(results, query) {
 function showNoResults() {
     resultsSection.style.display = 'none';
     noResults.style.display = 'block';
+    hideAds();
 }
 
 function hideResults() {
@@ -352,6 +350,66 @@ function setupEventListeners() {
             // Don't hide results immediately, but could add logic here if needed
         }
     });
+}
+
+// Ad System Integration
+const headerAdContainer = document.getElementById('header-ad');
+const footerAdContainer = document.getElementById('footer-ad');
+
+async function fetchMatchingAds(searchQuery) {
+    try {
+        const response = await fetch(`/api/ads/match?q=${encodeURIComponent(searchQuery)}`);
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        
+        if (data.ads) {
+            displayAd(headerAdContainer, data.ads.header);
+            displayAd(footerAdContainer, data.ads.footer);
+        }
+    } catch (error) {
+        console.log('Ad fetch skipped:', error.message);
+    }
+}
+
+function displayAd(container, ad) {
+    if (!container) return;
+    
+    if (!ad) {
+        container.classList.add('hidden');
+        return;
+    }
+    
+    const adId = ad.id;
+    container.innerHTML = `
+        <span class="lyrics-ad-label">Ad</span>
+        <a href="${escapeHtml(ad.linkUrl)}" target="_blank" rel="noopener" data-ad-id="${escapeHtml(String(adId))}">
+            <img src="${escapeHtml(ad.imageUrl)}" alt="${escapeHtml(ad.title)}" onerror="this.parentElement.parentElement.classList.add('hidden')">
+        </a>
+    `;
+    
+    const link = container.querySelector('a');
+    if (link) {
+        link.addEventListener('click', () => trackAdClick(adId));
+    }
+    
+    container.classList.remove('hidden');
+    trackAdImpression(adId);
+}
+
+function trackAdImpression(adId) {
+    if (!adId) return;
+    fetch(`/api/ads/impression/${adId}`, { method: 'POST' }).catch(() => {});
+}
+
+function trackAdClick(adId) {
+    if (!adId) return;
+    fetch(`/api/ads/click/${adId}`, { method: 'POST' }).catch(() => {});
+}
+
+function hideAds() {
+    if (headerAdContainer) headerAdContainer.classList.add('hidden');
+    if (footerAdContainer) footerAdContainer.classList.add('hidden');
 }
 
 // Initialize when DOM is loaded

@@ -1,441 +1,575 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
+const Ad = require('../models/Ad');
+const Advertiser = require('../models/Advertiser');
 
-// Mock ad inventory database
-let adInventory = {
-    inVideo: [
-        {
-            id: 'ice_cream_1',
-            type: 'in_video',
-            title: 'Local Ice Cream Shop',
-            description: 'Cool treats for hot days!',
-            image: '/images/ads/ice-cream-ad.jpg',
-            link: 'https://example.com/ice-cream',
-            category: 'ice cream',
-            targeting: ['dessert', 'sweet', 'treat', 'ice cream'],
-            cpm: 2.50,
-            active: true,
-            impressions: 0,
-            clicks: 0
-        },
-        {
-            id: 'car_dealership_1',
-            type: 'in_video',
-            title: 'Premium Auto Sales',
-            description: 'Drive your dreams today',
-            image: '/images/ads/car-ad.jpg',
-            link: 'https://example.com/cars',
-            category: 'car',
-            targeting: ['automotive', 'vehicle', 'driving', 'car'],
-            cpm: 3.00,
-            active: true,
-            impressions: 0,
-            clicks: 0
-        }
-    ],
-    interstitial: [
-        {
-            id: 'fashion_brand_1',
-            type: 'interstitial',
-            title: 'Trending Fashion',
-            description: 'Latest styles for music lovers',
-            image: '/images/ads/fashion-ad.jpg',
-            link: 'https://example.com/fashion',
-            category: 'fashion',
-            targeting: ['style', 'fashion', 'trendy', 'clothing'],
-            cpm: 3.00,
-            active: true,
-            impressions: 0,
-            clicks: 0
-        },
-        {
-            id: 'tech_company_1',
-            type: 'interstitial',
-            title: 'Smart Tech Solutions',
-            description: 'Innovation at your fingertips',
-            image: '/images/ads/tech-ad.jpg',
-            link: 'https://example.com/tech',
-            category: 'tech',
-            targeting: ['technology', 'innovation', 'smart', 'tech'],
-            cpm: 3.50,
-            active: true,
-            impressions: 0,
-            clicks: 0
-        }
-    ],
-    hero: [
-        {
-            id: 'music_store_1',
-            type: 'hero',
-            title: 'Premium Music Store',
-            description: 'Instruments and gear for every musician',
-            image: '/images/ads/music-store-ad.jpg',
-            link: 'https://example.com/music-store',
-            category: 'music',
-            targeting: ['music', 'instrument', 'gear', 'musician'],
-            cpm: 4.00,
-            active: true,
-            impressions: 0,
-            clicks: 0
-        }
-    ],
-    skyscraper: [
-        {
-            id: 'concert_tickets_1',
-            type: 'skyscraper',
-            title: 'Live Concert Tickets',
-            description: 'Get tickets to the hottest shows',
-            image: '/images/ads/concert-ad.jpg',
-            link: 'https://example.com/concerts',
-            category: 'entertainment',
-            targeting: ['concert', 'live', 'tickets', 'music'],
-            cpm: 3.50,
-            active: true,
-            impressions: 0,
-            clicks: 0
-        }
-    ]
+const AD_SIZES = {
+    'header': { width: 728, height: 90, label: 'Leaderboard (728x90)' },
+    'footer': { width: 728, height: 90, label: 'Leaderboard (728x90)' },
+    'mobile-header': { width: 320, height: 50, label: 'Mobile Banner (320x50)' },
+    'mobile-footer': { width: 320, height: 50, label: 'Mobile Banner (320x50)' },
+    'sidebar': { width: 300, height: 250, label: 'Medium Rectangle (300x250)' }
 };
 
-// Mock analytics data
-let analytics = {
-    impressions: [],
-    clicks: [],
-    pageViews: []
-};
+const MAX_KEYWORDS = 25;
 
-// Get ad inventory
-router.get('/inventory', (req, res) => {
+function isValidUrl(string) {
     try {
-        // Filter active ads only
-        const activeInventory = {};
-        Object.keys(adInventory).forEach(type => {
-            activeInventory[type] = adInventory[type].filter(ad => ad.active);
-        });
-        
-        res.json(activeInventory);
+        const url = new URL(string);
+        return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch {
+        return false;
+    }
+}
+
+function authenticateAdvertiser(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'wordeth-ads-secret');
+        req.advertiserId = decoded.advertiserId;
+        req.advertiserRole = decoded.role;
+        next();
     } catch (error) {
-        console.error('Error fetching ad inventory:', error);
-        res.status(500).json({ error: 'Failed to fetch ad inventory' });
+        return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+}
+
+function requireAdmin(req, res, next) {
+    if (req.advertiserRole !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+    }
+    next();
+}
+
+router.post('/advertisers/register', async (req, res) => {
+    try {
+        const { email, password, companyName, contactName, phone, website } = req.body;
+
+        if (!email || !password || !companyName || !contactName) {
+            return res.status(400).json({ error: 'Email, password, company name, and contact name are required' });
+        }
+
+        const existing = await Advertiser.findOne({ email });
+        if (existing) {
+            return res.status(400).json({ error: 'Email already registered' });
+        }
+
+        const advertiser = new Advertiser({
+            email,
+            password,
+            companyName,
+            contactName,
+            phone,
+            website,
+            accountType: 'self-serve',
+            status: 'approved'
+        });
+
+        await advertiser.save();
+
+        const token = jwt.sign(
+            { advertiserId: advertiser._id, role: advertiser.role },
+            process.env.JWT_SECRET || 'wordeth-ads-secret',
+            { expiresIn: '7d' }
+        );
+
+        res.status(201).json({
+            success: true,
+            message: 'Account created successfully',
+            token,
+            advertiser: {
+                id: advertiser._id,
+                email: advertiser.email,
+                companyName: advertiser.companyName,
+                accountType: advertiser.accountType
+            }
+        });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({ error: 'Failed to create account' });
     }
 });
 
-// Track ad impression
-router.post('/impression', (req, res) => {
+router.post('/advertisers/login', async (req, res) => {
     try {
-        const { adId, adType, target, timestamp, userId } = req.body;
-        
-        // Find and update ad impression count
-        Object.values(adInventory).flat().forEach(ad => {
-            if (ad.id === adId) {
-                ad.impressions++;
-            }
-        });
-        
-        // Store analytics data
-        analytics.impressions.push({
-            adId,
-            adType,
-            target,
-            timestamp,
-            userId,
-            sessionId: req.sessionID
-        });
-        
-        res.json({ success: true, message: 'Impression tracked' });
-    } catch (error) {
-        console.error('Error tracking impression:', error);
-        res.status(500).json({ error: 'Failed to track impression' });
-    }
-});
+        const { email, password } = req.body;
 
-// Track ad click
-router.post('/click', (req, res) => {
-    try {
-        const { adId, adType, target, timestamp, userId } = req.body;
-        
-        // Find and update ad click count
-        Object.values(adInventory).flat().forEach(ad => {
-            if (ad.id === adId) {
-                ad.clicks++;
-            }
-        });
-        
-        // Store analytics data
-        analytics.clicks.push({
-            adId,
-            adType,
-            target,
-            timestamp,
-            userId,
-            sessionId: req.sessionID
-        });
-        
-        res.json({ success: true, message: 'Click tracked' });
-    } catch (error) {
-        console.error('Error tracking click:', error);
-        res.status(500).json({ error: 'Failed to track click' });
-    }
-});
+        const advertiser = await Advertiser.findOne({ email });
+        if (!advertiser) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
 
-// Track page view
-router.post('/pageview', (req, res) => {
-    try {
-        const { page, timestamp, userId } = req.body;
-        
-        analytics.pageViews.push({
-            page,
-            timestamp,
-            userId,
-            sessionId: req.sessionID,
-            userAgent: req.get('User-Agent'),
-            referrer: req.get('Referrer')
-        });
-        
-        res.json({ success: true, message: 'Page view tracked' });
-    } catch (error) {
-        console.error('Error tracking page view:', error);
-        res.status(500).json({ error: 'Failed to track page view' });
-    }
-});
+        const isMatch = await advertiser.comparePassword(password);
+        if (!isMatch) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
 
-// Get contextual ads based on search
-router.post('/contextual', (req, res) => {
-    try {
-        const { searchTerm, songData, userProfile } = req.body;
-        
-        // Analyze search for targeting
-        const adTargets = analyzeSearchForAds(searchTerm, songData);
-        
-        // Find matching ads
-        const matchingAds = [];
-        Object.values(adInventory).flat().forEach(ad => {
-            if (!ad.active) return;
-            
-            let matchScore = 0;
-            
-            // Category matching
-            adTargets.forEach(target => {
-                if (ad.category === target.category) {
-                    matchScore += 0.8;
-                }
-            });
-            
-            // Keyword matching
-            if (ad.targeting && searchTerm) {
-                const searchLower = searchTerm.toLowerCase();
-                ad.targeting.forEach(keyword => {
-                    if (searchLower.includes(keyword.toLowerCase())) {
-                        matchScore += 0.6;
-                    }
-                });
-            }
-            
-            // User profile matching
-            if (userProfile && userProfile.interests) {
-                userProfile.interests.forEach(interest => {
-                    if (ad.targeting.includes(interest.toLowerCase())) {
-                        matchScore += 0.4;
-                    }
-                });
-            }
-            
-            if (matchScore > 0.3) {
-                matchingAds.push({ ...ad, matchScore });
-            }
-        });
-        
-        // Sort by match score and CPM
-        matchingAds.sort((a, b) => {
-            const scoreA = a.matchScore * a.cpm;
-            const scoreB = b.matchScore * b.cpm;
-            return scoreB - scoreA;
-        });
-        
+        if (advertiser.status === 'suspended') {
+            return res.status(403).json({ error: 'Account suspended. Please contact support.' });
+        }
+
+        const token = jwt.sign(
+            { advertiserId: advertiser._id, role: advertiser.role },
+            process.env.JWT_SECRET || 'wordeth-ads-secret',
+            { expiresIn: '7d' }
+        );
+
         res.json({
-            ads: matchingAds.slice(0, 3), // Return top 3 matches
-            targets: adTargets
+            success: true,
+            token,
+            advertiser: {
+                id: advertiser._id,
+                email: advertiser.email,
+                companyName: advertiser.companyName,
+                accountType: advertiser.accountType,
+                role: advertiser.role
+            }
         });
     } catch (error) {
-        console.error('Error getting contextual ads:', error);
-        res.status(500).json({ error: 'Failed to get contextual ads' });
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Login failed' });
     }
 });
 
-// Admin: Get analytics
-router.get('/analytics', (req, res) => {
+router.get('/advertisers/profile', authenticateAdvertiser, async (req, res) => {
     try {
-        const analyticsSummary = {
-            totalImpressions: analytics.impressions.length,
-            totalClicks: analytics.clicks.length,
-            totalPageViews: analytics.pageViews.length,
-            ctr: analytics.impressions.length > 0 ? 
-                (analytics.clicks.length / analytics.impressions.length * 100).toFixed(2) : 0,
-            adPerformance: {}
-        };
-        
-        // Calculate performance by ad
-        Object.values(adInventory).flat().forEach(ad => {
-            analyticsSummary.adPerformance[ad.id] = {
-                title: ad.title,
-                impressions: ad.impressions,
-                clicks: ad.clicks,
-                ctr: ad.impressions > 0 ? (ad.clicks / ad.impressions * 100).toFixed(2) : 0,
-                revenue: (ad.impressions / 1000) * ad.cpm
-            };
-        });
-        
-        res.json(analyticsSummary);
+        const advertiser = await Advertiser.findById(req.advertiserId).select('-password');
+        if (!advertiser) {
+            return res.status(404).json({ error: 'Advertiser not found' });
+        }
+        res.json(advertiser);
     } catch (error) {
-        console.error('Error fetching analytics:', error);
-        res.status(500).json({ error: 'Failed to fetch analytics' });
+        console.error('Profile fetch error:', error);
+        res.status(500).json({ error: 'Failed to fetch profile' });
     }
 });
 
-// Admin: Add new ad
-router.post('/admin/ad', (req, res) => {
+router.get('/sizes', (req, res) => {
+    res.json({
+        sizes: AD_SIZES,
+        maxKeywords: MAX_KEYWORDS
+    });
+});
+
+router.post('/create', authenticateAdvertiser, async (req, res) => {
     try {
-        const { type, title, description, image, link, category, targeting, cpm } = req.body;
-        
-        const newAd = {
-            id: `${category}_${Date.now()}`,
-            type,
+        const { title, description, imageUrl, linkUrl, placement, size, keywords } = req.body;
+
+        if (!title || !imageUrl || !linkUrl || !placement || !size) {
+            return res.status(400).json({ error: 'Title, image URL, link URL, placement, and size are required' });
+        }
+
+        if (!isValidUrl(imageUrl) || !isValidUrl(linkUrl)) {
+            return res.status(400).json({ error: 'Image URL and Link URL must be valid HTTP/HTTPS URLs' });
+        }
+
+        if (keywords && keywords.length > MAX_KEYWORDS) {
+            return res.status(400).json({ error: `Maximum ${MAX_KEYWORDS} keywords allowed` });
+        }
+
+        const validSizes = ['728x90', '320x50', '300x250'];
+        if (!validSizes.includes(size)) {
+            return res.status(400).json({ error: 'Invalid ad size' });
+        }
+
+        const advertiser = await Advertiser.findById(req.advertiserId);
+        const status = advertiser.role === 'admin' ? 'active' : 'pending';
+
+        const ad = new Ad({
+            advertiserId: req.advertiserId,
             title,
             description,
-            image,
-            link,
-            category,
-            targeting,
-            cpm: parseFloat(cpm),
-            active: true,
-            impressions: 0,
-            clicks: 0
-        };
-        
-        if (!adInventory[type]) {
-            adInventory[type] = [];
-        }
-        
-        adInventory[type].push(newAd);
-        
-        res.json({ success: true, ad: newAd });
+            imageUrl,
+            linkUrl,
+            placement,
+            size,
+            keywords: keywords || [],
+            status,
+            createdBy: advertiser.role === 'admin' ? 'admin' : 'self-serve'
+        });
+
+        await ad.save();
+
+        res.status(201).json({
+            success: true,
+            message: status === 'active' ? 'Ad created and activated' : 'Ad created and pending review',
+            ad
+        });
     } catch (error) {
-        console.error('Error adding ad:', error);
-        res.status(500).json({ error: 'Failed to add ad' });
+        console.error('Ad creation error:', error);
+        res.status(500).json({ error: 'Failed to create ad' });
     }
 });
 
-// Admin: Update ad
-router.put('/admin/ad/:id', (req, res) => {
+router.get('/my-ads', authenticateAdvertiser, async (req, res) => {
     try {
-        const { id } = req.params;
-        const updates = req.body;
-        
-        let adFound = false;
-        Object.values(adInventory).flat().forEach(ad => {
-            if (ad.id === id) {
-                Object.assign(ad, updates);
-                adFound = true;
-            }
-        });
-        
-        if (!adFound) {
+        const ads = await Ad.find({ advertiserId: req.advertiserId }).sort({ createdAt: -1 });
+        res.json({ ads });
+    } catch (error) {
+        console.error('Fetch ads error:', error);
+        res.status(500).json({ error: 'Failed to fetch ads' });
+    }
+});
+
+router.put('/update/:adId', authenticateAdvertiser, async (req, res) => {
+    try {
+        const { adId } = req.params;
+        const { title, description, imageUrl, linkUrl, keywords, status } = req.body;
+
+        const ad = await Ad.findById(adId);
+        if (!ad) {
             return res.status(404).json({ error: 'Ad not found' });
         }
-        
-        res.json({ success: true, message: 'Ad updated' });
+
+        const advertiser = await Advertiser.findById(req.advertiserId);
+        if (ad.advertiserId.toString() !== req.advertiserId && advertiser.role !== 'admin') {
+            return res.status(403).json({ error: 'Not authorized to update this ad' });
+        }
+
+        if (keywords && keywords.length > MAX_KEYWORDS) {
+            return res.status(400).json({ error: `Maximum ${MAX_KEYWORDS} keywords allowed` });
+        }
+
+        if (title) ad.title = title;
+        if (description !== undefined) ad.description = description;
+        if (imageUrl) ad.imageUrl = imageUrl;
+        if (linkUrl) ad.linkUrl = linkUrl;
+        if (keywords) ad.keywords = keywords;
+
+        if (advertiser.role === 'admin' && status) {
+            ad.status = status;
+        } else if (status === 'paused' || status === 'active') {
+            if (ad.status === 'approved' || ad.status === 'active' || ad.status === 'paused') {
+                ad.status = status;
+            }
+        }
+
+        await ad.save();
+
+        res.json({ success: true, message: 'Ad updated', ad });
     } catch (error) {
-        console.error('Error updating ad:', error);
+        console.error('Update ad error:', error);
         res.status(500).json({ error: 'Failed to update ad' });
     }
 });
 
-// Admin: Delete ad
-router.delete('/admin/ad/:id', (req, res) => {
+router.delete('/delete/:adId', authenticateAdvertiser, async (req, res) => {
     try {
-        const { id } = req.params;
-        
-        let adFound = false;
-        Object.keys(adInventory).forEach(type => {
-            adInventory[type] = adInventory[type].filter(ad => {
-                if (ad.id === id) {
-                    adFound = true;
-                    return false;
-                }
-                return true;
-            });
-        });
-        
-        if (!adFound) {
+        const { adId } = req.params;
+
+        const ad = await Ad.findById(adId);
+        if (!ad) {
             return res.status(404).json({ error: 'Ad not found' });
         }
-        
+
+        const advertiser = await Advertiser.findById(req.advertiserId);
+        if (ad.advertiserId.toString() !== req.advertiserId && advertiser.role !== 'admin') {
+            return res.status(403).json({ error: 'Not authorized to delete this ad' });
+        }
+
+        await Ad.findByIdAndDelete(adId);
+
         res.json({ success: true, message: 'Ad deleted' });
     } catch (error) {
-        console.error('Error deleting ad:', error);
+        console.error('Delete ad error:', error);
         res.status(500).json({ error: 'Failed to delete ad' });
     }
 });
 
-// Helper function to analyze search for ads
-function analyzeSearchForAds(searchTerm, songData = null) {
-    const adTargets = [];
-    
-    if (!searchTerm) return adTargets;
-    
-    const searchLower = searchTerm.toLowerCase();
-    
-    // Brand/Product Keywords
-    const brandKeywords = {
-        'ice cream': ['ice cream shop', 'dessert', 'frozen treat', 'sweet treat'],
-        'car': ['automotive', 'vehicle', 'transportation', 'driving'],
-        'phone': ['mobile', 'smartphone', 'communication', 'tech'],
-        'shoes': ['footwear', 'sneakers', 'fashion', 'style'],
-        'food': ['restaurant', 'dining', 'cuisine', 'meal'],
-        'drink': ['beverage', 'refreshment', 'bar', 'cocktail'],
-        'money': ['finance', 'banking', 'investment', 'wealth'],
-        'love': ['dating', 'romance', 'relationship', 'dating app'],
-        'party': ['entertainment', 'nightlife', 'events', 'celebration'],
-        'work': ['job', 'career', 'professional', 'business']
-    };
-    
-    // Analyze search term for brand opportunities
-    for (const [keyword, relatedTerms] of Object.entries(brandKeywords)) {
-        if (searchLower.includes(keyword) || relatedTerms.some(term => searchLower.includes(term))) {
-            adTargets.push({
-                category: keyword,
-                intent: 'brand_awareness',
-                confidence: 0.8,
-                searchTerm: searchTerm
-            });
+router.get('/match', async (req, res) => {
+    try {
+        const { q, placement } = req.query;
+
+        if (!q) {
+            return res.json({ ads: { header: null, footer: null } });
         }
+
+        const headerAds = await Ad.findMatchingAds(q, 'header');
+        const footerAds = await Ad.findMatchingAds(q, 'footer');
+
+        const headerAd = headerAds.length > 0 ? headerAds[0] : null;
+        const footerAd = footerAds.length > 0 ? footerAds[0] : null;
+
+        res.json({
+            ads: {
+                header: headerAd ? {
+                    id: headerAd._id,
+                    title: headerAd.title,
+                    imageUrl: headerAd.imageUrl,
+                    linkUrl: headerAd.linkUrl,
+                    size: headerAd.size
+                } : null,
+                footer: footerAd ? {
+                    id: footerAd._id,
+                    title: footerAd.title,
+                    imageUrl: footerAd.imageUrl,
+                    linkUrl: footerAd.linkUrl,
+                    size: footerAd.size
+                } : null
+            }
+        });
+    } catch (error) {
+        console.error('Ad match error:', error);
+        res.json({ ads: { header: null, footer: null } });
     }
-    
-    // Analyze song data if available
-    if (songData) {
-        if (songData.artist) {
-            adTargets.push({
-                category: 'artist_merch',
-                intent: 'purchase',
-                confidence: 0.9,
-                artist: songData.artist,
-                searchTerm: searchTerm
-            });
-        }
-        
-        if (songData.genre) {
-            adTargets.push({
-                category: 'genre_specific',
-                intent: 'discovery',
-                confidence: 0.7,
-                genre: songData.genre,
-                searchTerm: searchTerm
-            });
-        }
+});
+
+router.post('/impression/:adId', async (req, res) => {
+    try {
+        const { adId } = req.params;
+
+        await Ad.findByIdAndUpdate(adId, {
+            $inc: { 'stats.impressions': 1 }
+        });
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Impression tracking error:', error);
+        res.status(500).json({ error: 'Failed to track impression' });
     }
-    
-    return adTargets;
-}
+});
+
+router.post('/click/:adId', async (req, res) => {
+    try {
+        const { adId } = req.params;
+
+        await Ad.findByIdAndUpdate(adId, {
+            $inc: { 'stats.clicks': 1 }
+        });
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Click tracking error:', error);
+        res.status(500).json({ error: 'Failed to track click' });
+    }
+});
+
+router.get('/admin/all-ads', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        const { status, page = 1, limit = 20 } = req.query;
+
+        const query = {};
+        if (status) query.status = status;
+
+        const ads = await Ad.find(query)
+            .populate('advertiserId', 'companyName email')
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(parseInt(limit));
+
+        const total = await Ad.countDocuments(query);
+
+        res.json({
+            ads,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error) {
+        console.error('Admin fetch ads error:', error);
+        res.status(500).json({ error: 'Failed to fetch ads' });
+    }
+});
+
+router.get('/admin/pending', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        const ads = await Ad.find({ status: 'pending' })
+            .populate('advertiserId', 'companyName email')
+            .sort({ createdAt: 1 });
+
+        res.json({ ads });
+    } catch (error) {
+        console.error('Admin fetch pending error:', error);
+        res.status(500).json({ error: 'Failed to fetch pending ads' });
+    }
+});
+
+router.put('/admin/approve/:adId', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        const { adId } = req.params;
+
+        const ad = await Ad.findByIdAndUpdate(
+            adId,
+            { status: 'active' },
+            { new: true }
+        );
+
+        if (!ad) {
+            return res.status(404).json({ error: 'Ad not found' });
+        }
+
+        res.json({ success: true, message: 'Ad approved and activated', ad });
+    } catch (error) {
+        console.error('Admin approve error:', error);
+        res.status(500).json({ error: 'Failed to approve ad' });
+    }
+});
+
+router.put('/admin/reject/:adId', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        const { adId } = req.params;
+        const { reason } = req.body;
+
+        const ad = await Ad.findByIdAndUpdate(
+            adId,
+            { status: 'rejected' },
+            { new: true }
+        );
+
+        if (!ad) {
+            return res.status(404).json({ error: 'Ad not found' });
+        }
+
+        res.json({ success: true, message: 'Ad rejected', ad });
+    } catch (error) {
+        console.error('Admin reject error:', error);
+        res.status(500).json({ error: 'Failed to reject ad' });
+    }
+});
+
+router.get('/admin/all-advertisers', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        const advertisers = await Advertiser.find({ role: 'advertiser' })
+            .select('-password')
+            .sort({ createdAt: -1 });
+
+        res.json({ advertisers });
+    } catch (error) {
+        console.error('Admin fetch advertisers error:', error);
+        res.status(500).json({ error: 'Failed to fetch advertisers' });
+    }
+});
+
+router.post('/admin/create-admin', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        const { email, password, contactName } = req.body;
+
+        const existing = await Advertiser.findOne({ email });
+        if (existing) {
+            return res.status(400).json({ error: 'Email already registered' });
+        }
+
+        const admin = new Advertiser({
+            email,
+            password,
+            companyName: 'Wordeth',
+            contactName,
+            accountType: 'managed',
+            role: 'admin',
+            status: 'approved'
+        });
+
+        await admin.save();
+
+        res.status(201).json({
+            success: true,
+            message: 'Admin account created',
+            admin: {
+                id: admin._id,
+                email: admin.email,
+                contactName: admin.contactName
+            }
+        });
+    } catch (error) {
+        console.error('Create admin error:', error);
+        res.status(500).json({ error: 'Failed to create admin account' });
+    }
+});
+
+router.get('/admin/analytics', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        const totalAds = await Ad.countDocuments();
+        const activeAds = await Ad.countDocuments({ status: 'active' });
+        const pendingAds = await Ad.countDocuments({ status: 'pending' });
+        const totalAdvertisers = await Advertiser.countDocuments({ role: 'advertiser' });
+
+        const stats = await Ad.aggregate([
+            { $match: { status: 'active' } },
+            {
+                $group: {
+                    _id: null,
+                    totalImpressions: { $sum: '$stats.impressions' },
+                    totalClicks: { $sum: '$stats.clicks' }
+                }
+            }
+        ]);
+
+        const topAds = await Ad.find({ status: 'active' })
+            .sort({ 'stats.impressions': -1 })
+            .limit(10)
+            .populate('advertiserId', 'companyName');
+
+        res.json({
+            overview: {
+                totalAds,
+                activeAds,
+                pendingAds,
+                totalAdvertisers
+            },
+            performance: stats[0] || { totalImpressions: 0, totalClicks: 0 },
+            topAds
+        });
+    } catch (error) {
+        console.error('Admin analytics error:', error);
+        res.status(500).json({ error: 'Failed to fetch analytics' });
+    }
+});
+
+router.post('/admin/upload-for-client', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        const { clientEmail, title, description, imageUrl, linkUrl, placement, size, keywords } = req.body;
+
+        if (!isValidUrl(imageUrl) || !isValidUrl(linkUrl)) {
+            return res.status(400).json({ error: 'Image URL and Link URL must be valid HTTP/HTTPS URLs' });
+        }
+
+        let advertiser = await Advertiser.findOne({ email: clientEmail });
+
+        if (!advertiser) {
+            advertiser = new Advertiser({
+                email: clientEmail,
+                password: Math.random().toString(36).slice(-12),
+                companyName: title.split(' ')[0] || 'Client',
+                contactName: 'Managed Account',
+                accountType: 'managed',
+                status: 'approved'
+            });
+            await advertiser.save();
+        }
+
+        const ad = new Ad({
+            advertiserId: advertiser._id,
+            title,
+            description,
+            imageUrl,
+            linkUrl,
+            placement,
+            size,
+            keywords: keywords || [],
+            status: 'active',
+            createdBy: 'admin'
+        });
+
+        await ad.save();
+
+        res.status(201).json({
+            success: true,
+            message: 'Ad created for client',
+            ad
+        });
+    } catch (error) {
+        console.error('Upload for client error:', error);
+        res.status(500).json({ error: 'Failed to create ad for client' });
+    }
+});
 
 module.exports = router;
-

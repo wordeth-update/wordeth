@@ -57,6 +57,24 @@ The application is fully functional and ready for use. It runs on Node.js with E
   - Mirror effect for natural selfie view
   - Animated hue-rotate effect for psychedelic filter
   - Visual indicator on control button when filter is active
+- **Advertising System**: Keyword-based contextual advertising for lyrics search page
+  - Non-intrusive header/footer ad placements on search results
+  - MongoDB-backed ad and advertiser storage
+  - **Admin Panel** (`ad-admin.html`): Internal Wordeth sales team can:
+    - Upload ads for clients with specific size requirements (728x90, 320x50)
+    - Set up to 25 keywords per ad for targeting
+    - Approve/reject pending ads from self-serve advertisers
+    - View analytics (impressions, clicks, CTR)
+    - Create admin accounts for team members
+  - **Self-Serve Portal** (`ad-portal.html`): Business partners can:
+    - Create advertiser accounts
+    - Build and submit ads with keyword targeting
+    - Monitor ad performance and pause/resume campaigns
+  - **Documentation** (`ad-docs.html`): Comprehensive guide for advertisers
+    - Ad sizes and specifications
+    - Keyword targeting best practices
+    - Content guidelines and policies
+    - Approval process documentation
 
 ## Project Architecture
 
