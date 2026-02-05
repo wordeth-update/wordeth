@@ -102,7 +102,7 @@ function showResults(results, query) {
     resultsGrid.innerHTML = results.map(song => `
         <div class="result-card" data-song-id="${song.id}">
             <div class="result-image">
-                <img src="${song.image}" alt="${escapeHtml(song.title)} cover" onerror="this.src='https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80'">
+                <img src="${song.image || '/images/logo.png'}" alt="${escapeHtml(song.title)} cover" onerror="this.onerror=null; this.src='/images/logo.png'; this.classList.add('fallback-logo');">
             </div>
             <div class="result-content">
                 <h3>${escapeHtml(song.title)}</h3>
@@ -157,7 +157,8 @@ async function showLyricsModal(songId) {
         
         modalSongTitle.textContent = song.title;
         modalSongArtist.textContent = song.artist;
-        modalSongImage.src = song.image || song.album_image;
+        modalSongImage.src = song.image || song.album_image || '/images/logo.png';
+        modalSongImage.onerror = function() { this.onerror=null; this.src='/images/logo.png'; this.classList.add('fallback-logo'); };
         modalSongAlbum.textContent = song.album || 'Album not available';
         modalSongRelease.textContent = song.release_date || 'Release date not available';
         
@@ -174,7 +175,7 @@ async function showLyricsModal(songId) {
         // Show error in modal
         modalSongTitle.textContent = 'Error Loading Lyrics';
         modalSongArtist.textContent = 'Please try again';
-        modalSongImage.src = 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80';
+        modalSongImage.src = '/images/logo.png';
         modalSongAlbum.textContent = '';
         modalSongRelease.textContent = '';
         modalLyricsText.innerHTML = 'There was an error loading the lyrics. Please try again.';
