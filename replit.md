@@ -57,6 +57,12 @@ The application is fully functional and ready for use. It runs on Node.js with E
   - Mirror effect for natural selfie view
   - Animated hue-rotate effect for psychedelic filter
   - Visual indicator on control button when filter is active
+- **Lyrics-to-Merch Feature**: Highlight lyrics in modal → "Make Merch" button appears → redirects to merch store with lyrics pre-filled
+- **Artist Merch Store**: InkSoft-powered merchandise store with:
+  - Artist Garden: Featured artist cards for Music Artists, Designers, and Labels
+  - Search/filter functionality for 100K+ artist partnerships
+  - Direct InkSoft designer embed for immediate designing
+  - Artist-specific designer loads when selecting an artist card
 - **Advertising System**: Keyword-based contextual advertising for lyrics search page
   - Non-intrusive header/footer ad placements on search results
   - MongoDB-backed ad and advertiser storage

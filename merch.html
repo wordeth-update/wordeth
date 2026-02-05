@@ -257,6 +257,68 @@
             display: none;
         }
 
+        .quick-design-container {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .quick-design-embed {
+            width: 100%;
+            height: 720px;
+        }
+
+        .lyrics-prefill-banner {
+            background: linear-gradient(135deg, var(--purple-accent), var(--mint));
+            padding: 1.5rem 2rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            display: none;
+        }
+
+        .lyrics-prefill-banner.active {
+            display: block;
+        }
+
+        .lyrics-prefill-banner h3 {
+            color: white;
+            margin-bottom: 0.5rem;
+        }
+
+        .lyrics-prefill-text {
+            background: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: 10px;
+            color: white;
+            font-style: italic;
+            margin-bottom: 1rem;
+        }
+
+        .lyrics-prefill-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .lyrics-prefill-actions button {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .use-lyrics-btn {
+            background: white;
+            color: var(--purple-accent);
+        }
+
+        .clear-lyrics-btn {
+            background: transparent;
+            border: 1px solid white !important;
+            color: white;
+        }
+
         .search-results {
             display: none;
             max-width: 1400px;
@@ -395,6 +457,26 @@
                 <p>No artists found matching your search</p>
             </div>
         </div>
+
+        <section class="artist-garden" id="startDesigningSection">
+            <div class="section-header">
+                <h2><i class="fas fa-paint-brush"></i> Start Designing Now</h2>
+            </div>
+            <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Jump right in and create custom merch with the Wordeth store</p>
+            
+            <div class="lyrics-prefill-banner" id="lyricsPrefillBanner">
+                <h3><i class="fas fa-music"></i> Lyrics Ready to Use</h3>
+                <div class="lyrics-prefill-text" id="lyricsPrefillText"></div>
+                <div class="lyrics-prefill-actions">
+                    <button class="use-lyrics-btn" id="useLyricsBtn"><i class="fas fa-check"></i> Use These Lyrics</button>
+                    <button class="clear-lyrics-btn" id="clearLyricsBtn"><i class="fas fa-times"></i> Clear</button>
+                </div>
+            </div>
+            
+            <div class="quick-design-container">
+                <div class="quick-design-embed" id="quickDesignEmbed"></div>
+            </div>
+        </section>
 
         <section class="artist-garden" id="artistGarden">
             <div class="section-header">
@@ -611,8 +693,71 @@
             });
         });
 
+        // Check for lyrics from URL parameter
+        function checkForLyrics() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const lyrics = urlParams.get('lyrics');
+            const song = urlParams.get('song');
+            const artist = urlParams.get('artist');
+            
+            if (lyrics) {
+                const banner = document.getElementById('lyricsPrefillBanner');
+                const textEl = document.getElementById('lyricsPrefillText');
+                
+                let displayText = decodeURIComponent(lyrics);
+                if (song || artist) {
+                    displayText += `\n— ${song || ''} ${artist ? 'by ' + artist : ''}`;
+                }
+                textEl.textContent = displayText;
+                banner.classList.add('active');
+                
+                // Store for later use
+                window.selectedLyrics = decodeURIComponent(lyrics);
+            }
+        }
+
+        // Use lyrics button - copy to clipboard for paste into designer
+        document.getElementById('useLyricsBtn').addEventListener('click', () => {
+            if (window.selectedLyrics) {
+                navigator.clipboard.writeText(window.selectedLyrics).then(() => {
+                    const btn = document.getElementById('useLyricsBtn');
+                    btn.innerHTML = '<i class="fas fa-clipboard-check"></i> Copied! Paste in Designer';
+                    setTimeout(() => {
+                        btn.innerHTML = '<i class="fas fa-check"></i> Use These Lyrics';
+                    }, 3000);
+                });
+            }
+        });
+
+        // Clear lyrics button
+        document.getElementById('clearLyricsBtn').addEventListener('click', () => {
+            document.getElementById('lyricsPrefillBanner').classList.remove('active');
+            window.selectedLyrics = null;
+            // Remove URL params
+            window.history.replaceState({}, document.title, window.location.pathname);
+        });
+
+        // Load InkSoft in quick design section on page load
+        function loadQuickDesigner() {
+            let scriptElement = document.createElement('script');
+            scriptElement.type = 'text/javascript';
+            scriptElement.async = true;
+            scriptElement.src = 'https://cdn.inksoft.com/FrontendApps/storefront/assets/scripts/designer-embed.js';
+            scriptElement.onload = function() {
+                window.inksoftApi.launchEmbeddedDesignStudio({
+                    targetElementId: 'quickDesignEmbed',
+                    domain: 'https://stores.inksoft.com',
+                    cdnDomain: 'https://cdn.inksoft.com',
+                    storeUri: 'DS679149076'
+                });
+            };
+            document.body.appendChild(scriptElement);
+        }
+
         // Initialize
         populateGrids();
+        checkForLyrics();
+        loadQuickDesigner();
     </script>
 </body>
 </html>

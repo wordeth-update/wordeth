@@ -476,5 +476,60 @@ function displayModalAd(container, ad) {
     trackAdImpression(adId);
 }
 
+// Lyrics-to-Merch: Text selection handling
+let selectedLyricsText = '';
+let currentSongTitle = '';
+let currentArtist = '';
+
+function setupLyricsSelection() {
+    const lyricsTextEl = document.getElementById('modal-lyrics-text');
+    const makeMerchBtn = document.getElementById('makeMerchBtn');
+    
+    if (!lyricsTextEl || !makeMerchBtn) return;
+    
+    // Listen for text selection in the lyrics
+    lyricsTextEl.addEventListener('mouseup', handleTextSelection);
+    lyricsTextEl.addEventListener('touchend', handleTextSelection);
+    
+    // Make Merch button click handler
+    makeMerchBtn.addEventListener('click', () => {
+        if (selectedLyricsText) {
+            const params = new URLSearchParams({
+                lyrics: selectedLyricsText,
+                song: currentSongTitle,
+                artist: currentArtist
+            });
+            window.location.href = `/merch.html?${params.toString()}`;
+        }
+    });
+}
+
+function handleTextSelection() {
+    const selection = window.getSelection();
+    const selectedText = selection.toString().trim();
+    const makeMerchBtn = document.getElementById('makeMerchBtn');
+    
+    if (selectedText && selectedText.length > 0) {
+        selectedLyricsText = selectedText;
+        currentSongTitle = document.getElementById('modal-song-title').textContent || '';
+        currentArtist = document.getElementById('modal-song-artist').textContent || '';
+        makeMerchBtn.style.display = 'inline-block';
+    } else {
+        makeMerchBtn.style.display = 'none';
+    }
+}
+
+// Hide merch button when modal closes
+function hideModalMerchBtn() {
+    const makeMerchBtn = document.getElementById('makeMerchBtn');
+    if (makeMerchBtn) {
+        makeMerchBtn.style.display = 'none';
+    }
+    selectedLyricsText = '';
+}
+
 // Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', setupEventListeners); 
+document.addEventListener('DOMContentLoaded', () => {
+    setupEventListeners();
+    setupLyricsSelection();
+}); 
