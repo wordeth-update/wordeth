@@ -150,6 +150,9 @@ function escapeHtml(text) {
 async function showLyricsModal(songId) {
     showLoading();
     
+    // Get song info from search results
+    const songInfo = currentSearchResults.find(s => s.id === songId) || {};
+    
     try {
         console.log('Fetching lyrics for song ID:', songId);
         const response = await fetch(`/api/lyrics/lyrics/${songId}`);
@@ -159,27 +162,31 @@ async function showLyricsModal(songId) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        const song = await response.json();
-        console.log('Lyrics data:', song);
+        const lyricsData = await response.json();
+        console.log('Lyrics data:', lyricsData);
         
         hideLoading();
         
-        modalSongTitle.textContent = song.title;
-        modalSongArtist.textContent = song.artist;
-        modalSongImage.src = song.image || song.album_image || '/images/logo.png';
+        // Use song info from search results, lyrics from API
+        const title = songInfo.title || 'Unknown Title';
+        const artist = songInfo.artist || 'Unknown Artist';
+        
+        modalSongTitle.textContent = title;
+        modalSongArtist.textContent = artist;
+        modalSongImage.src = songInfo.image || songInfo.album_image || '/images/logo.png';
         modalSongImage.onerror = function() { this.onerror=null; this.src='/images/logo.png'; this.classList.add('fallback-logo'); };
-        modalSongAlbum.textContent = song.album || 'Album not available';
-        modalSongRelease.textContent = song.release_date || 'Release date not available';
+        modalSongAlbum.textContent = songInfo.album || 'Album not available';
+        modalSongRelease.textContent = songInfo.release_date || 'Release date not available';
         
         // Properly format lyrics with HTML encoding
-        const formattedLyrics = formatLyricsForDisplay(song.lyrics);
+        const formattedLyrics = formatLyricsForDisplay(lyricsData.lyrics);
         modalLyricsText.innerHTML = formattedLyrics;
 
         lyricsModal.style.display = 'block';
         document.body.style.overflow = 'hidden';
         
         // Fetch and display modal ads based on song title/artist
-        fetchModalAds(song.title, song.artist);
+        fetchModalAds(title, artist);
     } catch (error) {
         console.error('Error fetching lyrics:', error);
         hideLoading();
@@ -427,6 +434,9 @@ function hideModalAds() {
 }
 
 async function fetchModalAds(title, artist) {
+    console.log('fetchModalAds called:', title, artist);
+    console.log('modalSidebarAd element:', modalSidebarAd);
+    console.log('modalBottomAd element:', modalBottomAd);
     hideModalAds();
     
     try {
@@ -434,18 +444,22 @@ async function fetchModalAds(title, artist) {
         if (!query) return;
         
         const response = await fetch(`/api/ads/match-modal?q=${encodeURIComponent(query)}`);
+        console.log('Modal ads response status:', response.status);
         if (!response.ok) return;
         
         const data = await response.json();
+        console.log('Modal ads data:', data);
         
-        if (data.ads.sidebar) {
+        if (data.ads && data.ads.sidebar) {
+            console.log('Displaying sidebar ad');
             displayModalAd(modalSidebarAd, data.ads.sidebar);
         }
-        if (data.ads.bottom) {
+        if (data.ads && data.ads.bottom) {
+            console.log('Displaying bottom ad');
             displayModalAd(modalBottomAd, data.ads.bottom);
         }
     } catch (error) {
-        console.log('Modal ad fetch skipped:', error.message);
+        console.log('Modal ad fetch error:', error.message);
     }
 }
 
