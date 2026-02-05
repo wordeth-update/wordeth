@@ -294,6 +294,23 @@ footer {
     transition: transform 0.3s ease;
 }
 
+.footer-links {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 0.5rem;
+}
+
+.footer-links a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color 0.3s ease;
+}
+
+.footer-links a:hover {
+    color: var(--mint);
+}
+
 .social-icon:hover {
     transform: scale(1.1);
 }
