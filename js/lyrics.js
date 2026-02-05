@@ -19,8 +19,8 @@ const modalSongImage = document.getElementById('modal-song-image');
 const modalSongAlbum = document.getElementById('modal-song-album');
 const modalSongRelease = document.getElementById('modal-song-release');
 const modalLyricsText = document.getElementById('modal-lyrics-text');
-const modalSidebarAd = document.getElementById('modal-sidebar-ad');
-const modalBottomAd = document.getElementById('modal-bottom-ad');
+let modalSidebarAd = null;
+let modalBottomAd = null;
 
 // Search state
 let searchTimeout;
@@ -303,6 +303,10 @@ function hideLyricsModal() {
 
 // Event listeners
 function setupEventListeners() {
+    // Initialize modal ad containers (must be done after DOM is ready)
+    modalSidebarAd = document.getElementById('modal-sidebar-ad');
+    modalBottomAd = document.getElementById('modal-bottom-ad');
+    
     // Real-time search
     setupRealTimeSearch();
 
