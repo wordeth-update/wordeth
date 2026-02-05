@@ -1219,8 +1219,12 @@ class AudioRoomsManager {
         this.karaokeModal?.classList.add('active');
         
         // Retry YouTube player creation if not ready
-        if (!this.youtubeReady && window.YT && window.YT.Player) {
-            this.createYouTubePlayer();
+        if (!this.youtubeReady) {
+            if (window.YT && window.YT.Player) {
+                setTimeout(() => this.createYouTubePlayer(), 100);
+            } else {
+                console.log('YouTube API not loaded yet');
+            }
         }
     }
     
@@ -1580,14 +1584,20 @@ class AudioRoomsManager {
         document.getElementById('karaoke-song-artist').textContent = artist;
         const albumArt = document.getElementById('karaoke-album-art');
         if (albumArt) {
-            albumArt.src = image || 'https://via.placeholder.com/70';
-            albumArt.onerror = () => { albumArt.src = 'https://via.placeholder.com/70?text=Album'; };
+            albumArt.src = image || '/images/logo.png';
+            albumArt.onerror = () => { albumArt.src = '/images/logo.png'; };
         }
         
         // Load YouTube audio in parallel with lyrics
         this.loadYouTubeAudio(artist, title);
         
-        // Load lyrics
+        // Show loading state for lyrics
+        const lyricsContainer = document.getElementById('lyrics-scroll');
+        if (lyricsContainer) {
+            lyricsContainer.innerHTML = '<div class="lyrics-line active">Loading lyrics...</div>';
+        }
+        
+        // Load lyrics - try API first, then LRCLIB fallback
         try {
             const response = await fetch(`/api/lyrics/lyrics/${songId}`);
             const data = await response.json();
@@ -1596,14 +1606,36 @@ class AudioRoomsManager {
                 this.parseLyricsForKaraoke(data.lyrics);
                 this.addChatMessage('System', `Starting karaoke: "${title}" by ${artist}`, true);
             } else {
-                // Use demo lyrics when real lyrics can't be fetched
-                this.useDemoLyrics(title, artist);
+                // Try LRCLIB as direct fallback
+                await this.tryLrclibLyrics(title, artist);
             }
         } catch (error) {
             console.error('Error loading lyrics:', error);
-            // Use demo lyrics as fallback
-            this.useDemoLyrics(title, artist);
+            await this.tryLrclibLyrics(title, artist);
         }
+    }
+    
+    async tryLrclibLyrics(title, artist) {
+        try {
+            const cleanTitle = title.replace(/\s*\(.*?\)\s*/g, '').trim();
+            const cleanArtist = artist.replace(/\s*feat\..*$/i, '').replace(/\s*ft\..*$/i, '').trim();
+            const url = `https://lrclib.net/api/get?artist_name=${encodeURIComponent(cleanArtist)}&track_name=${encodeURIComponent(cleanTitle)}`;
+            
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.plainLyrics && data.plainLyrics.length > 50) {
+                    this.parseLyricsForKaraoke(data.plainLyrics);
+                    this.addChatMessage('System', `Starting karaoke: "${title}" by ${artist}`, true);
+                    return;
+                }
+            }
+        } catch (error) {
+            console.log('LRCLIB fallback failed:', error);
+        }
+        
+        // Final fallback to demo lyrics
+        this.useDemoLyrics(title, artist);
     }
     
     useDemoLyrics(title, artist) {
@@ -1769,34 +1801,50 @@ class AudioRoomsManager {
     initYouTubePlayer() {
         // YouTube API will call onYouTubeIframeAPIReady when ready
         window.onYouTubeIframeAPIReady = () => {
+            console.log('YouTube IFrame API ready');
+            this.ytApiReady = true;
             this.createYouTubePlayer();
         };
         
         // If API already loaded
         if (window.YT && window.YT.Player) {
+            this.ytApiReady = true;
             this.createYouTubePlayer();
         }
     }
     
     createYouTubePlayer() {
+        // Don't recreate if already exists and ready
+        if (this.youtubePlayer && this.youtubeReady) {
+            return;
+        }
+        
         const playerContainer = document.getElementById('youtube-player');
         if (!playerContainer) {
             console.log('YouTube player container not found, will retry when modal opens');
             return;
         }
         
+        // Check if there's already an iframe (player already created)
+        if (playerContainer.tagName === 'IFRAME') {
+            console.log('YouTube player already exists');
+            return;
+        }
+        
         try {
+            console.log('Creating YouTube player...');
             this.youtubePlayer = new YT.Player('youtube-player', {
                 height: '113',
                 width: '200',
                 playerVars: {
                     'autoplay': 0,
-                    'controls': 1, // Enable controls for better UX
+                    'controls': 1,
                     'disablekb': 0,
                     'modestbranding': 1,
                     'rel': 0,
                     'showinfo': 0,
-                    'fs': 0
+                    'fs': 0,
+                    'origin': window.location.origin
                 },
                 events: {
                     'onReady': () => {
