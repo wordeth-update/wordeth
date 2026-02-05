@@ -434,9 +434,6 @@ function hideModalAds() {
 }
 
 async function fetchModalAds(title, artist) {
-    console.log('fetchModalAds called:', title, artist);
-    console.log('modalSidebarAd element:', modalSidebarAd);
-    console.log('modalBottomAd element:', modalBottomAd);
     hideModalAds();
     
     try {
@@ -444,22 +441,18 @@ async function fetchModalAds(title, artist) {
         if (!query) return;
         
         const response = await fetch(`/api/ads/match-modal?q=${encodeURIComponent(query)}`);
-        console.log('Modal ads response status:', response.status);
         if (!response.ok) return;
         
         const data = await response.json();
-        console.log('Modal ads data:', data);
         
         if (data.ads && data.ads.sidebar) {
-            console.log('Displaying sidebar ad');
             displayModalAd(modalSidebarAd, data.ads.sidebar);
         }
         if (data.ads && data.ads.bottom) {
-            console.log('Displaying bottom ad');
             displayModalAd(modalBottomAd, data.ads.bottom);
         }
     } catch (error) {
-        console.log('Modal ad fetch error:', error.message);
+        // Silently skip ad loading on error
     }
 }
 
