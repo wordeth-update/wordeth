@@ -99,11 +99,20 @@ function showResults(results, query) {
     resultsTitle.textContent = `Search Results for "${query}"`;
     resultsSubtitle.textContent = `Found ${results.length} song${results.length !== 1 ? 's' : ''} matching your search`;
     
-    resultsGrid.innerHTML = results.map(song => `
+    resultsGrid.innerHTML = results.map(song => {
+        // Check for missing, null, or placeholder images
+        const hasValidImage = song.image && !song.image.includes('nocover') && !song.image.includes('placeholder');
+        const imageUrl = hasValidImage ? song.image : '/images/logo.png';
+        const fallbackClass = hasValidImage ? '' : 'fallback-logo';
+        
+        return `
         <div class="result-card" data-song-id="${song.id}">
             <div class="result-image">
-                <img src="${song.image || '/images/logo.png'}" alt="${escapeHtml(song.title)} cover" onerror="this.onerror=null; this.src='/images/logo.png'; this.classList.add('fallback-logo');">
-            </div>
+                <img src="${imageUrl}" alt="${escapeHtml(song.title)} cover" class="${fallbackClass}" onerror="this.onerror=null; this.src='/images/logo.png'; this.classList.add('fallback-logo');">
+            </div>`;
+    }).map((cardStart, i) => {
+        const song = results[i];
+        return cardStart + `
             <div class="result-content">
                 <h3>${escapeHtml(song.title)}</h3>
                 <p class="artist">${escapeHtml(song.artist)}</p>
@@ -113,8 +122,8 @@ function showResults(results, query) {
                 <i class="fas fa-music"></i>
                 View Lyrics
             </button>
-        </div>
-    `).join('');
+        </div>`;
+    }).join('');
     
     resultsSection.style.display = 'block';
     noResults.style.display = 'none';
