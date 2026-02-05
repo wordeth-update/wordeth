@@ -686,6 +686,18 @@
         </div>
     </main>
 
+    <script>
+        // Set up YouTube API callback before loading the API
+        window.youtubeApiReady = false;
+        window.onYouTubeIframeAPIReady = function() {
+            console.log('YouTube IFrame API ready (global)');
+            window.youtubeApiReady = true;
+            // Notify the audio rooms manager if it exists
+            if (window.audioRoomsManager) {
+                window.audioRoomsManager.onYouTubeApiReady();
+            }
+        };
+    </script>
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="js/verses.js"></script>
     <script src="js/nav-auth.js"></script>

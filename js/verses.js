@@ -1797,35 +1797,21 @@ class AudioRoomsManager {
     
     // YouTube Player Integration
     initYouTubePlayer() {
-        // YouTube API will call onYouTubeIframeAPIReady when ready
-        window.onYouTubeIframeAPIReady = () => {
-            console.log('YouTube IFrame API ready');
-            this.ytApiReady = true;
-            this.createYouTubePlayer();
-        };
-        
-        // If API already loaded
-        if (window.YT && window.YT.Player) {
+        // Check if API already loaded via global callback
+        if (window.youtubeApiReady || (window.YT && window.YT.Player)) {
+            console.log('YouTube API already ready');
             this.ytApiReady = true;
             this.createYouTubePlayer();
         } else {
-            // Dynamically load YouTube API if not present
-            this.loadYouTubeAPI();
+            console.log('Waiting for YouTube API...');
         }
     }
     
-    loadYouTubeAPI() {
-        // Check if script already exists
-        if (document.querySelector('script[src*="youtube.com/iframe_api"]')) {
-            return;
-        }
-        
-        const tag = document.createElement('script');
-        tag.src = 'https://www.youtube.com/iframe_api';
-        tag.async = true;
-        const firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-        console.log('YouTube API script injected');
+    // Called by global onYouTubeIframeAPIReady callback
+    onYouTubeApiReady() {
+        console.log('YouTube API ready callback received');
+        this.ytApiReady = true;
+        this.createYouTubePlayer();
     }
     
     createYouTubePlayer() {
