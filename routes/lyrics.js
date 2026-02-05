@@ -53,15 +53,18 @@ router.get('/search', async (req, res) => {
             }
         }
 
-        // Try each search query until we get results
+        // Try multiple search strategies
         let allHits = [];
         
         for (const searchQuery of searchQueries) {
+            if (allHits.length > 0) break;
+            
+            // Strategy 1: Search by artist name first (for artist-specific searches)
             try {
-                const response = await axios.get(`${MUSIXMATCH_BASE_URL}/track.search`, {
+                const artistResponse = await axios.get(`${MUSIXMATCH_BASE_URL}/track.search`, {
                     params: {
                         apikey: MUSIXMATCH_API_KEY,
-                        q: searchQuery,
+                        q_artist: searchQuery,
                         page_size: 20,
                         page: 1,
                         s_track_rating: 'desc'
@@ -69,28 +72,59 @@ router.get('/search', async (req, res) => {
                     timeout: MUSIXMATCH_TIMEOUT
                 });
 
-                if (response.data.message.header.status_code === 200) {
-                    const tracks = response.data.message.body.track_list;
-                    const hits = tracks.map(item => ({
-                        id: item.track.track_id,
-                        title: item.track.track_name,
-                        artist: item.track.artist_name,
-                        album: item.track.album_name,
-                        image: item.track.album_coverart_500x500 || item.track.album_coverart_350x350 || item.track.album_coverart_100x100 || null,
-                        url: item.track.track_share_url,
-                        release_date: item.track.first_release_date ? new Date(item.track.first_release_date).toLocaleDateString() : null,
-                        has_lyrics: item.track.has_lyrics === 1,
-                        explicit: item.track.explicit === 1,
-                        genres: item.track.primary_genres?.music_genre_list?.map(g => g.music_genre.music_genre_name) || []
-                    }));
-
-                    if (hits.length > 0) {
-                        allHits = hits;
-                        break;
+                if (artistResponse.data.message.header.status_code === 200) {
+                    const tracks = artistResponse.data.message.body.track_list;
+                    if (tracks && tracks.length > 0) {
+                        allHits = tracks.map(item => ({
+                            id: item.track.track_id,
+                            title: item.track.track_name,
+                            artist: item.track.artist_name,
+                            album: item.track.album_name,
+                            image: item.track.album_coverart_500x500 || item.track.album_coverart_350x350 || item.track.album_coverart_100x100 || null,
+                            url: item.track.track_share_url,
+                            release_date: item.track.first_release_date ? new Date(item.track.first_release_date).toLocaleDateString() : null,
+                            has_lyrics: item.track.has_lyrics === 1,
+                            explicit: item.track.explicit === 1,
+                            genres: item.track.primary_genres?.music_genre_list?.map(g => g.music_genre.music_genre_name) || []
+                        }));
                     }
                 }
             } catch (err) {
-                console.log(`Search variation failed: ${searchQuery}`, err.message);
+                console.log(`Artist search failed: ${searchQuery}`, err.message);
+            }
+
+            // Strategy 2: If no artist results, try general search
+            if (allHits.length === 0) {
+                try {
+                    const response = await axios.get(`${MUSIXMATCH_BASE_URL}/track.search`, {
+                        params: {
+                            apikey: MUSIXMATCH_API_KEY,
+                            q: searchQuery,
+                            page_size: 20,
+                            page: 1,
+                            s_track_rating: 'desc'
+                        },
+                        timeout: MUSIXMATCH_TIMEOUT
+                    });
+
+                    if (response.data.message.header.status_code === 200) {
+                        const tracks = response.data.message.body.track_list;
+                        allHits = tracks.map(item => ({
+                            id: item.track.track_id,
+                            title: item.track.track_name,
+                            artist: item.track.artist_name,
+                            album: item.track.album_name,
+                            image: item.track.album_coverart_500x500 || item.track.album_coverart_350x350 || item.track.album_coverart_100x100 || null,
+                            url: item.track.track_share_url,
+                            release_date: item.track.first_release_date ? new Date(item.track.first_release_date).toLocaleDateString() : null,
+                            has_lyrics: item.track.has_lyrics === 1,
+                            explicit: item.track.explicit === 1,
+                            genres: item.track.primary_genres?.music_genre_list?.map(g => g.music_genre.music_genre_name) || []
+                        }));
+                    }
+                } catch (err) {
+                    console.log(`General search failed: ${searchQuery}`, err.message);
+                }
             }
         }
 
