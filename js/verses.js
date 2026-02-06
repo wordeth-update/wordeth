@@ -1559,10 +1559,6 @@ class AudioRoomsManager {
                 ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
                 ctx.globalAlpha = 1.0;
             } else if (filter === 'bg-blur') {
-                ctx.filter = 'blur(8px)';
-                ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-                ctx.filter = 'none';
-
                 const cx = canvas.width / 2;
                 const cy = canvas.height * 0.4;
                 const rx = canvas.width * 0.3;
@@ -1572,8 +1568,19 @@ class AudioRoomsManager {
                 ctx.beginPath();
                 ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
                 ctx.clip();
+                ctx.filter = 'none';
                 ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
                 ctx.restore();
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+                ctx.rect(canvas.width, 0, -canvas.width, canvas.height);
+                ctx.clip('evenodd');
+                ctx.filter = 'blur(8px)';
+                ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+                ctx.restore();
+                ctx.filter = 'none';
             }
 
             this.canvasFilterRAF = requestAnimationFrame(renderFrame);
