@@ -526,9 +526,10 @@ function handleTextSelection() {
         const lastRect = rects[rects.length - 1];
         const modalContent = document.querySelector('.modal-content');
         const modalRect = modalContent ? modalContent.getBoundingClientRect() : { left: 0, top: 0 };
+        const scrollTop = modalContent ? modalContent.scrollTop : 0;
         
         const tooltipLeft = lastRect.right - modalRect.left;
-        const tooltipTop = lastRect.top - modalRect.top - 10;
+        const tooltipTop = lastRect.top - modalRect.top + scrollTop - 10;
         
         merchTooltip.style.left = tooltipLeft + 'px';
         merchTooltip.style.top = tooltipTop + 'px';
