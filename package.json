@@ -20,6 +20,7 @@
     "security": "npm audit && npm outdated"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.984.0",
     "@google-cloud/storage": "^7.19.0",
     "@uppy/aws-s3": "^5.1.0",
     "@uppy/core": "^5.2.0",

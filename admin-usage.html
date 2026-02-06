@@ -56,6 +56,7 @@
                     <li data-tab="community-segment"><i class="fas fa-comments"></i> Community</li>
                     <li data-tab="merch-segment"><i class="fas fa-tshirt"></i> Apparel</li>
                     <li data-tab="genres"><i class="fas fa-guitar"></i> Genre Propensity</li>
+                    <li data-tab="historical"><i class="fas fa-archive"></i> Historical Trends</li>
                 </ul>
             </aside>
 
@@ -204,6 +205,88 @@
                         <div class="metric-card wide">
                             <h3><i class="fas fa-chart-bar"></i> Genre Distribution</h3>
                             <div id="genreBarChart" class="chart-container tall"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="historical-tab" class="tab-content">
+                    <h2>Historical Trends</h2>
+                    <p class="section-desc">Long-term analytics archived to AWS S3 for year-over-year insights</p>
+
+                    <div id="archiveNotConfigured" style="display:none;">
+                        <div class="metric-card wide">
+                            <div class="empty-state">
+                                <i class="fas fa-cloud" style="font-size:2rem;margin-bottom:12px;color:#4ECDC4;"></i>
+                                <p>AWS S3 storage is not yet configured.</p>
+                                <p style="color:#8B949E;font-size:0.85rem;margin-top:8px;">
+                                    Add <code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code>, 
+                                    <code>AWS_S3_BUCKET</code>, and optionally <code>AWS_REGION</code> to your secrets to enable archiving.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="archiveConfigured" style="display:none;">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <i class="fas fa-calendar-alt"></i>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="archivedMonthsCount">-</span>
+                                    <span class="stat-label">Months Archived</span>
+                                </div>
+                            </div>
+                            <div class="stat-card stat-lyrics">
+                                <i class="fas fa-database"></i>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="archiveStatus">-</span>
+                                    <span class="stat-label">Archive Status</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-row">
+                            <div class="metric-card wide">
+                                <h3><i class="fas fa-save"></i> Archive Data</h3>
+                                <p style="color:#8B949E;font-size:0.85rem;margin-bottom:12px;">
+                                    Compress current database events into daily summaries and store in S3
+                                </p>
+                                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+                                    <button onclick="runArchive('auto')" class="btn-primary" style="padding:8px 16px;font-size:0.85rem;">
+                                        <i class="fas fa-magic"></i> Auto Archive (7+ days old)
+                                    </button>
+                                    <button onclick="runArchive('today')" class="btn-primary" style="padding:8px 16px;font-size:0.85rem;background:#3EB489;">
+                                        <i class="fas fa-calendar-day"></i> Archive Today
+                                    </button>
+                                </div>
+                                <div id="archiveResult" class="list-container" style="max-height:150px;overflow-y:auto;"></div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-row">
+                            <div class="metric-card wide">
+                                <h3><i class="fas fa-chart-line"></i> Month-over-Month Comparison</h3>
+                                <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+                                    <label style="color:#8B949E;font-size:0.85rem;">Archived months:</label>
+                                    <select id="compareMonth1" style="background:#1e2a3a;color:#e6e6e6;border:1px solid #2d3748;border-radius:6px;padding:6px 10px;font-size:0.85rem;">
+                                        <option value="">Select Month 1</option>
+                                    </select>
+                                    <span style="color:#8B949E;">vs</span>
+                                    <select id="compareMonth2" style="background:#1e2a3a;color:#e6e6e6;border:1px solid #2d3748;border-radius:6px;padding:6px 10px;font-size:0.85rem;">
+                                        <option value="">Select Month 2</option>
+                                    </select>
+                                    <button onclick="loadComparison()" class="btn-primary" style="padding:6px 14px;font-size:0.85rem;">
+                                        <i class="fas fa-balance-scale"></i> Compare
+                                    </button>
+                                </div>
+                                <div id="comparisonChart" class="chart-container"></div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-row">
+                            <div class="metric-card wide">
+                                <h3><i class="fas fa-history"></i> Monthly Totals</h3>
+                                <div id="monthlyTotalsChart" class="chart-container tall"></div>
+                            </div>
                         </div>
                     </div>
                 </section>

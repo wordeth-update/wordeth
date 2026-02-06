@@ -3,6 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const UsageEvent = require('../models/UsageEvent');
 const Advertiser = require('../models/Advertiser');
+const archiver = require('../services/archiver');
 
 function authenticateAdmin(req, res, next) {
     const authHeader = req.headers.authorization;
@@ -413,6 +414,99 @@ router.get('/admin/segment-comparison', authenticateAdmin, async (req, res) => {
     } catch (error) {
         console.error('Segment comparison error:', error);
         res.status(500).json({ error: 'Failed to generate segment comparison' });
+    }
+});
+
+router.get('/admin/archive/status', authenticateAdmin, (req, res) => {
+    res.json({ configured: archiver.isConfigured() });
+});
+
+router.post('/admin/archive', authenticateAdmin, async (req, res) => {
+    if (!archiver.isConfigured()) {
+        return res.status(400).json({ error: 'AWS S3 not configured. Set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_S3_BUCKET.' });
+    }
+    try {
+        const { mode, date, startDate, endDate, daysOld } = req.body;
+
+        let results;
+        if (mode === 'day' && date) {
+            results = await archiver.archiveDay(date);
+        } else if (mode === 'range' && startDate && endDate) {
+            results = await archiver.archiveRange(startDate, endDate);
+        } else {
+            results = await archiver.archiveOldData(daysOld || 7);
+        }
+
+        res.json({ success: true, results });
+    } catch (error) {
+        console.error('Archive error:', error);
+        res.status(500).json({ error: 'Failed to archive data' });
+    }
+});
+
+function requireArchiveConfig(req, res, next) {
+    if (!archiver.isConfigured()) {
+        return res.status(400).json({ error: 'AWS S3 not configured. Set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_S3_BUCKET.' });
+    }
+    next();
+}
+
+router.get('/admin/archive/months', authenticateAdmin, requireArchiveConfig, async (req, res) => {
+    try {
+        const months = await archiver.listArchivedMonths();
+        res.json({ months });
+    } catch (error) {
+        console.error('List months error:', error);
+        res.status(500).json({ error: 'Failed to list archived months' });
+    }
+});
+
+router.get('/admin/archive/month/:yearMonth', authenticateAdmin, requireArchiveConfig, async (req, res) => {
+    try {
+        const summary = await archiver.getMonthSummary(req.params.yearMonth);
+        if (!summary) {
+            return res.status(404).json({ error: 'No archived data for this month' });
+        }
+        res.json(summary);
+    } catch (error) {
+        console.error('Month summary error:', error);
+        res.status(500).json({ error: 'Failed to get month summary' });
+    }
+});
+
+router.get('/admin/archive/range', authenticateAdmin, requireArchiveConfig, async (req, res) => {
+    try {
+        const { start, end } = req.query;
+        if (!start || !end) {
+            return res.status(400).json({ error: 'start and end query params required (YYYY-MM-DD)' });
+        }
+        const summaries = await archiver.getArchivedRange(start, end);
+        res.json({ summaries, count: summaries.length });
+    } catch (error) {
+        console.error('Archive range error:', error);
+        res.status(500).json({ error: 'Failed to get archived range' });
+    }
+});
+
+router.get('/admin/archive/compare', authenticateAdmin, requireArchiveConfig, async (req, res) => {
+    try {
+        const { months } = req.query;
+        if (!months) {
+            return res.status(400).json({ error: 'months query param required (comma-separated YYYY-MM)' });
+        }
+
+        const monthList = months.split(',').map(m => m.trim());
+        const comparisons = [];
+
+        for (const month of monthList) {
+            const summary = await archiver.getMonthSummary(month);
+            if (summary) comparisons.push(summary);
+        }
+
+        res.json({ comparisons });
+    } catch (error) {
+        console.error('Compare error:', error);
+        res.status(500).json({ error: 'Failed to compare months' });
     }
 });
 

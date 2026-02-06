@@ -23,6 +23,15 @@ The application is fully functional and ready for use. It runs on Node.js with E
   - Cross-segment engagement analysis
   - Admin dashboard (`admin-usage.html`) with SVG charts, donut charts, bar charts
   - MongoDB-backed with 90-day TTL auto-expiry on events
+- **Historical Trends Archival System**: Long-term analytics storage via AWS S3
+  - Aggregates raw events into compact daily JSON summaries before they expire
+  - Stores summaries in AWS S3 (`wordeth-analytics/YYYY/MM/DD.json`)
+  - Historical Trends tab in admin dashboard with month-over-month comparison charts
+  - Stacked bar charts for monthly totals by segment
+  - Archive controls: auto-archive (7+ days old) or archive today
+  - Graceful handling when AWS not yet configured (shows setup instructions)
+  - Services: `services/archiver.js` with aggregation and S3 read/write
+  - Requires: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_S3_BUCKET` secrets
 - **REBRANDING**: "Audio Rooms" renamed to "Verses" - con-verse, uni-verse, verse (lyrics)
 - Renamed audio-rooms.html to verses.html with verse-themed UI
 - Updated all navigation across the site to reference Verses

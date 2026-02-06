@@ -140,6 +140,7 @@ function loadTabData(tab) {
         case 'community-segment': loadCommunitySegment(); break;
         case 'merch-segment': loadMerchSegment(); break;
         case 'genres': loadGenres(); break;
+        case 'historical': loadHistorical(); break;
     }
 }
 
@@ -680,4 +681,239 @@ function escapeHtml(str) {
 
 function emptyState(msg) {
     return `<div class="empty-state"><i class="fas fa-chart-bar"></i><p>${msg}</p></div>`;
+}
+
+async function loadHistorical() {
+    try {
+        const status = await apiFetch('/api/analytics/admin/archive/status');
+        if (!status.configured) {
+            document.getElementById('archiveNotConfigured').style.display = '';
+            document.getElementById('archiveConfigured').style.display = 'none';
+            return;
+        }
+        document.getElementById('archiveNotConfigured').style.display = 'none';
+        document.getElementById('archiveConfigured').style.display = '';
+        document.getElementById('archiveStatus').textContent = 'Connected';
+
+        const monthsData = await apiFetch('/api/analytics/admin/archive/months');
+        const months = monthsData.months || [];
+        document.getElementById('archivedMonthsCount').textContent = months.length;
+
+        const sel1 = document.getElementById('compareMonth1');
+        const sel2 = document.getElementById('compareMonth2');
+        sel1.innerHTML = '<option value="">Select Month 1</option>';
+        sel2.innerHTML = '<option value="">Select Month 2</option>';
+        months.forEach(m => {
+            const label = formatMonthLabel(m);
+            sel1.innerHTML += `<option value="${m}">${label}</option>`;
+            sel2.innerHTML += `<option value="${m}">${label}</option>`;
+        });
+
+        if (months.length >= 2) {
+            sel1.value = months[months.length - 2];
+            sel2.value = months[months.length - 1];
+        }
+
+        renderMonthlyTotals(months);
+    } catch (err) {
+        console.error('Historical load error:', err);
+    }
+}
+
+function formatMonthLabel(ym) {
+    const [y, m] = ym.split('-');
+    const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${names[parseInt(m) - 1]} ${y}`;
+}
+
+async function runArchive(mode) {
+    const resultEl = document.getElementById('archiveResult');
+    resultEl.innerHTML = '<div style="color:#8B949E;padding:8px;"><i class="fas fa-spinner fa-spin"></i> Archiving...</div>';
+
+    try {
+        const body = mode === 'today'
+            ? { mode: 'day', date: new Date().toISOString().split('T')[0] }
+            : {};
+
+        const res = await fetch(`${API_BASE}/api/analytics/admin/archive`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+
+        if (data.error) {
+            resultEl.innerHTML = `<div style="color:#FF6B6B;padding:8px;">${escapeHtml(data.error)}</div>`;
+            return;
+        }
+
+        const results = Array.isArray(data.results) ? data.results : [data.results];
+        const archived = results.filter(r => r && r.success);
+        const skipped = results.filter(r => r && r.skipped);
+        const errors = results.filter(r => r && r.error);
+
+        let html = '';
+        if (archived.length > 0) {
+            html += `<div style="color:#4ECDC4;padding:4px 8px;"><i class="fas fa-check"></i> Archived ${archived.length} day(s): ${archived.map(r => r.date).join(', ')}</div>`;
+        }
+        if (skipped.length > 0) {
+            html += `<div style="color:#FFD93D;padding:4px 8px;"><i class="fas fa-forward"></i> Skipped ${skipped.length} day(s) (no data)</div>`;
+        }
+        if (errors.length > 0) {
+            html += `<div style="color:#FF6B6B;padding:4px 8px;"><i class="fas fa-exclamation-triangle"></i> Errors: ${errors.length}</div>`;
+        }
+        if (data.results?.message) {
+            html = `<div style="color:#8B949E;padding:8px;">${escapeHtml(data.results.message)}</div>`;
+        }
+        resultEl.innerHTML = html || '<div style="color:#8B949E;padding:8px;">No results</div>';
+
+        loadHistorical();
+    } catch (err) {
+        resultEl.innerHTML = `<div style="color:#FF6B6B;padding:8px;">Error: ${escapeHtml(err.message)}</div>`;
+    }
+}
+
+async function loadComparison() {
+    const m1 = document.getElementById('compareMonth1').value;
+    const m2 = document.getElementById('compareMonth2').value;
+    const chartEl = document.getElementById('comparisonChart');
+
+    if (!m1 || !m2) {
+        chartEl.innerHTML = emptyState('Select two months to compare');
+        return;
+    }
+
+    try {
+        chartEl.innerHTML = '<div style="color:#8B949E;text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+        const data = await apiFetch(`/api/analytics/admin/archive/compare?months=${m1},${m2}`);
+        const comps = data.comparisons || [];
+
+        if (comps.length < 2) {
+            chartEl.innerHTML = emptyState('Not enough data for both months');
+            return;
+        }
+
+        renderComparisonChart(comps[0], comps[1]);
+    } catch (err) {
+        chartEl.innerHTML = emptyState('Failed to load comparison');
+    }
+}
+
+function renderComparisonChart(a, b) {
+    const el = document.getElementById('comparisonChart');
+    const labelA = formatMonthLabel(a.month);
+    const labelB = formatMonthLabel(b.month);
+
+    const metrics = [
+        { label: 'Total Events', valA: a.totalEvents, valB: b.totalEvents },
+        { label: 'Sessions', valA: a.totalSessions, valB: b.totalSessions },
+        { label: 'Lyrics', valA: a.segments?.lyrics || 0, valB: b.segments?.lyrics || 0 },
+        { label: 'Community', valA: a.segments?.community || 0, valB: b.segments?.community || 0 },
+        { label: 'Merch', valA: a.segments?.merch || 0, valB: b.segments?.merch || 0 },
+        { label: 'Orders', valA: a.merch?.orders || 0, valB: b.merch?.orders || 0 },
+        { label: 'Revenue', valA: a.merch?.revenue || 0, valB: b.merch?.revenue || 0 },
+        { label: 'Verse Joins', valA: a.community?.joins || 0, valB: b.community?.joins || 0 }
+    ];
+
+    const maxVal = Math.max(...metrics.map(m => Math.max(m.valA, m.valB)), 1);
+    const barWidth = 280;
+    const rowH = 40;
+    const svgH = metrics.length * rowH + 40;
+
+    let svg = `<svg width="100%" viewBox="0 0 700 ${svgH}" style="font-family:Inter,sans-serif;">`;
+    svg += `<text x="350" y="18" text-anchor="middle" fill="#8B949E" font-size="11">`;
+    svg += `<tspan fill="#4ECDC4">\u25CF ${escapeHtml(labelA)}</tspan>  <tspan fill="#FF6B6B">\u25CF ${escapeHtml(labelB)}</tspan></text>`;
+
+    metrics.forEach((m, i) => {
+        const y = i * rowH + 35;
+        const wA = Math.max((m.valA / maxVal) * barWidth, 2);
+        const wB = Math.max((m.valB / maxVal) * barWidth, 2);
+        const change = m.valA > 0 ? Math.round(((m.valB - m.valA) / m.valA) * 100) : 0;
+        const changeColor = change >= 0 ? '#4ECDC4' : '#FF6B6B';
+        const changeText = change >= 0 ? `+${change}%` : `${change}%`;
+
+        svg += `<text x="100" y="${y + 14}" text-anchor="end" fill="#e6e6e6" font-size="11">${escapeHtml(m.label)}</text>`;
+        svg += `<rect x="110" y="${y}" width="${wA}" height="12" rx="3" fill="#4ECDC4" opacity="0.8"/>`;
+        svg += `<rect x="110" y="${y + 16}" width="${wB}" height="12" rx="3" fill="#FF6B6B" opacity="0.8"/>`;
+        svg += `<text x="${115 + Math.max(wA, wB)}" y="${y + 10}" fill="#8B949E" font-size="10">${formatNum(m.valA)} / ${formatNum(m.valB)}</text>`;
+        svg += `<text x="650" y="${y + 14}" text-anchor="end" fill="${changeColor}" font-size="11" font-weight="600">${changeText}</text>`;
+    });
+
+    svg += '</svg>';
+    el.innerHTML = svg;
+}
+
+async function renderMonthlyTotals(months) {
+    const el = document.getElementById('monthlyTotalsChart');
+    if (months.length === 0) {
+        el.innerHTML = emptyState('No archived months yet. Use the Archive button above to start.');
+        return;
+    }
+
+    el.innerHTML = '<div style="color:#8B949E;text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading monthly data...</div>';
+
+    try {
+        const summaries = [];
+        for (const m of months.slice(-12)) {
+            try {
+                const data = await apiFetch(`/api/analytics/admin/archive/month/${m}`);
+                if (data) summaries.push(data);
+            } catch (e) { /* skip */ }
+        }
+
+        if (summaries.length === 0) {
+            el.innerHTML = emptyState('No data found in archives');
+            return;
+        }
+
+        const maxEvents = Math.max(...summaries.map(s => s.totalEvents), 1);
+        const barW = Math.min(50, Math.floor(600 / summaries.length) - 8);
+        const chartW = summaries.length * (barW + 8) + 60;
+        const chartH = 260;
+        const plotH = 180;
+
+        let svg = `<svg width="100%" viewBox="0 0 ${Math.max(chartW, 400)} ${chartH}" style="font-family:Inter,sans-serif;">`;
+
+        summaries.forEach((s, i) => {
+            const x = 50 + i * (barW + 8);
+            const h = (s.totalEvents / maxEvents) * plotH;
+            const y = 10 + plotH - h;
+
+            const lyricsH = ((s.segments?.lyrics || 0) / maxEvents) * plotH;
+            const commH = ((s.segments?.community || 0) / maxEvents) * plotH;
+            const merchH = ((s.segments?.merch || 0) / maxEvents) * plotH;
+            const otherH = h - lyricsH - commH - merchH;
+
+            let stackY = y;
+            if (lyricsH > 0) {
+                svg += `<rect x="${x}" y="${stackY}" width="${barW}" height="${lyricsH}" rx="2" fill="#4ECDC4" opacity="0.85"/>`;
+                stackY += lyricsH;
+            }
+            if (commH > 0) {
+                svg += `<rect x="${x}" y="${stackY}" width="${barW}" height="${commH}" rx="2" fill="#FFD93D" opacity="0.85"/>`;
+                stackY += commH;
+            }
+            if (merchH > 0) {
+                svg += `<rect x="${x}" y="${stackY}" width="${barW}" height="${merchH}" rx="2" fill="#FF6B6B" opacity="0.85"/>`;
+                stackY += merchH;
+            }
+            if (otherH > 1) {
+                svg += `<rect x="${x}" y="${stackY}" width="${barW}" height="${otherH}" rx="2" fill="#8B949E" opacity="0.5"/>`;
+            }
+
+            svg += `<text x="${x + barW / 2}" y="${y - 4}" text-anchor="middle" fill="#8B949E" font-size="9">${formatNum(s.totalEvents)}</text>`;
+            svg += `<text x="${x + barW / 2}" y="${plotH + 25}" text-anchor="middle" fill="#e6e6e6" font-size="9">${formatMonthLabel(s.month)}</text>`;
+        });
+
+        svg += `<text x="${Math.max(chartW, 400) / 2}" y="${chartH - 5}" text-anchor="middle" fill="#8B949E" font-size="10">`;
+        svg += `<tspan fill="#4ECDC4">\u25CF Lyrics</tspan>  <tspan fill="#FFD93D">\u25CF Community</tspan>  <tspan fill="#FF6B6B">\u25CF Merch</tspan>  <tspan fill="#8B949E">\u25CF Other</tspan>`;
+        svg += '</text>';
+        svg += '</svg>';
+        el.innerHTML = svg;
+    } catch (err) {
+        el.innerHTML = emptyState('Failed to load monthly data');
+    }
 }
