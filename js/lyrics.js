@@ -522,12 +522,16 @@ function handleTextSelection() {
         currentArtist = document.getElementById('modal-song-artist').textContent || '';
         
         const range = selection.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
+        const rects = range.getClientRects();
+        const lastRect = rects[rects.length - 1];
         const modalContent = document.querySelector('.modal-content');
         const modalRect = modalContent ? modalContent.getBoundingClientRect() : { left: 0, top: 0 };
         
-        merchTooltip.style.left = (rect.left + rect.width / 2 - modalRect.left) + 'px';
-        merchTooltip.style.top = (rect.top - modalRect.top - 50) + 'px';
+        const tooltipLeft = lastRect.right - modalRect.left;
+        const tooltipTop = lastRect.top - modalRect.top - 10;
+        
+        merchTooltip.style.left = tooltipLeft + 'px';
+        merchTooltip.style.top = tooltipTop + 'px';
         merchTooltip.classList.add('visible');
     } else {
         hideTooltip();
