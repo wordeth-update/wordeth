@@ -820,9 +820,20 @@ class AudioRoomsManager {
             this.audioRoom?.classList.remove('hidden');
             
             this.currentRoom = roomId;
+            this.roomJoinTime = Date.now();
             this.updateRoomInfo(roomId);
             this.initializeWebRTC();
             this.addChatMessage('System', 'Welcome to the room!', true);
+
+            fetch('/api/analytics/track', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    eventType: 'verse_join',
+                    segment: 'community',
+                    metadata: { roomId, page: 'verses' }
+                })
+            }).catch(() => {});
             
         } catch (error) {
             console.error('Error joining room:', error);
@@ -903,6 +914,19 @@ class AudioRoomsManager {
     }
 
     leaveRoom() {
+        const duration = this.roomJoinTime ? Math.round((Date.now() - this.roomJoinTime) / 1000) : 0;
+        if (this.currentRoom) {
+            fetch('/api/analytics/track', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    eventType: 'verse_leave',
+                    segment: 'community',
+                    metadata: { roomId: this.currentRoom, duration, page: 'verses' }
+                })
+            }).catch(() => {});
+        }
+
         if (this.localStream) {
             this.localStream.getTracks().forEach(track => track.stop());
             this.localStream = null;
@@ -918,6 +942,7 @@ class AudioRoomsManager {
         this.audioRoom?.classList.add('hidden');
         if (this.roomSelection) this.roomSelection.style.display = 'block';
         this.currentRoom = null;
+        this.roomJoinTime = null;
         
         if (this.chatMessagesContainer) this.chatMessagesContainer.innerHTML = '';
         

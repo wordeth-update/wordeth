@@ -12,6 +12,17 @@ Wordeth is a social music experience platform that allows users to:
 The application is fully functional and ready for use. It runs on Node.js with Express.js backend.
 
 ## Recent Changes (February 2026)
+- **Usage Metrics System**: Admin dashboard for data-driven audience insights
+  - Auto-tracking middleware captures events on all API routes (lyrics, merch, auth, articles)
+  - Client-side tracking for Verses (join/leave with session duration)
+  - Three core audience segments: Lyric Finders, Community Users, Apparel Creators/Buyers
+  - Usage tiers (Low/Moderate/High/Hyper) based on 7-day rolling event counts
+  - Genre propensity analysis from lyrics search patterns
+  - Merch metrics: AOV, total revenue, conversion funnel, top products
+  - Community metrics: room activity, top rooms, daily activity trends
+  - Cross-segment engagement analysis
+  - Admin dashboard (`admin-usage.html`) with SVG charts, donut charts, bar charts
+  - MongoDB-backed with 90-day TTL auto-expiry on events
 - **REBRANDING**: "Audio Rooms" renamed to "Verses" - con-verse, uni-verse, verse (lyrics)
 - Renamed audio-rooms.html to verses.html with verse-themed UI
 - Updated all navigation across the site to reference Verses
@@ -96,6 +107,14 @@ The application is fully functional and ready for use. It runs on Node.js with E
   - `articles.js` - Music articles API
   - `ads.js` - Advertising system
   - `merch.js` - Merchandise/InkSoft integration
+  - `analytics.js` - Usage metrics & admin dashboard APIs
+- `middleware/` - Express middleware:
+  - `tracking.js` - Auto-captures usage events on API routes
+- `models/` - Mongoose models:
+  - `User.js` - User accounts
+  - `Ad.js` - Advertisements
+  - `Advertiser.js` - Advertiser accounts
+  - `UsageEvent.js` - Usage tracking events (auto-expires after 90 days)
 
 ### Frontend (Static HTML/CSS/JS)
 - `index.html` - Main landing page
@@ -105,10 +124,11 @@ The application is fully functional and ready for use. It runs on Node.js with E
 - `articles.html` - Music articles
 - `signin.html` - Authentication page
 - `signup.html` - User registration page
+- `admin-usage.html` - Usage metrics admin dashboard
 
 ### Assets
-- `css/` - Stylesheets (verses.css, enhanced.css, styles.css)
-- `js/` - Frontend JavaScript (verses.js)
+- `css/` - Stylesheets (verses.css, enhanced.css, styles.css, usage-metrics.css)
+- `js/` - Frontend JavaScript (verses.js, admin-usage.js)
 - `images/` - Logo and static images
 - `assets/products/` - Product SVG images
 
@@ -135,6 +155,15 @@ The application is fully functional and ready for use. It runs on Node.js with E
 - `GET /api/user/profile` - Get user profile
 - `POST /api/user/avatar` - Upload avatar
 - User history, annotations, friends management
+
+### Usage Metrics (Admin)
+- `POST /api/analytics/track` - Client-side event tracking (public)
+- `GET /api/analytics/admin/summary` - Platform overview (admin auth)
+- `GET /api/analytics/admin/usage-tiers` - User engagement tiers (admin auth)
+- `GET /api/analytics/admin/genre-propensity` - Genre preferences (admin auth)
+- `GET /api/analytics/admin/merch-metrics` - Apparel/order metrics (admin auth)
+- `GET /api/analytics/admin/community-metrics` - Verses/community metrics (admin auth)
+- `GET /api/analytics/admin/segment-comparison` - Cross-segment analysis (admin auth)
 
 ## Environment Variables
 

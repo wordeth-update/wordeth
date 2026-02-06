@@ -16,6 +16,8 @@ const lyricsRoutes = require('./routes/lyrics'); // Re-enabled with Genius API k
 const merchRoutes = require('./routes/merch');
 const articleRoutes = require('./routes/articles');
 const adsRoutes = require('./routes/ads'); // Advertising system
+const analyticsRoutes = require('./routes/analytics'); // Usage metrics
+const trackingMiddleware = require('./middleware/tracking'); // Event tracking
 
 // Create Express app
 const app = express();
@@ -140,6 +142,9 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Usage tracking middleware (auto-captures events on API routes)
+app.use('/api/', trackingMiddleware);
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
@@ -147,6 +152,7 @@ app.use('/api/lyrics', lyricsRoutes); // Re-enabled with Genius API key
 app.use('/api/merch', merchRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/ads', adsRoutes); // Advertising system
+app.use('/api/analytics', analyticsRoutes); // Usage metrics & admin dashboard
 
 // Serve frontend files in production
 if (process.env.NODE_ENV === 'production') {
