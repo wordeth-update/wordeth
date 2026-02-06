@@ -292,7 +292,15 @@
             border-radius: 10px;
             color: white;
             font-style: italic;
+            margin-bottom: 0.5rem;
+        }
+
+        .lyrics-prefill-meta {
+            display: none;
+            color: rgba(255,255,255,0.7);
+            font-size: 0.85rem;
             margin-bottom: 1rem;
+            padding-left: 0.25rem;
         }
 
         .lyrics-prefill-actions {
@@ -495,6 +503,7 @@
             <div class="lyrics-prefill-banner" id="lyricsPrefillBanner">
                 <h3><i class="fas fa-music"></i> Lyrics Ready to Use</h3>
                 <div class="lyrics-prefill-text" id="lyricsPrefillText"></div>
+                <div class="lyrics-prefill-meta" id="lyricsPrefillMeta"></div>
                 <div class="lyrics-prefill-actions">
                     <button class="use-lyrics-btn" id="useLyricsBtn"><i class="fas fa-check"></i> Use These Lyrics</button>
                     <button class="clear-lyrics-btn" id="clearLyricsBtn"><i class="fas fa-times"></i> Clear</button>
@@ -703,15 +712,27 @@
             if (lyrics) {
                 const banner = document.getElementById('lyricsPrefillBanner');
                 const textEl = document.getElementById('lyricsPrefillText');
+                const metaEl = document.getElementById('lyricsPrefillMeta');
                 
-                let displayText = decodeURIComponent(lyrics);
+                textEl.textContent = decodeURIComponent(lyrics);
+                
                 if (song || artist) {
-                    displayText += `\n— ${song || ''} ${artist ? 'by ' + artist : ''}`;
+                    const songName = song ? decodeURIComponent(song) : '';
+                    const artistName = artist ? decodeURIComponent(artist) : '';
+                    let metaLine = '';
+                    if (songName && artistName) {
+                        metaLine = `"${songName}" by ${artistName}`;
+                    } else if (songName) {
+                        metaLine = `"${songName}"`;
+                    } else if (artistName) {
+                        metaLine = `by ${artistName}`;
+                    }
+                    metaEl.textContent = metaLine;
+                    metaEl.style.display = 'block';
                 }
-                textEl.textContent = displayText;
+                
                 banner.classList.add('active');
                 
-                // Store for later use
                 window.selectedLyrics = decodeURIComponent(lyrics);
             }
         }
@@ -732,6 +753,7 @@
         // Clear lyrics button
         document.getElementById('clearLyricsBtn').addEventListener('click', () => {
             document.getElementById('lyricsPrefillBanner').classList.remove('active');
+            document.getElementById('lyricsPrefillMeta').style.display = 'none';
             window.selectedLyrics = null;
             // Remove URL params
             window.history.replaceState({}, document.title, window.location.pathname);
