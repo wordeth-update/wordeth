@@ -38,6 +38,8 @@ app.use(helmet({
             frameSrc: ["https://stores.inksoft.com", "https://cdn.inksoft.com"],
         },
     },
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
 }));
 
 // Rate limiting
