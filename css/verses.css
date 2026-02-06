@@ -2350,11 +2350,17 @@
 }
 
 .lyrics-line {
-    padding: 0.75rem 0;
+    padding: 0.75rem 0.5rem;
     font-size: 1.1rem;
     color: rgba(255, 255, 255, 0.4);
     transition: all 0.3s ease;
     line-height: 1.5;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.lyrics-line:hover {
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .lyrics-line.active {

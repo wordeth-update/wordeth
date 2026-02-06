@@ -1853,7 +1853,21 @@ class AudioRoomsManager {
             lyricsContainer.innerHTML = lines.map((line, index) => 
                 `<div class="lyrics-line ${index === 0 ? 'active' : ''}" data-index="${index}">${line}</div>`
             ).join('');
+
+            lyricsContainer.addEventListener('dblclick', (e) => {
+                const lineEl = e.target.closest('.lyrics-line');
+                if (!lineEl) return;
+                const idx = parseInt(lineEl.dataset.index, 10);
+                if (!isNaN(idx)) this.skipToLyricLine(idx);
+            });
         }
+    }
+
+    skipToLyricLine(index) {
+        if (index < 0 || index >= this.karaokeLyrics.length) return;
+        this.currentLyricIndex = index;
+        this.updateLyricHighlight();
+        this.updateProgress();
     }
     
     toggleKaraokePlayback() {
