@@ -653,11 +653,14 @@
                         </div>
                     </div>
                     
-                    <!-- YouTube Audio Player -->
+                    <!-- YouTube Audio Link Panel -->
                     <div class="karaoke-audio-container">
-                        <div id="youtube-player"></div>
+                        <div id="youtube-player" style="display:none;"></div>
+                        <a id="youtube-link" class="yt-link-btn" href="#" target="_blank" rel="noopener noreferrer" style="display:none;">
+                            <i class="fab fa-youtube"></i> Open on YouTube
+                        </a>
                         <div class="audio-status" id="audio-status">
-                            <i class="fas fa-music"></i> <span>Loading audio...</span>
+                            <i class="fas fa-music"></i> <span>Search a song to begin</span>
                         </div>
                     </div>
                     <div class="karaoke-lyrics-container" id="karaoke-lyrics-container">
@@ -686,19 +689,64 @@
         </div>
     </main>
 
+    <!-- Floating YouTube Mini Panel -->
+    <div id="yt-float-panel" class="yt-float-panel" style="display:none;">
+        <div class="yt-float-header" id="yt-float-drag-handle">
+            <i class="fab fa-youtube"></i>
+            <span id="yt-float-title">Now Playing</span>
+            <button class="yt-float-close" id="yt-float-close">&times;</button>
+        </div>
+        <div class="yt-float-body">
+            <div class="yt-float-song" id="yt-float-song"></div>
+            <a id="yt-float-link" class="yt-float-open-btn" href="#" target="_blank" rel="noopener noreferrer">
+                <i class="fab fa-youtube"></i> Play on YouTube
+            </a>
+            <p class="yt-float-hint">Play music there, scroll lyrics here</p>
+        </div>
+    </div>
+
     <script>
-        // Set up YouTube API callback before loading the API
-        window.youtubeApiReady = false;
-        window.onYouTubeIframeAPIReady = function() {
-            console.log('YouTube IFrame API ready (global)');
-            window.youtubeApiReady = true;
-            // Notify the audio rooms manager if it exists
-            if (window.audioRoomsManager) {
-                window.audioRoomsManager.onYouTubeApiReady();
-            }
-        };
+        (function() {
+            const panel = document.getElementById('yt-float-panel');
+            const handle = document.getElementById('yt-float-drag-handle');
+            const closeBtn = document.getElementById('yt-float-close');
+            let isDragging = false, offsetX = 0, offsetY = 0;
+
+            handle.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                offsetX = e.clientX - panel.getBoundingClientRect().left;
+                offsetY = e.clientY - panel.getBoundingClientRect().top;
+                panel.style.transition = 'none';
+            });
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                panel.style.left = (e.clientX - offsetX) + 'px';
+                panel.style.top = (e.clientY - offsetY) + 'px';
+                panel.style.right = 'auto';
+                panel.style.bottom = 'auto';
+            });
+            document.addEventListener('mouseup', () => { isDragging = false; panel.style.transition = ''; });
+
+            handle.addEventListener('touchstart', (e) => {
+                isDragging = true;
+                const t = e.touches[0];
+                offsetX = t.clientX - panel.getBoundingClientRect().left;
+                offsetY = t.clientY - panel.getBoundingClientRect().top;
+                panel.style.transition = 'none';
+            }, { passive: true });
+            document.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                const t = e.touches[0];
+                panel.style.left = (t.clientX - offsetX) + 'px';
+                panel.style.top = (t.clientY - offsetY) + 'px';
+                panel.style.right = 'auto';
+                panel.style.bottom = 'auto';
+            }, { passive: true });
+            document.addEventListener('touchend', () => { isDragging = false; panel.style.transition = ''; });
+
+            closeBtn.addEventListener('click', () => { panel.style.display = 'none'; });
+        })();
     </script>
-    <script src="https://www.youtube.com/iframe_api"></script>
     <script src="js/verses.js"></script>
     <script src="js/nav-auth.js"></script>
 </body>

@@ -1695,22 +1695,12 @@ class AudioRoomsManager {
         const icon = playPauseBtn?.querySelector('i');
         
         if (this.karaokeActive) {
-            // Pause
             this.karaokeActive = false;
             clearInterval(this.karaokeInterval);
             if (icon) icon.className = 'fas fa-play';
-            // Pause YouTube
-            if (this.youtubePlayer && this.youtubeReady) {
-                this.youtubePlayer.pauseVideo();
-            }
         } else {
-            // Play
             this.karaokeActive = true;
             if (icon) icon.className = 'fas fa-pause';
-            // Play YouTube
-            if (this.youtubePlayer && this.youtubeReady && this.currentVideoId) {
-                this.youtubePlayer.playVideo();
-            }
             this.startLyricScrolling();
         }
     }
@@ -1781,10 +1771,12 @@ class AudioRoomsManager {
         const icon = playPauseBtn?.querySelector('i');
         if (icon) icon.className = 'fas fa-play';
         
-        // Stop YouTube playback
-        if (this.youtubePlayer && this.youtubeReady) {
-            this.youtubePlayer.stopVideo();
-        }
+        // Hide floating YouTube panel
+        const floatPanel = document.getElementById('yt-float-panel');
+        if (floatPanel) floatPanel.style.display = 'none';
+
+        const inlineLink = document.getElementById('youtube-link');
+        if (inlineLink) inlineLink.style.display = 'none';
         
         // Reset to beginning
         this.currentLyricIndex = 0;
@@ -1929,54 +1921,57 @@ class AudioRoomsManager {
             const data = await response.json();
             
             if (data.videoIds && data.videoIds.length > 0) {
-                return data.videoIds;
+                return { videoId: data.videoIds[0], title: data.titles ? data.titles[0] : '' };
             }
             if (data.videoId) {
-                return [data.videoId];
+                return { videoId: data.videoId, title: '' };
             }
-            return [];
+            return null;
         } catch (error) {
             console.error('YouTube search error:', error);
-            return [];
+            return null;
         }
     }
     
     async loadYouTubeAudio(artist, title) {
-        this.updateAudioStatus('playing', 'Finding audio...');
+        this.updateAudioStatus('playing', 'Finding song...');
         
-        if (!this.youtubeReady) {
-            this.updateAudioStatus('playing', 'Loading player...');
-            const ready = await this.waitForYouTubeReady(10000);
-            if (!ready) {
-                this.updateAudioStatus('error', 'Player not ready');
-                return false;
+        const result = await this.searchYouTubeAudio(artist, title);
+        
+        if (result && result.videoId) {
+            this.currentVideoId = result.videoId;
+            const ytUrl = `https://www.youtube.com/watch?v=${result.videoId}`;
+            const ytSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(artist + ' ' + title)}`;
+
+            const inlineLink = document.getElementById('youtube-link');
+            if (inlineLink) {
+                inlineLink.href = ytUrl;
+                inlineLink.style.display = 'inline-flex';
             }
-        }
-        
-        const videoIds = await this.searchYouTubeAudio(artist, title);
-        
-        if (videoIds.length > 0 && this.youtubePlayer && this.youtubeReady) {
-            this.videoQueue = videoIds;
-            this.videoQueueIndex = 0;
-            this.tryNextVideo();
+
+            const floatPanel = document.getElementById('yt-float-panel');
+            const floatLink = document.getElementById('yt-float-link');
+            const floatSong = document.getElementById('yt-float-song');
+            if (floatPanel && floatLink && floatSong) {
+                floatSong.textContent = `${title} — ${artist}`;
+                floatLink.href = ytUrl;
+                floatPanel.style.display = '';
+            }
+
+            this.updateAudioStatus('ready', 'Open YouTube to play along');
             return true;
         } else {
-            this.updateAudioStatus('error', 'No audio found');
+            const ytSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(artist + ' ' + title)}`;
+            const inlineLink = document.getElementById('youtube-link');
+            if (inlineLink) {
+                inlineLink.href = ytSearchUrl;
+                inlineLink.textContent = 'Search on YouTube';
+                inlineLink.style.display = 'inline-flex';
+                inlineLink.innerHTML = '<i class="fab fa-youtube"></i> Search on YouTube';
+            }
+            this.updateAudioStatus('ready', 'Search YouTube for this song');
             return false;
         }
-    }
-
-    tryNextVideo() {
-        if (!this.videoQueue || this.videoQueueIndex >= this.videoQueue.length) {
-            this.updateAudioStatus('error', 'No embeddable audio found');
-            return;
-        }
-        const videoId = this.videoQueue[this.videoQueueIndex];
-        this.currentVideoId = videoId;
-        console.log(`Trying video ${this.videoQueueIndex + 1}/${this.videoQueue.length}: ${videoId}`);
-        this.updateAudioStatus('playing', `Trying source ${this.videoQueueIndex + 1}...`);
-        this.youtubePlayer.loadVideoById(videoId);
-        this.youtubePlayer.pauseVideo();
     }
     
     waitForYouTubeReady(timeout = 10000) {
