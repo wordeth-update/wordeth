@@ -31,7 +31,11 @@ function authenticateAdvertiser(req, res, next) {
 
     const token = authHeader.split(' ')[1];
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'wordeth-ads-secret');
+        const jwtSecret = process.env.JWT_SECRET;
+        if (!jwtSecret) {
+            return res.status(500).json({ error: 'Server configuration error' });
+        }
+        const decoded = jwt.verify(token, jwtSecret);
         req.advertiserId = decoded.advertiserId;
         req.advertiserRole = decoded.role;
         next();
@@ -75,7 +79,7 @@ router.post('/advertisers/register', async (req, res) => {
 
         const token = jwt.sign(
             { advertiserId: advertiser._id, role: advertiser.role },
-            process.env.JWT_SECRET || 'wordeth-ads-secret',
+            process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
 
@@ -116,7 +120,7 @@ router.post('/advertisers/login', async (req, res) => {
 
         const token = jwt.sign(
             { advertiserId: advertiser._id, role: advertiser.role },
-            process.env.JWT_SECRET || 'wordeth-ads-secret',
+            process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
 

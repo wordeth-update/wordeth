@@ -11,7 +11,11 @@ function authenticateAdmin(req, res, next) {
     }
     const token = authHeader.split(' ')[1];
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'wordeth-ads-secret');
+        const jwtSecret = process.env.JWT_SECRET;
+        if (!jwtSecret) {
+            return res.status(500).json({ error: 'Server configuration error' });
+        }
+        const decoded = jwt.verify(token, jwtSecret);
         if (decoded.role !== 'admin') {
             return res.status(403).json({ error: 'Admin access required' });
         }
@@ -36,7 +40,33 @@ function classifyTier(eventCount) {
     return 'low';
 }
 
+const trackingLimiter = new Map();
+const TRACK_LIMIT = 60;
+const TRACK_WINDOW = 60000;
+
+function checkTrackingRate(ip) {
+    const now = Date.now();
+    const entry = trackingLimiter.get(ip);
+    if (!entry || now - entry.start > TRACK_WINDOW) {
+        trackingLimiter.set(ip, { start: now, count: 1 });
+        return true;
+    }
+    entry.count++;
+    return entry.count <= TRACK_LIMIT;
+}
+
+setInterval(() => {
+    const now = Date.now();
+    for (const [ip, entry] of trackingLimiter) {
+        if (now - entry.start > TRACK_WINDOW) trackingLimiter.delete(ip);
+    }
+}, 120000);
+
 router.post('/track', (req, res) => {
+    if (!checkTrackingRate(req.ip)) {
+        return res.status(429).json({ error: 'Too many tracking requests' });
+    }
+
     const { eventType, segment, metadata, sessionId } = req.body;
     if (!eventType || !segment) {
         return res.status(400).json({ error: 'eventType and segment required' });

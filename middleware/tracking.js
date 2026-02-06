@@ -53,10 +53,12 @@ function trackingMiddleware(req, res, next) {
         try {
             const metadata = extractMetadata(req, routeConfig);
 
-            if (routeConfig.eventType === 'lyrics_search' && body?.results) {
-                const firstResult = body.results[0];
-                if (firstResult?.primary_genres?.music_genre_list?.[0]?.music_genre?.music_genre_name) {
-                    metadata.genre = firstResult.primary_genres.music_genre_list[0].music_genre.music_genre_name;
+            if (routeConfig.eventType === 'lyrics_search' && body?.hits) {
+                const firstHit = body.hits[0];
+                if (firstHit?.genre) {
+                    metadata.genre = firstHit.genre;
+                } else if (firstHit?.artist) {
+                    metadata.artist = firstHit.artist;
                 }
             }
 
