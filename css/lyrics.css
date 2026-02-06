@@ -70,19 +70,21 @@
 }
 
 .merch-reminder {
-    background: linear-gradient(135deg, rgba(150, 197, 176, 0.15) 0%, rgba(95, 14, 130, 0.25) 100%);
+    background: linear-gradient(135deg, rgba(150, 197, 176, 0.12) 0%, rgba(95, 14, 130, 0.2) 100%);
     color: var(--mint);
-    padding: 0.5rem 1rem;
-    font-size: 0.75rem;
+    padding: 0.6rem 1rem;
+    font-size: 0.8rem;
     font-weight: 600;
     text-align: center;
     letter-spacing: 0.3px;
-    border-bottom: 1px solid rgba(150, 197, 176, 0.15);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(150, 197, 176, 0.15);
 }
 
 .merch-reminder i {
-    margin-right: 0.35rem;
-    font-size: 0.7rem;
+    margin-right: 0.4rem;
+    font-size: 0.75rem;
 }
 
 .result-card:hover {
