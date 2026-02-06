@@ -476,7 +476,7 @@ function displayModalAd(container, ad) {
     trackAdImpression(adId);
 }
 
-// Lyrics-to-Merch: Text selection handling
+// Lyrics-to-Merch: Floating tooltip near highlighted text
 let selectedLyricsText = '';
 let currentSongTitle = '';
 let currentArtist = '';
@@ -484,14 +484,19 @@ let currentArtist = '';
 function setupLyricsSelection() {
     const lyricsTextEl = document.getElementById('modal-lyrics-text');
     const makeMerchBtn = document.getElementById('makeMerchBtn');
+    const merchTooltip = document.getElementById('merchTooltip');
     
-    if (!lyricsTextEl || !makeMerchBtn) return;
+    if (!lyricsTextEl || !makeMerchBtn || !merchTooltip) return;
     
-    // Listen for text selection in the lyrics
     lyricsTextEl.addEventListener('mouseup', handleTextSelection);
     lyricsTextEl.addEventListener('touchend', handleTextSelection);
     
-    // Make Merch button click handler
+    document.addEventListener('mousedown', (e) => {
+        if (!merchTooltip.contains(e.target)) {
+            hideTooltip();
+        }
+    });
+    
     makeMerchBtn.addEventListener('click', () => {
         if (selectedLyricsText) {
             const params = new URLSearchParams({
@@ -507,25 +512,33 @@ function setupLyricsSelection() {
 function handleTextSelection() {
     const selection = window.getSelection();
     const selectedText = selection.toString().trim();
-    const makeMerchBtn = document.getElementById('makeMerchBtn');
+    const merchTooltip = document.getElementById('merchTooltip');
+    
+    if (!merchTooltip) return;
     
     if (selectedText && selectedText.length > 0) {
         selectedLyricsText = selectedText;
         currentSongTitle = document.getElementById('modal-song-title').textContent || '';
         currentArtist = document.getElementById('modal-song-artist').textContent || '';
-        makeMerchBtn.style.display = 'inline-block';
+        
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        const modalContent = document.querySelector('.modal-content');
+        const modalRect = modalContent ? modalContent.getBoundingClientRect() : { left: 0, top: 0 };
+        
+        merchTooltip.style.left = (rect.left + rect.width / 2 - modalRect.left) + 'px';
+        merchTooltip.style.top = (rect.top - modalRect.top - 50) + 'px';
+        merchTooltip.classList.add('visible');
     } else {
-        makeMerchBtn.style.display = 'none';
+        hideTooltip();
     }
 }
 
-// Hide merch button when modal closes
-function hideModalMerchBtn() {
-    const makeMerchBtn = document.getElementById('makeMerchBtn');
-    if (makeMerchBtn) {
-        makeMerchBtn.style.display = 'none';
+function hideTooltip() {
+    const merchTooltip = document.getElementById('merchTooltip');
+    if (merchTooltip) {
+        merchTooltip.classList.remove('visible');
     }
-    selectedLyricsText = '';
 }
 
 // Initialize when DOM is loaded

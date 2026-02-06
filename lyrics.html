@@ -260,6 +260,53 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        .merch-tooltip {
+            position: absolute;
+            z-index: 1001;
+            display: none;
+            transform: translateX(-50%);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .merch-tooltip.visible {
+            display: block;
+            pointer-events: auto;
+            opacity: 1;
+        }
+
+        .merch-tooltip-btn {
+            background: linear-gradient(135deg, #5F0E82, #96C5B0);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            box-shadow: 0 4px 15px rgba(95, 14, 130, 0.4);
+            transition: transform 0.2s ease;
+        }
+
+        .merch-tooltip-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .merch-tooltip::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid #96C5B0;
+        }
     </style>
 </head>
 <body>
@@ -399,11 +446,14 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="make-merch-btn" id="makeMerchBtn" style="display: none; background: linear-gradient(135deg, var(--purple-accent), var(--mint)); color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 25px; cursor: pointer; font-weight: 600; margin-right: 1rem;">
-                        <i class="fas fa-tshirt"></i> Make Merch with Selection
-                    </button>
                     <button class="start-discussion-btn">
                         <i class="fas fa-headphones"></i> Start Video Discussion
+                    </button>
+                </div>
+
+                <div class="merch-tooltip" id="merchTooltip">
+                    <button class="merch-tooltip-btn" id="makeMerchBtn">
+                        <i class="fas fa-tshirt"></i> Make Merch
                     </button>
                 </div>
             </div>
