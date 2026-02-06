@@ -106,6 +106,9 @@ function showResults(results, query) {
         
         return `
         <div class="result-card" data-song-id="${song.id}">
+            <div class="merch-reminder">
+                <i class="fas fa-tshirt"></i> Highlight any lyrics to customize merch
+            </div>
             <div class="result-image">
                 <img src="${imageUrl}" alt="${escapeHtml(song.title)} cover" class="${fallbackClass}" onerror="this.onerror=null; this.src='/images/logo.png'; this.classList.add('fallback-logo');">
             </div>`;
