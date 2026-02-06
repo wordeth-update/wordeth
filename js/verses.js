@@ -30,6 +30,8 @@ class AudioRoomsManager {
         this.currentVideoId = null;
         this.videoQueue = [];
         this.videoQueueIndex = 0;
+        this.currentYtUrl = null;
+        this.ytPopup = null;
         this.karaokeEnabled = false; // Host/moderator permission for karaoke
         this.isRoomHost = false; // Track if current user created the room
         
@@ -1771,6 +1773,12 @@ class AudioRoomsManager {
         const icon = playPauseBtn?.querySelector('i');
         if (icon) icon.className = 'fas fa-play';
         
+        // Close YouTube popup if open
+        if (this.ytPopup && !this.ytPopup.closed) {
+            this.ytPopup.close();
+        }
+        this.ytPopup = null;
+
         // Hide floating YouTube panel
         const floatPanel = document.getElementById('yt-float-panel');
         if (floatPanel) floatPanel.style.display = 'none';
@@ -1940,13 +1948,13 @@ class AudioRoomsManager {
         
         if (result && result.videoId) {
             this.currentVideoId = result.videoId;
-            const ytUrl = `https://www.youtube.com/watch?v=${result.videoId}`;
-            const ytSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(artist + ' ' + title)}`;
+            this.currentYtUrl = `https://www.youtube.com/watch?v=${result.videoId}`;
 
             const inlineLink = document.getElementById('youtube-link');
             if (inlineLink) {
-                inlineLink.href = ytUrl;
+                inlineLink.href = '#';
                 inlineLink.style.display = 'inline-flex';
+                inlineLink.onclick = (e) => { e.preventDefault(); this.openYouTubePopup(); };
             }
 
             const floatPanel = document.getElementById('yt-float-panel');
@@ -1954,7 +1962,8 @@ class AudioRoomsManager {
             const floatSong = document.getElementById('yt-float-song');
             if (floatPanel && floatLink && floatSong) {
                 floatSong.textContent = `${title} — ${artist}`;
-                floatLink.href = ytUrl;
+                floatLink.href = '#';
+                floatLink.onclick = (e) => { e.preventDefault(); this.openYouTubePopup(); };
                 floatPanel.style.display = '';
             }
 
@@ -1964,16 +1973,42 @@ class AudioRoomsManager {
             const ytSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(artist + ' ' + title)}`;
             const inlineLink = document.getElementById('youtube-link');
             if (inlineLink) {
-                inlineLink.href = ytSearchUrl;
-                inlineLink.textContent = 'Search on YouTube';
+                inlineLink.href = '#';
                 inlineLink.style.display = 'inline-flex';
                 inlineLink.innerHTML = '<i class="fab fa-youtube"></i> Search on YouTube';
+                inlineLink.onclick = (e) => {
+                    e.preventDefault();
+                    this.currentYtUrl = ytSearchUrl;
+                    this.openYouTubePopup();
+                };
             }
             this.updateAudioStatus('ready', 'Search YouTube for this song');
             return false;
         }
     }
     
+    openYouTubePopup() {
+        if (!this.currentYtUrl) return;
+
+        const width = 480;
+        const height = 360;
+        const left = window.screenX + window.outerWidth - width - 30;
+        const top = window.screenY + 80;
+
+        if (this.ytPopup && !this.ytPopup.closed) {
+            this.ytPopup.location.href = this.currentYtUrl;
+            this.ytPopup.focus();
+        } else {
+            this.ytPopup = window.open(
+                this.currentYtUrl,
+                'wordeth_youtube',
+                `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=no,toolbar=no,menubar=no,location=no,status=no`
+            );
+        }
+
+        this.updateAudioStatus('playing', 'Playing in YouTube window');
+    }
+
     waitForYouTubeReady(timeout = 10000) {
         return new Promise((resolve) => {
             if (this.youtubeReady) {
