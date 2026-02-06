@@ -604,7 +604,6 @@ router.get('/artist/:id/tracks', async (req, res) => {
     }
 });
 
-// YouTube video search for karaoke audio
 router.get('/youtube-search', async (req, res) => {
     try {
         const { q } = req.query;
@@ -615,33 +614,56 @@ router.get('/youtube-search', async (req, res) => {
         
         if (!YOUTUBE_API_KEY) {
             console.log('YouTube API key not configured');
-            return res.json({ videoId: null, error: 'YouTube API not configured' });
+            return res.json({ videoIds: [], error: 'YouTube API not configured' });
+        }
+
+        const searchVariants = [
+            `${q} lyrics`,
+            `${q} official audio`,
+            q
+        ];
+
+        const seenIds = new Set();
+        const results = [];
+
+        for (const searchQuery of searchVariants) {
+            if (results.length >= 5) break;
+            try {
+                const response = await axios.get(YOUTUBE_API_URL, {
+                    params: {
+                        part: 'snippet',
+                        q: searchQuery,
+                        type: 'video',
+                        videoCategoryId: '10',
+                        maxResults: 3,
+                        videoEmbeddable: 'true',
+                        key: YOUTUBE_API_KEY
+                    },
+                    timeout: 10000
+                });
+
+                if (response.data.items) {
+                    for (const item of response.data.items) {
+                        const vid = item.id.videoId;
+                        if (!seenIds.has(vid)) {
+                            seenIds.add(vid);
+                            results.push({ videoId: vid, title: item.snippet.title });
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error(`YouTube search variant error for "${searchQuery}":`, err.message);
+            }
+        }
+
+        if (results.length > 0) {
+            return res.json({ videoIds: results.map(r => r.videoId), titles: results.map(r => r.title), videoId: results[0].videoId });
         }
         
-        const response = await axios.get(YOUTUBE_API_URL, {
-            params: {
-                part: 'snippet',
-                q: q,
-                type: 'video',
-                videoCategoryId: '10', // Music category
-                maxResults: 1,
-                key: YOUTUBE_API_KEY
-            },
-            timeout: 10000
-        });
-        
-        if (response.data.items && response.data.items.length > 0) {
-            const videoId = response.data.items[0].id.videoId;
-            return res.json({ 
-                videoId,
-                title: response.data.items[0].snippet.title
-            });
-        }
-        
-        res.json({ videoId: null });
+        res.json({ videoIds: [], videoId: null });
     } catch (error) {
         console.error('YouTube search error:', error.response?.data || error.message);
-        res.json({ videoId: null, error: 'Search failed' });
+        res.json({ videoIds: [], videoId: null, error: 'Search failed' });
     }
 });
 

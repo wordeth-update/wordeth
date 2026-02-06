@@ -28,6 +28,8 @@ class AudioRoomsManager {
         this.youtubePlayer = null;
         this.youtubeReady = false;
         this.currentVideoId = null;
+        this.videoQueue = [];
+        this.videoQueueIndex = 0;
         this.karaokeEnabled = false; // Host/moderator permission for karaoke
         this.isRoomHost = false; // Track if current user created the room
         
@@ -1900,7 +1902,13 @@ class AudioRoomsManager {
     
     onYouTubeError(event) {
         console.error('YouTube error:', event.data);
-        this.updateAudioStatus('error', 'Audio unavailable');
+        if ((event.data === 150 || event.data === 101) && this.videoQueue && this.videoQueueIndex < this.videoQueue.length - 1) {
+            console.log('Video blocked by owner, trying next result...');
+            this.videoQueueIndex++;
+            this.tryNextVideo();
+        } else {
+            this.updateAudioStatus('error', 'Audio unavailable');
+        }
     }
     
     updateAudioStatus(state, message) {
@@ -1913,45 +1921,59 @@ class AudioRoomsManager {
     
     async searchYouTubeAudio(artist, title) {
         try {
-            const query = `${artist} ${title} official audio`;
+            const query = `${artist} ${title}`;
             const response = await fetch(`/api/lyrics/youtube-search?q=${encodeURIComponent(query)}`);
             const data = await response.json();
             
-            if (data.videoId) {
-                return data.videoId;
+            if (data.videoIds && data.videoIds.length > 0) {
+                return data.videoIds;
             }
-            return null;
+            if (data.videoId) {
+                return [data.videoId];
+            }
+            return [];
         } catch (error) {
             console.error('YouTube search error:', error);
-            return null;
+            return [];
         }
     }
     
     async loadYouTubeAudio(artist, title) {
         this.updateAudioStatus('playing', 'Finding audio...');
         
-        // Wait for YouTube API to be ready (with timeout)
         if (!this.youtubeReady) {
             this.updateAudioStatus('playing', 'Loading player...');
-            const ready = await this.waitForYouTubeReady(10000); // 10 second timeout
+            const ready = await this.waitForYouTubeReady(10000);
             if (!ready) {
                 this.updateAudioStatus('error', 'Player not ready');
                 return false;
             }
         }
         
-        const videoId = await this.searchYouTubeAudio(artist, title);
+        const videoIds = await this.searchYouTubeAudio(artist, title);
         
-        if (videoId && this.youtubePlayer && this.youtubeReady) {
-            this.currentVideoId = videoId;
-            this.youtubePlayer.loadVideoById(videoId);
-            this.youtubePlayer.pauseVideo(); // Load but don't auto-play
-            this.updateAudioStatus('ready', 'Audio loaded - Press play');
+        if (videoIds.length > 0 && this.youtubePlayer && this.youtubeReady) {
+            this.videoQueue = videoIds;
+            this.videoQueueIndex = 0;
+            this.tryNextVideo();
             return true;
         } else {
             this.updateAudioStatus('error', 'No audio found');
             return false;
         }
+    }
+
+    tryNextVideo() {
+        if (!this.videoQueue || this.videoQueueIndex >= this.videoQueue.length) {
+            this.updateAudioStatus('error', 'No embeddable audio found');
+            return;
+        }
+        const videoId = this.videoQueue[this.videoQueueIndex];
+        this.currentVideoId = videoId;
+        console.log(`Trying video ${this.videoQueueIndex + 1}/${this.videoQueue.length}: ${videoId}`);
+        this.updateAudioStatus('playing', `Trying source ${this.videoQueueIndex + 1}...`);
+        this.youtubePlayer.loadVideoById(videoId);
+        this.youtubePlayer.pauseVideo();
     }
     
     waitForYouTubeReady(timeout = 10000) {
