@@ -32,6 +32,11 @@ class AudioRoomsManager {
         this.videoQueueIndex = 0;
         this.currentYtUrl = null;
         this.ytPopup = null;
+        this.scrollSpeed = 1.0;
+        this.baseScrollInterval = 3000;
+        this.previewMode = true;
+        this.karaokeCanvas = null;
+        this.karaokeCanvasCtx = null;
         this.karaokeEnabled = false; // Host/moderator permission for karaoke
         this.isRoomHost = false; // Track if current user created the room
         
@@ -152,8 +157,13 @@ class AudioRoomsManager {
         document.getElementById('screenshare-btn')?.addEventListener('click', () => this.startScreenShare());
         document.getElementById('screenshare-stop')?.addEventListener('click', () => this.stopScreenShare());
         
+        // Karaoke scroll speed controls
+        document.getElementById('karaoke-slower')?.addEventListener('click', () => this.adjustScrollSpeed(-0.25));
+        document.getElementById('karaoke-faster')?.addEventListener('click', () => this.adjustScrollSpeed(0.25));
+
         // Karaoke video controls
         document.getElementById('karaoke-camera-toggle')?.addEventListener('click', () => this.toggleKaraokeCamera());
+        document.getElementById('karaoke-preview-toggle')?.addEventListener('click', () => this.togglePreviewMode());
         document.querySelectorAll('.video-filter-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const filter = e.currentTarget.dataset.filter;
@@ -1440,7 +1450,18 @@ class AudioRoomsManager {
         const placeholder = document.getElementById('video-placeholder');
         
         if (this.karaokeVideoActive) {
-            // Stop camera
+            if (this.canvasFilterRAF) {
+                cancelAnimationFrame(this.canvasFilterRAF);
+                this.canvasFilterRAF = null;
+            }
+            if (this.canvasStream) {
+                this.canvasStream.getTracks().forEach(t => t.stop());
+                this.canvasStream = null;
+            }
+            const canvas = document.getElementById('karaoke-canvas');
+            if (canvas) canvas.style.display = 'none';
+            if (videoEl) videoEl.style.display = '';
+
             if (this.karaokeVideoStream) {
                 this.karaokeVideoStream.getTracks().forEach(track => track.stop());
                 this.karaokeVideoStream = null;
@@ -1449,6 +1470,7 @@ class AudioRoomsManager {
             placeholder?.classList.remove('hidden');
             cameraBtn?.classList.remove('active');
             this.karaokeVideoActive = false;
+            this.restoreOriginalVideoTrack();
         } else {
             // Start camera
             try {
@@ -1476,20 +1498,155 @@ class AudioRoomsManager {
     setVideoFilter(filter) {
         const videoEl = document.getElementById('karaoke-video');
         
-        // Remove all filter classes
-        const filters = ['none', 'grayscale', 'sepia', 'saturate', 'hue-rotate', 'blur'];
-        filters.forEach(f => {
+        const allFilters = ['none', 'grayscale', 'sepia', 'saturate', 'hue-rotate', 'blur', 'beautify', 'bg-blur'];
+        allFilters.forEach(f => {
             videoEl?.classList.remove(`filter-${f}`);
         });
         
-        // Add new filter class
-        videoEl?.classList.add(`filter-${filter}`);
+        if (this.canvasFilterRAF) {
+            cancelAnimationFrame(this.canvasFilterRAF);
+            this.canvasFilterRAF = null;
+        }
+
+        const canvas = document.getElementById('karaoke-canvas');
+
+        if (filter === 'beautify' || filter === 'bg-blur') {
+            this.startCanvasFilter(filter);
+            if (canvas) canvas.style.display = 'block';
+            if (videoEl) videoEl.style.display = 'none';
+        } else {
+            if (canvas) canvas.style.display = 'none';
+            if (videoEl) videoEl.style.display = '';
+            videoEl?.classList.add(`filter-${filter}`);
+            this.restoreOriginalVideoTrack();
+        }
+
         this.currentVideoFilter = filter;
         
-        // Update button states
         document.querySelectorAll('.video-filter-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.filter === filter);
         });
+    }
+
+    startCanvasFilter(filter) {
+        const videoEl = document.getElementById('karaoke-video');
+        let canvas = document.getElementById('karaoke-canvas');
+        const container = document.getElementById('karaoke-video-container');
+
+        if (!canvas && container) {
+            canvas = document.createElement('canvas');
+            canvas.id = 'karaoke-canvas';
+            canvas.width = 320;
+            canvas.height = 240;
+            canvas.className = 'karaoke-canvas-overlay';
+            container.appendChild(canvas);
+        }
+
+        if (!canvas || !videoEl) return;
+
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        this.karaokeCanvas = canvas;
+        this.karaokeCanvasCtx = ctx;
+
+        const renderFrame = () => {
+            if (!this.karaokeVideoActive) return;
+
+            if (filter === 'beautify') {
+                ctx.filter = 'blur(1px) brightness(1.08) contrast(0.95) saturate(1.1)';
+                ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+                ctx.filter = 'none';
+                ctx.globalAlpha = 0.5;
+                ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+                ctx.globalAlpha = 1.0;
+            } else if (filter === 'bg-blur') {
+                ctx.filter = 'blur(8px)';
+                ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+                ctx.filter = 'none';
+
+                const cx = canvas.width / 2;
+                const cy = canvas.height * 0.4;
+                const rx = canvas.width * 0.3;
+                const ry = canvas.height * 0.45;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+                ctx.clip();
+                ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+                ctx.restore();
+            }
+
+            this.canvasFilterRAF = requestAnimationFrame(renderFrame);
+        };
+
+        this.canvasFilterRAF = requestAnimationFrame(renderFrame);
+
+        this.updateBroadcastStream();
+    }
+
+    updateBroadcastStream() {
+        if (this.previewMode) return;
+
+        const canvas = document.getElementById('karaoke-canvas');
+        if (!canvas || !this.karaokeVideoActive) return;
+
+        try {
+            if (!this.canvasStream) {
+                this.canvasStream = canvas.captureStream(15);
+            }
+            const canvasTrack = this.canvasStream.getVideoTracks()[0];
+            if (!canvasTrack) return;
+
+            this.peerConnections.forEach((pc) => {
+                const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+                if (sender) {
+                    sender.replaceTrack(canvasTrack);
+                }
+            });
+        } catch (e) {
+            console.error('Error updating broadcast stream:', e);
+        }
+    }
+
+    restoreOriginalVideoTrack() {
+        if (!this.karaokeVideoStream) return;
+        const originalTrack = this.karaokeVideoStream.getVideoTracks()[0];
+        if (!originalTrack) return;
+
+        this.peerConnections.forEach((pc) => {
+            const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+            if (sender) {
+                sender.replaceTrack(originalTrack);
+            }
+        });
+    }
+
+    togglePreviewMode() {
+        this.previewMode = !this.previewMode;
+        const btn = document.getElementById('karaoke-preview-toggle');
+        const icon = btn?.querySelector('i');
+        const label = btn?.querySelector('.btn-label');
+
+        if (this.previewMode) {
+            if (icon) icon.className = 'fas fa-eye';
+            if (label) label.textContent = 'Preview';
+            btn?.classList.add('active');
+            this.peerConnections.forEach((pc) => {
+                const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+                if (sender) sender.replaceTrack(null);
+            });
+            this.addChatMessage('System', 'Preview mode ON — camera visible only to you.', true);
+        } else {
+            if (icon) icon.className = 'fas fa-broadcast-tower';
+            if (label) label.textContent = 'Live';
+            btn?.classList.remove('active');
+            if (this.currentVideoFilter === 'beautify' || this.currentVideoFilter === 'bg-blur') {
+                this.updateBroadcastStream();
+            } else {
+                this.restoreOriginalVideoTrack();
+            }
+            this.addChatMessage('System', 'You are now LIVE — camera visible to the room.', true);
+        }
     }
     
     async searchKaraokeSongs() {
@@ -1707,18 +1864,28 @@ class AudioRoomsManager {
         }
     }
     
+    adjustScrollSpeed(delta) {
+        this.scrollSpeed = Math.max(0.25, Math.min(3.0, this.scrollSpeed + delta));
+        const speedEl = document.getElementById('speed-value');
+        if (speedEl) speedEl.textContent = `${this.scrollSpeed.toFixed(2)}x`;
+
+        if (this.karaokeActive) {
+            clearInterval(this.karaokeInterval);
+            this.startLyricScrolling();
+        }
+    }
+
     startLyricScrolling() {
-        // Scroll through lyrics every 3 seconds (approximate line duration)
+        const interval = Math.round(this.baseScrollInterval / this.scrollSpeed);
         this.karaokeInterval = setInterval(() => {
             if (this.currentLyricIndex < this.karaokeLyrics.length - 1) {
                 this.currentLyricIndex++;
                 this.updateLyricHighlight();
                 this.updateProgress();
             } else {
-                // End of song
                 this.stopKaraoke();
             }
-        }, 3000);
+        }, interval);
     }
     
     updateLyricHighlight() {
@@ -1772,6 +1939,17 @@ class AudioRoomsManager {
         const playPauseBtn = document.getElementById('karaoke-play-pause');
         const icon = playPauseBtn?.querySelector('i');
         if (icon) icon.className = 'fas fa-play';
+
+        // Reset scroll speed
+        this.scrollSpeed = 1.0;
+        const speedEl = document.getElementById('speed-value');
+        if (speedEl) speedEl.textContent = '1.0x';
+
+        // Stop canvas filter
+        if (this.canvasFilterRAF) {
+            cancelAnimationFrame(this.canvasFilterRAF);
+            this.canvasFilterRAF = null;
+        }
         
         // Close YouTube popup if open
         if (this.ytPopup && !this.ytPopup.closed) {

@@ -649,6 +649,17 @@
                                 <button class="video-filter-btn" data-filter="blur" title="Soft focus">
                                     <i class="fas fa-cloud"></i>
                                 </button>
+                                <button class="video-filter-btn" data-filter="beautify" title="Beautify">
+                                    <i class="fas fa-magic"></i>
+                                </button>
+                                <button class="video-filter-btn" data-filter="bg-blur" title="Blur Background">
+                                    <i class="fas fa-portrait"></i>
+                                </button>
+                            </div>
+                            <div class="video-preview-toggle">
+                                <button class="video-control-btn" id="karaoke-preview-toggle" title="Preview before broadcast">
+                                    <i class="fas fa-eye"></i> <span class="btn-label">Preview</span>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -669,15 +680,24 @@
                         </div>
                     </div>
                     <div class="karaoke-controls">
-                        <button class="karaoke-control-btn" id="karaoke-restart">
+                        <button class="karaoke-control-btn" id="karaoke-restart" title="Restart">
                             <i class="fas fa-redo"></i>
+                        </button>
+                        <button class="karaoke-control-btn" id="karaoke-slower" title="Slower">
+                            <i class="fas fa-minus"></i>
                         </button>
                         <button class="karaoke-control-btn primary" id="karaoke-play-pause">
                             <i class="fas fa-play"></i>
                         </button>
-                        <button class="karaoke-control-btn" id="karaoke-stop">
+                        <button class="karaoke-control-btn" id="karaoke-faster" title="Faster">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button class="karaoke-control-btn" id="karaoke-stop" title="Stop">
                             <i class="fas fa-stop"></i>
                         </button>
+                    </div>
+                    <div class="karaoke-speed-display" id="karaoke-speed-display">
+                        Speed: <span id="speed-value">1.0x</span>
                     </div>
                     <div class="karaoke-progress">
                         <div class="progress-bar">

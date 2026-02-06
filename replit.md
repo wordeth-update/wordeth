@@ -53,10 +53,13 @@ The application is fully functional and ready for use. It runs on Node.js with E
   - WebRTC integration for sharing with participants
 - **Karaoke Video**: Video camera with filters for karaoke performances
   - Toggle camera on/off during karaoke sessions
-  - 6 video filters: None, B&W, Vintage, Vivid, Psychedelic, Soft focus
+  - 8 video filters: None, B&W, Vintage, Vivid, Psychedelic, Soft focus, Beautify (smooth skin), Background Blur
+  - Canvas-based processing for Beautify and Background Blur with captureStream() broadcast at 15fps
+  - Preview mode toggle: test filters locally before broadcasting to room participants
   - Mirror effect for natural selfie view
   - Animated hue-rotate effect for psychedelic filter
   - Visual indicator on control button when filter is active
+  - Lyrics scroll speed controls (0.25x-3.0x) with +/- buttons
 - **Lyrics-to-Merch Feature**: Highlight lyrics in modal → "Make Merch" button appears → redirects to merch store with lyrics pre-filled
 - **Artist Merch Store**: InkSoft-powered merchandise store with:
   - Artist Garden: Featured artist cards for Music Artists, Designers, and Labels
