@@ -1,0 +1,546 @@
+/*=====================================
+   Wordeth x InkSoft Custom Theme
+   Upload via: Store Admin > Settings > Developer Settings > Custom CSS
+   
+   Brand Colors:
+   - Black:         #000000
+   - Purple Dark:   #553555
+   - Purple Accent:  #5F0E82
+   - Purple Light:  #755B69
+   - Mint:          #96C5B0
+   - White:         #ffffff
+=======================================*/
+
+
+/* ====== GLOBAL ====== */
+
+#body {
+  background: #000000;
+  color: #ffffff;
+  font-family: 'Inter', 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+
+/* ====== BUTTONS ====== */
+
+#body button.mat-button,
+#body button.mat-fab,
+#body button.mat-flat-button,
+#body button.mat-icon-button,
+#body button.mat-mini-fab,
+#body button.mat-raised-button,
+#body button.mat-stroked-button {
+  border-radius: 25px;
+  font-weight: 700;
+  font-family: 'Inter', 'Poppins', sans-serif;
+  letter-spacing: 0.3px;
+  transition: all 0.3s ease;
+}
+
+#body button.mat-raised-button {
+  background: linear-gradient(135deg, #96C5B0 0%, #5F0E82 100%);
+  color: #000000;
+  box-shadow: 0 4px 12px rgba(150, 197, 176, 0.3);
+}
+
+#body button.mat-raised-button:hover {
+  box-shadow: 0 8px 20px rgba(150, 197, 176, 0.4);
+  transform: translateY(-2px);
+}
+
+#body button.mat-stroked-button {
+  border-color: #96C5B0;
+  color: #96C5B0;
+}
+
+#body button.mat-stroked-button:hover {
+  background: rgba(150, 197, 176, 0.1);
+}
+
+
+/* ====== MODALS ====== */
+
+#body .mat-dialog-title {
+  color: #96C5B0;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+}
+
+#body .mat-dialog-content {
+  background: linear-gradient(135deg, #553555 0%, #000000 100%);
+  color: #ffffff;
+}
+
+#body .mat-dialog-actions {
+  border-top: 1px solid rgba(150, 197, 176, 0.2);
+}
+
+#body .cdk-overlay-dark-backdrop {
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(5px);
+}
+
+#itemAddedDialog {
+  background: linear-gradient(135deg, #553555, #000000);
+  border: 1px solid rgba(150, 197, 176, 0.2);
+  border-radius: 16px;
+}
+
+
+/* ====== HEADER ====== */
+
+#StoreHeader-component {
+  background: linear-gradient(135deg, #553555 0%, #000000 100%);
+  border-bottom: 1px solid rgba(150, 197, 176, 0.15);
+}
+
+#StoreHeader-component a {
+  color: #ffffff;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+#StoreHeader-component a:hover {
+  color: #96C5B0;
+}
+
+#storeLogo .store-name {
+  color: #96C5B0;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+}
+
+#mobileHeaderWrap {
+  background: linear-gradient(135deg, #553555, #000000);
+}
+
+ul.mobile-menu {
+  background: #553555;
+}
+
+a.mobile-menu-link {
+  color: #ffffff !important;
+}
+
+a.mobile-menu-link:hover {
+  color: #96C5B0 !important;
+  background: rgba(150, 197, 176, 0.1);
+}
+
+
+/* ====== FOOTER ====== */
+
+#StoreFooter-component {
+  background: #000000;
+  border-top: 1px solid rgba(150, 197, 176, 0.15);
+}
+
+#StoreFooter-component .main-footer-wrap {
+  background: #000000;
+}
+
+#StoreFooter-component .column h5 {
+  color: #96C5B0;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+}
+
+#StoreFooter-component .column a {
+  color: rgba(255, 255, 255, 0.7);
+  transition: color 0.3s ease;
+}
+
+#StoreFooter-component .column a:hover {
+  color: #96C5B0;
+}
+
+
+/* ====== PROMO BAR ====== */
+
+#body promo-bar-wrapper {
+  background: linear-gradient(135deg, #5F0E82, #96C5B0);
+}
+
+#body promo-bar-wrapper span {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+
+/* ====== FEATURED PRODUCTS ====== */
+
+#body .store-products-wrap {
+  background: #000000;
+}
+
+#body .store-products-wrap .product-list-wrap .product-list-header h2 {
+  color: #96C5B0;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+}
+
+#body .store-products-wrap .product-list-wrap .product-list-header span {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+#body .store-products-wrap .product-card {
+  background: linear-gradient(135deg, rgba(95, 14, 130, 0.4) 0%, rgba(85, 53, 85, 0.6) 100%);
+  border: 1px solid rgba(150, 197, 176, 0.1);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.4s ease;
+}
+
+#body .store-products-wrap .product-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 60px rgba(95, 14, 130, 0.2);
+  border-color: rgba(150, 197, 176, 0.3);
+}
+
+#body .store-products-wrap .product-name {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+#body .store-products-wrap .product-manufacturer {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+#body .store-products-wrap .product-price {
+  color: #96C5B0;
+  font-weight: 700;
+}
+
+#body .store-products-wrap .mat-raised-button {
+  background: linear-gradient(135deg, #96C5B0, #5F0E82);
+  color: #000000;
+  border-radius: 25px;
+  font-weight: 700;
+}
+
+
+/* ====== SIGN IN / CREATE ACCOUNT ====== */
+
+account-login .store-page,
+create-account .store-page {
+  background: linear-gradient(135deg, #553555 0%, #000000 100%);
+  color: #ffffff;
+}
+
+#body .login-container-wrap,
+#body .create-acct-container-wrap {
+  background: transparent;
+}
+
+#body .login-container-wrap .store-logo-link h1.text-wrap,
+#body .create-acct-container-wrap .store-logo-link h1.text-wrap {
+  color: #96C5B0;
+}
+
+#body .login-container-wrap .card {
+  background: rgba(85, 53, 85, 0.6);
+  border: 1px solid rgba(150, 197, 176, 0.15);
+  border-radius: 16px;
+}
+
+#body .login-container-wrap .card h1 {
+  color: #96C5B0;
+}
+
+
+/* ====== PRODUCT CATALOG ====== */
+
+product-category .store-page {
+  background: #000000;
+  color: #ffffff;
+}
+
+#body .product-list-wrap {
+  background: transparent;
+}
+
+#body .product-list-wrap .actual-category-info p {
+  color: #96C5B0;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+}
+
+#body .product-list-wrap .category-path span {
+  color: #96C5B0;
+}
+
+#body a.category-view-all {
+  color: #96C5B0;
+}
+
+#body ul.category-list li {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.product-card {
+  background: linear-gradient(135deg, rgba(95, 14, 130, 0.4), rgba(85, 53, 85, 0.6));
+  border: 1px solid rgba(150, 197, 176, 0.1);
+  border-radius: 16px;
+  transition: all 0.4s ease;
+}
+
+.product-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 60px rgba(95, 14, 130, 0.2);
+  border-color: rgba(150, 197, 176, 0.3);
+}
+
+.product-card .product-info .product-name {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.product-card .product-info .product-manufacturer {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.product-card .product-info .product-price {
+  color: #96C5B0;
+  font-weight: 700;
+}
+
+
+/* ====== PRODUCT DETAIL PAGE ====== */
+
+product-detail .store-page {
+  background: #000000;
+  color: #ffffff;
+}
+
+#body .product-carousel-wrap {
+  background: rgba(85, 53, 85, 0.3);
+  border: 1px solid rgba(150, 197, 176, 0.1);
+  border-radius: 16px;
+}
+
+#body .product-detail-panel {
+  background: linear-gradient(135deg, rgba(85, 53, 85, 0.5), rgba(0, 0, 0, 0.8));
+  border: 1px solid rgba(150, 197, 176, 0.15);
+  border-radius: 16px;
+}
+
+#body .product-panel-group-item {
+  border-bottom: 1px solid rgba(150, 197, 176, 0.1);
+}
+
+#body .product-panel-group-item.has-background {
+  background: rgba(95, 14, 130, 0.15);
+}
+
+#body .product-detail-panel .product-title {
+  color: #96C5B0;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+}
+
+#body .product-detail-panel .product-manuf {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+#body .product-detail-panel .product-price {
+  color: #96C5B0;
+  font-weight: 700;
+  font-size: 1.2em;
+}
+
+#body .product-detail-panel a#sizeChart {
+  color: #96C5B0;
+}
+
+
+/* ====== DESIGNER ====== */
+
+#body .ds-select-product-container .product-catalog-wrap {
+  background: #000000;
+}
+
+#body .ds-select-product-container .product-catalog-header {
+  background: transparent;
+}
+
+#body .ds-select-product-container .product-catalog-header h1 {
+  color: #96C5B0;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+}
+
+#body .ds-select-product-container .product-catalog-header p {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+#body .ds-select-product-container .product-card-wrap {
+  background: linear-gradient(135deg, rgba(95, 14, 130, 0.3), rgba(85, 53, 85, 0.5));
+  border: 1px solid rgba(150, 197, 176, 0.1);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+#body .ds-select-product-container .product-card-wrap:hover {
+  border-color: rgba(150, 197, 176, 0.3);
+  box-shadow: 0 8px 24px rgba(95, 14, 130, 0.2);
+}
+
+#body .ds-select-product-container .product-card-wrap.selected-state {
+  border-color: #96C5B0;
+  box-shadow: 0 0 20px rgba(150, 197, 176, 0.3);
+}
+
+#body .ds-select-product-container .product-detail-container {
+  background: linear-gradient(135deg, rgba(85, 53, 85, 0.5), rgba(0, 0, 0, 0.8));
+  border: 1px solid rgba(150, 197, 176, 0.15);
+  border-radius: 16px;
+}
+
+#body .ds-select-product-container .product-detail-container #productName {
+  color: #96C5B0;
+  font-weight: 700;
+}
+
+#body .ds-select-product-container .product-detail-container #productManufacturer {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+#body .ds-select-product-container .product-detail-container #designNowBtn {
+  background: linear-gradient(135deg, #96C5B0 0%, #5F0E82 100%);
+  color: #000000;
+  border-radius: 25px;
+  font-weight: 700;
+  box-shadow: 0 4px 15px rgba(150, 197, 176, 0.3);
+}
+
+#body .ds-select-product-container .product-detail-container #descriptionLabel {
+  color: #96C5B0;
+}
+
+#body .ds-select-product-container .product-detail-container #productLongDescription {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+
+/* ====== SHOPPING CART ====== */
+
+store-cart .store-page,
+store-cart .cart-page {
+  background: #000000;
+  color: #ffffff;
+}
+
+#body .cart-items .card {
+  background: linear-gradient(135deg, rgba(85, 53, 85, 0.5), rgba(0, 0, 0, 0.8));
+  border: 1px solid rgba(150, 197, 176, 0.15);
+  border-radius: 16px;
+}
+
+
+/* ====== CHECKOUT ====== */
+
+#body .checkout-wrap {
+  background: #000000;
+  color: #ffffff;
+}
+
+#body #checkout-progress-nav a {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+#body #checkout-progress-nav li.active a {
+  background: linear-gradient(135deg, #96C5B0, #5F0E82);
+  color: #000000;
+  font-weight: 700;
+}
+
+#body #checkout-progress-nav li.active a:after {
+  border-left-color: #5F0E82;
+}
+
+
+/* ====== FUNDRAISER ====== */
+
+#body .fundraiser-block {
+  background: linear-gradient(135deg, rgba(95, 14, 130, 0.4), rgba(85, 53, 85, 0.6));
+  border-radius: 16px;
+  border: 1px solid rgba(150, 197, 176, 0.15);
+}
+
+#body .fundraiser-block .raised-amount {
+  color: #96C5B0;
+  font-weight: 700;
+}
+
+#body .fundraiser-block .raised-label {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+#body .fundraiser-block .mat-progress-bar {
+  background: rgba(150, 197, 176, 0.2);
+}
+
+
+/* ====== COUNTDOWN ====== */
+
+#body .countdown-block {
+  background: linear-gradient(135deg, #553555, #000000);
+}
+
+#body .countdown-block .headline h1 {
+  color: #96C5B0;
+  font-family: 'Poppins', sans-serif;
+}
+
+#body .countdown-block .flip-clock-wrapper div.inn {
+  color: #96C5B0;
+  text-shadow: 0 1px 2px #000000;
+  background-color: #553555;
+  font-size: 60px;
+}
+
+
+/* ====== SCROLLBAR ====== */
+
+#body ::-webkit-scrollbar {
+  width: 8px;
+}
+
+#body ::-webkit-scrollbar-track {
+  background: #000000;
+}
+
+#body ::-webkit-scrollbar-thumb {
+  background: #553555;
+  border-radius: 4px;
+}
+
+#body ::-webkit-scrollbar-thumb:hover {
+  background: #5F0E82;
+}
+
+
+/* ====== FORM INPUTS ====== */
+
+#body input,
+#body select,
+#body textarea {
+  background: rgba(85, 53, 85, 0.3);
+  border: 1px solid rgba(150, 197, 176, 0.2);
+  color: #ffffff;
+  border-radius: 8px;
+  transition: border-color 0.3s ease;
+}
+
+#body input:focus,
+#body select:focus,
+#body textarea:focus {
+  border-color: #96C5B0;
+  outline: none;
+  box-shadow: 0 0 10px rgba(150, 197, 176, 0.2);
+}
+
+#body input::placeholder,
+#body textarea::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
