@@ -618,25 +618,27 @@ router.get('/youtube-search', async (req, res) => {
         }
 
         const searchVariants = [
-            `${q} lyrics`,
-            `${q} official audio`,
-            q
+            `${q} lyric video`,
+            `${q} lyrics audio`,
+            `${q} audio`,
+            `${q} clean lyrics`
         ];
 
         const seenIds = new Set();
         const results = [];
+        const blockedChannelKeywords = ['vevo'];
 
         for (const searchQuery of searchVariants) {
-            if (results.length >= 5) break;
+            if (results.length >= 8) break;
             try {
                 const response = await axios.get(YOUTUBE_API_URL, {
                     params: {
                         part: 'snippet',
                         q: searchQuery,
                         type: 'video',
-                        videoCategoryId: '10',
-                        maxResults: 3,
+                        maxResults: 5,
                         videoEmbeddable: 'true',
+                        videoSyndicated: 'true',
                         key: YOUTUBE_API_KEY
                     },
                     timeout: 10000
@@ -645,9 +647,15 @@ router.get('/youtube-search', async (req, res) => {
                 if (response.data.items) {
                     for (const item of response.data.items) {
                         const vid = item.id.videoId;
+                        const channelTitle = (item.snippet.channelTitle || '').toLowerCase();
+                        const isBlockedChannel = blockedChannelKeywords.some(kw => channelTitle.includes(kw));
                         if (!seenIds.has(vid)) {
                             seenIds.add(vid);
-                            results.push({ videoId: vid, title: item.snippet.title });
+                            results.push({
+                                videoId: vid,
+                                title: item.snippet.title,
+                                priority: isBlockedChannel ? 1 : 0
+                            });
                         }
                     }
                 }
@@ -655,6 +663,8 @@ router.get('/youtube-search', async (req, res) => {
                 console.error(`YouTube search variant error for "${searchQuery}":`, err.message);
             }
         }
+
+        results.sort((a, b) => a.priority - b.priority);
 
         if (results.length > 0) {
             return res.json({ videoIds: results.map(r => r.videoId), titles: results.map(r => r.title), videoId: results[0].videoId });

@@ -1897,6 +1897,9 @@ class AudioRoomsManager {
             case YT.PlayerState.BUFFERING:
                 this.updateAudioStatus('playing', 'Buffering...');
                 break;
+            case YT.PlayerState.CUED:
+                this.updateAudioStatus('ready', 'Audio loaded - Press play');
+                break;
         }
     }
     
