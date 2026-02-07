@@ -3,11 +3,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
-const passport = require('passport');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const session = require('express-session');
-const MongoStore = require('connect-mongo');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -89,36 +86,7 @@ if (mongoUri && mongoUri !== 'mongodb://localhost:27017/wordeth') {
     }
 }
 
-// Session configuration
-if (mongoUri && mongoUri !== 'mongodb://localhost:27017/wordeth') {
-    app.use(session({
-        secret: process.env.SESSION_SECRET || 'fallback-secret',
-        resave: false,
-        saveUninitialized: false,
-        store: MongoStore.create({ 
-            mongoUrl: mongoUri,
-            collectionName: 'sessions'
-        }),
-        cookie: {
-            secure: process.env.NODE_ENV === 'production',
-            httpOnly: true,
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
-        }
-    }));
-} else {
-    app.use(session({
-        secret: process.env.SESSION_SECRET || 'fallback-secret',
-        resave: false,
-        saveUninitialized: false,
-        cookie: {
-            secure: process.env.NODE_ENV === 'production',
-            httpOnly: true,
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
-        }
-    }));
-}
-
-// CORS configuration - allow all origins for Replit proxy compatibility
+// CORS configuration
 app.use(cors({
     origin: true,
     credentials: true
@@ -127,8 +95,6 @@ app.use(cors({
 // Middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(passport.initialize());
-app.use(passport.session());
 
 // Serve static files with cache control
 app.use(express.static(path.join(__dirname), {

@@ -42,10 +42,6 @@ Thumbs.db
 *.swo
 *~
 
-# Uploads
-uploads/*
-!uploads/.gitkeep
-
 # Test database
 wordeth_test
 
@@ -56,3 +52,7 @@ wordeth_test
 # Misc
 .cache/
 .temp/
+.env.bak
+*.backup
+*.backup2
+*.tmp
