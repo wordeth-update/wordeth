@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordeth Privacy & Data Admin</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/ads.css">
+    <link rel="stylesheet" href="css/cookie-consent.css">
+    <style>
+        .privacy-admin-body { background: #0a0a0f; color: #e0e0e0; font-family: 'Inter', sans-serif; }
+        .pa-nav { display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; background: #111118; border-bottom: 1px solid #222; }
+        .pa-nav .nav-brand { display: flex; align-items: center; gap: 12px; }
+        .pa-nav .logo { height: 32px; }
+        .pa-nav .badge { background: #e74c3c; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 4px; letter-spacing: 1px; }
+        .pa-nav .nav-links { display: flex; gap: 12px; align-items: center; }
+        .pa-nav .nav-link { color: #aaa; text-decoration: none; font-size: 13px; transition: color .2s; }
+        .pa-nav .nav-link:hover { color: #fff; }
+        .pa-container { display: flex; max-width: 1200px; margin: 0 auto; padding: 32px 16px; gap: 32px; }
+        .pa-sidebar { width: 220px; flex-shrink: 0; position: sticky; top: 32px; align-self: flex-start; }
+        .pa-sidebar nav h4 { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 8px; }
+        .pa-sidebar nav h4:first-child { margin-top: 0; }
+        .pa-sidebar nav ul { list-style: none; padding: 0; margin: 0; }
+        .pa-sidebar nav li { margin: 0; }
+        .pa-sidebar nav a { display: block; color: #aaa; text-decoration: none; font-size: 13px; padding: 6px 12px; border-radius: 6px; transition: all .2s; }
+        .pa-sidebar nav a:hover, .pa-sidebar nav a.active { background: #1a1a24; color: #fff; }
+        .pa-main { flex: 1; min-width: 0; }
+        .pa-main section { margin-bottom: 48px; }
+        .pa-main h1 { font-family: 'Poppins', sans-serif; font-size: 28px; color: #fff; margin: 0 0 8px; }
+        .pa-main .lead { font-size: 16px; color: #999; margin: 0 0 32px; }
+        .pa-main h2 { font-family: 'Poppins', sans-serif; font-size: 20px; color: #fff; margin: 0 0 16px; padding-top: 16px; border-top: 1px solid #222; }
+        .pa-main h3 { font-size: 16px; color: #ddd; margin: 20px 0 8px; }
+        .pa-main p, .pa-main li { line-height: 1.7; color: #bbb; font-size: 14px; }
+        .pa-main ul, .pa-main ol { padding-left: 20px; }
+        .pa-main li { margin-bottom: 6px; }
+        .pa-main a { color: #7c6aef; }
+        .pa-main a:hover { color: #a08ff8; }
+        .info-box { background: #12121c; border: 1px solid #222; border-radius: 8px; padding: 20px; margin: 16px 0; }
+        .info-box.warning { border-color: #e74c3c44; background: #1a0f0f; }
+        .info-box.warning .info-icon { color: #e74c3c; }
+        .info-box.tip { border-color: #2ecc7144; background: #0f1a14; }
+        .info-box.tip .info-icon { color: #2ecc71; }
+        .info-box .info-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-weight: 600; color: #fff; }
+        .info-icon { font-size: 16px; }
+        code { background: #1a1a24; color: #7c6aef; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+        pre { background: #111118; border: 1px solid #222; border-radius: 8px; padding: 16px; overflow-x: auto; font-size: 13px; line-height: 1.6; color: #ccc; }
+        pre code { background: none; padding: 0; color: inherit; }
+        .page-map { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin: 20px 0; }
+        .page-card { background: #12121c; border: 1px solid #222; border-radius: 10px; padding: 20px; text-align: center; transition: border-color .2s; }
+        .page-card:hover { border-color: #7c6aef; }
+        .page-card i { font-size: 28px; color: #7c6aef; margin-bottom: 10px; }
+        .page-card h3 { margin: 0 0 6px; font-size: 15px; color: #fff; }
+        .page-card p { margin: 0 0 10px; font-size: 12px; color: #888; }
+        .page-card .path { font-size: 11px; color: #666; font-family: monospace; }
+
+        .flush-tool { background: #12121c; border: 1px solid #222; border-radius: 10px; padding: 24px; margin: 20px 0; }
+        .flush-tool h3 { margin: 0 0 16px; color: #fff; }
+        .flush-login { display: flex; flex-direction: column; gap: 12px; max-width: 400px; }
+        .flush-login input, .flush-tool input { background: #1a1a24; border: 1px solid #333; border-radius: 6px; padding: 10px 14px; color: #fff; font-size: 14px; outline: none; }
+        .flush-login input:focus, .flush-tool input:focus { border-color: #7c6aef; }
+        .btn-admin { background: #7c6aef; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .2s; }
+        .btn-admin:hover { background: #6b5ce0; }
+        .btn-danger { background: #e74c3c; }
+        .btn-danger:hover { background: #c0392b; }
+        .flush-actions { display: none; }
+        .flush-actions.visible { display: block; }
+        .flush-email-row { display: flex; gap: 12px; margin-top: 16px; align-items: flex-end; }
+        .flush-email-row input { flex: 1; }
+        .flush-result { margin-top: 16px; padding: 16px; border-radius: 8px; font-size: 13px; display: none; }
+        .flush-result.success { display: block; background: #0f1a14; border: 1px solid #2ecc7144; color: #2ecc71; }
+        .flush-result.error { display: block; background: #1a0f0f; border: 1px solid #e74c3c44; color: #e74c3c; }
+        .flush-result pre { background: transparent; border: none; padding: 8px 0 0; color: inherit; font-size: 12px; }
+        .admin-status { font-size: 13px; margin-top: 8px; }
+        .admin-status.ok { color: #2ecc71; }
+        .admin-status.fail { color: #e74c3c; }
+        .confirm-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 100; align-items: center; justify-content: center; }
+        .confirm-overlay.visible { display: flex; }
+        .confirm-dialog { background: #1a1a24; border: 1px solid #333; border-radius: 12px; padding: 32px; max-width: 440px; text-align: center; }
+        .confirm-dialog h3 { color: #e74c3c; margin: 0 0 12px; }
+        .confirm-dialog p { color: #bbb; font-size: 14px; margin: 0 0 8px; }
+        .confirm-dialog .email-confirm { color: #fff; font-weight: 600; font-size: 16px; margin: 12px 0; }
+        .confirm-dialog .btn-row { display: flex; gap: 12px; justify-content: center; margin-top: 20px; }
+        .confirm-dialog .btn-cancel { background: #333; color: #fff; border: none; padding: 10px 24px; border-radius: 6px; font-size: 14px; cursor: pointer; }
+
+        .endpoint-table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        .endpoint-table th, .endpoint-table td { text-align: left; padding: 10px 14px; border-bottom: 1px solid #222; font-size: 13px; }
+        .endpoint-table th { color: #888; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+        .endpoint-table td { color: #ccc; }
+        .method-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+        .method-post { background: #2ecc7122; color: #2ecc71; }
+        .method-delete { background: #e74c3c22; color: #e74c3c; }
+        .method-get { background: #3498db22; color: #3498db; }
+
+        @media (max-width: 768px) {
+            .pa-container { flex-direction: column; }
+            .pa-sidebar { width: 100%; position: static; }
+            .page-map { grid-template-columns: 1fr; }
+            .flush-email-row { flex-direction: column; }
+        }
+    </style>
+</head>
+<body class="privacy-admin-body">
+    <nav class="pa-nav">
+        <div class="nav-brand">
+            <a href="index.html"><img src="images/wordeth-logo.svg" alt="Wordeth" class="logo"></a>
+            <span class="badge">PRIVACY ADMIN</span>
+        </div>
+        <div class="nav-links">
+            <a href="admin-usage.html" class="nav-link"><i class="fas fa-chart-pie"></i> Usage Metrics</a>
+            <a href="ad-admin.html" class="nav-link"><i class="fas fa-ad"></i> Ad Admin</a>
+            <a href="index.html" class="nav-link"><i class="fas fa-home"></i> Home</a>
+        </div>
+    </nav>
+
+    <div class="pa-container">
+        <aside class="pa-sidebar">
+            <nav>
+                <h4>Overview</h4>
+                <ul>
+                    <li><a href="#pages">Pages &amp; Locations</a></li>
+                    <li><a href="#endpoints">API Endpoints</a></li>
+                </ul>
+                <h4>Cookie Consent</h4>
+                <ul>
+                    <li><a href="#cookie-how">How It Works</a></li>
+                    <li><a href="#cookie-tracking">Tracking &amp; Consent</a></li>
+                </ul>
+                <h4>Terms &amp; Signup</h4>
+                <ul>
+                    <li><a href="#terms-flow">Signup Enforcement</a></li>
+                    <li><a href="#terms-data">Data Stored</a></li>
+                </ul>
+                <h4>Data Flush</h4>
+                <ul>
+                    <li><a href="#flush-overview">What Gets Deleted</a></li>
+                    <li><a href="#flush-admin">Admin Flush (API)</a></li>
+                    <li><a href="#flush-self">User Self-Delete</a></li>
+                    <li><a href="#flush-tool">Flush Tool</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="pa-main">
+            <section id="intro">
+                <h1>Privacy &amp; Compliance Admin Guide</h1>
+                <p class="lead">Everything your team needs to manage cookie consent, terms enforcement, and data deletion (GDPR/CCPA "Right to Be Forgotten") on Wordeth.</p>
+            </section>
+
+            <section id="pages">
+                <h2>Pages &amp; File Locations</h2>
+                <p>Here's where every privacy-related page lives in the project:</p>
+                <div class="page-map">
+                    <div class="page-card">
+                        <i class="fas fa-cookie-bite"></i>
+                        <h3>Cookie Consent Banner</h3>
+                        <p>Bottom banner on all pages. Accept All or Essential Only.</p>
+                        <span class="path">js/cookie-consent.js<br>css/cookie-consent.css</span>
+                    </div>
+                    <div class="page-card">
+                        <i class="fas fa-file-contract"></i>
+                        <h3>Terms of Service</h3>
+                        <p>Version 1.0 legal terms for using Wordeth.</p>
+                        <span class="path">terms.html</span>
+                    </div>
+                    <div class="page-card">
+                        <i class="fas fa-shield-alt"></i>
+                        <h3>Privacy Policy</h3>
+                        <p>Version 1.0 covering GDPR/CCPA rights, data practices.</p>
+                        <span class="path">privacy.html</span>
+                    </div>
+                    <div class="page-card">
+                        <i class="fas fa-user-plus"></i>
+                        <h3>Signup (Terms Checkbox)</h3>
+                        <p>Registration requires agreement before account creation.</p>
+                        <span class="path">signup.html<br>js/auth.js</span>
+                    </div>
+                    <div class="page-card">
+                        <i class="fas fa-trash-alt"></i>
+                        <h3>Data Flush (Admin API)</h3>
+                        <p>Delete a user's entire data footprint by email.</p>
+                        <span class="path">routes/user.js<br>POST /api/user/admin/flush</span>
+                    </div>
+                    <div class="page-card">
+                        <i class="fas fa-user-slash"></i>
+                        <h3>Self-Delete (User API)</h3>
+                        <p>Users can permanently delete their own account.</p>
+                        <span class="path">routes/user.js<br>DELETE /api/user/account</span>
+                    </div>
+                    <div class="page-card">
+                        <i class="fas fa-book"></i>
+                        <h3>This Guide</h3>
+                        <p>The page you're reading right now.</p>
+                        <span class="path">privacy-admin.html</span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="endpoints">
+                <h2>API Endpoints Reference</h2>
+                <table class="endpoint-table">
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Endpoint</th>
+                            <th>Auth</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="method-badge method-post">POST</span></td>
+                            <td><code>/api/user/admin/flush</code></td>
+                            <td>Admin JWT</td>
+                            <td>Permanently delete all data for a user by email</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method-badge method-delete">DELETE</span></td>
+                            <td><code>/api/user/account</code></td>
+                            <td>User JWT</td>
+                            <td>User deletes their own account and data</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method-badge method-post">POST</span></td>
+                            <td><code>/api/analytics/track</code></td>
+                            <td>None</td>
+                            <td>Client-side event tracking (respects consent)</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method-badge method-post">POST</span></td>
+                            <td><code>/api/auth/signup</code></td>
+                            <td>None</td>
+                            <td>Creates account (requires agreedToTerms: true)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="cookie-how">
+                <h2>Cookie Consent: How It Works</h2>
+                <p>A small banner slides up from the bottom of every page the first time someone visits. Two options:</p>
+                <ul>
+                    <li><strong>Accept All</strong> &mdash; enables full analytics tracking alongside essential site functionality</li>
+                    <li><strong>Essential Only</strong> &mdash; site works normally, but analytics events are silently skipped (the tracking call returns immediately without saving data)</li>
+                </ul>
+                <p>The choice is stored in the browser's <code>localStorage</code> under the key <code>wordeth_cookie_consent</code>. It includes a version number so if you update the privacy policy, you can bump the version to re-prompt users.</p>
+                <div class="info-box tip">
+                    <div class="info-header"><i class="fas fa-lightbulb info-icon"></i> Version Bump</div>
+                    <p>To re-prompt all users after a policy update, change <code>CONSENT_VERSION</code> in <code>js/cookie-consent.js</code>. Any stored consent with an older version will trigger the banner again.</p>
+                </div>
+            </section>
+
+            <section id="cookie-tracking">
+                <h2>Tracking &amp; Consent</h2>
+                <p>Wordeth has two layers of tracking:</p>
+                <ol>
+                    <li><strong>Server-side middleware</strong> (<code>middleware/tracking.js</code>) &mdash; Automatically logs API route usage. This is operational/essential tracking and is not affected by the cookie banner. It tracks which endpoints are called, not personal browsing behavior.</li>
+                    <li><strong>Client-side tracking</strong> (<code>POST /api/analytics/track</code>) &mdash; Used for things like Verses join/leave events. This endpoint checks the <code>consentGiven</code> field in the request body. If <code>consentGiven</code> is <code>false</code>, the event is silently skipped.</li>
+                </ol>
+                <div class="info-box">
+                    <div class="info-header"><i class="fas fa-info-circle info-icon"></i> How consent flows</div>
+                    <p>The cookie consent JS sets a flag that client-side tracking code reads before making requests. If consent was declined, the tracking call sends <code>consentGiven: false</code> and the server returns immediately without storing anything.</p>
+                </div>
+            </section>
+
+            <section id="terms-flow">
+                <h2>Terms &amp; Signup Enforcement</h2>
+                <p>During account creation on <code>signup.html</code>:</p>
+                <ol>
+                    <li>A checkbox appears: "I agree to the Terms of Service and Privacy Policy" (with links to both documents)</li>
+                    <li>The signup button is disabled until the box is checked (client-side)</li>
+                    <li>The server also validates <code>agreedToTerms: true</code> in the request body and rejects signups without it (server-side)</li>
+                </ol>
+                <div class="info-box warning">
+                    <div class="info-header"><i class="fas fa-exclamation-triangle info-icon"></i> Social Login</div>
+                    <p>Social OAuth logins (Twitter, Instagram, Facebook) are currently marked "Coming Soon" and are non-functional. When they are activated in the future, terms enforcement should be added to those flows as well.</p>
+                </div>
+            </section>
+
+            <section id="terms-data">
+                <h2>Terms Agreement Data</h2>
+                <p>When a user agrees to terms during signup, these fields are saved on their User record in MongoDB:</p>
+                <pre><code>{
+  "agreedToTerms": true,
+  "termsAgreedAt": "2026-02-07T14:30:00.000Z",
+  "termsVersion": "1.0"
+}</code></pre>
+                <p>This provides an audit trail for compliance: you can verify when each user agreed and to which version of the terms.</p>
+            </section>
+
+            <section id="flush-overview">
+                <h2>Data Flush: What Gets Deleted</h2>
+                <p>When a data flush is performed (by admin or by the user themselves), the following is permanently removed:</p>
+                <ul>
+                    <li><strong>User account</strong> &mdash; The entire User document including name, email, password hash, and all embedded data (search history, annotations, custom merch designs)</li>
+                    <li><strong>Usage tracking events</strong> &mdash; All records in the UsageEvent collection tied to that user</li>
+                    <li><strong>Social connections</strong> &mdash; The user is removed from all other users' followers and following lists</li>
+                    <li><strong>Uploaded files</strong> &mdash; Avatar images stored on the server are deleted from disk</li>
+                </ul>
+                <div class="info-box warning">
+                    <div class="info-header"><i class="fas fa-exclamation-triangle info-icon"></i> Irreversible</div>
+                    <p>Data flush is permanent and cannot be undone. There is no recycle bin or grace period. Always double-check the email before confirming.</p>
+                </div>
+            </section>
+
+            <section id="flush-admin">
+                <h2>Admin Flush via API</h2>
+                <p>This is for your team to handle user data deletion requests (e.g., GDPR "Right to Erasure" requests sent via email or support ticket).</p>
+
+                <h3>Step 1: Get an Admin Token</h3>
+                <p>Sign into the <a href="ad-admin.html">Ad Admin panel</a> with your admin credentials. The admin system uses the same authentication. You'll need the JWT token from that login.</p>
+                <p>To get your token programmatically:</p>
+                <pre><code>POST /api/ads/admin/login
+Content-Type: application/json
+
+{
+  "email": "your-admin@wordeth.com",
+  "password": "your-admin-password"
+}</code></pre>
+                <p>The response includes a <code>token</code> field &mdash; that's your admin JWT.</p>
+
+                <h3>Step 2: Call the Flush Endpoint</h3>
+                <pre><code>POST /api/user/admin/flush
+Authorization: Bearer YOUR_ADMIN_TOKEN
+Content-Type: application/json
+
+{
+  "email": "user-to-delete@example.com"
+}</code></pre>
+
+                <h3>Step 3: Review the Response</h3>
+                <p>A successful flush returns details of everything that was removed:</p>
+                <pre><code>{
+  "success": true,
+  "message": "User data has been permanently deleted",
+  "details": {
+    "email": "user@example.com",
+    "name": "Jane Doe",
+    "deletedData": {
+      "usageEvents": 47,
+      "followersRemoved": 3,
+      "followingRemoved": 5,
+      "avatarRemoved": true,
+      "accountDeleted": true
+    },
+    "flushedAt": "2026-02-07T15:00:00.000Z"
+  }
+}</code></pre>
+            </section>
+
+            <section id="flush-self">
+                <h2>User Self-Delete</h2>
+                <p>Users can delete their own account by calling this endpoint with their regular login token:</p>
+                <pre><code>DELETE /api/user/account
+Authorization: Bearer USER_JWT_TOKEN</code></pre>
+                <p>This performs the same complete data removal as the admin flush. The response confirms deletion:</p>
+                <pre><code>{
+  "success": true,
+  "message": "Your account and all associated data have been permanently deleted"
+}</code></pre>
+                <div class="info-box tip">
+                    <div class="info-header"><i class="fas fa-lightbulb info-icon"></i> Future Enhancement</div>
+                    <p>Consider adding a "Delete My Account" button to the user profile page that calls this endpoint, so users can self-serve without contacting support.</p>
+                </div>
+            </section>
+
+            <section id="flush-tool">
+                <h2>Flush Tool</h2>
+                <p>Use this tool to flush a user's data directly from this page. You'll need your admin credentials.</p>
+
+                <div class="flush-tool">
+                    <div id="flushLogin" class="flush-login">
+                        <h3><i class="fas fa-lock"></i> Admin Sign In</h3>
+                        <input type="email" id="flushAdminEmail" placeholder="Admin email">
+                        <input type="password" id="flushAdminPassword" placeholder="Admin password">
+                        <button class="btn-admin" onclick="flushAdminLogin()">Sign In</button>
+                        <div id="flushLoginStatus" class="admin-status"></div>
+                    </div>
+
+                    <div id="flushActions" class="flush-actions">
+                        <h3><i class="fas fa-trash-alt" style="color:#e74c3c"></i> Delete User Data</h3>
+                        <p style="font-size:13px;color:#888;">Enter the email address of the user whose data should be permanently deleted.</p>
+                        <div class="flush-email-row">
+                            <input type="email" id="flushUserEmail" placeholder="User email to flush">
+                            <button class="btn-admin btn-danger" onclick="confirmFlush()">Flush Data</button>
+                        </div>
+                        <div id="flushResult" class="flush-result"></div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="confirm-overlay" id="confirmOverlay">
+                <div class="confirm-dialog">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Confirm Data Deletion</h3>
+                    <p>You are about to permanently delete ALL data for:</p>
+                    <div class="email-confirm" id="confirmEmail"></div>
+                    <p>This action cannot be undone.</p>
+                    <div class="btn-row">
+                        <button class="btn-cancel" onclick="cancelFlush()">Cancel</button>
+                        <button class="btn-admin btn-danger" onclick="executeFlush()">Yes, Delete Everything</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/cookie-consent.js"></script>
+    <script>
+        let adminToken = null;
+
+        async function flushAdminLogin() {
+            const email = document.getElementById('flushAdminEmail').value.trim();
+            const password = document.getElementById('flushAdminPassword').value;
+            const status = document.getElementById('flushLoginStatus');
+
+            if (!email || !password) {
+                status.textContent = 'Please enter email and password.';
+                status.className = 'admin-status fail';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/ads/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+                if (res.ok && data.token) {
+                    adminToken = data.token;
+                    document.getElementById('flushLogin').style.display = 'none';
+                    document.getElementById('flushActions').classList.add('visible');
+                    status.textContent = '';
+                } else {
+                    status.textContent = data.error || 'Login failed. Check your credentials.';
+                    status.className = 'admin-status fail';
+                }
+            } catch (err) {
+                status.textContent = 'Connection error. Is the server running?';
+                status.className = 'admin-status fail';
+            }
+        }
+
+        function confirmFlush() {
+            const email = document.getElementById('flushUserEmail').value.trim();
+            if (!email) {
+                showResult('error', 'Please enter a user email address.');
+                return;
+            }
+            document.getElementById('confirmEmail').textContent = email;
+            document.getElementById('confirmOverlay').classList.add('visible');
+        }
+
+        function cancelFlush() {
+            document.getElementById('confirmOverlay').classList.remove('visible');
+        }
+
+        async function executeFlush() {
+            document.getElementById('confirmOverlay').classList.remove('visible');
+            const email = document.getElementById('flushUserEmail').value.trim();
+            const resultEl = document.getElementById('flushResult');
+
+            try {
+                const res = await fetch('/api/user/admin/flush', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + adminToken
+                    },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showResult('success', 'User data deleted successfully.\n\n' + JSON.stringify(data.details, null, 2));
+                    document.getElementById('flushUserEmail').value = '';
+                } else {
+                    showResult('error', data.error || 'Flush failed.');
+                }
+            } catch (err) {
+                showResult('error', 'Connection error: ' + err.message);
+            }
+        }
+
+        function showResult(type, msg) {
+            const el = document.getElementById('flushResult');
+            el.className = 'flush-result ' + type;
+            if (type === 'success' && msg.includes('\n')) {
+                const parts = msg.split('\n\n');
+                el.innerHTML = '';
+                const p = document.createElement('p');
+                p.textContent = parts[0];
+                el.appendChild(p);
+                if (parts[1]) {
+                    const pre = document.createElement('pre');
+                    pre.textContent = parts[1];
+                    el.appendChild(pre);
+                }
+            } else {
+                el.textContent = msg;
+            }
+        }
+
+        document.querySelectorAll('.pa-sidebar a').forEach(link => {
+            link.addEventListener('click', function() {
+                document.querySelectorAll('.pa-sidebar a').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

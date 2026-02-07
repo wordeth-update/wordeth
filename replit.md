@@ -114,6 +114,17 @@ The application is fully functional and ready for use. It runs on Node.js with E
   - `agreedToTerms`, `termsAgreedAt`, `termsVersion` fields on User model
   - **Data Flush** (`POST /api/user/admin/flush`): Admin endpoint to permanently delete all user data (account, usage events, social connections, uploaded files)
   - **Self-Delete** (`DELETE /api/user/account`): Users can delete their own account and all associated data
+  - **Privacy Admin Guide** (`privacy-admin.html`): Documentation page for admin team
+    - Page/file location map for all privacy-related components
+    - API endpoint reference table with auth requirements
+    - Cookie consent explanation (how it works, version bumping)
+    - Tracking & consent flow documentation
+    - Terms enforcement details and stored data fields
+    - Data flush scope (what gets deleted) with warnings
+    - Step-by-step admin flush instructions (get token, call API, review response)
+    - User self-delete documentation
+    - Built-in Flush Tool: admin login + email input to flush user data directly from the page
+    - Linked from Usage Metrics admin nav
 
 ## Project Architecture
 
