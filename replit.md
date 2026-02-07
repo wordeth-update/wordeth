@@ -1,55 +1,97 @@
 # Wordeth - Social Music Experience Platform
 
 ## Overview
-Wordeth is a social music experience platform designed to create a vibrant, interactive community around music. It enables users to deeply engage with music through lyric exploration, live audio discussions, personalized merchandise, curated articles, and social connections. The platform aims to be a central hub for music enthusiasts, fostering engagement and offering unique ways to interact with their favorite artists and songs.
 
-### Key Capabilities:
-- **Lyric Discovery & Interaction**: Search and view song lyrics, with advanced features like karaoke mode and performance recording.
-- **Live Audio Discussions ("Verses")**: Participate in real-time audio rooms inspired by Twitter Spaces/Clubhouse, fostering community and discussion.
-- **Personalized Merchandise**: Customize and order unique music-related merchandise, including a "Lyrics-to-Merch" feature.
-- **Curated Content**: Read and discuss music articles.
-- **Social Connection**: Connect with other music enthusiasts and artists.
-- **Usage Metrics & Analytics**: Comprehensive system for audience insights, historical trends, and ad campaign performance.
-- **Privacy & Compliance**: Robust privacy features including cookie consent, terms/privacy policies, and data management tools.
+Wordeth is a social music experience platform that creates an interactive community around music. It lets users search and explore song lyrics (with karaoke mode), participate in live audio discussion rooms called "Verses" (Twitter Spaces/Clubhouse style), customize and order music-related merchandise, read curated music articles, and connect with other music enthusiasts. The platform also includes a self-serve advertising system, usage analytics, and privacy/compliance tools.
 
 ## User Preferences
-- Audio rooms preferred over video rooms (Twitter Spaces / Clubhouse style)
+
+Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Core Design Principles
-- **Community-Centric**: Features are built to encourage interaction and shared experiences around music.
-- **Scalable Backend**: Node.js with Express.js for efficient API handling and real-time features.
-- **Rich Frontend Experience**: Static HTML/CSS/JS with modern UI/UX design (CSS Grid, modern typography, smooth transitions).
-- **Data-Driven Insights**: Integrated analytics for understanding user behavior and platform performance.
-- **Privacy by Design**: Comprehensive features for user data control and compliance.
+### Frontend
+- **Technology**: Static HTML pages with vanilla CSS and JavaScript (no frontend framework)
+- **Pages**: `index.html` (home), `verses.html` (audio rooms), `lyrics.html` (lyric search), `merch.html` (merchandise), `articles.html`, `signin.html`, `signup.html`, `profile.html`, plus admin pages for ads and analytics
+- **Styling**: Multiple CSS files split by feature (`styles.css`, `enhanced.css`, `verses.css`, `lyrics.css`, `auth.css`, `profile.css`, `ads.css`, `advertising.css`, `animations.css`, `cookie-consent.css`, `legal.css`, `usage-metrics.css`). Uses CSS custom properties for theming with a dark color scheme (black/purple/mint palette).
+- **JS Architecture**: Each page has its own JS file (e.g., `js/verses.js`, `js/lyrics.js`, `js/auth.js`, `js/profile.js`). No bundler — scripts are loaded directly. Classes are used for complex page managers (e.g., `AudioRoomsManager`, `ArticlesPageManager`, `AdPortal`).
+- **Design**: Mobile-responsive with hamburger menu. Fonts from Google Fonts (Inter, Poppins). Icons from Font Awesome.
 
-### Technical Implementations & Features
-- **Authentication**: Email/password signup+signin with JWT tokens (7-day expiry), bcrypt password hashing, token verification middleware. OAuth stubs for Twitter/Instagram/Facebook (not yet active). JWT_SECRET stored as a proper secret. Auto-redirect to signin on 401. Nav updates dynamically for logged-in/logged-out state.
-- **User Profiles**: Full profile page with avatar upload (multer, 5MB limit), name/bio editing, tabbed views (history, annotations, friends, merch, settings), account deletion with double confirmation.
-- **Verses (Live Audio Rooms)**: Twitter Spaces/Clubhouse style audio discussions with features like host controls (door lock, karaoke enablement), participant interaction (hand-raise), audio filters (voice effects), and screen sharing.
-- **Karaoke Mode**: Synchronized scrolling lyrics from multiple sources (Musixmatch, LRCLIB, Lyrics.ovh), YouTube audio integration, and advanced features like Mic Tempo Sync for dynamic lyric scrolling based on vocal activity.
-- **Performance Recording**: Capture karaoke performances with video camera, video filters, lyrics overlay, and Wordeth branding for social sharing (optimized for TikTok/Reels/Shorts). Includes ffmpeg.wasm (single-threaded core) for MP4 conversion.
-- **Merchandise System**: Integration with InkSoft for artist-specific stores, merchandise customization, and a "Lyrics-to-Merch" feature.
-- **Advertising System**: Contextual keyword-based advertising on lyric search pages, with a robust registration, admin approval, and advertiser portal system.
-- **Usage Metrics & Archival**: Real-time event tracking, audience segmentation, genre propensity analysis, and aggregation for long-term storage in AWS S3, visualized in an admin dashboard with historical trends.
-- **Privacy & Compliance**: Cookie consent management, explicit agreement to Terms of Service and Privacy Policy during signup, user self-deletion, and admin tools for data flushing.
-- **Security**: JWT + OAuth for authentication, Content Security Policy, and trust proxy configuration.
-- **UI/UX**: Consistent navigation across desktop and mobile, enhanced CSS for modern aesthetics, and SVG product images for merch.
+### Backend
+- **Technology**: Node.js with Express.js (`server.js` is the entry point)
+- **Entry command**: `node server.js` (or `nodemon server.js` for dev)
+- **API Routes**: Modular route files in `/routes/` directory:
+  - `/api/auth` — signup, signin (JWT-based)
+  - `/api/user` — profile management, avatar upload
+  - `/api/lyrics` — lyric search (Genius API integration)
+  - `/api/merch` — merchandise system
+  - `/api/articles` — article content
+  - `/api/ads` — advertising system (advertiser registration, ad CRUD, admin approval)
+  - `/api/analytics` — usage metrics
+- **Middleware**: 
+  - `middleware/auth.js` — JWT authentication middleware
+  - `middleware/tracking.js` — automatic usage event tracking based on route patterns
+- **Security**: Helmet for CSP headers, express-rate-limit (100 req/15min), CORS, trust proxy enabled for Replit
 
-### Technology Stack
-- **Backend**: Node.js, Express.js
-- **Database**: MongoDB (Mongoose ORM)
-- **Frontend**: HTML, CSS (CSS Grid, enhanced.css), JavaScript (Web Audio API, WebRTC, MediaRecorder API, ffmpeg.wasm)
-- **Cloud**: AWS S3 for historical data archival
+### Database
+- **Technology**: MongoDB with Mongoose ODM
+- **Models** (in `/models/`):
+  - `User.js` — user accounts with name, email, bcrypt-hashed password, bio, avatar, search history, following/followers, custom merch
+  - `Ad.js` — advertisements with placement, size, keywords, status, impression/click tracking
+  - `Advertiser.js` — advertiser accounts with bcrypt password, company info, account type, approval status
+  - `AdApplication.js` — advertising registration applications
+  - `UsageEvent.js` — analytics events with segment, event type, metadata, session tracking
+- **Connection**: MongoDB connection string expected in `MONGODB_URI` environment variable
+
+### Authentication
+- JWT tokens with 7-day expiry, stored in localStorage on client side
+- bcrypt for password hashing (both User and Advertiser models)
+- Separate auth flows for regular users (`/api/auth`) and advertisers (`/api/ads/advertisers`)
+- Token verification middleware checks JWT and loads user from database
+
+### Key Features Architecture
+- **Verses (Audio Rooms)**: WebRTC-based with Web Audio API for audio filters, YouTube integration for karaoke, MediaRecorder for performance recording
+- **Lyrics**: Server-side search via Genius API, with fallback sources (LRCLIB, Lyrics.ovh, Musixmatch)
+- **Advertising**: Contextual keyword-based ads on lyrics pages, with self-serve portal, admin approval workflow, and impression/click tracking
+- **Usage Analytics**: Event tracking middleware automatically logs API usage to MongoDB, with admin dashboard for visualization
+- **Cookie Consent**: Client-side consent banner with localStorage persistence
+
+### Environment Variables Required
+- `MONGODB_URI` — MongoDB connection string
+- `JWT_SECRET` — Secret for JWT signing
+- `PORT` — Server port (defaults likely to 3000)
+- `GENIUS_API_KEY` — For lyrics search functionality
+- AWS credentials for S3 (historical data archival)
 
 ## External Dependencies
 
-- **Musixmatch API**: Primary source for song lyrics and search.
-- **LRCLIB / Lyrics.ovh**: Fallback sources for synchronized lyrics.
-- **YouTube**: Audio/video playback integration for karaoke.
-- **InkSoft**: Platform for merchandise customization and artist stores.
-- **AWS S3**: Cloud storage for historical analytics data.
-- **MongoDB Atlas**: Cloud-hosted database for application data.
-- **Twitter, Instagram, Facebook**: OAuth integrations for authentication.
-- **Google Fonts**: For enhanced typography.
+### NPM Packages (Runtime)
+- **express** — Web framework
+- **mongoose** — MongoDB ODM
+- **bcryptjs** — Password hashing
+- **jsonwebtoken** — JWT auth tokens
+- **cors** — Cross-origin resource sharing
+- **helmet** — Security headers
+- **express-rate-limit** — API rate limiting
+- **express-validator** — Request validation
+- **dotenv** — Environment variable loading
+- **axios** — HTTP client (for external API calls)
+- **multer** — File upload handling (avatar images, 5MB limit)
+- **@aws-sdk/client-s3** — AWS S3 for data archival
+
+### NPM Packages (Dev)
+- **nodemon** — Auto-restart during development
+- **jest** — Testing framework
+- **supertest** — HTTP assertion testing
+
+### External APIs & Services
+- **Genius API** — Primary lyrics search and song data
+- **Musixmatch API** — Lyrics source (fallback/supplementary)
+- **LRCLIB / Lyrics.ovh** — Fallback synchronized lyrics sources
+- **YouTube** — Audio/video playback for karaoke feature
+- **MongoDB** — Primary database (needs `MONGODB_URI`)
+- **AWS S3** — Historical analytics data archival
+- **InkSoft** — Merchandise store integration (iframes for artist stores)
+- **Google Fonts** — Typography (Inter, Poppins)
+- **Font Awesome** — Icon library (loaded from CDN)
+- **Google STUN servers** — WebRTC connectivity (`stun:stun.l.google.com:19302`)
