@@ -80,14 +80,14 @@ The application is fully functional and ready for use. It runs on Node.js with E
   - Animated hue-rotate effect for psychedelic filter
   - Visual indicator on control button when filter is active
   - Lyrics scroll speed controls (0.25x-3.0x) with +/- buttons
-- **Mic Tempo Sync**: Auto-adjusts lyrics scroll speed based on vocal activity
+- **Mic Tempo Sync**: Natively auto-adjusts lyrics scroll speed based on vocal activity
   - Uses Web Audio API AnalyserNode for real-time RMS energy detection
   - Smoothed exponential moving average for stable readings
   - Silence detection slows/pauses scrolling when singer pauses
   - Active singing speeds up scrolling proportionally to vocal energy
   - Visual energy meter shows mic input level
   - Manual speed +/- still works as 5-second override
-  - Toggle on/off via mic button in karaoke controls
+  - Automatically starts/stops with karaoke playback (no toggle needed)
 - **Performance Recording**: Record karaoke performances for social sharing (Voicey-style)
   - Canvas compositor combines camera video + lyrics overlay + Wordeth watermark
   - 720x1280 portrait format optimized for TikTok/Instagram Reels/YouTube Shorts

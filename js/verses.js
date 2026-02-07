@@ -207,7 +207,6 @@ class AudioRoomsManager {
         document.getElementById('karaoke-play-pause')?.addEventListener('click', () => this.toggleKaraokePlayback());
         document.getElementById('karaoke-restart')?.addEventListener('click', () => this.restartKaraoke());
         document.getElementById('karaoke-stop')?.addEventListener('click', () => this.stopKaraoke());
-        document.getElementById('mic-tempo-toggle')?.addEventListener('click', () => this.toggleMicTempo());
         document.getElementById('karaoke-record-btn')?.addEventListener('click', () => this.toggleRecording());
 
         // Chat functionality
@@ -1923,10 +1922,12 @@ class AudioRoomsManager {
             this.karaokeActive = false;
             clearInterval(this.karaokeInterval);
             if (icon) icon.className = 'fas fa-play';
+            this.stopMicTempo();
         } else {
             this.karaokeActive = true;
             if (icon) icon.className = 'fas fa-pause';
             this.startLyricScrolling();
+            this.startMicTempo();
         }
     }
     
@@ -2008,12 +2009,7 @@ class AudioRoomsManager {
     
     stopKaraoke() {
         if (this.isRecording) this.stopRecording();
-        if (this.micTempoEnabled) {
-            this.stopMicTempo();
-            document.getElementById('mic-tempo-toggle')?.classList.remove('active');
-            const energyBar = document.getElementById('mic-energy-bar');
-            if (energyBar) energyBar.style.display = 'none';
-        }
+        this.stopMicTempo();
 
         this.karaokeActive = false;
         clearInterval(this.karaokeInterval);
@@ -2058,22 +2054,6 @@ class AudioRoomsManager {
     }
     
     // ─── Mic Tempo Sync ───
-    toggleMicTempo() {
-        const btn = document.getElementById('mic-tempo-toggle');
-        const energyBar = document.getElementById('mic-energy-bar');
-        if (this.micTempoEnabled) {
-            this.stopMicTempo();
-            btn?.classList.remove('active');
-            if (energyBar) energyBar.style.display = 'none';
-            this.addChatMessage('System', 'Mic tempo sync disabled. Manual speed control restored.', true);
-        } else {
-            this.startMicTempo();
-            btn?.classList.add('active');
-            if (energyBar) energyBar.style.display = 'block';
-            this.addChatMessage('System', 'Mic tempo sync enabled! Lyrics scroll speed will follow your voice.', true);
-        }
-    }
-
     startMicTempo() {
         if (!this.localStream) {
             this.addChatMessage('System', 'Microphone not available. Join a room first.', true);
@@ -2578,6 +2558,7 @@ class AudioRoomsManager {
                     const icon = playPauseBtn?.querySelector('i');
                     if (icon) icon.className = 'fas fa-pause';
                     this.startLyricScrolling();
+                    this.startMicTempo();
                 }
                 break;
             case YT.PlayerState.PAUSED:
@@ -2585,6 +2566,7 @@ class AudioRoomsManager {
                 if (this.karaokeActive) {
                     this.karaokeActive = false;
                     clearInterval(this.karaokeInterval);
+                    this.stopMicTempo();
                     const playPauseBtn = document.getElementById('karaoke-play-pause');
                     const icon = playPauseBtn?.querySelector('i');
                     if (icon) icon.className = 'fas fa-play';
