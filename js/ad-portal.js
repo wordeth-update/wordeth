@@ -236,7 +236,7 @@ class AdPortal {
 
         return `
             <div class="ad-item">
-                <img src="${this.escapeHtml(ad.imageUrl)}" alt="${this.escapeHtml(ad.title)}" class="ad-item-image" onerror="this.src='images/wordeth-logo.svg'">
+                <img src="${this.escapeHtml(ad.imageUrl)}" alt="${this.escapeHtml(ad.title)}" class="ad-item-image" onerror="this.src='images/logo.png'">
                 <div class="ad-item-info">
                     <h4>${this.escapeHtml(ad.title)}</h4>
                     <p>${ad.placement} | ${ad.size}</p>
