@@ -25,13 +25,10 @@ class AudioRoomsManager {
         this.karaokeLyrics = [];
         
         // YouTube player state
-        this.youtubePlayer = null;
         this.youtubeReady = false;
         this.currentVideoId = null;
         this.videoQueue = [];
         this.videoQueueIndex = 0;
-        this.currentYtUrl = null;
-        this.ytPopup = null;
         this.scrollSpeed = 1.0;
         this.baseScrollInterval = 3000;
         this.previewMode = true;
@@ -88,14 +85,6 @@ class AudioRoomsManager {
     }
     
     handleAppVisible() {
-        if (this.youtubePlayer && this.youtubeReady) {
-            try {
-                const state = this.youtubePlayer.getPlayerState();
-                if (state === YT.PlayerState.PAUSED) {
-                    this.updateAudioStatus('ready', 'Tap play to resume');
-                }
-            } catch (e) {}
-        }
     }
 
     initializeElements() {
@@ -236,6 +225,13 @@ class AudioRoomsManager {
         document.getElementById('karaoke-search-input')?.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.searchKaraokeSongs();
         });
+        
+        // YouTube embed controls
+        document.getElementById('yt-embed-btn')?.addEventListener('click', () => this.embedYouTubeFromInput());
+        document.getElementById('yt-url-input')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.embedYouTubeFromInput();
+        });
+        document.getElementById('yt-embed-close')?.addEventListener('click', () => this.closeYouTubeEmbed());
         
         // Karaoke controls
         document.getElementById('karaoke-play-pause')?.addEventListener('click', () => this.toggleKaraokePlayback());
@@ -962,9 +958,6 @@ class AudioRoomsManager {
         
         if (data.feature === 'karaoke') {
             this.karaokeModal?.classList.add('active');
-            if (!this.youtubeReady && window.YT && window.YT.Player) {
-                setTimeout(() => this.createYouTubePlayer(), 100);
-            }
         } else if (data.feature === 'screenshare') {
             this.startScreenShareAfterApproval();
         }
@@ -1364,14 +1357,6 @@ class AudioRoomsManager {
             this.addChatMessage('System', 'Karaoke mode enabled!', true);
         }
         this.karaokeModal?.classList.add('active');
-        
-        if (!this.youtubeReady) {
-            if (window.YT && window.YT.Player) {
-                setTimeout(() => this.createYouTubePlayer(), 100);
-            } else {
-                console.log('YouTube API not loaded yet');
-            }
-        }
     }
     
     stopKaraokeCamera() {
@@ -2252,18 +2237,8 @@ class AudioRoomsManager {
             this.canvasFilterRAF = null;
         }
         
-        // Close YouTube popup if open
-        if (this.ytPopup && !this.ytPopup.closed) {
-            this.ytPopup.close();
-        }
-        this.ytPopup = null;
+        this.closeYouTubeEmbed();
 
-        // Hide floating YouTube panel
-        const floatPanel = document.getElementById('yt-float-panel');
-        if (floatPanel) floatPanel.style.display = 'none';
-
-        const inlineLink = document.getElementById('youtube-link');
-        if (inlineLink) inlineLink.style.display = 'none';
         
         // Reset to beginning
         this.currentLyricIndex = 0;
@@ -2898,122 +2873,15 @@ class AudioRoomsManager {
 
     // YouTube Player Integration
     initYouTubePlayer() {
-        // Check if API already loaded via global callback
-        if (window.youtubeApiReady || (window.YT && window.YT.Player)) {
-            console.log('YouTube API already ready');
-            this.ytApiReady = true;
-            this.createYouTubePlayer();
-        } else {
-            console.log('Waiting for YouTube API...');
-        }
+        console.log('YouTube embed mode ready');
+        this.youtubeReady = true;
     }
     
-    // Called by global onYouTubeIframeAPIReady callback
     onYouTubeApiReady() {
-        console.log('YouTube API ready callback received');
-        this.ytApiReady = true;
-        this.createYouTubePlayer();
+        this.youtubeReady = true;
     }
     
     createYouTubePlayer() {
-        // Don't recreate if already exists and ready
-        if (this.youtubePlayer && this.youtubeReady) {
-            return;
-        }
-        
-        const playerContainer = document.getElementById('youtube-player');
-        if (!playerContainer) {
-            console.log('YouTube player container not found, will retry when modal opens');
-            return;
-        }
-        
-        // Check if there's already an iframe (player already created)
-        if (playerContainer.tagName === 'IFRAME') {
-            console.log('YouTube player already exists');
-            return;
-        }
-        
-        try {
-            console.log('Creating YouTube player...');
-            this.youtubePlayer = new YT.Player('youtube-player', {
-                height: '113',
-                width: '200',
-                playerVars: {
-                    'autoplay': 0,
-                    'controls': 1,
-                    'disablekb': 0,
-                    'modestbranding': 1,
-                    'rel': 0,
-                    'showinfo': 0,
-                    'fs': 0,
-                    'playsinline': 1,
-                    'origin': window.location.origin
-                },
-                events: {
-                    'onReady': () => {
-                        console.log('YouTube player ready');
-                        this.youtubeReady = true;
-                        this.updateAudioStatus('ready', 'Ready to play');
-                    },
-                    'onStateChange': (event) => this.onYouTubeStateChange(event),
-                    'onError': (event) => this.onYouTubeError(event)
-                }
-            });
-        } catch (error) {
-            console.error('Error creating YouTube player:', error);
-            this.updateAudioStatus('error', 'Player failed to load');
-        }
-    }
-    
-    onYouTubeStateChange(event) {
-        const statusEl = document.getElementById('audio-status');
-        
-        switch (event.data) {
-            case YT.PlayerState.PLAYING:
-                this.updateAudioStatus('playing', 'Playing');
-                // Start lyrics sync if not already running
-                if (!this.karaokeActive) {
-                    this.karaokeActive = true;
-                    const playPauseBtn = document.getElementById('karaoke-play-pause');
-                    const icon = playPauseBtn?.querySelector('i');
-                    if (icon) icon.className = 'fas fa-pause';
-                    this.startLyricScrolling();
-                    this.startMicTempo();
-                }
-                break;
-            case YT.PlayerState.PAUSED:
-                this.updateAudioStatus('ready', 'Paused');
-                if (this.karaokeActive) {
-                    this.karaokeActive = false;
-                    clearInterval(this.karaokeInterval);
-                    this.stopMicTempo();
-                    const playPauseBtn = document.getElementById('karaoke-play-pause');
-                    const icon = playPauseBtn?.querySelector('i');
-                    if (icon) icon.className = 'fas fa-play';
-                }
-                break;
-            case YT.PlayerState.ENDED:
-                this.updateAudioStatus('ready', 'Finished');
-                this.stopKaraoke();
-                break;
-            case YT.PlayerState.BUFFERING:
-                this.updateAudioStatus('playing', 'Buffering...');
-                break;
-            case YT.PlayerState.CUED:
-                this.updateAudioStatus('ready', 'Audio loaded - Press play');
-                break;
-        }
-    }
-    
-    onYouTubeError(event) {
-        console.error('YouTube error:', event.data);
-        if ((event.data === 150 || event.data === 101) && this.videoQueue && this.videoQueueIndex < this.videoQueue.length - 1) {
-            console.log('Video blocked by owner, trying next result...');
-            this.videoQueueIndex++;
-            this.tryNextVideo();
-        } else {
-            this.updateAudioStatus('error', 'Audio unavailable');
-        }
     }
     
     updateAudioStatus(state, message) {
@@ -3043,6 +2911,56 @@ class AudioRoomsManager {
         }
     }
     
+    extractYouTubeVideoId(url) {
+        if (!url) return null;
+        const patterns = [
+            /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+            /^([a-zA-Z0-9_-]{11})$/
+        ];
+        for (const pattern of patterns) {
+            const match = url.match(pattern);
+            if (match) return match[1];
+        }
+        return null;
+    }
+    
+    embedYouTubeVideo(videoId) {
+        const wrapper = document.getElementById('yt-embed-wrapper');
+        const iframe = document.getElementById('yt-embed-iframe');
+        if (!wrapper || !iframe) return;
+        
+        iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0&modestbranding=1`;
+        wrapper.style.display = '';
+        this.currentVideoId = videoId;
+        this.updateAudioStatus('playing', 'Playing');
+    }
+    
+    embedYouTubeFromInput() {
+        const input = document.getElementById('yt-url-input');
+        const url = input?.value?.trim();
+        if (!url) {
+            this.updateAudioStatus('error', 'Please paste a YouTube link');
+            return;
+        }
+        
+        const videoId = this.extractYouTubeVideoId(url);
+        if (!videoId) {
+            this.updateAudioStatus('error', 'Invalid YouTube link. Try again.');
+            return;
+        }
+        
+        this.embedYouTubeVideo(videoId);
+    }
+    
+    closeYouTubeEmbed() {
+        const wrapper = document.getElementById('yt-embed-wrapper');
+        const iframe = document.getElementById('yt-embed-iframe');
+        if (iframe) iframe.src = '';
+        if (wrapper) wrapper.style.display = 'none';
+        this.currentVideoId = null;
+        this.updateAudioStatus('ready', 'Video closed');
+    }
+    
     async loadYouTubeAudio(artist, title) {
         this.updateAudioStatus('playing', 'Finding song...');
         
@@ -3050,66 +2968,20 @@ class AudioRoomsManager {
         
         if (result && result.videoId) {
             this.currentVideoId = result.videoId;
-            this.currentYtUrl = `https://www.youtube.com/watch?v=${result.videoId}`;
-
-            const inlineLink = document.getElementById('youtube-link');
-            if (inlineLink) {
-                inlineLink.href = '#';
-                inlineLink.style.display = 'inline-flex';
-                inlineLink.onclick = (e) => { e.preventDefault(); this.openYouTubePopup(); };
-            }
-
-            const floatPanel = document.getElementById('yt-float-panel');
-            const floatLink = document.getElementById('yt-float-link');
-            const floatSong = document.getElementById('yt-float-song');
-            if (floatPanel && floatLink && floatSong) {
-                floatSong.textContent = `${title} — ${artist}`;
-                floatLink.href = '#';
-                floatLink.onclick = (e) => { e.preventDefault(); this.openYouTubePopup(); };
-                floatPanel.style.display = '';
-            }
-
-            this.updateAudioStatus('ready', 'Open YouTube to play along');
+            this.embedYouTubeVideo(result.videoId);
+            
+            const input = document.getElementById('yt-url-input');
+            if (input) input.value = `https://youtu.be/${result.videoId}`;
+            
             return true;
         } else {
-            const ytSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(artist + ' ' + title)}`;
-            const inlineLink = document.getElementById('youtube-link');
-            if (inlineLink) {
-                inlineLink.href = '#';
-                inlineLink.style.display = 'inline-flex';
-                inlineLink.innerHTML = '<i class="fab fa-youtube"></i> Search on YouTube';
-                inlineLink.onclick = (e) => {
-                    e.preventDefault();
-                    this.currentYtUrl = ytSearchUrl;
-                    this.openYouTubePopup();
-                };
-            }
-            this.updateAudioStatus('ready', 'Search YouTube for this song');
+            const input = document.getElementById('yt-url-input');
+            if (input) input.placeholder = `Paste a YouTube link for "${title}"...`;
+            this.updateAudioStatus('ready', 'Paste a YouTube link to play along');
             return false;
         }
     }
     
-    openYouTubePopup() {
-        if (!this.currentYtUrl) return;
-
-        const width = 480;
-        const height = 360;
-        const left = window.screenX + window.outerWidth - width - 30;
-        const top = window.screenY + 80;
-
-        if (this.ytPopup && !this.ytPopup.closed) {
-            this.ytPopup.location.href = this.currentYtUrl;
-            this.ytPopup.focus();
-        } else {
-            this.ytPopup = window.open(
-                this.currentYtUrl,
-                'wordeth_youtube',
-                `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=no,toolbar=no,menubar=no,location=no,status=no`
-            );
-        }
-
-        this.updateAudioStatus('playing', 'Playing in YouTube window');
-    }
 
     waitForYouTubeReady(timeout = 10000) {
         return new Promise((resolve) => {
