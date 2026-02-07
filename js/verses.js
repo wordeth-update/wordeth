@@ -37,9 +37,11 @@ class AudioRoomsManager {
         this.previewMode = true;
         this.karaokeCanvas = null;
         this.karaokeCanvasCtx = null;
-        this.karaokeEnabled = false; // Host/moderator permission for karaoke
-        this.isRoomHost = false; // Track if current user created the room
+        this.karaokeEnabled = false;
+        this.isRoomHost = false;
         this.pendingRequests = [];
+        this.wasPlayingBeforeHidden = false;
+        this.resumeAttempts = 0;
         
         // Screen share state
         this.screenshareEnabled = false;
@@ -73,9 +75,79 @@ class AudioRoomsManager {
         
         this.initializeElements();
         this.setupEventListeners();
+        this.setupVisibilityHandler();
         this.connectToServer();
         this.loadActiveRooms();
         this.loadReplays();
+    }
+    
+    setupVisibilityHandler() {
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                this.handleAppHidden();
+            } else {
+                this.handleAppVisible();
+            }
+        });
+        
+        window.addEventListener('blur', () => this.handleAppHidden());
+        window.addEventListener('focus', () => this.handleAppVisible());
+    }
+    
+    handleAppHidden() {
+        if (this.youtubePlayer && this.youtubeReady) {
+            try {
+                const state = this.youtubePlayer.getPlayerState();
+                if (state === YT.PlayerState.PLAYING) {
+                    this.wasPlayingBeforeHidden = true;
+                    this.playbackTimeBeforeHidden = this.youtubePlayer.getCurrentTime();
+                }
+            } catch (e) {
+                console.log('Could not check player state:', e);
+            }
+        }
+    }
+    
+    handleAppVisible() {
+        if (!this.wasPlayingBeforeHidden) return;
+        this.wasPlayingBeforeHidden = false;
+        this.resumeAttempts = 0;
+        this.attemptResume();
+    }
+    
+    attemptResume() {
+        if (this.resumeAttempts > 5) {
+            this.addChatMessage('System', 'Music was paused while away. Tap play to resume.', true);
+            this.updateAudioStatus('ready', 'Tap play to resume');
+            return;
+        }
+        this.resumeAttempts++;
+        
+        try {
+            if (this.youtubePlayer && this.youtubeReady) {
+                const state = this.youtubePlayer.getPlayerState();
+                if (state === YT.PlayerState.PAUSED || state === YT.PlayerState.CUED) {
+                    if (this.playbackTimeBeforeHidden) {
+                        this.youtubePlayer.seekTo(this.playbackTimeBeforeHidden, true);
+                    }
+                    this.youtubePlayer.playVideo();
+                    
+                    setTimeout(() => {
+                        try {
+                            const newState = this.youtubePlayer.getPlayerState();
+                            if (newState === YT.PlayerState.PLAYING || newState === YT.PlayerState.BUFFERING) {
+                                this.playbackTimeBeforeHidden = null;
+                            } else {
+                                this.attemptResume();
+                            }
+                        } catch (e) {}
+                    }, 500);
+                }
+            }
+        } catch (e) {
+            console.log('Resume attempt failed:', e);
+            setTimeout(() => this.attemptResume(), 500);
+        }
     }
 
     initializeElements() {
@@ -2884,6 +2956,7 @@ class AudioRoomsManager {
                     'rel': 0,
                     'showinfo': 0,
                     'fs': 0,
+                    'playsinline': 1,
                     'origin': window.location.origin
                 },
                 events: {
@@ -2919,14 +2992,18 @@ class AudioRoomsManager {
                 }
                 break;
             case YT.PlayerState.PAUSED:
-                this.updateAudioStatus('ready', 'Paused');
-                if (this.karaokeActive) {
-                    this.karaokeActive = false;
-                    clearInterval(this.karaokeInterval);
-                    this.stopMicTempo();
-                    const playPauseBtn = document.getElementById('karaoke-play-pause');
-                    const icon = playPauseBtn?.querySelector('i');
-                    if (icon) icon.className = 'fas fa-play';
+                if (document.hidden && this.wasPlayingBeforeHidden) {
+                    this.updateAudioStatus('playing', 'Resuming...');
+                } else {
+                    this.updateAudioStatus('ready', 'Paused');
+                    if (this.karaokeActive) {
+                        this.karaokeActive = false;
+                        clearInterval(this.karaokeInterval);
+                        this.stopMicTempo();
+                        const playPauseBtn = document.getElementById('karaoke-play-pause');
+                        const icon = playPauseBtn?.querySelector('i');
+                        if (icon) icon.className = 'fas fa-play';
+                    }
                 }
                 break;
             case YT.PlayerState.ENDED:

@@ -2943,6 +2943,10 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        font-size: 0;
+    }
+    .room-header .room-actions .action-btn i {
+        font-size: 14px;
     }
     .room-header .room-actions .action-btn span,
     .room-header .room-actions .action-btn .lock-text,
