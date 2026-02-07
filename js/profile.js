@@ -133,6 +133,36 @@ document.addEventListener('DOMContentLoaded', () => {
         els.editSave.textContent = 'Save Changes';
     });
 
+    let nameCheckTimeout;
+    const editNameStatus = document.getElementById('edit-name-status');
+    els.editName.addEventListener('input', () => {
+        clearTimeout(nameCheckTimeout);
+        const val = els.editName.value.trim();
+        if (val.length < 2 || (currentUser && val.toLowerCase() === currentUser.name.toLowerCase())) {
+            if (editNameStatus) { editNameStatus.textContent = ''; editNameStatus.className = 'name-status'; }
+            return;
+        }
+        if (editNameStatus) { editNameStatus.textContent = 'Checking...'; editNameStatus.className = 'name-status checking'; }
+        nameCheckTimeout = setTimeout(async () => {
+            try {
+                const res = await fetch(`/api/user/check-name?name=${encodeURIComponent(val)}`);
+                const data = await res.json();
+                if (els.editName.value.trim() !== val) return;
+                if (editNameStatus) {
+                    if (data.available) {
+                        editNameStatus.textContent = 'Name is available';
+                        editNameStatus.className = 'name-status available';
+                    } else {
+                        editNameStatus.textContent = 'Name is already taken';
+                        editNameStatus.className = 'name-status taken';
+                    }
+                }
+            } catch (e) {
+                if (editNameStatus) { editNameStatus.textContent = ''; editNameStatus.className = 'name-status'; }
+            }
+        }, 400);
+    });
+
     els.avatarBtn.addEventListener('click', () => {
         const input = document.createElement('input');
         input.type = 'file';

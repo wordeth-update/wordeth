@@ -19,7 +19,19 @@ const upload = multer({
     }
 });
 
-// Get user profile
+router.get('/check-name', async (req, res) => {
+    try {
+        const { name } = req.query;
+        if (!name || name.trim().length < 2) {
+            return res.json({ available: false });
+        }
+        const existing = await User.findOne({ name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } });
+        res.json({ available: !existing });
+    } catch (error) {
+        res.status(500).json({ available: false });
+    }
+});
+
 router.get('/profile', auth, async (req, res) => {
     try {
         res.json(req.user.getPublicProfile());
@@ -40,6 +52,13 @@ router.put('/profile', auth, async (req, res) => {
             }
             if (trimmed.length > 50) {
                 return res.status(400).json({ message: 'Name must be 50 characters or fewer' });
+            }
+            const existing = await User.findOne({
+                name: { $regex: new RegExp(`^${trimmed}$`, 'i') },
+                _id: { $ne: req.user._id }
+            });
+            if (existing) {
+                return res.status(400).json({ message: 'That name is already taken. Please choose a different one.' });
             }
             updates.name = trimmed;
         }

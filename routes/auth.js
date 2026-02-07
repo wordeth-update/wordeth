@@ -22,10 +22,14 @@ router.post('/signup', [
             return res.status(400).json({ message: 'You must agree to the Terms of Service and Privacy Policy to create an account.' });
         }
         
-        // Check if user already exists
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
+        const existingEmail = await User.findOne({ email });
+        if (existingEmail) {
             return res.status(400).json({ message: 'User already exists with this email' });
+        }
+
+        const existingName = await User.findOne({ name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } });
+        if (existingName) {
+            return res.status(400).json({ message: 'That name is already taken. Please choose a different one.' });
         }
 
         const user = new User({

@@ -45,6 +45,23 @@
     gap: 0.5rem;
 }
 
+.name-status {
+    font-size: 0.8rem;
+    min-height: 1.2em;
+}
+
+.name-status.checking {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.name-status.available {
+    color: #4caf50;
+}
+
+.name-status.taken {
+    color: #ff6b7a;
+}
+
 .form-group label {
     color: var(--mint);
     font-size: 0.9rem;
