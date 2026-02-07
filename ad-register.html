@@ -11,11 +11,11 @@
     <link rel="stylesheet" href="css/ads.css">
     <link rel="stylesheet" href="css/cookie-consent.css">
     <style>
-        .reg-hero { text-align: center; padding: 3rem 1rem 2rem; }
-        .reg-hero h1 { font-family: 'Poppins', sans-serif; font-size: 2rem; margin-bottom: 0.5rem; }
-        .reg-hero p { color: var(--text-secondary); font-size: 1rem; max-width: 600px; margin: 0 auto; }
-        .type-selector { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
-        .type-card { background: var(--dark-surface); border: 2px solid var(--dark-border); border-radius: 16px; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.3s; position: relative; }
+        .reg-hero { text-align: center; padding: 2rem 1rem 1rem; }
+        .reg-hero h1 { font-family: 'Poppins', sans-serif; font-size: 1.8rem; margin-bottom: 0.5rem; }
+        .reg-hero p { color: var(--text-secondary); font-size: 0.95rem; max-width: 600px; margin: 0 auto; }
+        .type-selector { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; max-width: 900px; margin: 1.5rem auto; padding: 0 1rem; }
+        .type-card { background: var(--dark-surface); border: 2px solid var(--dark-border); border-radius: 16px; padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.3s; position: relative; }
         .type-card:hover { border-color: var(--mint); transform: translateY(-2px); }
         .type-card.selected { border-color: var(--mint); background: rgba(62, 180, 137, 0.08); }
         .type-card .card-icon { font-size: 2.5rem; color: var(--mint); margin-bottom: 1rem; }
@@ -98,6 +98,12 @@
                     <li>Pause/resume campaigns anytime</li>
                 </ul>
             </div>
+        </div>
+
+        <div style="text-align:center; margin-top:1.5rem;">
+            <button id="continueBtn" class="btn-primary btn-large" style="min-width:280px; font-size:1rem; padding:0.9rem 2rem; opacity:0.4; cursor:not-allowed;" disabled onclick="proceedToForm()">
+                Select an account type to continue
+            </button>
         </div>
     </div>
 
@@ -302,11 +308,25 @@
             document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
             document.querySelector(`.type-card[data-type="${type}"]`).classList.add('selected');
 
-            document.getElementById('accountType').value = type;
+            const btn = document.getElementById('continueBtn');
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            if (type === 'partner') {
+                btn.textContent = 'Continue as Partner (White Glove) →';
+            } else {
+                btn.textContent = 'Continue as Self-Serve →';
+            }
+        }
+
+        function proceedToForm() {
+            if (!selectedType) return;
+
+            document.getElementById('accountType').value = selectedType;
             document.getElementById('selectionScreen').style.display = 'none';
             document.getElementById('formScreen').classList.add('visible');
 
-            if (type === 'partner') {
+            if (selectedType === 'partner') {
                 document.getElementById('formTitle').textContent = 'Partner Application (White Glove)';
                 document.getElementById('formSubtitle').textContent = 'Apply for managed advertising with our dedicated team handling your campaigns.';
             } else {
