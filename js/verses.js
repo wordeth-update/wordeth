@@ -48,6 +48,24 @@ class AudioRoomsManager {
         // Karaoke video state
         this.karaokeVideoStream = null;
         this.karaokeVideoActive = false;
+        
+        // Mic tempo sync state
+        this.micTempoEnabled = false;
+        this.micAnalyser = null;
+        this.micTempoRAF = null;
+        this.micEnergySmoothed = 0;
+        this.silenceStartTime = 0;
+        this.manualSpeedOverride = false;
+        this.manualOverrideTimeout = null;
+        
+        // Recording state
+        this.isRecording = false;
+        this.mediaRecorder = null;
+        this.recordedChunks = [];
+        this.recordingCanvas = null;
+        this.recordingCtx = null;
+        this.recordingRAF = null;
+        this.recordingStartTime = 0;
         this.currentVideoFilter = 'none';
         
         this.initYouTubePlayer();
@@ -189,6 +207,8 @@ class AudioRoomsManager {
         document.getElementById('karaoke-play-pause')?.addEventListener('click', () => this.toggleKaraokePlayback());
         document.getElementById('karaoke-restart')?.addEventListener('click', () => this.restartKaraoke());
         document.getElementById('karaoke-stop')?.addEventListener('click', () => this.stopKaraoke());
+        document.getElementById('mic-tempo-toggle')?.addEventListener('click', () => this.toggleMicTempo());
+        document.getElementById('karaoke-record-btn')?.addEventListener('click', () => this.toggleRecording());
 
         // Chat functionality
         this.sendMessageBtn?.addEventListener('click', () => this.sendMessage());
@@ -1915,6 +1935,14 @@ class AudioRoomsManager {
         const speedEl = document.getElementById('speed-value');
         if (speedEl) speedEl.textContent = `${this.scrollSpeed.toFixed(2)}x`;
 
+        if (this.micTempoEnabled) {
+            this.manualSpeedOverride = true;
+            clearTimeout(this.manualOverrideTimeout);
+            this.manualOverrideTimeout = setTimeout(() => {
+                this.manualSpeedOverride = false;
+            }, 5000);
+        }
+
         if (this.karaokeActive) {
             clearInterval(this.karaokeInterval);
             this.startLyricScrolling();
@@ -1979,6 +2007,14 @@ class AudioRoomsManager {
     }
     
     stopKaraoke() {
+        if (this.isRecording) this.stopRecording();
+        if (this.micTempoEnabled) {
+            this.stopMicTempo();
+            document.getElementById('mic-tempo-toggle')?.classList.remove('active');
+            const energyBar = document.getElementById('mic-energy-bar');
+            if (energyBar) energyBar.style.display = 'none';
+        }
+
         this.karaokeActive = false;
         clearInterval(this.karaokeInterval);
         
@@ -2021,6 +2057,446 @@ class AudioRoomsManager {
         }
     }
     
+    // ─── Mic Tempo Sync ───
+    toggleMicTempo() {
+        const btn = document.getElementById('mic-tempo-toggle');
+        const energyBar = document.getElementById('mic-energy-bar');
+        if (this.micTempoEnabled) {
+            this.stopMicTempo();
+            btn?.classList.remove('active');
+            if (energyBar) energyBar.style.display = 'none';
+            this.addChatMessage('System', 'Mic tempo sync disabled. Manual speed control restored.', true);
+        } else {
+            this.startMicTempo();
+            btn?.classList.add('active');
+            if (energyBar) energyBar.style.display = 'block';
+            this.addChatMessage('System', 'Mic tempo sync enabled! Lyrics scroll speed will follow your voice.', true);
+        }
+    }
+
+    startMicTempo() {
+        if (!this.localStream) {
+            this.addChatMessage('System', 'Microphone not available. Join a room first.', true);
+            return;
+        }
+
+        this.micTempoEnabled = true;
+        this.micEnergySmoothed = 0;
+        this.silenceStartTime = 0;
+
+        try {
+            const ctx = this.audioContext || new (window.AudioContext || window.webkitAudioContext)();
+            if (!this.audioContext) this.audioContext = ctx;
+
+            this.micAnalyser = ctx.createAnalyser();
+            this.micAnalyser.fftSize = 2048;
+            this.micAnalyser.smoothingTimeConstant = 0.8;
+
+            const source = ctx.createMediaStreamSource(this.localStream);
+            source.connect(this.micAnalyser);
+            this.micTempoSource = source;
+
+            const dataArray = new Float32Array(this.micAnalyser.fftSize);
+
+            const detectEnergy = () => {
+                if (!this.micTempoEnabled) return;
+
+                this.micAnalyser.getFloatTimeDomainData(dataArray);
+
+                let sumSq = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                    sumSq += dataArray[i] * dataArray[i];
+                }
+                const rms = Math.sqrt(sumSq / dataArray.length);
+
+                const alpha = 0.15;
+                this.micEnergySmoothed = alpha * rms + (1 - alpha) * this.micEnergySmoothed;
+
+                if (!this.manualSpeedOverride && this.karaokeActive) {
+                    const silenceThreshold = 0.01;
+                    const now = Date.now();
+
+                    if (this.micEnergySmoothed < silenceThreshold) {
+                        if (this.silenceStartTime === 0) this.silenceStartTime = now;
+                        const silenceDuration = now - this.silenceStartTime;
+
+                        if (silenceDuration > 1500) {
+                            this.setMicScrollSpeed(0.3);
+                        } else if (silenceDuration > 800) {
+                            this.setMicScrollSpeed(0.5);
+                        }
+                    } else {
+                        this.silenceStartTime = 0;
+                        const energy = Math.min(this.micEnergySmoothed, 0.15);
+                        const normalizedEnergy = energy / 0.15;
+                        const targetSpeed = 0.6 + normalizedEnergy * 1.4;
+                        this.setMicScrollSpeed(targetSpeed);
+                    }
+                }
+
+                const indicator = document.getElementById('mic-energy-indicator');
+                if (indicator) {
+                    const level = Math.min(this.micEnergySmoothed * 500, 100);
+                    indicator.style.width = `${level}%`;
+                }
+
+                this.micTempoRAF = requestAnimationFrame(detectEnergy);
+            };
+
+            detectEnergy();
+        } catch (e) {
+            console.error('Mic tempo sync error:', e);
+            this.micTempoEnabled = false;
+        }
+    }
+
+    setMicScrollSpeed(targetSpeed) {
+        const clamped = Math.max(0.25, Math.min(3.0, targetSpeed));
+        const blendAlpha = 0.08;
+        this.scrollSpeed = this.scrollSpeed + blendAlpha * (clamped - this.scrollSpeed);
+
+        const speedEl = document.getElementById('speed-value');
+        if (speedEl) speedEl.textContent = `${this.scrollSpeed.toFixed(2)}x`;
+
+        if (this.karaokeActive) {
+            clearInterval(this.karaokeInterval);
+            this.startLyricScrolling();
+        }
+    }
+
+    stopMicTempo() {
+        this.micTempoEnabled = false;
+        if (this.micTempoRAF) {
+            cancelAnimationFrame(this.micTempoRAF);
+            this.micTempoRAF = null;
+        }
+        if (this.micTempoSource) {
+            try { this.micTempoSource.disconnect(); } catch (e) {}
+            this.micTempoSource = null;
+        }
+        this.micAnalyser = null;
+        this.manualSpeedOverride = false;
+        clearTimeout(this.manualOverrideTimeout);
+    }
+
+    // ─── Performance Recording ───
+    async toggleRecording() {
+        if (this.isRecording) {
+            this.stopRecording();
+        } else {
+            await this.startRecording();
+        }
+    }
+
+    async startRecording() {
+        if (!this.karaokeActive && !this.karaokeLyrics.length) {
+            this.addChatMessage('System', 'Start a karaoke session first before recording.', true);
+            return;
+        }
+
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 720;
+            canvas.height = 1280;
+            this.recordingCanvas = canvas;
+            this.recordingCtx = canvas.getContext('2d');
+
+            const canvasStream = canvas.captureStream(30);
+
+            let micStream = this.localStream;
+            if (micStream) {
+                const audioTracks = micStream.getAudioTracks();
+                if (audioTracks.length > 0) {
+                    canvasStream.addTrack(audioTracks[0]);
+                }
+            }
+
+            const mimeTypes = [
+                'video/webm;codecs=vp9,opus',
+                'video/webm;codecs=vp8,opus',
+                'video/webm;codecs=vp8',
+                'video/webm'
+            ];
+            let selectedMime = '';
+            for (const mime of mimeTypes) {
+                if (MediaRecorder.isTypeSupported(mime)) {
+                    selectedMime = mime;
+                    break;
+                }
+            }
+
+            this.recordedChunks = [];
+            this.mediaRecorder = new MediaRecorder(canvasStream, {
+                mimeType: selectedMime || undefined,
+                videoBitsPerSecond: 2500000
+            });
+
+            this.mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    this.recordedChunks.push(e.data);
+                }
+            };
+
+            this.mediaRecorder.onstop = () => {
+                this.onRecordingComplete();
+            };
+
+            this.recordingStartTime = Date.now();
+            this.mediaRecorder.start(1000);
+            this.isRecording = true;
+            this.startRecordingCompositor();
+            this.updateRecordingUI(true);
+            this.addChatMessage('System', 'Recording started! Your performance is being captured.', true);
+        } catch (e) {
+            console.error('Recording start error:', e);
+            this.addChatMessage('System', 'Could not start recording. Please check permissions.', true);
+        }
+    }
+
+    startRecordingCompositor() {
+        const ctx = this.recordingCtx;
+        const canvas = this.recordingCanvas;
+        if (!ctx || !canvas) return;
+
+        const renderFrame = () => {
+            if (!this.isRecording) return;
+
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const videoEl = document.getElementById('karaoke-video');
+            const karaokeCanvasEl = document.getElementById('karaoke-canvas');
+            const videoSource = (this.karaokeVideoActive && karaokeCanvasEl && karaokeCanvasEl.width > 0)
+                ? karaokeCanvasEl
+                : (this.karaokeVideoActive && videoEl && videoEl.videoWidth > 0)
+                    ? videoEl
+                    : null;
+
+            if (videoSource) {
+                const vw = canvas.width;
+                const vh = canvas.width * 0.75;
+                ctx.save();
+                ctx.translate(vw, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(videoSource, 0, 40, vw, vh);
+                ctx.restore();
+            } else {
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 40, canvas.width, canvas.width * 0.75);
+                ctx.fillStyle = '#3EB489';
+                ctx.font = 'bold 48px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('W', canvas.width / 2, 40 + (canvas.width * 0.75) / 2 + 16);
+            }
+
+            const lyricsY = videoSource ? (40 + canvas.width * 0.75 + 30) : 600;
+            this.drawLyricsOnCanvas(ctx, canvas.width, lyricsY, canvas.height - lyricsY - 120);
+
+            const songTitle = document.getElementById('karaoke-song-title')?.textContent || '';
+            const songArtist = document.getElementById('karaoke-song-artist')?.textContent || '';
+            if (songTitle) {
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 28px Poppins, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(songTitle, canvas.width / 2, lyricsY - 50);
+                ctx.fillStyle = '#aaaaaa';
+                ctx.font = '22px Inter, sans-serif';
+                ctx.fillText(songArtist, canvas.width / 2, lyricsY - 20);
+            }
+
+            ctx.fillStyle = 'rgba(62, 180, 137, 0.9)';
+            ctx.fillRect(0, canvas.height - 70, canvas.width, 70);
+            ctx.fillStyle = '#0a0a0f';
+            ctx.font = 'bold 30px Poppins, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('WORDETH', canvas.width / 2, canvas.height - 32);
+            ctx.fillStyle = '#0a0a0f';
+            ctx.font = '14px Inter, sans-serif';
+            ctx.fillText('wordeth.com', canvas.width / 2, canvas.height - 14);
+
+            const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
+            const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+            const secs = String(elapsed % 60).padStart(2, '0');
+            ctx.fillStyle = 'rgba(220, 38, 38, 0.9)';
+            const recW = 100;
+            ctx.fillRect(canvas.width - recW - 16, 8, recW, 28);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 14px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`⏺ ${mins}:${secs}`, canvas.width - recW / 2 - 16, 27);
+
+            this.recordingRAF = requestAnimationFrame(renderFrame);
+        };
+
+        renderFrame();
+    }
+
+    drawLyricsOnCanvas(ctx, width, startY, maxHeight) {
+        if (!this.karaokeLyrics.length) return;
+
+        const lineHeight = 44;
+        const visibleLines = Math.floor(maxHeight / lineHeight);
+        const halfVisible = Math.floor(visibleLines / 2);
+
+        let startIdx = Math.max(0, this.currentLyricIndex - halfVisible);
+        let endIdx = Math.min(this.karaokeLyrics.length, startIdx + visibleLines);
+
+        ctx.textAlign = 'center';
+
+        for (let i = startIdx; i < endIdx; i++) {
+            const relIdx = i - startIdx;
+            const y = startY + relIdx * lineHeight + lineHeight / 2;
+
+            if (i === this.currentLyricIndex) {
+                ctx.fillStyle = '#3EB489';
+                ctx.font = 'bold 26px Inter, sans-serif';
+                ctx.shadowColor = 'rgba(62, 180, 137, 0.5)';
+                ctx.shadowBlur = 12;
+            } else if (i < this.currentLyricIndex) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+                ctx.font = '22px Inter, sans-serif';
+                ctx.shadowBlur = 0;
+            } else {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.font = '22px Inter, sans-serif';
+                ctx.shadowBlur = 0;
+            }
+
+            const line = this.karaokeLyrics[i];
+            const maxChars = Math.floor(width / 14);
+            if (line.length > maxChars) {
+                ctx.fillText(line.substring(0, maxChars) + '...', width / 2, y);
+            } else {
+                ctx.fillText(line, width / 2, y);
+            }
+            ctx.shadowBlur = 0;
+        }
+    }
+
+    stopRecording() {
+        if (!this.isRecording) return;
+
+        this.isRecording = false;
+        if (this.recordingRAF) {
+            cancelAnimationFrame(this.recordingRAF);
+            this.recordingRAF = null;
+        }
+        if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+            this.mediaRecorder.stop();
+        }
+        if (this.recordingCanvas) {
+            const stream = this.recordingCanvas.captureStream(0);
+            stream.getTracks().forEach(t => t.stop());
+            this.recordingCanvas = null;
+            this.recordingCtx = null;
+        }
+        this.updateRecordingUI(false);
+    }
+
+    onRecordingComplete() {
+        if (this.recordedChunks.length === 0) return;
+
+        const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+
+        const songTitle = document.getElementById('karaoke-song-title')?.textContent || 'karaoke';
+        const artist = document.getElementById('karaoke-song-artist')?.textContent || '';
+        const safeName = `wordeth-${songTitle}-${artist}`.replace(/[^a-zA-Z0-9-]/g, '_').substring(0, 60);
+
+        const overlay = document.createElement('div');
+        overlay.className = 'recording-download-overlay';
+
+        const card = document.createElement('div');
+        card.className = 'recording-download-card';
+
+        const iconDiv = document.createElement('div');
+        iconDiv.className = 'recording-download-icon';
+        iconDiv.innerHTML = '<i class="fas fa-check-circle"></i>';
+        card.appendChild(iconDiv);
+
+        const h3 = document.createElement('h3');
+        h3.textContent = 'Performance Recorded!';
+        card.appendChild(h3);
+
+        const desc = document.createElement('p');
+        desc.textContent = 'Your karaoke performance is ready. Download it and share it on your social platforms!';
+        card.appendChild(desc);
+
+        const video = document.createElement('video');
+        video.src = url;
+        video.controls = true;
+        video.style.cssText = 'width:100%; max-height:300px; border-radius:8px; margin:1rem 0;';
+        card.appendChild(video);
+
+        const actions = document.createElement('div');
+        actions.className = 'recording-download-actions';
+
+        const downloadLink = document.createElement('a');
+        downloadLink.href = url;
+        downloadLink.download = `${safeName}.webm`;
+        downloadLink.className = 'btn-primary';
+        downloadLink.style.cssText = 'text-decoration:none; display:inline-flex; align-items:center; gap:8px;';
+        downloadLink.innerHTML = '<i class="fas fa-download"></i> Download Video';
+        actions.appendChild(downloadLink);
+
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'btn-secondary';
+        closeBtn.textContent = 'Close';
+        closeBtn.addEventListener('click', () => {
+            URL.revokeObjectURL(url);
+            overlay.remove();
+        });
+        actions.appendChild(closeBtn);
+        card.appendChild(actions);
+
+        const tip = document.createElement('p');
+        tip.style.cssText = 'color:#888; font-size:0.75rem; margin-top:0.75rem;';
+        tip.textContent = 'Tip: Upload to TikTok, Instagram Reels, or YouTube Shorts to share your talent!';
+        card.appendChild(tip);
+
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+
+        this.addChatMessage('System', 'Recording saved! Download your performance to share it.', true);
+        this.recordedChunks = [];
+    }
+
+    updateRecordingUI(recording) {
+        const btn = document.getElementById('karaoke-record-btn');
+        const timerEl = document.getElementById('recording-timer');
+        if (btn) {
+            if (recording) {
+                btn.classList.add('recording');
+                btn.title = 'Stop Recording';
+                btn.querySelector('i').className = 'fas fa-stop';
+            } else {
+                btn.classList.remove('recording');
+                btn.title = 'Record Performance';
+                btn.querySelector('i').className = 'fas fa-circle';
+            }
+        }
+        if (timerEl) {
+            timerEl.style.display = recording ? 'inline' : 'none';
+            if (recording) this.startRecordingTimer();
+            else timerEl.textContent = '';
+        }
+    }
+
+    startRecordingTimer() {
+        const timerEl = document.getElementById('recording-timer');
+        if (!timerEl) return;
+
+        const tick = () => {
+            if (!this.isRecording) return;
+            const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
+            const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+            const secs = String(elapsed % 60).padStart(2, '0');
+            timerEl.textContent = `${mins}:${secs}`;
+            requestAnimationFrame(tick);
+        };
+        tick();
+    }
+
     // YouTube Player Integration
     initYouTubePlayer() {
         // Check if API already loaded via global callback

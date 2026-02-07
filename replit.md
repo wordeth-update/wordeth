@@ -80,6 +80,25 @@ The application is fully functional and ready for use. It runs on Node.js with E
   - Animated hue-rotate effect for psychedelic filter
   - Visual indicator on control button when filter is active
   - Lyrics scroll speed controls (0.25x-3.0x) with +/- buttons
+- **Mic Tempo Sync**: Auto-adjusts lyrics scroll speed based on vocal activity
+  - Uses Web Audio API AnalyserNode for real-time RMS energy detection
+  - Smoothed exponential moving average for stable readings
+  - Silence detection slows/pauses scrolling when singer pauses
+  - Active singing speeds up scrolling proportionally to vocal energy
+  - Visual energy meter shows mic input level
+  - Manual speed +/- still works as 5-second override
+  - Toggle on/off via mic button in karaoke controls
+- **Performance Recording**: Record karaoke performances for social sharing (Voicey-style)
+  - Canvas compositor combines camera video + lyrics overlay + Wordeth watermark
+  - 720x1280 portrait format optimized for TikTok/Instagram Reels/YouTube Shorts
+  - Real-time lyrics rendering with active line highlighting on recording
+  - Mirror effect for camera, video filter support in recording
+  - Wordeth branded footer bar on all recordings
+  - Recording timer with red blinking indicator
+  - MediaRecorder API with VP9/VP8+Opus codec fallback
+  - Download as .webm with song-named filename
+  - Preview playback before downloading
+  - Promotes Wordeth branding on every shared performance
 - **Lyrics-to-Merch Feature**: Highlight lyrics in modal → "Make Merch" button appears → redirects to merch store with lyrics pre-filled
 - **Artist Merch Store**: InkSoft-powered merchandise store with:
   - Artist Garden: Featured artist cards for Music Artists, Designers, and Labels
