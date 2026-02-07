@@ -16,9 +16,7 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: function() {
-            return !this.socialId;
-        }
+        required: true
     },
     bio: {
         type: String,
@@ -28,30 +26,9 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: 'assets/default-avatar.png'
     },
-    socialId: {
-        type: String,
-        sparse: true
-    },
-    socialProvider: {
-        type: String,
-        enum: ['x', 'instagram', 'facebook', null],
-        default: null
-    },
     searchHistory: [{
         songTitle: String,
         artist: String,
-        timestamp: {
-            type: Date,
-            default: Date.now
-        }
-    }],
-    annotations: [{
-        songTitle: String,
-        text: String,
-        likes: {
-            type: Number,
-            default: 0
-        },
         timestamp: {
             type: Date,
             default: Date.now

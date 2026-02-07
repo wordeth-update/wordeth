@@ -136,7 +136,6 @@ app.use(express.static(path.join(__dirname), {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
 }));
-app.use('/uploads', express.static('uploads'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

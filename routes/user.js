@@ -1,34 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const auth = require('../middleware/auth');
 const User = require('../models/User');
 const UsageEvent = require('../models/UsageEvent');
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadsDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
-
 const upload = multer({
-    storage,
+    storage: multer.memoryStorage(),
     limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB limit
+        fileSize: 2 * 1024 * 1024
     },
     fileFilter: (req, file, cb) => {
         if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
@@ -83,13 +64,18 @@ router.put('/profile', auth, async (req, res) => {
     }
 });
 
-// Update avatar
 router.post('/avatar', auth, upload.single('avatar'), async (req, res) => {
     try {
-        req.user.avatar = `/uploads/${req.file.filename}`;
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+        const base64 = req.file.buffer.toString('base64');
+        const dataUrl = `data:${req.file.mimetype};base64,${base64}`;
+        req.user.avatar = dataUrl;
         await req.user.save();
-        res.json({ avatarUrl: req.user.avatar });
+        res.json({ avatarUrl: dataUrl });
     } catch (error) {
+        console.error('Avatar upload error:', error);
         res.status(500).json({ message: 'Error uploading avatar' });
     }
 });
@@ -110,27 +96,6 @@ router.post('/history', auth, async (req, res) => {
         req.user.searchHistory.unshift({ songTitle, artist });
         await req.user.save();
         res.json(req.user.searchHistory);
-    } catch (error) {
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-
-// Get annotations
-router.get('/annotations', auth, async (req, res) => {
-    try {
-        res.json(req.user.annotations.sort((a, b) => b.timestamp - a.timestamp));
-    } catch (error) {
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-
-// Add annotation
-router.post('/annotations', auth, async (req, res) => {
-    try {
-        const { songTitle, text } = req.body;
-        req.user.annotations.unshift({ songTitle, text });
-        await req.user.save();
-        res.json(req.user.annotations);
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
     }
@@ -179,12 +144,14 @@ router.get('/merch', auth, async (req, res) => {
     }
 });
 
-// Add custom merch
 router.post('/merch', auth, upload.single('image'), async (req, res) => {
     try {
         const { name, type } = req.body;
-        const image = `/uploads/${req.file.filename}`;
-        
+        let image = '';
+        if (req.file) {
+            const base64 = req.file.buffer.toString('base64');
+            image = `data:${req.file.mimetype};base64,${base64}`;
+        }
         req.user.customMerch.unshift({ name, type, image });
         await req.user.save();
         res.json(req.user.customMerch);
@@ -245,13 +212,6 @@ router.post('/admin/flush', authenticateAdmin, async (req, res) => {
         );
         flushed.deletedData.followingRemoved = followingUpdated.modifiedCount;
 
-        if (user.avatar && user.avatar.startsWith('/uploads/')) {
-            const avatarPath = path.join(__dirname, '..', user.avatar);
-            if (fs.existsSync(avatarPath)) {
-                fs.unlinkSync(avatarPath);
-                flushed.deletedData.avatarRemoved = true;
-            }
-        }
 
         await User.findByIdAndDelete(userId);
         flushed.deletedData.accountDeleted = true;
@@ -275,12 +235,6 @@ router.delete('/account', auth, async (req, res) => {
         await User.updateMany({ following: userId }, { $pull: { following: userId } });
         await User.updateMany({ followers: userId }, { $pull: { followers: userId } });
 
-        if (req.user.avatar && req.user.avatar.startsWith('/uploads/')) {
-            const avatarPath = path.join(__dirname, '..', req.user.avatar);
-            if (fs.existsSync(avatarPath)) {
-                fs.unlinkSync(avatarPath);
-            }
-        }
 
         await User.findByIdAndDelete(userId);
 
