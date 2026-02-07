@@ -90,24 +90,23 @@ The application is fully functional and ready for use. It runs on Node.js with E
   - Non-intrusive header/footer ad placements on search results
   - MongoDB-backed ad and advertiser storage
   - **Registration & Application System** (`ad-register.html`):
-    - Three account types: Wordeth Admin (internal), Partner (White Glove), Self-Serve
+    - Two account types: Partner (White Glove) and Self-Serve (admin accounts are created internally by the team)
     - Comprehensive application questionnaire: business type, budget, campaign goals, target audience, genres, ad experience, timeline
     - All registrations require admin approval (routed to advertising@wordeth.com, 48-72 hour turnaround)
-    - Admin accounts require referral code from existing team member
     - Success screen with next-steps timeline
-    - Register links on both ad-admin.html and ad-portal.html login screens
-  - **Admin Panel** (`ad-admin.html`): Internal Wordeth sales team can:
-    - Upload ads for clients with specific size requirements (728x90, 320x50)
-    - Set up to 25 keywords per ad for targeting
-    - Approve/reject pending ads from self-serve advertisers
-    - **Applications tab**: Review, approve, or reject advertiser applications with full detail view
-    - View analytics (impressions, clicks, CTR)
-    - Create admin accounts for team members
-  - **Self-Serve Portal** (`ad-portal.html`): Business partners can:
+  - **Admin Dashboard** (`ad-admin.html`): Higher-level internal Wordeth team dashboard, separate from advertiser portal:
+    - Platform Overview with pending applications, active partners, ad stats, impressions/clicks
+    - Partner Applications: Review, approve, or reject advertiser applications with full detail view
+    - Partners tab: View and filter all advertising partners by status and type
+    - Ad Oversight: Review, approve/reject all ads with status filters
+    - Create Ad for managed (White Glove) clients
+    - Settings: Create internal admin accounts for team members
+    - Quick links to Usage Metrics and Privacy Admin dashboards
+  - **Advertising Portal** (`ad-portal.html`): Partner-facing dashboard focused on ad operations:
     - Sign in (pending accounts see "under review" message)
-    - Build and submit ads with keyword targeting
-    - Monitor ad performance and pause/resume campaigns
-    - Create Account tab redirects to unified registration page
+    - My Ads: View, pause/resume active campaigns
+    - Create Ad: Build and submit ads with keyword targeting
+    - Account: View account information
   - **Documentation** (`ad-docs.html`): Comprehensive guide for advertisers
     - Ad sizes and specifications
     - Keyword targeting best practices

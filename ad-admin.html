@@ -3,19 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wordeth Ad Admin</title>
+    <title>Wordeth Admin Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/ads.css">
     <link rel="stylesheet" href="css/cookie-consent.css">
+    <style>
+        .admin-badge { background: linear-gradient(135deg, #7c6aef, #3EB489) !important; }
+        .overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+        .overview-card { background: var(--dark-surface); border: 1px solid var(--dark-border); border-radius: 12px; padding: 1.5rem; }
+        .overview-card .card-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.5rem; }
+        .overview-card .card-value { font-size: 1.75rem; font-weight: 700; color: var(--text-primary); font-family: 'Poppins', sans-serif; }
+        .overview-card .card-sub { font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem; }
+        .overview-card.highlight { border-color: var(--mint); background: rgba(62, 180, 137, 0.06); }
+        .overview-card.warning { border-color: #D29922; background: rgba(210, 153, 34, 0.06); }
+        .section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        .section-panel { background: var(--dark-surface); border: 1px solid var(--dark-border); border-radius: 12px; padding: 1.5rem; }
+        .section-panel h3 { font-family: 'Poppins', sans-serif; font-size: 1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .section-panel h3 i { color: var(--mint); }
+        .quick-list { list-style: none; padding: 0; margin: 0; }
+        .quick-list li { padding: 0.75rem 0; border-bottom: 1px solid var(--dark-border); display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem; }
+        .quick-list li:last-child { border-bottom: none; }
+        .quick-list .ql-label { color: var(--text-secondary); }
+        .quick-list .ql-value { font-weight: 600; color: var(--text-primary); }
+        .action-btn { background: transparent; border: 1px solid var(--dark-border); color: var(--mint); padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; }
+        .action-btn:hover { background: var(--mint); color: var(--dark-bg); }
+        .partner-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--dark-bg); border: 1px solid var(--dark-border); border-radius: 10px; margin-bottom: 0.75rem; }
+        .partner-info h4 { margin: 0 0 4px; font-size: 0.95rem; }
+        .partner-info p { margin: 0; font-size: 0.8rem; color: var(--text-secondary); }
+        .partner-meta { text-align: right; }
+        .partner-meta .partner-type { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 3px 8px; border-radius: 4px; font-weight: 600; }
+        .partner-type.partner { background: rgba(124, 106, 239, 0.15); color: #7c6aef; }
+        .partner-type.self-serve { background: rgba(62, 180, 137, 0.15); color: var(--mint); }
+        .filter-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+        .filter-tab { background: transparent; border: 1px solid var(--dark-border); color: var(--text-secondary); padding: 0.4rem 1rem; border-radius: 20px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; }
+        .filter-tab.active, .filter-tab:hover { background: var(--mint); color: var(--dark-bg); border-color: var(--mint); }
+        .admin-login-note { text-align: center; margin-top: 1.5rem; color: var(--text-secondary); font-size: 0.85rem; }
+        @media (max-width: 768px) { .section-grid { grid-template-columns: 1fr; } .overview-grid { grid-template-columns: 1fr 1fr; } }
+    </style>
 </head>
 <body>
     <nav class="admin-nav">
         <div class="nav-brand">
             <img src="images/wordeth-logo.svg" alt="Wordeth" class="logo">
-            <span class="admin-badge">AD ADMIN</span>
+            <span class="admin-badge">ADMIN</span>
         </div>
         <div class="nav-user">
             <span id="adminName">Admin</span>
@@ -26,78 +59,110 @@
     <div class="admin-container">
         <aside class="sidebar">
             <ul class="sidebar-menu">
-                <li class="active" data-tab="dashboard"><i class="fas fa-chart-line"></i> Dashboard</li>
-                <li data-tab="pending"><i class="fas fa-clock"></i> Pending Review <span id="pendingCount" class="badge">0</span></li>
-                <li data-tab="all-ads"><i class="fas fa-ad"></i> All Ads</li>
+                <li class="active" data-tab="overview"><i class="fas fa-th-large"></i> Overview</li>
+                <li data-tab="applications"><i class="fas fa-inbox"></i> Applications <span id="appCount" class="badge">0</span></li>
+                <li data-tab="partners"><i class="fas fa-handshake"></i> Partners</li>
+                <li data-tab="ad-oversight"><i class="fas fa-ad"></i> Ad Oversight <span id="pendingCount" class="badge">0</span></li>
                 <li data-tab="create-ad"><i class="fas fa-plus-circle"></i> Create Ad</li>
-                <li data-tab="applications"><i class="fas fa-file-alt"></i> Applications <span id="appCount" class="badge">0</span></li>
-                <li data-tab="advertisers"><i class="fas fa-users"></i> Advertisers</li>
                 <li data-tab="settings"><i class="fas fa-cog"></i> Settings</li>
             </ul>
+            <div class="sidebar-help">
+                <a href="admin-usage.html"><i class="fas fa-chart-bar"></i> Usage Metrics</a>
+                <a href="privacy-admin.html"><i class="fas fa-shield-alt"></i> Privacy Admin</a>
+            </div>
         </aside>
 
         <main class="admin-main">
-            <section id="dashboard-tab" class="tab-content active">
-                <h2>Dashboard</h2>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <i class="fas fa-ad"></i>
-                        <div class="stat-info">
-                            <span class="stat-value" id="totalAds">0</span>
-                            <span class="stat-label">Total Ads</span>
-                        </div>
+            <section id="overview-tab" class="tab-content active">
+                <h2>Platform Overview</h2>
+                <div class="overview-grid">
+                    <div class="overview-card warning" id="pendingAppsCard">
+                        <div class="card-label">Pending Applications</div>
+                        <div class="card-value" id="overviewPendingApps">0</div>
+                        <div class="card-sub">Awaiting review</div>
                     </div>
-                    <div class="stat-card">
-                        <i class="fas fa-check-circle"></i>
-                        <div class="stat-info">
-                            <span class="stat-value" id="activeAds">0</span>
-                            <span class="stat-label">Active Ads</span>
-                        </div>
+                    <div class="overview-card">
+                        <div class="card-label">Active Partners</div>
+                        <div class="card-value" id="overviewActivePartners">0</div>
+                        <div class="card-sub">Approved advertisers</div>
                     </div>
-                    <div class="stat-card">
-                        <i class="fas fa-eye"></i>
-                        <div class="stat-info">
-                            <span class="stat-value" id="totalImpressions">0</span>
-                            <span class="stat-label">Impressions</span>
-                        </div>
+                    <div class="overview-card highlight">
+                        <div class="card-label">Active Ads</div>
+                        <div class="card-value" id="overviewActiveAds">0</div>
+                        <div class="card-sub">Currently running</div>
                     </div>
-                    <div class="stat-card">
-                        <i class="fas fa-mouse-pointer"></i>
-                        <div class="stat-info">
-                            <span class="stat-value" id="totalClicks">0</span>
-                            <span class="stat-label">Clicks</span>
-                        </div>
+                    <div class="overview-card">
+                        <div class="card-label">Pending Ads</div>
+                        <div class="card-value" id="overviewPendingAds">0</div>
+                        <div class="card-sub">Awaiting approval</div>
+                    </div>
+                    <div class="overview-card">
+                        <div class="card-label">Total Impressions</div>
+                        <div class="card-value" id="overviewImpressions">0</div>
+                        <div class="card-sub">All time</div>
+                    </div>
+                    <div class="overview-card">
+                        <div class="card-label">Total Clicks</div>
+                        <div class="card-value" id="overviewClicks">0</div>
+                        <div class="card-sub">All time</div>
                     </div>
                 </div>
 
-                <div class="top-ads-section">
-                    <h3>Top Performing Ads</h3>
-                    <div id="topAdsList" class="ads-list"></div>
+                <div class="section-grid">
+                    <div class="section-panel">
+                        <h3><i class="fas fa-inbox"></i> Recent Applications</h3>
+                        <div id="recentApplications">
+                            <p class="empty-message">No recent applications</p>
+                        </div>
+                        <button class="action-btn" style="margin-top:1rem;" onclick="adAdmin.switchTab('applications')">View All Applications</button>
+                    </div>
+                    <div class="section-panel">
+                        <h3><i class="fas fa-chart-line"></i> Top Performing Ads</h3>
+                        <div id="topAdsList">
+                            <p class="empty-message">No active ads yet</p>
+                        </div>
+                        <button class="action-btn" style="margin-top:1rem;" onclick="adAdmin.switchTab('ad-oversight')">View All Ads</button>
+                    </div>
                 </div>
             </section>
 
-            <section id="pending-tab" class="tab-content">
-                <h2>Pending Review</h2>
-                <div id="pendingAdsList" class="ads-list"></div>
-                <p id="noPending" class="empty-message" style="display: none;">No ads pending review</p>
+            <section id="applications-tab" class="tab-content">
+                <h2>Partner Applications</h2>
+                <p style="color:var(--text-secondary); margin-bottom:1.5rem; font-size:0.875rem;">Review and approve or reject advertising partner applications. All applications are routed to advertising@wordeth.com with a 48-72 hour turnaround.</p>
+                <div id="applicationsList" class="ads-list"></div>
+                <p id="noApplications" class="empty-message" style="display:none;">No pending applications</p>
             </section>
 
-            <section id="all-ads-tab" class="tab-content">
-                <h2>All Ads</h2>
-                <div class="filter-bar">
-                    <select id="statusFilter">
-                        <option value="">All Status</option>
-                        <option value="active">Active</option>
-                        <option value="pending">Pending</option>
-                        <option value="paused">Paused</option>
-                        <option value="rejected">Rejected</option>
-                    </select>
+            <section id="partners-tab" class="tab-content">
+                <h2>Advertising Partners</h2>
+                <div class="filter-tabs" id="partnerFilters">
+                    <button class="filter-tab active" data-filter="all">All</button>
+                    <button class="filter-tab" data-filter="approved">Active</button>
+                    <button class="filter-tab" data-filter="pending">Pending</button>
+                    <button class="filter-tab" data-filter="partner">White Glove</button>
+                    <button class="filter-tab" data-filter="self-serve">Self-Serve</button>
+                </div>
+                <div id="partnersList"></div>
+            </section>
+
+            <section id="ad-oversight-tab" class="tab-content">
+                <h2>Ad Oversight</h2>
+                <div class="filter-tabs" id="adFilters">
+                    <button class="filter-tab active" data-filter="">All</button>
+                    <button class="filter-tab" data-filter="pending">Pending Review</button>
+                    <button class="filter-tab" data-filter="active">Active</button>
+                    <button class="filter-tab" data-filter="paused">Paused</button>
+                    <button class="filter-tab" data-filter="rejected">Rejected</button>
                 </div>
                 <div id="allAdsList" class="ads-list"></div>
             </section>
 
             <section id="create-ad-tab" class="tab-content">
-                <h2>Create Ad for Client</h2>
+                <h2>Create Ad for Managed Client</h2>
+                <div class="info-banner" style="background:rgba(62,180,137,0.08); border:1px solid rgba(62,180,137,0.2); border-radius:10px; padding:1rem; margin-bottom:1.5rem; display:flex; gap:0.75rem; align-items:flex-start;">
+                    <i class="fas fa-info-circle" style="color:var(--mint); margin-top:2px;"></i>
+                    <p style="color:var(--text-secondary); font-size:0.85rem; margin:0;">Use this for White Glove partners whose campaigns are managed by the Wordeth team. Self-serve partners create their own ads through the Ad Portal.</p>
+                </div>
                 <form id="createAdForm" class="ad-form">
                     <div class="form-group">
                         <label>Client Email</label>
@@ -151,22 +216,11 @@
                 </form>
             </section>
 
-            <section id="applications-tab" class="tab-content">
-                <h2>Pending Applications</h2>
-                <p style="color:var(--text-secondary); margin-bottom:1.5rem; font-size:0.875rem;">Review and approve or reject advertising partner applications. All applications are routed to advertising@wordeth.com with a 48-72 hour turnaround.</p>
-                <div id="applicationsList" class="ads-list"></div>
-                <p id="noApplications" class="empty-message" style="display:none;">No pending applications</p>
-            </section>
-
-            <section id="advertisers-tab" class="tab-content">
-                <h2>Advertisers</h2>
-                <div id="advertisersList" class="advertisers-list"></div>
-            </section>
-
             <section id="settings-tab" class="tab-content">
                 <h2>Settings</h2>
                 <div class="settings-section">
                     <h3>Create Admin Account</h3>
+                    <p style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:1.25rem;">Add a new internal team member with admin access to this dashboard.</p>
                     <form id="createAdminForm" class="ad-form">
                         <div class="form-group">
                             <label>Email</label>
@@ -202,9 +256,7 @@
                 <button type="submit" class="btn-primary">Login</button>
             </form>
             <p id="loginError" class="error-message"></p>
-            <p style="text-align:center; margin-top:1.5rem; color:var(--text-secondary); font-size:0.875rem;">
-                Don't have an account? <a href="ad-register.html" style="color:var(--mint); text-decoration:none; font-weight:600;">Apply to Register</a>
-            </p>
+            <p class="admin-login-note">Internal Wordeth team access only. Advertising partners should use the <a href="ad-portal.html" style="color:var(--mint); text-decoration:none; font-weight:600;">Ad Portal</a>.</p>
         </div>
     </div>
 

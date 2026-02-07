@@ -62,18 +62,8 @@ router.post('/advertisers/register', async (req, res) => {
             return res.status(400).json({ error: 'Email, password, company name, and contact name are required' });
         }
 
-        const validTypes = ['self-serve', 'partner', 'managed'];
+        const validTypes = ['self-serve', 'partner'];
         const type = validTypes.includes(accountType) ? accountType : 'self-serve';
-
-        if (type === 'managed') {
-            if (!application || !application.adminReferralCode) {
-                return res.status(400).json({ error: 'Admin registration requires a referral code' });
-            }
-            const validReferralCode = process.env.ADMIN_REFERRAL_CODE || 'WORDETH-ADMIN-2026';
-            if (application.adminReferralCode !== validReferralCode) {
-                return res.status(400).json({ error: 'Invalid referral code. Please contact an existing team member for a valid code.' });
-            }
-        }
 
         const existing = await Advertiser.findOne({ email });
         if (existing) {
