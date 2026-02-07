@@ -73,7 +73,19 @@ const userSchema = new mongoose.Schema({
             type: Date,
             default: Date.now
         }
-    }]
+    }],
+    agreedToTerms: {
+        type: Boolean,
+        default: false
+    },
+    termsAgreedAt: {
+        type: Date,
+        default: null
+    },
+    termsVersion: {
+        type: String,
+        default: null
+    }
 }, {
     timestamps: true
 });

@@ -68,7 +68,12 @@ router.post('/track', (req, res) => {
         return res.status(429).json({ error: 'Too many tracking requests' });
     }
 
-    const { eventType, segment, metadata, sessionId } = req.body;
+    const { eventType, segment, metadata, sessionId, consentGiven } = req.body;
+
+    if (consentGiven === false) {
+        return res.json({ success: true, skipped: true });
+    }
+
     if (!eventType || !segment) {
         return res.status(400).json({ error: 'eventType and segment required' });
     }

@@ -192,6 +192,41 @@
     text-decoration: underline;
 }
 
+.terms-group {
+    margin-top: 0.5rem;
+}
+
+.terms-checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    cursor: pointer;
+}
+
+.terms-checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-top: 3px;
+    accent-color: var(--mint);
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.terms-text {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.terms-text a {
+    color: var(--mint);
+    text-decoration: underline;
+}
+
+.terms-text a:hover {
+    color: #fff;
+}
+
 @media (max-width: 480px) {
     .auth-box {
         padding: 1.5rem;

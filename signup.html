@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="css/auth.css">
     <link rel="stylesheet" href="css/enhanced.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="css/cookie-consent.css">
 </head>
 <body>
     <nav class="main-nav">
@@ -47,6 +48,12 @@
                     <label for="confirm-password">Confirm Password</label>
                     <input type="password" id="confirm-password" name="confirm-password" required>
                 </div>
+                <div class="form-group terms-group">
+                    <label class="terms-checkbox-label">
+                        <input type="checkbox" id="agree-terms" name="agree-terms" required>
+                        <span class="terms-text">I have read and agree to the <a href="/terms.html" target="_blank">Terms of Service</a> and <a href="/privacy.html" target="_blank">Privacy Policy</a></span>
+                    </label>
+                </div>
                 <button type="submit" class="submit-btn">Create Account</button>
             </form>
 
@@ -57,5 +64,6 @@
     </main>
 
     <script src="js/auth.js"></script>
+    <script src="js/cookie-consent.js"></script>
 </body>
 </html>

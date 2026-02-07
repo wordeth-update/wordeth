@@ -104,6 +104,16 @@ The application is fully functional and ready for use. It runs on Node.js with E
     - Keyword targeting best practices
     - Content guidelines and policies
     - Approval process documentation
+- **Privacy & Compliance System**:
+  - Cookie consent banner on all pages (Accept All / Essential Only)
+  - `js/cookie-consent.js` - Consent management with localStorage persistence, versioned consent
+  - `css/cookie-consent.css` - Animated bottom banner styling
+  - Terms of Service page (`terms.html`) - Version 1.0
+  - Privacy Policy page (`privacy.html`) - Version 1.0, covers GDPR/CCPA rights
+  - Signup requires explicit agreement to Terms & Privacy Policy (checkbox)
+  - `agreedToTerms`, `termsAgreedAt`, `termsVersion` fields on User model
+  - **Data Flush** (`POST /api/user/admin/flush`): Admin endpoint to permanently delete all user data (account, usage events, social connections, uploaded files)
+  - **Self-Delete** (`DELETE /api/user/account`): Users can delete their own account and all associated data
 
 ## Project Architecture
 

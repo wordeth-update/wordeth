@@ -18,7 +18,11 @@ router.post('/signup', [
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { name, email, password } = req.body;
+        const { name, email, password, agreedToTerms } = req.body;
+
+        if (!agreedToTerms) {
+            return res.status(400).json({ message: 'You must agree to the Terms of Service and Privacy Policy to create an account.' });
+        }
         
         // Check if user already exists
         const existingUser = await User.findOne({ email });
@@ -26,7 +30,12 @@ router.post('/signup', [
             return res.status(400).json({ message: 'User already exists with this email' });
         }
 
-        const user = new User({ name, email, password });
+        const user = new User({
+            name, email, password,
+            agreedToTerms: true,
+            termsAgreedAt: new Date(),
+            termsVersion: '1.0'
+        });
         await user.save();
 
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { 

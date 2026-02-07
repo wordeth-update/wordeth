@@ -50,10 +50,16 @@ if (signupForm) {
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
         const confirmPassword = document.getElementById('confirm-password').value;
+        const agreeTerms = document.getElementById('agree-terms');
         const submitBtn = signupForm.querySelector('.submit-btn');
         
         if (password !== confirmPassword) {
             showError('Passwords do not match');
+            return;
+        }
+
+        if (agreeTerms && !agreeTerms.checked) {
+            showError('You must agree to the Terms of Service and Privacy Policy');
             return;
         }
         
@@ -66,7 +72,7 @@ if (signupForm) {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ name, email, password })
+                body: JSON.stringify({ name, email, password, agreedToTerms: true })
             });
 
             const data = await response.json();
