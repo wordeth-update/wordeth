@@ -53,10 +53,26 @@ function requireAdmin(req, res, next) {
 
 router.post('/advertisers/register', async (req, res) => {
     try {
-        const { email, password, companyName, contactName, phone, website } = req.body;
+        const {
+            email, password, companyName, contactName, phone, website,
+            accountType, application
+        } = req.body;
 
         if (!email || !password || !companyName || !contactName) {
             return res.status(400).json({ error: 'Email, password, company name, and contact name are required' });
+        }
+
+        const validTypes = ['self-serve', 'partner', 'managed'];
+        const type = validTypes.includes(accountType) ? accountType : 'self-serve';
+
+        if (type === 'managed') {
+            if (!application || !application.adminReferralCode) {
+                return res.status(400).json({ error: 'Admin registration requires a referral code' });
+            }
+            const validReferralCode = process.env.ADMIN_REFERRAL_CODE || 'WORDETH-ADMIN-2026';
+            if (application.adminReferralCode !== validReferralCode) {
+                return res.status(400).json({ error: 'Invalid referral code. Please contact an existing team member for a valid code.' });
+            }
         }
 
         const existing = await Advertiser.findOne({ email });
@@ -71,27 +87,23 @@ router.post('/advertisers/register', async (req, res) => {
             contactName,
             phone,
             website,
-            accountType: 'self-serve',
-            status: 'approved'
+            accountType: type,
+            role: 'advertiser',
+            status: 'pending',
+            application: application || {}
         });
 
         await advertiser.save();
 
-        const token = jwt.sign(
-            { advertiserId: advertiser._id, role: advertiser.role },
-            process.env.JWT_SECRET,
-            { expiresIn: '7d' }
-        );
-
         res.status(201).json({
             success: true,
-            message: 'Account created successfully',
-            token,
+            message: 'Your application has been submitted and is under review. Our advertising team at advertising@wordeth.com will respond within 48-72 hours.',
             advertiser: {
                 id: advertiser._id,
                 email: advertiser.email,
                 companyName: advertiser.companyName,
-                accountType: advertiser.accountType
+                accountType: advertiser.accountType,
+                status: 'pending'
             }
         });
     } catch (error) {
@@ -114,8 +126,12 @@ router.post('/advertisers/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
+        if (advertiser.status === 'pending') {
+            return res.status(403).json({ error: 'Your application is still under review. Our advertising team at advertising@wordeth.com will respond within 48-72 hours.', status: 'pending' });
+        }
+
         if (advertiser.status === 'suspended') {
-            return res.status(403).json({ error: 'Account suspended. Please contact support.' });
+            return res.status(403).json({ error: 'Account suspended. Please contact support.', status: 'suspended' });
         }
 
         const token = jwt.sign(
@@ -611,6 +627,70 @@ router.post('/admin/upload-for-client', authenticateAdvertiser, requireAdmin, as
     } catch (error) {
         console.error('Upload for client error:', error);
         res.status(500).json({ error: 'Failed to create ad for client' });
+    }
+});
+
+router.get('/admin/pending-applications', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        const applications = await Advertiser.find({ role: 'advertiser', status: 'pending' })
+            .select('-password')
+            .sort({ createdAt: 1 });
+
+        res.json({ applications });
+    } catch (error) {
+        console.error('Fetch pending applications error:', error);
+        res.status(500).json({ error: 'Failed to fetch applications' });
+    }
+});
+
+router.put('/admin/approve-application/:id', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reviewNotes, setAsAdmin } = req.body;
+
+        const advertiser = await Advertiser.findById(id);
+        if (!advertiser) {
+            return res.status(404).json({ error: 'Application not found' });
+        }
+
+        advertiser.status = 'approved';
+        advertiser.reviewedBy = req.advertiserId;
+        advertiser.reviewedAt = new Date();
+        advertiser.reviewNotes = reviewNotes || '';
+
+        if (setAsAdmin && advertiser.accountType === 'managed') {
+            advertiser.role = 'admin';
+        }
+
+        await advertiser.save();
+
+        res.json({ success: true, message: 'Application approved', advertiser: { id: advertiser._id, email: advertiser.email, companyName: advertiser.companyName, status: 'approved' } });
+    } catch (error) {
+        console.error('Approve application error:', error);
+        res.status(500).json({ error: 'Failed to approve application' });
+    }
+});
+
+router.put('/admin/reject-application/:id', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reviewNotes } = req.body;
+
+        const advertiser = await Advertiser.findById(id);
+        if (!advertiser) {
+            return res.status(404).json({ error: 'Application not found' });
+        }
+
+        advertiser.status = 'suspended';
+        advertiser.reviewedBy = req.advertiserId;
+        advertiser.reviewedAt = new Date();
+        advertiser.reviewNotes = reviewNotes || '';
+        await advertiser.save();
+
+        res.json({ success: true, message: 'Application rejected' });
+    } catch (error) {
+        console.error('Reject application error:', error);
+        res.status(500).json({ error: 'Failed to reject application' });
     }
 });
 

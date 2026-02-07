@@ -89,16 +89,25 @@ The application is fully functional and ready for use. It runs on Node.js with E
 - **Advertising System**: Keyword-based contextual advertising for lyrics search page
   - Non-intrusive header/footer ad placements on search results
   - MongoDB-backed ad and advertiser storage
+  - **Registration & Application System** (`ad-register.html`):
+    - Three account types: Wordeth Admin (internal), Partner (White Glove), Self-Serve
+    - Comprehensive application questionnaire: business type, budget, campaign goals, target audience, genres, ad experience, timeline
+    - All registrations require admin approval (routed to advertising@wordeth.com, 48-72 hour turnaround)
+    - Admin accounts require referral code from existing team member
+    - Success screen with next-steps timeline
+    - Register links on both ad-admin.html and ad-portal.html login screens
   - **Admin Panel** (`ad-admin.html`): Internal Wordeth sales team can:
     - Upload ads for clients with specific size requirements (728x90, 320x50)
     - Set up to 25 keywords per ad for targeting
     - Approve/reject pending ads from self-serve advertisers
+    - **Applications tab**: Review, approve, or reject advertiser applications with full detail view
     - View analytics (impressions, clicks, CTR)
     - Create admin accounts for team members
   - **Self-Serve Portal** (`ad-portal.html`): Business partners can:
-    - Create advertiser accounts
+    - Sign in (pending accounts see "under review" message)
     - Build and submit ads with keyword targeting
     - Monitor ad performance and pause/resume campaigns
+    - Create Account tab redirects to unified registration page
   - **Documentation** (`ad-docs.html`): Comprehensive guide for advertisers
     - Ad sizes and specifications
     - Keyword targeting best practices

@@ -194,6 +194,9 @@ class AdAdmin {
             case 'all-ads':
                 this.loadAllAds();
                 break;
+            case 'applications':
+                this.loadApplications();
+                break;
             case 'advertisers':
                 this.loadAdvertisers();
                 break;
@@ -201,6 +204,7 @@ class AdAdmin {
     }
 
     async loadDashboard() {
+        this.loadApplicationCount();
         try {
             const response = await fetch('/api/ads/admin/analytics', {
                 headers: { 'Authorization': `Bearer ${this.token}` }
@@ -378,6 +382,168 @@ class AdAdmin {
         } catch (error) {
             console.error('Reject ad error:', error);
             alert('Failed to reject ad');
+        }
+    }
+
+    async loadApplicationCount() {
+        try {
+            const response = await fetch('/api/ads/admin/pending-applications', {
+                headers: { 'Authorization': `Bearer ${this.token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                const countEl = document.getElementById('appCount');
+                if (countEl) countEl.textContent = data.applications ? data.applications.length : 0;
+            }
+        } catch (error) {
+            console.error('Load app count error:', error);
+        }
+    }
+
+    async loadApplications() {
+        try {
+            const response = await fetch('/api/ads/admin/pending-applications', {
+                headers: { 'Authorization': `Bearer ${this.token}` }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const container = document.getElementById('applicationsList');
+                const noMessage = document.getElementById('noApplications');
+                const countEl = document.getElementById('appCount');
+
+                if (countEl) countEl.textContent = data.applications ? data.applications.length : 0;
+
+                if (data.applications && data.applications.length > 0) {
+                    container.innerHTML = data.applications.map(app => this.renderApplication(app)).join('');
+                    noMessage.style.display = 'none';
+                } else {
+                    container.innerHTML = '';
+                    noMessage.style.display = 'block';
+                }
+            }
+        } catch (error) {
+            console.error('Load applications error:', error);
+        }
+    }
+
+    renderApplication(app) {
+        const budgetLabels = {
+            'under-500': 'Under $500/mo',
+            '500-2000': '$500-$2,000/mo',
+            '2000-5000': '$2,000-$5,000/mo',
+            '5000-10000': '$5,000-$10,000/mo',
+            '10000-25000': '$10,000-$25,000/mo',
+            '25000-plus': '$25,000+/mo'
+        };
+        const typeLabels = {
+            'brand': 'Brand / Consumer Product',
+            'record-label': 'Record Label',
+            'independent-artist': 'Independent Artist',
+            'retailer': 'Retailer / E-Commerce',
+            'tech-company': 'Tech / App Company',
+            'event-promoter': 'Event Promoter / Venue',
+            'media-entertainment': 'Media / Entertainment',
+            'agency': 'Marketing / Ad Agency',
+            'nonprofit': 'Nonprofit',
+            'other': 'Other'
+        };
+        const acctLabels = { 'self-serve': 'Self-Serve', 'partner': 'Partner (White Glove)', 'managed': 'Wordeth Admin' };
+        const adExp = { 'yes-digital': 'Digital', 'yes-traditional': 'Traditional', 'yes-both': 'Both', 'no': 'None' };
+        const startLabels = { 'immediately': 'Immediately', 'within-2-weeks': 'Within 2 weeks', 'within-month': 'Within a month', 'within-quarter': 'Within 3 months', 'exploring': 'Just exploring' };
+
+        const a = app.application || {};
+        const goals = (a.campaignGoals || []).map(g => g.replace(/-/g, ' ')).join(', ');
+        const genres = (a.targetGenres || []).map(g => g.replace(/-/g, ' ')).join(', ');
+        const date = new Date(app.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+        const isAdmin = app.accountType === 'managed';
+
+        return `
+            <div class="ad-item" style="flex-direction:column; gap:1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%;">
+                    <div>
+                        <h4>${this.escapeHtml(app.companyName)}</h4>
+                        <p style="margin:4px 0;">${this.escapeHtml(app.contactName)} &middot; ${this.escapeHtml(app.email)}</p>
+                        <p style="margin:4px 0;">${date}</p>
+                    </div>
+                    <span class="ad-status pending" style="white-space:nowrap;">${acctLabels[app.accountType] || app.accountType}</span>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 2rem; width:100%; font-size:0.85rem; color:var(--text-secondary);">
+                    <div><strong style="color:var(--text-primary);">Business Type:</strong> ${this.escapeHtml(typeLabels[a.businessType] || a.businessType || 'N/A')}${a.businessTypeOther ? ' (' + this.escapeHtml(a.businessTypeOther) + ')' : ''}</div>
+                    <div><strong style="color:var(--text-primary);">Budget:</strong> ${budgetLabels[a.monthlyBudget] || a.monthlyBudget || 'N/A'}</div>
+                    <div><strong style="color:var(--text-primary);">Ad Experience:</strong> ${adExp[a.previousAdvertising] || a.previousAdvertising || 'N/A'}</div>
+                    <div><strong style="color:var(--text-primary);">Start Date:</strong> ${startLabels[a.expectedStartDate] || a.expectedStartDate || 'N/A'}</div>
+                    <div style="grid-column:span 2;"><strong style="color:var(--text-primary);">Goals:</strong> ${this.escapeHtml(goals || 'N/A')}${a.campaignGoalsOther ? ' (' + this.escapeHtml(a.campaignGoalsOther) + ')' : ''}</div>
+                    <div style="grid-column:span 2;"><strong style="color:var(--text-primary);">Target Audience:</strong> ${this.escapeHtml(a.targetAudience || 'N/A')}</div>
+                    ${genres ? `<div style="grid-column:span 2;"><strong style="color:var(--text-primary);">Genres:</strong> ${this.escapeHtml(genres)}</div>` : ''}
+                    <div style="grid-column:span 2;"><strong style="color:var(--text-primary);">Description:</strong> ${this.escapeHtml(a.businessDescription || 'N/A')}</div>
+                    ${a.additionalNotes ? `<div style="grid-column:span 2;"><strong style="color:var(--text-primary);">Notes:</strong> ${this.escapeHtml(a.additionalNotes)}</div>` : ''}
+                    ${app.phone ? `<div><strong style="color:var(--text-primary);">Phone:</strong> ${this.escapeHtml(app.phone)}</div>` : ''}
+                    ${app.website ? `<div><strong style="color:var(--text-primary);">Website:</strong> <a href="${this.escapeHtml(app.website)}" target="_blank" style="color:var(--mint);">${this.escapeHtml(app.website)}</a></div>` : ''}
+                </div>
+                <div class="ad-actions" style="margin-top:0.5rem;">
+                    <button class="btn-primary" onclick="adAdmin.approveApplication('${app._id}', ${isAdmin})">Approve</button>
+                    <button class="btn-danger" onclick="adAdmin.rejectApplication('${app._id}')">Reject</button>
+                </div>
+            </div>
+        `;
+    }
+
+    async approveApplication(id, isAdmin) {
+        let reviewNotes = prompt('Add review notes (optional):') || '';
+        let setAsAdmin = false;
+        if (isAdmin) {
+            setAsAdmin = confirm('This is a Wordeth Admin application. Grant admin access?');
+        }
+
+        try {
+            const response = await fetch(`/api/ads/admin/approve-application/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.token}`
+                },
+                body: JSON.stringify({ reviewNotes, setAsAdmin })
+            });
+
+            if (response.ok) {
+                alert('Application approved! The applicant can now sign in.');
+                this.loadApplications();
+            } else {
+                const data = await response.json();
+                alert(data.error || 'Failed to approve application');
+            }
+        } catch (error) {
+            console.error('Approve application error:', error);
+            alert('Failed to approve application');
+        }
+    }
+
+    async rejectApplication(id) {
+        const reviewNotes = prompt('Reason for rejection (will be sent to applicant):');
+        if (reviewNotes === null) return;
+
+        try {
+            const response = await fetch(`/api/ads/admin/reject-application/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.token}`
+                },
+                body: JSON.stringify({ reviewNotes })
+            });
+
+            if (response.ok) {
+                alert('Application rejected.');
+                this.loadApplications();
+            } else {
+                const data = await response.json();
+                alert(data.error || 'Failed to reject application');
+            }
+        } catch (error) {
+            console.error('Reject application error:', error);
+            alert('Failed to reject application');
         }
     }
 

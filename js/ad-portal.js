@@ -51,7 +51,6 @@ class AdPortal {
         });
 
         document.getElementById('loginForm').addEventListener('submit', (e) => this.handleLogin(e));
-        document.getElementById('registerForm').addEventListener('submit', (e) => this.handleRegister(e));
         document.getElementById('createAdForm').addEventListener('submit', (e) => this.handleCreateAd(e));
 
         document.querySelectorAll('.sidebar-menu li').forEach(item => {
@@ -100,47 +99,18 @@ class AdPortal {
                 localStorage.setItem('adPortalToken', this.token);
                 this.showPortal();
             } else {
-                document.getElementById('loginError').textContent = data.error || 'Login failed';
+                const errorEl = document.getElementById('loginError');
+                if (data.status === 'pending') {
+                    errorEl.style.color = '#D29922';
+                    errorEl.textContent = data.error;
+                } else {
+                    errorEl.style.color = '';
+                    errorEl.textContent = data.error || 'Login failed';
+                }
             }
         } catch (error) {
             console.error('Login error:', error);
             document.getElementById('loginError').textContent = 'Login failed. Please try again.';
-        }
-    }
-
-    async handleRegister(e) {
-        e.preventDefault();
-        const form = e.target;
-
-        const registerData = {
-            companyName: form.companyName.value,
-            contactName: form.contactName.value,
-            email: form.email.value,
-            password: form.password.value,
-            phone: form.phone.value,
-            website: form.website.value
-        };
-
-        try {
-            const response = await fetch('/api/ads/advertisers/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(registerData)
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                this.token = data.token;
-                this.advertiser = data.advertiser;
-                localStorage.setItem('adPortalToken', this.token);
-                this.showPortal();
-            } else {
-                document.getElementById('registerError').textContent = data.error || 'Registration failed';
-            }
-        } catch (error) {
-            console.error('Register error:', error);
-            document.getElementById('registerError').textContent = 'Registration failed. Please try again.';
         }
     }
 

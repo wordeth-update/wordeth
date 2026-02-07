@@ -30,6 +30,7 @@
                 <li data-tab="pending"><i class="fas fa-clock"></i> Pending Review <span id="pendingCount" class="badge">0</span></li>
                 <li data-tab="all-ads"><i class="fas fa-ad"></i> All Ads</li>
                 <li data-tab="create-ad"><i class="fas fa-plus-circle"></i> Create Ad</li>
+                <li data-tab="applications"><i class="fas fa-file-alt"></i> Applications <span id="appCount" class="badge">0</span></li>
                 <li data-tab="advertisers"><i class="fas fa-users"></i> Advertisers</li>
                 <li data-tab="settings"><i class="fas fa-cog"></i> Settings</li>
             </ul>
@@ -150,6 +151,13 @@
                 </form>
             </section>
 
+            <section id="applications-tab" class="tab-content">
+                <h2>Pending Applications</h2>
+                <p style="color:var(--text-secondary); margin-bottom:1.5rem; font-size:0.875rem;">Review and approve or reject advertising partner applications. All applications are routed to advertising@wordeth.com with a 48-72 hour turnaround.</p>
+                <div id="applicationsList" class="ads-list"></div>
+                <p id="noApplications" class="empty-message" style="display:none;">No pending applications</p>
+            </section>
+
             <section id="advertisers-tab" class="tab-content">
                 <h2>Advertisers</h2>
                 <div id="advertisersList" class="advertisers-list"></div>
@@ -194,6 +202,9 @@
                 <button type="submit" class="btn-primary">Login</button>
             </form>
             <p id="loginError" class="error-message"></p>
+            <p style="text-align:center; margin-top:1.5rem; color:var(--text-secondary); font-size:0.875rem;">
+                Don't have an account? <a href="ad-register.html" style="color:var(--mint); text-decoration:none; font-weight:600;">Apply to Register</a>
+            </p>
         </div>
     </div>
 

@@ -46,42 +46,20 @@
                 </div>
                 <button type="submit" class="btn-primary">Sign In</button>
                 <p id="loginError" class="error-message"></p>
+                <p style="text-align:center; margin-top:1rem; color:var(--text-secondary); font-size:0.875rem;">
+                    Don't have an account? <a href="ad-register.html" style="color:var(--mint); text-decoration:none; font-weight:600;">Apply to Register</a>
+                </p>
             </form>
 
-            <form id="registerForm" class="auth-form">
+            <div id="registerForm" class="auth-form">
                 <h2>Create Account</h2>
-                <p class="auth-subtitle">Start advertising on Wordeth</p>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Company Name</label>
-                        <input type="text" name="companyName" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Contact Name</label>
-                        <input type="text" name="contactName" required>
-                    </div>
+                <p class="auth-subtitle">All new accounts require an application and approval.</p>
+                <div style="text-align:center; padding: 2rem 0;">
+                    <p style="color:var(--text-secondary); margin-bottom:1.5rem; line-height:1.6;">Our registration process ensures we maintain quality partnerships. Choose from Self-Serve, Partner (White Glove), or Admin account types.</p>
+                    <a href="ad-register.html" class="btn-primary btn-large" style="text-decoration:none; display:inline-block;">Start Your Application</a>
+                    <p style="color:var(--text-secondary); margin-top:1rem; font-size:0.8rem;">Applications are reviewed within 48-72 hours</p>
                 </div>
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" name="email" required>
-                </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" name="password" required minlength="8">
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Phone (optional)</label>
-                        <input type="tel" name="phone">
-                    </div>
-                    <div class="form-group">
-                        <label>Website (optional)</label>
-                        <input type="url" name="website" placeholder="https://">
-                    </div>
-                </div>
-                <button type="submit" class="btn-primary">Create Account</button>
-                <p id="registerError" class="error-message"></p>
-            </form>
+            </div>
         </div>
     </div>
 

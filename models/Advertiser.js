@@ -33,7 +33,7 @@ const advertiserSchema = new mongoose.Schema({
     },
     accountType: {
         type: String,
-        enum: ['self-serve', 'managed'],
+        enum: ['self-serve', 'managed', 'partner'],
         default: 'self-serve'
     },
     role: {
@@ -46,6 +46,26 @@ const advertiserSchema = new mongoose.Schema({
         enum: ['pending', 'approved', 'suspended'],
         default: 'pending'
     },
+    application: {
+        businessType: { type: String, trim: true },
+        businessTypeOther: { type: String, trim: true },
+        businessDescription: { type: String, trim: true },
+        monthlyBudget: { type: String, trim: true },
+        campaignGoals: [{ type: String }],
+        campaignGoalsOther: { type: String, trim: true },
+        targetAudience: { type: String, trim: true },
+        targetGenres: [{ type: String }],
+        previousAdvertising: { type: String, trim: true },
+        expectedStartDate: { type: String, trim: true },
+        additionalNotes: { type: String, trim: true },
+        adminReferralCode: { type: String, trim: true }
+    },
+    reviewedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Advertiser'
+    },
+    reviewedAt: { type: Date },
+    reviewNotes: { type: String, trim: true },
     billing: {
         balance: { type: Number, default: 0 },
         totalSpent: { type: Number, default: 0 }

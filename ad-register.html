@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordeth - Advertising Registration</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/ads.css">
+    <link rel="stylesheet" href="css/cookie-consent.css">
+    <style>
+        .reg-hero { text-align: center; padding: 3rem 1rem 2rem; }
+        .reg-hero h1 { font-family: 'Poppins', sans-serif; font-size: 2rem; margin-bottom: 0.5rem; }
+        .reg-hero p { color: var(--text-secondary); font-size: 1rem; max-width: 600px; margin: 0 auto; }
+        .type-selector { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+        .type-card { background: var(--dark-surface); border: 2px solid var(--dark-border); border-radius: 16px; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.3s; position: relative; }
+        .type-card:hover { border-color: var(--mint); transform: translateY(-2px); }
+        .type-card.selected { border-color: var(--mint); background: rgba(62, 180, 137, 0.08); }
+        .type-card .card-icon { font-size: 2.5rem; color: var(--mint); margin-bottom: 1rem; }
+        .type-card h3 { font-family: 'Poppins', sans-serif; margin-bottom: 0.5rem; font-size: 1.1rem; }
+        .type-card p { color: var(--text-secondary); font-size: 0.85rem; line-height: 1.5; }
+        .type-card .card-features { text-align: left; margin-top: 1rem; }
+        .type-card .card-features li { color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 0.4rem; list-style: none; padding-left: 1.25rem; position: relative; }
+        .type-card .card-features li::before { content: '\f00c'; font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; left: 0; color: var(--mint); font-size: 0.7rem; }
+        .type-badge { position: absolute; top: -10px; right: 16px; background: var(--mint); color: var(--dark-bg); padding: 3px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+        .reg-form-container { max-width: 700px; margin: 0 auto 4rem; padding: 0 1rem; display: none; }
+        .reg-form-container.visible { display: block; }
+        .reg-form-container h2 { font-family: 'Poppins', sans-serif; margin-bottom: 0.5rem; font-size: 1.5rem; }
+        .reg-form-container .form-subtitle { color: var(--text-secondary); margin-bottom: 2rem; font-size: 0.9rem; }
+        .form-section-title { font-family: 'Poppins', sans-serif; font-size: 1rem; color: var(--mint); margin: 2rem 0 1rem; padding-top: 1.5rem; border-top: 1px solid var(--dark-border); }
+        .form-section-title:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; }
+        .checkbox-label { display: flex; align-items: center; gap: 0.5rem; background: var(--dark-bg); border: 1px solid var(--dark-border); padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: all 0.2s; color: var(--text-secondary); }
+        .checkbox-label:hover { border-color: var(--mint); }
+        .checkbox-label input { accent-color: var(--mint); }
+        .checkbox-label input:checked ~ span { color: var(--text-primary); }
+        .select-group { width: 100%; }
+        .review-notice { background: rgba(62, 180, 137, 0.1); border: 1px solid var(--mint); border-radius: 12px; padding: 1.25rem; margin-bottom: 2rem; display: flex; gap: 1rem; align-items: flex-start; }
+        .review-notice i { color: var(--mint); font-size: 1.25rem; margin-top: 2px; }
+        .review-notice p { color: var(--text-primary); font-size: 0.875rem; line-height: 1.6; }
+        .review-notice strong { color: var(--mint); }
+        .success-screen { display: none; text-align: center; max-width: 600px; margin: 4rem auto; padding: 0 1rem; }
+        .success-screen.visible { display: block; }
+        .success-icon { font-size: 4rem; color: var(--success); margin-bottom: 1.5rem; }
+        .success-screen h2 { font-family: 'Poppins', sans-serif; margin-bottom: 1rem; }
+        .success-screen p { color: var(--text-secondary); line-height: 1.7; margin-bottom: 1rem; }
+        .success-screen .email-highlight { color: var(--mint); font-weight: 600; }
+        .success-screen .timeline-info { background: var(--dark-surface); border: 1px solid var(--dark-border); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; text-align: left; }
+        .success-screen .timeline-info h4 { margin-bottom: 1rem; color: var(--text-primary); }
+        .success-screen .timeline-info .step-item { display: flex; gap: 1rem; margin-bottom: 1rem; align-items: flex-start; }
+        .success-screen .timeline-info .step-num { background: var(--mint); color: var(--dark-bg); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+        .success-screen .timeline-info .step-text { font-size: 0.85rem; color: var(--text-secondary); }
+        .admin-code-section { display: none; }
+        .admin-code-section.visible { display: block; }
+        @media (max-width: 768px) { .type-selector { grid-template-columns: 1fr; } .form-row { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <nav class="portal-nav">
+        <div class="nav-brand">
+            <a href="index.html"><img src="images/wordeth-logo.svg" alt="Wordeth" class="logo"></a>
+            <span class="portal-badge">REGISTER</span>
+        </div>
+        <div class="nav-links">
+            <a href="ad-docs.html" class="nav-link"><i class="fas fa-book"></i> Ad Docs</a>
+            <a href="ad-portal.html" class="nav-link"><i class="fas fa-sign-in-alt"></i> Sign In</a>
+        </div>
+    </nav>
+
+    <div id="selectionScreen">
+        <div class="reg-hero">
+            <h1>Join the Wordeth Advertising Platform</h1>
+            <p>Choose the account type that best fits your needs. All applications are reviewed by our team to ensure a great experience for our partners and community.</p>
+        </div>
+
+        <div class="type-selector">
+            <div class="type-card" data-type="managed" onclick="selectType('managed')">
+                <span class="type-badge">Internal</span>
+                <div class="card-icon"><i class="fas fa-shield-alt"></i></div>
+                <h3>Wordeth Admin</h3>
+                <p>For internal Wordeth team members who manage advertising operations.</p>
+                <ul class="card-features">
+                    <li>Full admin dashboard access</li>
+                    <li>Approve/reject ads and applications</li>
+                    <li>Create ads for managed clients</li>
+                    <li>View analytics and performance</li>
+                </ul>
+            </div>
+
+            <div class="type-card" data-type="partner" onclick="selectType('partner')">
+                <span class="type-badge" style="background: #7c6aef;">Recommended</span>
+                <div class="card-icon"><i class="fas fa-handshake"></i></div>
+                <h3>Partner (White Glove)</h3>
+                <p>Our team manages your campaigns for you. Ideal for businesses wanting hands-on support.</p>
+                <ul class="card-features">
+                    <li>Dedicated account manager</li>
+                    <li>Campaign strategy and optimization</li>
+                    <li>Custom keyword targeting</li>
+                    <li>Performance reporting</li>
+                </ul>
+            </div>
+
+            <div class="type-card" data-type="self-serve" onclick="selectType('self-serve')">
+                <div class="card-icon"><i class="fas fa-rocket"></i></div>
+                <h3>Self-Serve</h3>
+                <p>Create and manage your own ad campaigns through our portal.</p>
+                <ul class="card-features">
+                    <li>Self-service ad creation</li>
+                    <li>Keyword targeting tools</li>
+                    <li>Real-time performance tracking</li>
+                    <li>Pause/resume campaigns anytime</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div id="formScreen" class="reg-form-container">
+        <h2 id="formTitle">Create Your Account</h2>
+        <p class="form-subtitle" id="formSubtitle">Fill out the application below. All fields marked with * are required.</p>
+
+        <div class="review-notice">
+            <i class="fas fa-info-circle"></i>
+            <p>All applications are reviewed by our advertising team at <strong>advertising@wordeth.com</strong>. You'll receive a response within <strong>48-72 hours</strong>. Once approved, you'll be able to sign in and start using the platform.</p>
+        </div>
+
+        <form id="registerForm" class="ad-form" style="max-width:100%;">
+            <input type="hidden" id="accountType" name="accountType" value="self-serve">
+
+            <h4 class="form-section-title"><i class="fas fa-user"></i> Account Information</h4>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Contact Name <span class="required">*</span></label>
+                    <input type="text" name="contactName" required placeholder="Your full name">
+                </div>
+                <div class="form-group">
+                    <label>Email <span class="required">*</span></label>
+                    <input type="email" name="email" required placeholder="you@company.com">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Password <span class="required">*</span></label>
+                    <input type="password" name="password" required minlength="8" placeholder="Minimum 8 characters">
+                </div>
+                <div class="form-group">
+                    <label>Confirm Password <span class="required">*</span></label>
+                    <input type="password" name="confirmPassword" required minlength="8" placeholder="Confirm your password">
+                </div>
+            </div>
+
+            <div id="adminCodeSection" class="admin-code-section">
+                <div class="form-group">
+                    <label>Admin Referral Code <span class="required">*</span></label>
+                    <input type="text" name="adminReferralCode" placeholder="Enter the code provided by your team lead">
+                    <small>You must have a referral code from an existing Wordeth admin to register as an admin.</small>
+                </div>
+            </div>
+
+            <h4 class="form-section-title"><i class="fas fa-building"></i> Business Information</h4>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Company / Brand Name <span class="required">*</span></label>
+                    <input type="text" name="companyName" required placeholder="Your company or brand">
+                </div>
+                <div class="form-group">
+                    <label>Phone</label>
+                    <input type="tel" name="phone" placeholder="(555) 123-4567">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Website</label>
+                <input type="url" name="website" placeholder="https://your-company.com">
+            </div>
+
+            <div class="form-group">
+                <label>Type of Business <span class="required">*</span></label>
+                <select name="businessType" required class="select-group">
+                    <option value="">Select your business type...</option>
+                    <option value="brand">Brand / Consumer Product</option>
+                    <option value="record-label">Record Label</option>
+                    <option value="independent-artist">Independent Artist / Manager</option>
+                    <option value="retailer">Retailer / E-Commerce</option>
+                    <option value="tech-company">Tech / App Company</option>
+                    <option value="event-promoter">Event Promoter / Venue</option>
+                    <option value="media-entertainment">Media / Entertainment</option>
+                    <option value="agency">Marketing / Ad Agency</option>
+                    <option value="nonprofit">Nonprofit / Cause</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-group" id="businessTypeOtherGroup" style="display:none;">
+                <label>Please specify <span class="required">*</span></label>
+                <input type="text" name="businessTypeOther" placeholder="Describe your business type">
+            </div>
+
+            <div class="form-group">
+                <label>Tell us about your business <span class="required">*</span></label>
+                <textarea name="businessDescription" required placeholder="Brief description of your company, what you offer, and how you connect to the music space..." style="min-height:100px;"></textarea>
+            </div>
+
+            <h4 class="form-section-title"><i class="fas fa-bullseye"></i> Campaign & Budget Details</h4>
+
+            <div class="form-group">
+                <label>Monthly Advertising Budget <span class="required">*</span></label>
+                <select name="monthlyBudget" required class="select-group">
+                    <option value="">Select your budget range...</option>
+                    <option value="under-500">Under $500/mo</option>
+                    <option value="500-2000">$500 - $2,000/mo</option>
+                    <option value="2000-5000">$2,000 - $5,000/mo</option>
+                    <option value="5000-10000">$5,000 - $10,000/mo</option>
+                    <option value="10000-25000">$10,000 - $25,000/mo</option>
+                    <option value="25000-plus">$25,000+/mo</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Campaign Goals <span class="required">*</span></label>
+                <div class="checkbox-group">
+                    <label class="checkbox-label"><input type="checkbox" name="campaignGoals" value="brand-awareness"><span>Brand Awareness</span></label>
+                    <label class="checkbox-label"><input type="checkbox" name="campaignGoals" value="website-traffic"><span>Website Traffic</span></label>
+                    <label class="checkbox-label"><input type="checkbox" name="campaignGoals" value="product-sales"><span>Product Sales</span></label>
+                    <label class="checkbox-label"><input type="checkbox" name="campaignGoals" value="event-promotion"><span>Event Promotion</span></label>
+                    <label class="checkbox-label"><input type="checkbox" name="campaignGoals" value="app-downloads"><span>App Downloads</span></label>
+                    <label class="checkbox-label"><input type="checkbox" name="campaignGoals" value="audience-growth"><span>Audience Growth</span></label>
+                    <label class="checkbox-label"><input type="checkbox" name="campaignGoals" value="other"><span>Other</span></label>
+                </div>
+            </div>
+            <div class="form-group" id="campaignGoalsOtherGroup" style="display:none;">
+                <label>Other campaign goals</label>
+                <input type="text" name="campaignGoalsOther" placeholder="Describe your goals">
+            </div>
+
+            <div class="form-group">
+                <label>Who is your target audience? <span class="required">*</span></label>
+                <textarea name="targetAudience" required placeholder="Describe your ideal customer: age range, interests, demographics, behaviors..." style="min-height:80px;"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Music genres your audience connects with</label>
+                <div class="checkbox-group">
+                    <label class="checkbox-label"><input type="checkbox" name="targetGenres" value="hip-hop"><span>Hip-Hop / Rap</span></label>
+                    <label class="checkbox-label"><input type="checkbox" name="targetGenres" value="r-and-b"><span>R&B / Soul</span></label>
+                    <label class="checkbox-label"><input type="checkbox" name="targetGenres" value="pop"><span>Pop</span></label>
+                    <label class="checkbox-label"><input type="checkbox" name="targetGenres" value="rock"><span>Rock</span></label>
+                    <label class="checkbox-label"><input type="checkbox" name="targetGenres" value="country"><span>Country</span></label>
+                    <label class="checkbox-label"><input type="checkbox" name="targetGenres" value="electronic"><span>Electronic / EDM</span></label>
+                    <label class="checkbox-label"><input type="checkbox" name="targetGenres" value="latin"><span>Latin / Reggaeton</span></label>
+                    <label class="checkbox-label"><input type="checkbox" name="targetGenres" value="indie"><span>Indie / Alternative</span></label>
+                    <label class="checkbox-label"><input type="checkbox" name="targetGenres" value="k-pop"><span>K-Pop</span></label>
+                    <label class="checkbox-label"><input type="checkbox" name="targetGenres" value="all"><span>All Genres</span></label>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Previous advertising experience <span class="required">*</span></label>
+                    <select name="previousAdvertising" required class="select-group">
+                        <option value="">Select...</option>
+                        <option value="yes-digital">Yes, digital advertising</option>
+                        <option value="yes-traditional">Yes, traditional advertising</option>
+                        <option value="yes-both">Yes, both digital and traditional</option>
+                        <option value="no">No, this would be our first</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>When do you want to start? <span class="required">*</span></label>
+                    <select name="expectedStartDate" required class="select-group">
+                        <option value="">Select...</option>
+                        <option value="immediately">Immediately</option>
+                        <option value="within-2-weeks">Within 2 weeks</option>
+                        <option value="within-month">Within a month</option>
+                        <option value="within-quarter">Within 3 months</option>
+                        <option value="exploring">Just exploring options</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Anything else you'd like us to know?</label>
+                <textarea name="additionalNotes" placeholder="Special requirements, questions, or additional context about your advertising needs..." style="min-height:80px;"></textarea>
+            </div>
+
+            <button type="submit" class="btn-primary btn-large" style="width:100%; margin-top: 1rem;">Submit Application</button>
+            <p id="registerError" class="error-message"></p>
+            <p style="text-align:center; margin-top:1rem;"><a href="#" onclick="goBackToSelection(); return false;" style="color:var(--text-secondary); font-size:0.85rem;">Back to account type selection</a></p>
+        </form>
+    </div>
+
+    <div id="successScreen" class="success-screen">
+        <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+        <h2>Application Submitted!</h2>
+        <p>Thank you for your interest in advertising on Wordeth. Your application has been received and will be reviewed by our team at <span class="email-highlight">advertising@wordeth.com</span>.</p>
+
+        <div class="timeline-info">
+            <h4>What happens next?</h4>
+            <div class="step-item">
+                <div class="step-num">1</div>
+                <div class="step-text">Our advertising team reviews your application (within <strong>48-72 hours</strong>)</div>
+            </div>
+            <div class="step-item">
+                <div class="step-num">2</div>
+                <div class="step-text">You'll receive an email at the address you provided with the decision</div>
+            </div>
+            <div class="step-item">
+                <div class="step-num">3</div>
+                <div class="step-text">Once approved, sign in at the <a href="ad-portal.html" style="color:var(--mint);">Ad Portal</a> or <a href="ad-admin.html" style="color:var(--mint);">Admin Panel</a> with your credentials</div>
+            </div>
+        </div>
+
+        <p>Have questions? Reach out to <span class="email-highlight">advertising@wordeth.com</span></p>
+        <a href="index.html" class="btn-primary" style="display:inline-block; margin-top:1rem; text-decoration:none;">Return to Wordeth</a>
+    </div>
+
+    <script src="js/cookie-consent.js"></script>
+    <script>
+        let selectedType = null;
+
+        function selectType(type) {
+            selectedType = type;
+            document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+            document.querySelector(`.type-card[data-type="${type}"]`).classList.add('selected');
+
+            document.getElementById('accountType').value = type;
+            document.getElementById('selectionScreen').style.display = 'none';
+            document.getElementById('formScreen').classList.add('visible');
+
+            const adminSection = document.getElementById('adminCodeSection');
+
+            if (type === 'managed') {
+                document.getElementById('formTitle').textContent = 'Wordeth Admin Application';
+                document.getElementById('formSubtitle').textContent = 'Apply for internal admin access. You need a referral code from an existing team member.';
+                adminSection.classList.add('visible');
+            } else if (type === 'partner') {
+                document.getElementById('formTitle').textContent = 'Partner Application (White Glove)';
+                document.getElementById('formSubtitle').textContent = 'Apply for managed advertising with our dedicated team handling your campaigns.';
+                adminSection.classList.remove('visible');
+            } else {
+                document.getElementById('formTitle').textContent = 'Self-Serve Application';
+                document.getElementById('formSubtitle').textContent = 'Apply to create and manage your own ad campaigns on Wordeth.';
+                adminSection.classList.remove('visible');
+            }
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function goBackToSelection() {
+            document.getElementById('formScreen').classList.remove('visible');
+            document.getElementById('selectionScreen').style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        document.querySelector('select[name="businessType"]').addEventListener('change', function() {
+            document.getElementById('businessTypeOtherGroup').style.display = this.value === 'other' ? 'block' : 'none';
+        });
+
+        document.querySelectorAll('input[name="campaignGoals"]').forEach(cb => {
+            cb.addEventListener('change', function() {
+                const otherChecked = document.querySelector('input[name="campaignGoals"][value="other"]').checked;
+                document.getElementById('campaignGoalsOtherGroup').style.display = otherChecked ? 'block' : 'none';
+            });
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const form = e.target;
+            const errorEl = document.getElementById('registerError');
+            errorEl.textContent = '';
+
+            if (form.password.value !== form.confirmPassword.value) {
+                errorEl.textContent = 'Passwords do not match.';
+                return;
+            }
+
+            const goals = Array.from(form.querySelectorAll('input[name="campaignGoals"]:checked')).map(cb => cb.value);
+            const genres = Array.from(form.querySelectorAll('input[name="targetGenres"]:checked')).map(cb => cb.value);
+
+            if (goals.length === 0) {
+                errorEl.textContent = 'Please select at least one campaign goal.';
+                return;
+            }
+
+            const data = {
+                contactName: form.contactName.value,
+                email: form.email.value,
+                password: form.password.value,
+                companyName: form.companyName.value,
+                phone: form.phone.value,
+                website: form.website.value,
+                accountType: form.accountType.value,
+                application: {
+                    businessType: form.businessType.value,
+                    businessTypeOther: form.businessTypeOther?.value || '',
+                    businessDescription: form.businessDescription.value,
+                    monthlyBudget: form.monthlyBudget.value,
+                    campaignGoals: goals,
+                    campaignGoalsOther: form.campaignGoalsOther?.value || '',
+                    targetAudience: form.targetAudience.value,
+                    targetGenres: genres,
+                    previousAdvertising: form.previousAdvertising.value,
+                    expectedStartDate: form.expectedStartDate.value,
+                    additionalNotes: form.additionalNotes?.value || ''
+                }
+            };
+
+            if (form.accountType.value === 'managed') {
+                data.application.adminReferralCode = form.adminReferralCode.value;
+            }
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+
+            try {
+                const res = await fetch('/api/ads/advertisers/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await res.json();
+
+                if (res.ok) {
+                    document.getElementById('formScreen').classList.remove('visible');
+                    document.getElementById('successScreen').classList.add('visible');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    errorEl.textContent = result.error || 'Registration failed. Please try again.';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit Application';
+                }
+            } catch (err) {
+                errorEl.textContent = 'Connection error. Please try again.';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Application';
+            }
+        });
+    </script>
+</body>
+</html>
