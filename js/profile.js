@@ -214,18 +214,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     `).join('');
                     break;
-                case 'annotations':
-                    listEl.innerHTML = data.map(item => `
-                        <div class="annotation-item">
-                            <h3>${escHtml(item.songTitle || '')}</h3>
-                            <p class="annotation-text">${escHtml(item.text || '')}</p>
-                            <div class="annotation-meta">
-                                <span>${item.likes || 0} likes</span>
-                                <span>${new Date(item.timestamp).toLocaleDateString()}</span>
-                            </div>
-                        </div>
-                    `).join('');
-                    break;
                 case 'friends':
                     listEl.innerHTML = data.map(f => `
                         <div class="friend-card">
@@ -259,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         els.deleteBtn.addEventListener('click', async () => {
             const confirmed = confirm('Are you sure you want to permanently delete your account? This cannot be undone.');
             if (!confirmed) return;
-            const doubleCheck = confirm('This will delete all your data including search history, annotations, and connections. Continue?');
+            const doubleCheck = confirm('This will delete all your data including search history and connections. Continue?');
             if (!doubleCheck) return;
 
             els.deleteBtn.disabled = true;
