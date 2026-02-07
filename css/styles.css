@@ -8,7 +8,7 @@
     --gradient-primary: linear-gradient(135deg, var(--purple-dark), var(--purple-accent));
 }
 
-* {
+*, *::before, *::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -317,6 +317,15 @@ footer {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    body {
+        overflow-x: hidden;
+    }
+
+    .main-nav {
+        padding: 0.75rem 1rem;
+        gap: 0.5rem;
+    }
+
     .nav-links {
         display: none;
         position: fixed;
@@ -333,13 +342,20 @@ footer {
         display: flex;
     }
 
-    .search-container,
-    .nav-auth { /* Keep auth button visible on mobile */
-        /* display: none; */
+    .search-container {
+        display: none;
+    }
+
+    .nav-auth {
+        display: none;
     }
 
     .menu-toggle {
         display: flex;
+    }
+
+    .audio-rooms-container {
+        overflow-x: hidden;
     }
 }
 
@@ -900,10 +916,6 @@ footer {
     transform: translateX(4px);
 }
 
-.search-container,
-.nav-auth { /* Hide auth button on mobile */
-    display: none;
-}
 
 .menu-toggle {
     display: none;

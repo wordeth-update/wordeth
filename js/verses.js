@@ -648,7 +648,12 @@ class AudioRoomsManager {
     // Chat Management
     toggleChat() {
         this.chatVisible = !this.chatVisible;
-        this.chatSection?.classList.toggle('hidden', !this.chatVisible);
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            this.chatSection?.classList.toggle('mobile-visible');
+        } else {
+            this.chatSection?.classList.toggle('hidden', !this.chatVisible);
+        }
         this.toggleChatBtn?.classList.toggle('active', this.chatVisible);
     }
 

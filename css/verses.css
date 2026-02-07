@@ -1289,69 +1289,6 @@
     font-size: 0.8rem;
 }
 
-/* Responsive Design Updates */
-@media (max-width: 768px) {
-    .hero-section {
-        flex-direction: column;
-        text-align: center;
-        padding: 2rem 1rem;
-        gap: 2rem;
-    }
-
-    .hero-title {
-        font-size: 2.5rem;
-    }
-
-    .hero-stats {
-        justify-content: center;
-    }
-
-    .hero-visual {
-        height: 300px;
-    }
-
-    .rooms-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-
-    .room-header {
-        flex-direction: column;
-        gap: 1rem;
-        text-align: center;
-    }
-
-    .room-actions {
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .video-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .room-controls {
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .control-btn {
-        width: 45px;
-        height: 45px;
-    }
-
-    .section-header {
-        flex-direction: column;
-        gap: 1rem;
-        text-align: center;
-    }
-
-    .filter-tabs {
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-}
 
 /* Additional Enhancements */
 .room-main {
@@ -1811,49 +1748,6 @@
     font-size: 0.8rem;
 }
 
-/* Responsive Design Updates */
-@media (max-width: 768px) {
-    .room-main {
-        flex-direction: column;
-    }
-
-    .chat-section {
-        width: 100%;
-        height: 200px;
-        border-left: none;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .filters-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .room-header {
-        flex-direction: column;
-        gap: 1rem;
-        text-align: center;
-    }
-
-    .room-actions {
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .video-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .room-controls {
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .control-btn {
-        width: 40px;
-        height: 40px;
-    }
-}
 
 /* ==========================================
    NEW FEATURES: Door Lock, Karaoke, Audio Filters
@@ -2311,13 +2205,6 @@
     margin-bottom: 0;
 }
 
-@media (max-width: 768px) {
-    .yt-float-panel {
-        width: 200px;
-        bottom: 80px;
-        right: 10px;
-    }
-}
 
 .karaoke-lyrics-container {
     background: rgba(0, 0, 0, 0.4);
@@ -2469,29 +2356,6 @@
     transition: width 0.3s ease;
 }
 
-/* Responsive for new features */
-@media (max-width: 768px) {
-    .audio-filters-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .karaoke-modal .modal-content {
-        max-height: 95vh;
-        margin: 0.5rem;
-    }
-
-    .karaoke-lyrics-container {
-        height: 200px;
-    }
-
-    .lyrics-line {
-        font-size: 1rem;
-    }
-
-    .lyrics-line.active {
-        font-size: 1.2rem;
-    }
-}
 
 /* ==========================================
    SCREEN SHARE FEATURE
@@ -2847,4 +2711,273 @@
 .recording-download-actions .btn-secondary:hover {
     border-color: #3EB489;
     color: #fff;
-} 
+}
+
+/* ========== MOBILE RESPONSIVE - CLUBHOUSE STYLE ========== */
+@media (max-width: 768px) {
+    /* Room Selection */
+    .hero-section {
+        flex-direction: column;
+        text-align: center;
+        padding: 1.5rem 1rem;
+        gap: 1rem;
+    }
+    .hero-title { font-size: 2rem; }
+    .hero-subtitle { font-size: 0.95rem; margin-bottom: 1.5rem; }
+    .hero-visual { display: none; }
+    .hero-stats { justify-content: center; gap: 1rem; }
+    .stat-number { font-size: 1.5rem; }
+    .stat-label { font-size: 0.75rem; }
+    .create-room-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 1rem;
+        font-size: 1rem;
+    }
+
+    .rooms-section { padding: 1rem; }
+    .section-header {
+        flex-direction: column;
+        gap: 0.75rem;
+        text-align: center;
+    }
+    .section-header h2 { font-size: 1.5rem; }
+    .filter-tabs {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 0.5rem;
+        justify-content: flex-start;
+    }
+    .filter-tab {
+        flex-shrink: 0;
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+    }
+    .rooms-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    .room-card { padding: 1rem; }
+    .room-info h3 { font-size: 1.1rem; }
+    .room-topic { font-size: 0.85rem; }
+    .room-actions { flex-direction: row; }
+
+    .friends-section { padding: 1rem; }
+    .friend-room { padding: 1rem; }
+    .friend-avatar { width: 45px; height: 45px; }
+    .friend-info h4 { font-size: 0.95rem; }
+    .friend-info p { font-size: 0.8rem; }
+
+    /* ===== AUDIO ROOM - CLUBHOUSE MOBILE ===== */
+    .audio-room {
+        height: 100vh;
+        height: -webkit-fill-available;
+        overflow: hidden;
+        position: relative;
+    }
+
+    /* Room Header - Compact */
+    .room-header {
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        text-align: center;
+    }
+    .room-title h2 { font-size: 1.1rem; }
+    .room-title p,
+    .topic-container { font-size: 0.8rem; }
+    .edit-topic-btn { display: none; }
+
+    /* Header action buttons - minimal on mobile */
+    .room-header .room-actions {
+        gap: 0.5rem;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        justify-content: center;
+        padding: 0;
+    }
+    .room-header .room-actions .action-btn {
+        padding: 0.5rem;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .room-header .room-actions .action-btn span,
+    .room-header .room-actions .action-btn .lock-text,
+    .room-header .room-actions .action-btn .karaoke-toggle-text,
+    .room-header .room-actions .action-btn .screenshare-toggle-text {
+        display: none;
+    }
+
+    /* Room Main - Full height minus header and controls */
+    .room-main {
+        flex-direction: column;
+        height: calc(100vh - 160px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Audio/Speakers Section */
+    .audio-section {
+        padding: 1rem;
+        gap: 1rem;
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .speakers-stage {
+        gap: 1.25rem;
+        padding: 1.25rem;
+        justify-content: center;
+    }
+
+    .avatar-ring {
+        width: 60px;
+        height: 60px;
+    }
+
+    .speaker-name { font-size: 0.8rem; }
+    .speaker-role { font-size: 0.65rem; }
+    .speaker-status {
+        width: 22px;
+        height: 22px;
+        font-size: 0.65rem;
+    }
+
+    .listeners-section { padding: 1rem; }
+    .listener-avatar { width: 38px; height: 38px; }
+
+    /* Chat - Slide up overlay on mobile */
+    .chat-section {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: 60vh;
+        z-index: 100;
+        border-left: none;
+        border-top: none;
+        border-radius: 20px 20px 0 0;
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+        background: linear-gradient(135deg, #1a1a2e 0%, #0a0a0a 100%);
+        box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+    }
+    .chat-section.hidden {
+        transform: translateY(100%);
+        width: 100%;
+    }
+    .chat-section.mobile-visible {
+        transform: translateY(0);
+    }
+    .chat-header {
+        padding: 1rem;
+        position: relative;
+    }
+    .chat-header::before {
+        content: '';
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 4px;
+        background: rgba(255,255,255,0.3);
+        border-radius: 2px;
+    }
+
+    /* Screen Share */
+    .screenshare-container {
+        margin: 0;
+        border-radius: 0;
+    }
+    #screenshare-video {
+        max-height: 200px;
+    }
+
+    /* ===== BOTTOM CONTROL PANEL - CLUBHOUSE STYLE ===== */
+    .room-controls {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 90;
+        padding: 1rem 1rem;
+        padding-bottom: calc(1rem + env(safe-area-inset-bottom, 16px));
+        background: linear-gradient(180deg, rgba(26,26,46,0.95) 0%, rgba(10,10,10,0.98) 100%);
+        border-radius: 20px 20px 0 0;
+        border-top: 1px solid rgba(150, 197, 176, 0.15);
+        box-shadow: 0 -8px 30px rgba(0,0,0,0.4);
+        gap: 0.75rem;
+        flex-wrap: nowrap;
+        justify-content: space-around;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+    .room-controls::before {
+        content: '';
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 4px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 2px;
+    }
+
+    .control-btn {
+        width: 48px;
+        height: 48px;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+
+    /* Modals on mobile */
+    .modal-content {
+        width: 95%;
+        margin: 1rem;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+
+    .karaoke-modal .modal-content {
+        max-height: 90vh;
+        margin: 0.5rem;
+    }
+
+    .audio-filters-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .karaoke-lyrics-container {
+        height: 180px;
+    }
+
+    .karaoke-video-section {
+        flex-direction: column;
+        align-items: center;
+    }
+    .karaoke-video-container {
+        width: 100%;
+        height: 200px;
+    }
+    .karaoke-video-controls {
+        flex-direction: row;
+        justify-content: center;
+    }
+
+    /* Float panel adjustments */
+    .yt-float-panel {
+        width: 180px;
+        bottom: 100px;
+        right: 8px;
+    }
+}
