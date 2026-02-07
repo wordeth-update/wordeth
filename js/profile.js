@@ -170,8 +170,8 @@ document.addEventListener('DOMContentLoaded', () => {
         input.onchange = async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            if (file.size > 2 * 1024 * 1024) {
-                showToast('Image must be under 2MB', true);
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('Image must be under 5MB', true);
                 return;
             }
             const formData = new FormData();

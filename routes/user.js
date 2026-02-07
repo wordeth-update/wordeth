@@ -9,10 +9,10 @@ const UsageEvent = require('../models/UsageEvent');
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-        fileSize: 2 * 1024 * 1024
+        fileSize: 5 * 1024 * 1024
     },
     fileFilter: (req, file, cb) => {
-        if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+        if (!file.mimetype.startsWith('image/')) {
             return cb(new Error('Please upload an image file'));
         }
         cb(null, true);
@@ -83,20 +83,28 @@ router.put('/profile', auth, async (req, res) => {
     }
 });
 
-router.post('/avatar', auth, upload.single('avatar'), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ message: 'No file uploaded' });
+router.post('/avatar', auth, (req, res) => {
+    upload.single('avatar')(req, res, async (err) => {
+        if (err) {
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).json({ message: 'Image must be under 5MB' });
+            }
+            return res.status(400).json({ message: err.message || 'Upload failed' });
         }
-        const base64 = req.file.buffer.toString('base64');
-        const dataUrl = `data:${req.file.mimetype};base64,${base64}`;
-        req.user.avatar = dataUrl;
-        await req.user.save();
-        res.json({ avatarUrl: dataUrl });
-    } catch (error) {
-        console.error('Avatar upload error:', error);
-        res.status(500).json({ message: 'Error uploading avatar' });
-    }
+        try {
+            if (!req.file) {
+                return res.status(400).json({ message: 'No file uploaded' });
+            }
+            const base64 = req.file.buffer.toString('base64');
+            const dataUrl = `data:${req.file.mimetype};base64,${base64}`;
+            req.user.avatar = dataUrl;
+            await req.user.save();
+            res.json({ avatarUrl: dataUrl });
+        } catch (error) {
+            console.error('Avatar upload error:', error);
+            res.status(500).json({ message: 'Error uploading avatar' });
+        }
+    });
 });
 
 // Get search history
