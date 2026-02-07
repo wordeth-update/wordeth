@@ -2740,6 +2740,115 @@
     color: #fff;
 }
 
+/* Host Approval Notifications */
+.host-notifications {
+    position: fixed;
+    top: 80px;
+    right: 1rem;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 380px;
+    pointer-events: none;
+}
+
+.host-notification {
+    background: linear-gradient(135deg, #1a1a2e 0%, #2d1b4e 100%);
+    border: 1px solid rgba(150, 197, 176, 0.3);
+    border-radius: 16px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    transform: translateX(120%);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    pointer-events: all;
+}
+
+.host-notification.visible {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.host-notification.dismissing {
+    transform: translateX(120%);
+    opacity: 0;
+}
+
+.host-notif-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--mint) 0%, var(--purple-accent) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--black);
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.host-notif-content {
+    flex: 1;
+    color: var(--white);
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.host-notif-content strong {
+    color: var(--mint);
+}
+
+.host-notif-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.notif-approve-btn {
+    background: var(--mint);
+    color: var(--black);
+    border: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.notif-approve-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(150, 197, 176, 0.3);
+}
+
+.notif-deny-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 0.75rem;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.notif-deny-btn:hover {
+    background: #dc3545;
+    border-color: #dc3545;
+    color: white;
+}
+
 /* ========== MOBILE RESPONSIVE - CLUBHOUSE STYLE ========== */
 @media (max-width: 768px) {
     /* Room Selection */
@@ -3006,5 +3115,20 @@
         width: 180px;
         bottom: 100px;
         right: 8px;
+    }
+
+    .host-notifications {
+        top: auto;
+        bottom: 100px;
+        right: 0.5rem;
+        left: 0.5rem;
+        max-width: 100%;
+    }
+    .host-notification {
+        padding: 0.75rem 1rem;
+    }
+    .host-notif-actions {
+        flex-direction: column;
+        gap: 0.25rem;
     }
 }

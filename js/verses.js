@@ -39,6 +39,7 @@ class AudioRoomsManager {
         this.karaokeCanvasCtx = null;
         this.karaokeEnabled = false; // Host/moderator permission for karaoke
         this.isRoomHost = false; // Track if current user created the room
+        this.pendingRequests = [];
         
         // Screen share state
         this.screenshareEnabled = false;
@@ -777,6 +778,12 @@ class AudioRoomsManager {
             const newRoom = await this.createRoomOnServer(roomData);
             this.hideAllModals();
             this.isRoomHost = true; // Mark as host since we created the room
+            
+            const roomNameEl = document.getElementById('room-name');
+            const currentSongEl = document.getElementById('current-song');
+            if (roomNameEl) roomNameEl.textContent = roomData.name || 'Untitled Room';
+            if (currentSongEl) currentSongEl.textContent = roomData.initialSong ? `Currently discussing: "${roomData.initialSong}"` : '';
+            
             this.joinRoom(newRoom.id, true); // Pass isHost flag
         } catch (error) {
             console.error('Error creating room:', error);
@@ -873,10 +880,7 @@ class AudioRoomsManager {
     updateRoomInfo(roomId) {
         const roomName = document.getElementById('room-name');
         const currentSong = document.getElementById('current-song');
-        
-        if (roomName) roomName.textContent = 'Hip-Hop Classics Deep Dive';
-        if (currentSong) currentSong.textContent = 'Currently discussing: "Lose Yourself" by Eminem';
-        if (this.participantCount) this.participantCount.textContent = '3 participants';
+        if (this.participantCount) this.participantCount.textContent = '1 participant';
     }
 
     toggleAudio() {
@@ -909,6 +913,64 @@ class AudioRoomsManager {
 
     notifyParticipants(event, data) {
         console.log('Notifying participants:', event, data);
+        
+        if (event === 'permission-request') {
+            this.handlePermissionRequest(data);
+        } else if (event === 'permission-approved') {
+            this.handlePermissionApproved(data);
+        } else if (event === 'permission-denied') {
+            this.handlePermissionDenied(data);
+        }
+    }
+    
+    handlePermissionApproved(data) {
+        const featureLabel = data.feature === 'karaoke' ? 'Karaoke' : 'Screen Share';
+        this.addChatMessage('System', `${data.userName}'s ${featureLabel} request was approved.`, true);
+        
+        if (data.feature === 'karaoke') {
+            this.karaokeModal?.classList.add('active');
+            if (!this.youtubeReady && window.YT && window.YT.Player) {
+                setTimeout(() => this.createYouTubePlayer(), 100);
+            }
+        } else if (data.feature === 'screenshare') {
+            this.startScreenShareAfterApproval();
+        }
+    }
+    
+    async startScreenShareAfterApproval() {
+        try {
+            this.screenshareStream = await navigator.mediaDevices.getDisplayMedia({
+                video: { cursor: 'always' },
+                audio: false
+            });
+            
+            const screenshareVideo = document.getElementById('screenshare-video');
+            const screenshareContainer = document.getElementById('screenshare-container');
+            const screenshareBtn = document.getElementById('screenshare-btn');
+            
+            if (screenshareVideo && this.screenshareStream) {
+                screenshareVideo.srcObject = this.screenshareStream;
+                screenshareContainer?.classList.remove('hidden');
+                screenshareBtn?.classList.add('sharing');
+                this.isScreenSharing = true;
+                
+                this.addChatMessage('System', 'You started sharing your screen.', true);
+                
+                this.screenshareStream.getVideoTracks()[0].onended = () => {
+                    this.stopScreenShare();
+                };
+            }
+        } catch (error) {
+            console.error('Screen share error:', error);
+            if (error.name !== 'NotAllowedError') {
+                this.addChatMessage('System', 'Failed to start screen sharing.', true);
+            }
+        }
+    }
+    
+    handlePermissionDenied(data) {
+        const featureLabel = data.feature === 'karaoke' ? 'Karaoke' : 'Screen Share';
+        this.addChatMessage('System', `${data.userName}'s ${featureLabel} request was denied.`, true);
     }
 
     leaveRoom() {
@@ -1248,14 +1310,21 @@ class AudioRoomsManager {
     // ==========================================
     
     showKaraokeModal() {
-        // Check if karaoke is enabled by host/moderator
-        if (!this.karaokeEnabled) {
-            this.addChatMessage('System', 'Karaoke is currently disabled. Ask the host to enable it.', true);
+        if (!this.isRoomHost) {
+            this.requestPermission('karaoke', 'A participant');
             return;
+        }
+        if (!this.karaokeEnabled) {
+            this.karaokeEnabled = true;
+            this.updateKaraokeButtonState();
+            const btn = document.getElementById('karaoke-toggle-btn');
+            const text = btn?.querySelector('.karaoke-toggle-text');
+            btn?.classList.add('active');
+            if (text) text.textContent = 'Karaoke: On';
+            this.addChatMessage('System', 'Karaoke mode enabled!', true);
         }
         this.karaokeModal?.classList.add('active');
         
-        // Retry YouTube player creation if not ready
         if (!this.youtubeReady) {
             if (window.YT && window.YT.Player) {
                 setTimeout(() => this.createYouTubePlayer(), 100);
@@ -1393,10 +1462,123 @@ class AudioRoomsManager {
         }
     }
     
+    requestPermission(feature, userName) {
+        const requestId = Date.now().toString();
+        const featureLabel = feature === 'karaoke' ? 'Karaoke' : 'Screen Share';
+        
+        this.addChatMessage('System', `Your ${featureLabel} request has been sent to the host.`, true);
+        
+        this.notifyParticipants('permission-request', {
+            requestId,
+            feature,
+            userName: userName || 'A participant',
+            userId: 'currentUser'
+        });
+    }
+    
+    handlePermissionRequest(data) {
+        if (!this.isRoomHost) return;
+        this.showHostApprovalNotification(data.requestId, data.feature, data.userName);
+    }
+    
+    showHostApprovalNotification(requestId, feature, userName) {
+        const container = document.getElementById('host-notifications');
+        if (!container) return;
+        
+        const featureLabel = feature === 'karaoke' ? 'Karaoke' : 'Screen Share';
+        const featureIcon = feature === 'karaoke' ? 'fa-compact-disc' : 'fa-desktop';
+        
+        const notification = document.createElement('div');
+        notification.className = 'host-notification';
+        notification.dataset.requestId = requestId;
+        notification.innerHTML = `
+            <div class="host-notif-icon"><i class="fas ${featureIcon}"></i></div>
+            <div class="host-notif-content">
+                <strong>${userName}</strong> wants to use <strong>${featureLabel}</strong>
+            </div>
+            <div class="host-notif-actions">
+                <button class="notif-approve-btn" onclick="window.audioRoomsManager?.approveRequest('${requestId}', '${feature}', '${userName}')">
+                    <i class="fas fa-check"></i> Allow
+                </button>
+                <button class="notif-deny-btn" onclick="window.audioRoomsManager?.denyRequest('${requestId}', '${feature}', '${userName}')">
+                    <i class="fas fa-times"></i> Deny
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.classList.add('visible');
+        }, 10);
+        
+        setTimeout(() => {
+            this.dismissNotification(requestId);
+        }, 30000);
+    }
+    
+    approveRequest(requestId, feature, userName) {
+        this.notifyParticipants('permission-approved', {
+            requestId,
+            feature,
+            userName
+        });
+        
+        if (feature === 'karaoke') {
+            if (!this.karaokeEnabled) {
+                this.karaokeEnabled = true;
+                const btn = document.getElementById('karaoke-toggle-btn');
+                const text = btn?.querySelector('.karaoke-toggle-text');
+                btn?.classList.add('active');
+                if (text) text.textContent = 'Karaoke: On';
+                this.updateKaraokeButtonState();
+            }
+        } else if (feature === 'screenshare') {
+            if (!this.screenshareEnabled) {
+                this.screenshareEnabled = true;
+                const btn = document.getElementById('screenshare-toggle-btn');
+                const text = btn?.querySelector('.screenshare-toggle-text');
+                btn?.classList.add('active');
+                if (text) text.textContent = 'Share: On';
+                this.updateScreenshareButtonState();
+            }
+        }
+        
+        this.dismissNotification(requestId);
+    }
+    
+    denyRequest(requestId, feature, userName) {
+        this.notifyParticipants('permission-denied', {
+            requestId,
+            feature,
+            userName
+        });
+        
+        this.dismissNotification(requestId);
+    }
+    
+    dismissNotification(requestId) {
+        const notification = document.querySelector(`.host-notification[data-request-id="${requestId}"]`);
+        if (notification) {
+            notification.classList.remove('visible');
+            notification.classList.add('dismissing');
+            setTimeout(() => notification.remove(), 300);
+        }
+    }
+
     async startScreenShare() {
-        if (!this.screenshareEnabled) {
-            this.addChatMessage('System', 'Screen sharing is disabled. Ask the host to enable it.', true);
+        if (!this.isRoomHost) {
+            this.requestPermission('screenshare', 'A participant');
             return;
+        }
+        if (!this.screenshareEnabled) {
+            this.screenshareEnabled = true;
+            this.updateScreenshareButtonState();
+            const btn = document.getElementById('screenshare-toggle-btn');
+            const text = btn?.querySelector('.screenshare-toggle-text');
+            btn?.classList.add('active');
+            if (text) text.textContent = 'Share: On';
+            this.addChatMessage('System', 'Screen sharing enabled!', true);
         }
         
         if (this.isScreenSharing) {
