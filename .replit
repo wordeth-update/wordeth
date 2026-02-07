@@ -12,6 +12,7 @@ integrations = ["javascript_object_storage:2.0.0"]
 [userenv.shared]
 NODE_ENV = "development"
 PORT = "5000"
+JWT_SECRET = "1a7c40046c7d7aa62490768869490de09cbc7911e017470a2e5a0fecab7715e9cc12e7166638b5e2e7038c3497d70a8803e70128e648bbf388c5ec06c7db0311"
 
 [workflows]
 runButton = "Project"
