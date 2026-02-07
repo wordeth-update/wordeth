@@ -2181,13 +2181,13 @@ class AudioRoomsManager {
             this.recordingCanvas = canvas;
             this.recordingCtx = canvas.getContext('2d');
 
-            const canvasStream = canvas.captureStream(30);
+            this.recordingStream = canvas.captureStream(30);
 
             let micStream = this.localStream;
             if (micStream) {
                 const audioTracks = micStream.getAudioTracks();
                 if (audioTracks.length > 0) {
-                    canvasStream.addTrack(audioTracks[0]);
+                    this.recordingStream.addTrack(audioTracks[0]);
                 }
             }
 
@@ -2206,7 +2206,7 @@ class AudioRoomsManager {
             }
 
             this.recordedChunks = [];
-            this.mediaRecorder = new MediaRecorder(canvasStream, {
+            this.mediaRecorder = new MediaRecorder(this.recordingStream, {
                 mimeType: selectedMime || undefined,
                 videoBitsPerSecond: 2500000
             });
@@ -2364,12 +2364,12 @@ class AudioRoomsManager {
         if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
             this.mediaRecorder.stop();
         }
-        if (this.recordingCanvas) {
-            const stream = this.recordingCanvas.captureStream(0);
-            stream.getTracks().forEach(t => t.stop());
-            this.recordingCanvas = null;
-            this.recordingCtx = null;
+        if (this.recordingStream) {
+            this.recordingStream.getTracks().forEach(t => t.stop());
+            this.recordingStream = null;
         }
+        this.recordingCanvas = null;
+        this.recordingCtx = null;
         this.updateRecordingUI(false);
     }
 
@@ -2408,7 +2408,9 @@ class AudioRoomsManager {
         const video = document.createElement('video');
         video.src = url;
         video.controls = true;
-        video.style.cssText = 'width:100%; max-height:300px; border-radius:8px; margin:1rem 0;';
+        video.preload = 'auto';
+        video.playsInline = true;
+        video.style.cssText = 'width:100%; max-height:300px; border-radius:12px; margin:1rem 0; background:#000;';
         card.appendChild(video);
 
         const actions = document.createElement('div');
