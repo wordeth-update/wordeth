@@ -2389,10 +2389,13 @@ class AudioRoomsManager {
         const card = document.createElement('div');
         card.className = 'recording-download-card';
 
-        const iconDiv = document.createElement('div');
-        iconDiv.className = 'recording-download-icon';
-        iconDiv.innerHTML = '<i class="fas fa-check-circle"></i>';
-        card.appendChild(iconDiv);
+        const logoDiv = document.createElement('div');
+        logoDiv.className = 'recording-download-logo';
+        const logoImg = document.createElement('img');
+        logoImg.src = '/images/logo.png';
+        logoImg.alt = 'Wordeth';
+        logoDiv.appendChild(logoImg);
+        card.appendChild(logoDiv);
 
         const h3 = document.createElement('h3');
         h3.textContent = 'Performance Recorded!';

@@ -2746,40 +2746,58 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.8);
+    background: radial-gradient(ellipse at center, rgba(30, 15, 60, 0.95) 0%, rgba(0, 0, 0, 0.95) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 10000;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(8px);
 }
 
 .recording-download-card {
-    background: #1a1a2e;
-    border: 1px solid #333;
-    border-radius: 16px;
-    padding: 2rem;
+    background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
+    border: 1px solid rgba(62, 180, 137, 0.25);
+    border-radius: 20px;
+    padding: 2rem 2rem 1.5rem;
     max-width: 480px;
     width: 90%;
     text-align: center;
-    animation: slideUp 0.3s ease;
+    animation: cardSlideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 0 40px rgba(62, 180, 137, 0.1), 0 0 80px rgba(124, 106, 239, 0.05);
 }
 
-@keyframes slideUp {
-    from { transform: translateY(30px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+@keyframes cardSlideUp {
+    from { transform: translateY(40px) scale(0.95); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
-.recording-download-icon {
-    font-size: 3rem;
-    color: #3EB489;
-    margin-bottom: 1rem;
+.recording-download-logo {
+    margin-bottom: 0.75rem;
+    animation: logoFloat 3s ease-in-out infinite;
+}
+
+.recording-download-logo img {
+    width: 120px;
+    height: auto;
+    filter: drop-shadow(0 4px 20px rgba(62, 180, 137, 0.3)) drop-shadow(0 0 40px rgba(124, 106, 239, 0.2));
+}
+
+@keyframes logoFloat {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(-8px) rotate(1deg); }
+    50% { transform: translateY(-4px) rotate(0deg); }
+    75% { transform: translateY(-10px) rotate(-1deg); }
 }
 
 .recording-download-card h3 {
     font-family: 'Poppins', sans-serif;
     margin-bottom: 0.5rem;
     color: #ffffff;
+    font-size: 1.3rem;
+    background: linear-gradient(90deg, #3EB489, #7c6aef);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .recording-download-card p {
@@ -2798,14 +2816,21 @@
 }
 
 .recording-download-actions .btn-primary {
-    background: #3EB489;
+    background: linear-gradient(135deg, #3EB489, #2d9a74);
     color: #0a0a0f;
     border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
+    padding: 0.75rem 1.75rem;
+    border-radius: 10px;
     font-weight: 600;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 15px rgba(62, 180, 137, 0.3);
+}
+
+.recording-download-actions .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(62, 180, 137, 0.45);
 }
 
 .recording-download-actions .btn-secondary {
@@ -2813,12 +2838,13 @@
     color: #aaa;
     border: 1px solid #444;
     padding: 0.75rem 1.5rem;
-    border-radius: 8px;
+    border-radius: 10px;
     cursor: pointer;
     font-size: 0.9rem;
+    transition: border-color 0.2s, color 0.2s;
 }
 
 .recording-download-actions .btn-secondary:hover {
-    border-color: #666;
+    border-color: #3EB489;
     color: #fff;
 } 
