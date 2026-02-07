@@ -33,7 +33,7 @@ class WordethAds {
     // Load ad inventory from server
     async loadAdInventory() {
         try {
-            const response = await fetch('/api/ads/inventory');
+            const response = await fetch(apiUrl('/api/ads/inventory'));
             if (response.ok) {
                 return await response.json();
             }
@@ -304,7 +304,7 @@ class WordethAds {
         };
         
         // Send to analytics
-        fetch('/api/ads/impression', {
+        fetch(apiUrl('/api/ads/impression'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(impressionData)
@@ -325,7 +325,7 @@ class WordethAds {
         };
         
         // Send to analytics
-        fetch('/api/ads/click', {
+        fetch(apiUrl('/api/ads/click'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(clickData)
@@ -367,7 +367,7 @@ class WordethAds {
             userId: this.userProfile.id || 'anonymous'
         };
         
-        fetch('/api/ads/pageview', {
+        fetch(apiUrl('/api/ads/pageview'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(pageData)

@@ -22,7 +22,7 @@ class ArticlesPageManager {
             this.showLoading(true);
             
             // Try to get all articles first
-            const response = await fetch('/api/articles');
+            const response = await fetch(apiUrl('/api/articles'));
             if (!response.ok) {
                 throw new Error('Failed to load articles');
             }
@@ -32,7 +32,7 @@ class ArticlesPageManager {
             
             if (this.articles.length === 0) {
                 // Fallback to featured articles if no articles found
-                const featuredResponse = await fetch('/api/articles/featured');
+                const featuredResponse = await fetch(apiUrl('/api/articles/featured'));
                 if (featuredResponse.ok) {
                     const featuredData = await featuredResponse.json();
                     this.articles = featuredData.articles || [];

@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function apiFetch(url, options = {}) {
         const headers = { 'Authorization': `Bearer ${token}`, ...options.headers };
-        const res = await fetch(url, { ...options, headers });
+        const res = await fetch(apiUrl(url), { ...options, headers });
         if (res.status === 401) {
             localStorage.removeItem('authToken');
             localStorage.removeItem('user');
@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (editNameStatus) { editNameStatus.textContent = 'Checking...'; editNameStatus.className = 'name-status checking'; }
         nameCheckTimeout = setTimeout(async () => {
             try {
-                const res = await fetch(`/api/user/check-name?name=${encodeURIComponent(val)}`);
+                const res = await fetch(apiUrl(`/api/user/check-name?name=${encodeURIComponent(val)}`));
                 const data = await res.json();
                 if (els.editName.value.trim() !== val) return;
                 if (editNameStatus) {
@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const formData = new FormData();
             formData.append('avatar', file);
             try {
-                const res = await fetch('/api/user/avatar', {
+                const res = await fetch(apiUrl('/api/user/avatar'), {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` },
                     body: formData

@@ -49,6 +49,14 @@ wordeth_test
 *.tar.gz
 *.zip
 
+# Mobile build output
+www/
+
+# Capacitor native build artifacts
+android/app/build/
+ios/App/Pods/
+ios/DerivedData/
+
 # Misc
 .cache/
 .temp/

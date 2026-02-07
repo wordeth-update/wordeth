@@ -15,7 +15,7 @@ if (signinForm) {
         submitBtn.textContent = 'Signing in...';
 
         try {
-            const response = await fetch('/api/auth/signin', {
+            const response = await fetch(apiUrl('/api/auth/signin'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -67,7 +67,7 @@ if (signupForm) {
         submitBtn.textContent = 'Creating account...';
 
         try {
-            const response = await fetch('/api/auth/signup', {
+            const response = await fetch(apiUrl('/api/auth/signup'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

@@ -11,10 +11,10 @@ class ArticlesManager {
     async loadFeaturedArticles() {
         try {
             // Try to get featured articles first
-            let response = await fetch('/api/articles/featured');
+            let response = await fetch(apiUrl('/api/articles/featured'));
             if (!response.ok) {
                 // Fallback to all articles if featured endpoint doesn't exist
-                response = await fetch('/api/articles');
+                response = await fetch(apiUrl('/api/articles'));
             }
             
             if (!response.ok) {

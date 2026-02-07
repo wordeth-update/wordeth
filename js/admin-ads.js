@@ -95,7 +95,7 @@ class AdminAds {
         };
         
         try {
-            const response = await fetch('/api/ads/admin/ad', {
+            const response = await fetch(apiUrl('/api/ads/admin/ad'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -124,7 +124,7 @@ class AdminAds {
     
     async loadAds() {
         try {
-            const response = await fetch('/api/ads/inventory');
+            const response = await fetch(apiUrl('/api/ads/inventory'));
             if (response.ok) {
                 const inventory = await response.json();
                 this.displayAds(inventory);
@@ -195,7 +195,7 @@ class AdminAds {
     
     async toggleAdStatus(adId) {
         try {
-            const response = await fetch(`/api/ads/admin/ad/${adId}`, {
+            const response = await fetch(apiUrl(`/api/ads/admin/ad/${adId}`), {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -221,7 +221,7 @@ class AdminAds {
         }
         
         try {
-            const response = await fetch(`/api/ads/admin/ad/${adId}`, {
+            const response = await fetch(apiUrl(`/api/ads/admin/ad/${adId}`), {
                 method: 'DELETE'
             });
             
@@ -239,7 +239,7 @@ class AdminAds {
     
     async loadAnalytics() {
         try {
-            const response = await fetch('/api/ads/analytics');
+            const response = await fetch(apiUrl('/api/ads/analytics'));
             if (response.ok) {
                 const analytics = await response.json();
                 this.displayAnalytics(analytics);

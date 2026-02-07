@@ -844,7 +844,7 @@ class AudioRoomsManager {
             this.initializeWebRTC();
             this.addChatMessage('System', 'Welcome to the room!', true);
 
-            fetch('/api/analytics/track', {
+            fetch(apiUrl('/api/analytics/track'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -935,7 +935,7 @@ class AudioRoomsManager {
     leaveRoom() {
         const duration = this.roomJoinTime ? Math.round((Date.now() - this.roomJoinTime) / 1000) : 0;
         if (this.currentRoom) {
-            fetch('/api/analytics/track', {
+            fetch(apiUrl('/api/analytics/track'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1712,7 +1712,7 @@ class AudioRoomsManager {
         }
         
         try {
-            const response = await fetch(`/api/lyrics/search?q=${encodeURIComponent(query)}`);
+            const response = await fetch(apiUrl(`/api/lyrics/search?q=${encodeURIComponent(query)}`));
             const data = await response.json();
             
             if (data.hits && data.hits.length > 0) {
@@ -1811,7 +1811,7 @@ class AudioRoomsManager {
         
         // Load lyrics - try API first, then LRCLIB fallback
         try {
-            const response = await fetch(`/api/lyrics/lyrics/${songId}`);
+            const response = await fetch(apiUrl(`/api/lyrics/lyrics/${songId}`));
             const data = await response.json();
             
             if (data.lyrics && data.lyrics.length > 50) {
@@ -2803,7 +2803,7 @@ class AudioRoomsManager {
     async searchYouTubeAudio(artist, title) {
         try {
             const query = `${artist} ${title}`;
-            const response = await fetch(`/api/lyrics/youtube-search?q=${encodeURIComponent(query)}`);
+            const response = await fetch(apiUrl(`/api/lyrics/youtube-search?q=${encodeURIComponent(query)}`));
             const data = await response.json();
             
             if (data.videoIds && data.videoIds.length > 0) {

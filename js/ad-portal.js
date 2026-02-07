@@ -15,7 +15,7 @@ class AdPortal {
 
     async verifyToken() {
         try {
-            const response = await fetch('/api/ads/advertisers/profile', {
+            const response = await fetch(apiUrl('/api/ads/advertisers/profile'), {
                 headers: { 'Authorization': `Bearer ${this.token}` }
             });
 
@@ -85,7 +85,7 @@ class AdPortal {
         const password = form.password.value;
 
         try {
-            const response = await fetch('/api/ads/advertisers/login', {
+            const response = await fetch(apiUrl('/api/ads/advertisers/login'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
@@ -135,7 +135,7 @@ class AdPortal {
         };
 
         try {
-            const response = await fetch('/api/ads/create', {
+            const response = await fetch(apiUrl('/api/ads/create'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -182,7 +182,7 @@ class AdPortal {
 
     async loadMyAds() {
         try {
-            const response = await fetch('/api/ads/my-ads', {
+            const response = await fetch(apiUrl('/api/ads/my-ads'), {
                 headers: { 'Authorization': `Bearer ${this.token}` }
             });
 
@@ -251,7 +251,7 @@ class AdPortal {
 
     async toggleAd(adId, newStatus) {
         try {
-            const response = await fetch(`/api/ads/update/${adId}`, {
+            const response = await fetch(apiUrl(`/api/ads/update/${adId}`), {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

@@ -1,55 +1,204 @@
 # Wordeth - Social Music Experience Platform
 
 ## Overview
-Wordeth is a social music experience platform designed to create a vibrant, interactive community around music. It enables users to deeply engage with music through lyric exploration, live audio discussions, personalized merchandise, curated articles, and social connections. The platform aims to be a central hub for music enthusiasts, fostering engagement and offering unique ways to interact with their favorite artists and songs.
-
-### Key Capabilities:
-- **Lyric Discovery & Interaction**: Search and view song lyrics, with advanced features like karaoke mode and performance recording.
-- **Live Audio Discussions ("Verses")**: Participate in real-time audio rooms inspired by Twitter Spaces/Clubhouse, fostering community and discussion.
-- **Personalized Merchandise**: Customize and order unique music-related merchandise, including a "Lyrics-to-Merch" feature.
-- **Curated Content**: Read and discuss music articles.
-- **Social Connection**: Connect with other music enthusiasts and artists.
-- **Usage Metrics & Analytics**: Comprehensive system for audience insights, historical trends, and ad campaign performance.
-- **Privacy & Compliance**: Robust privacy features including cookie consent, terms/privacy policies, and data management tools.
-
-## User Preferences
-- Audio rooms preferred over video rooms (Twitter Spaces / Clubhouse style)
+Wordeth is a social music experience platform that creates an interactive community around music. Users can search and explore song lyrics (with karaoke mode), participate in live audio discussion rooms called "Verses", customize and order music-related merchandise, read curated music articles, and connect with other music enthusiasts. The platform includes a self-serve advertising system, usage analytics, and privacy/compliance tools.
 
 ## System Architecture
 
-### Core Design Principles
-- **Community-Centric**: Features are built to encourage interaction and shared experiences around music.
-- **Scalable Backend**: Node.js with Express.js for efficient API handling and real-time features.
-- **Rich Frontend Experience**: Static HTML/CSS/JS with modern UI/UX design (CSS Grid, modern typography, smooth transitions).
-- **Data-Driven Insights**: Integrated analytics for understanding user behavior and platform performance.
-- **Privacy by Design**: Comprehensive features for user data control and compliance.
+### Frontend (Mobile + Web)
+- **Technology**: Static HTML pages with vanilla CSS and JavaScript, wrapped with Capacitor for iOS and Android
+- **App ID**: `com.wordeth.app`
+- **API Config**: All API calls use `js/config.js` which provides `apiUrl()` function. Set `window.WORDETH_API_BASE` or use the build script to configure the backend URL.
+- **Pages**: index.html (home), verses.html (audio rooms), lyrics.html (lyric search), merch.html (merchandise), articles.html, signin.html, signup.html, profile.html, plus admin pages for ads and analytics
+- **Styling**: CSS custom properties with dark color scheme (black/purple/mint palette). Mobile-responsive with hamburger menu.
+- **Design**: Fonts from Google Fonts (Inter, Poppins). Icons from Font Awesome.
 
-### Technical Implementations & Features
-- **Authentication**: Email/password signup+signin with JWT tokens (7-day expiry), bcrypt password hashing, token verification middleware. OAuth stubs for Twitter/Instagram/Facebook (not yet active). JWT_SECRET stored as a proper secret. Auto-redirect to signin on 401. Nav updates dynamically for logged-in/logged-out state.
-- **User Profiles**: Full profile page with avatar upload (multer, 5MB limit), name/bio editing, tabbed views (history, annotations, friends, merch, settings), account deletion with double confirmation.
-- **Verses (Live Audio Rooms)**: Twitter Spaces/Clubhouse style audio discussions with features like host controls (door lock, karaoke enablement), participant interaction (hand-raise), audio filters (voice effects), and screen sharing.
-- **Karaoke Mode**: Synchronized scrolling lyrics from multiple sources (Musixmatch, LRCLIB, Lyrics.ovh), YouTube audio integration, and advanced features like Mic Tempo Sync for dynamic lyric scrolling based on vocal activity.
-- **Performance Recording**: Capture karaoke performances with video camera, video filters, lyrics overlay, and Wordeth branding for social sharing (optimized for TikTok/Reels/Shorts). Includes ffmpeg.wasm (single-threaded core) for MP4 conversion.
-- **Merchandise System**: Integration with InkSoft for artist-specific stores, merchandise customization, and a "Lyrics-to-Merch" feature.
-- **Advertising System**: Contextual keyword-based advertising on lyric search pages, with a robust registration, admin approval, and advertiser portal system.
-- **Usage Metrics & Archival**: Real-time event tracking, audience segmentation, genre propensity analysis, and aggregation for long-term storage in AWS S3, visualized in an admin dashboard with historical trends.
-- **Privacy & Compliance**: Cookie consent management, explicit agreement to Terms of Service and Privacy Policy during signup, user self-deletion, and admin tools for data flushing.
-- **Security**: JWT + OAuth for authentication, Content Security Policy, and trust proxy configuration.
-- **UI/UX**: Consistent navigation across desktop and mobile, enhanced CSS for modern aesthetics, and SVG product images for merch.
+### Backend
+- **Technology**: Node.js with Express.js (`server.js` is the entry point)
+- **Run**: `node server.js` (binds to PORT env var, defaults to 5000)
+- **API Routes** (all under `/api/`):
+  - `/api/auth` — signup, signin (JWT-based)
+  - `/api/user` — profile management, avatar upload (base64 in MongoDB, 5MB limit), unique username enforcement
+  - `/api/lyrics` — lyric search (Genius + Musixmatch + LRCLIB + Lyrics.ovh)
+  - `/api/merch` — merchandise system
+  - `/api/articles` — article content
+  - `/api/ads` — advertising system (advertiser registration, ad CRUD, admin approval)
+  - `/api/analytics` — usage metrics and S3 archival
+- **Security**: Helmet CSP headers, express-rate-limit (100 req/15min), CORS
 
-### Technology Stack
-- **Backend**: Node.js, Express.js
-- **Database**: MongoDB (Mongoose ORM)
-- **Frontend**: HTML, CSS (CSS Grid, enhanced.css), JavaScript (Web Audio API, WebRTC, MediaRecorder API, ffmpeg.wasm)
-- **Cloud**: AWS S3 for historical data archival
+### Database
+- **Technology**: MongoDB with Mongoose ODM
+- **Connection**: Built from `MONGODB_USERNAME` and `MONGODB_PASSWORD` env vars (Atlas), or `MONGODB_URI` directly
+- **Models**: User, Ad, Advertiser, AdApplication, UsageEvent
 
-## External Dependencies
+### Authentication
+- JWT tokens with 7-day expiry, stored in localStorage
+- bcrypt for password hashing
+- Unique usernames enforced case-insensitively
+- Separate auth flows for users and advertisers
 
-- **Musixmatch API**: Primary source for song lyrics and search.
-- **LRCLIB / Lyrics.ovh**: Fallback sources for synchronized lyrics.
-- **YouTube**: Audio/video playback integration for karaoke.
-- **InkSoft**: Platform for merchandise customization and artist stores.
-- **AWS S3**: Cloud storage for historical analytics data.
-- **MongoDB Atlas**: Cloud-hosted database for application data.
-- **Twitter, Instagram, Facebook**: OAuth integrations for authentication.
-- **Google Fonts**: For enhanced typography.
+### Key Features
+- **Verses (Audio Rooms)**: WebRTC-based with Web Audio API for audio filters, YouTube integration for karaoke, MediaRecorder for performance recording
+- **Lyrics**: Multi-source lyric search (Genius API primary, Musixmatch, LRCLIB, Lyrics.ovh fallbacks)
+- **Karaoke**: Synchronized scrolling lyrics, YouTube audio, mic tempo sync, performance recording with video filters and Wordeth branding
+- **Advertising**: Contextual keyword-based ads on lyrics pages, self-serve portal with admin approval
+- **Analytics**: Event tracking with admin dashboard, AWS S3 archival for historical data
+- **Privacy**: Cookie consent, GDPR/CCPA compliance tools, user account deletion
+
+## Environment Variables Required
+
+### Required
+- `MONGODB_USERNAME` — MongoDB Atlas username
+- `MONGODB_PASSWORD` — MongoDB Atlas password
+- `JWT_SECRET` — Secret for JWT signing
+- `GENIUS_ACCESS_TOKEN` — For lyrics search (primary source)
+
+### Optional
+- `PORT` — Server port (defaults to 5000)
+- `MUSIXMATCH_API_KEY` — For supplementary lyrics
+- `YOUTUBE_API_KEY` — For YouTube search in karaoke
+- `AWS_ACCESS_KEY_ID` — For S3 analytics archival
+- `AWS_SECRET_ACCESS_KEY` — For S3 analytics archival
+- `AWS_S3_BUCKET` — S3 bucket name for archival
+- `AWS_REGION` — AWS region (defaults to us-east-1)
+
+## NPM Dependencies
+
+### Runtime
+- express, mongoose, bcryptjs, jsonwebtoken, cors, helmet, express-rate-limit, express-validator, dotenv, axios, multer, @aws-sdk/client-s3
+
+### Mobile (Capacitor)
+- @capacitor/core, @capacitor/cli, @capacitor/ios, @capacitor/android, @capacitor/camera, @capacitor/status-bar, @capacitor/splash-screen, @capacitor/network, @capacitor/app
+
+### Dev
+- nodemon, jest, supertest
+
+## Mobile App Build
+
+### Prerequisites
+- Node.js 18+
+- For iOS: Mac with Xcode 15+, CocoaPods
+- For Android: Android Studio with SDK 33+
+
+### Build Steps
+
+1. Set your backend URL:
+   ```bash
+   export WORDETH_API_URL=https://your-deployed-backend.com
+   ```
+
+2. Build the frontend and sync to native projects:
+   ```bash
+   npm run mobile:build
+   ```
+
+3. Open in IDE:
+   ```bash
+   npx cap open ios      # Opens Xcode
+   npx cap open android  # Opens Android Studio
+   ```
+
+4. Build and run from the IDE, or archive for store submission.
+
+### App Store Submission
+- **Bundle ID**: com.wordeth.app
+- **Permissions required**: Camera (profile photos), Microphone (Verses audio rooms), Photo Library (profile images)
+- **iOS**: Archive in Xcode → Upload to App Store Connect
+- **Android**: Generate signed APK/AAB in Android Studio → Upload to Google Play Console
+
+### Updating the App
+For backend/API changes: Deploy the backend — changes take effect immediately.
+For frontend/UI changes:
+```bash
+npm run mobile:build
+npx cap open ios      # or android
+```
+Then rebuild and submit an update through the app store.
+
+## Standalone Backend Deployment
+
+The backend is a standard Node.js/Express app and can run anywhere:
+
+### Option 1: Railway (recommended for simplicity)
+1. Push code to GitHub
+2. Connect Railway to the repo
+3. Set environment variables in Railway dashboard
+4. Railway auto-deploys on push
+
+### Option 2: DigitalOcean App Platform
+1. Connect GitHub repo
+2. Set run command: `node server.js`
+3. Add environment variables
+4. Deploy
+
+### Option 3: AWS EC2 / Any VPS
+1. Clone repo on server
+2. `npm install --production`
+3. Set environment variables
+4. Run with PM2: `pm2 start server.js --name wordeth`
+5. Set up Nginx reverse proxy for HTTPS
+
+### Option 4: Render
+1. Connect GitHub repo
+2. Set build command: `npm install`
+3. Set start command: `node server.js`
+4. Add environment variables
+
+All options require a MongoDB Atlas database (already configured) and the environment variables listed above.
+
+## Project Structure
+```
+wordeth/
+├── server.js              # Express server entry point
+├── capacitor.config.json  # Capacitor mobile config
+├── package.json
+├── wordeth.md             # This file
+│
+├── js/                    # Frontend JavaScript
+│   ├── config.js          # API base URL config (used by all files)
+│   ├── auth.js            # Sign in/sign up logic
+│   ├── nav-auth.js        # Navigation auth state
+│   ├── profile.js         # User profile management
+│   ├── lyrics.js          # Lyrics search page
+│   ├── verses.js          # Audio rooms (Verses)
+│   ├── articles.js        # Articles homepage
+│   ├── articles-page.js   # Articles listing
+│   ├── ad-portal.js       # Advertiser portal
+│   ├── ad-admin.js        # Ad admin dashboard
+│   ├── admin-ads.js       # Ad management
+│   ├── admin-usage.js     # Usage analytics admin
+│   ├── advertising.js     # Ad display/tracking
+│   ├── cookie-consent.js  # Cookie consent banner
+│   └── wordeth-ads-sdk.js # Ads SDK
+│
+├── css/                   # Stylesheets
+├── assets/                # SVG logos and product images
+├── images/                # Additional images
+│
+├── routes/                # Express API routes
+│   ├── auth.js, user.js, lyrics.js, merch.js
+│   ├── articles.js, ads.js, analytics.js
+│
+├── models/                # Mongoose models
+│   ├── User.js, Ad.js, Advertiser.js
+│   ├── AdApplication.js, UsageEvent.js
+│
+├── middleware/            # Express middleware
+│   ├── auth.js            # JWT verification
+│   └── tracking.js        # Usage event tracking
+│
+├── services/              # Business logic services
+│   ├── archiver.js        # S3 analytics archival
+│   └── inksoft/           # InkSoft merch integration
+│
+├── scripts/               # Build and utility scripts
+│   ├── build-mobile.js    # Builds www/ for Capacitor
+│   ├── deploy.sh          # Deployment script
+│   ├── setup-local-env.js # Local env setup
+│   └── validate-env.js    # Env var validation
+│
+├── ios/                   # Capacitor iOS project
+├── android/               # Capacitor Android project
+├── www/                   # Built frontend (generated, gitignored)
+└── tests/                 # Jest test files
+```

@@ -56,7 +56,7 @@ async function performSearch(query) {
 
     try {
         console.log('Searching for:', query);
-        const response = await fetch(`/api/lyrics/search?q=${encodeURIComponent(query)}`);
+        const response = await fetch(apiUrl(`/api/lyrics/search?q=${encodeURIComponent(query)}`));
         console.log('Search response status:', response.status);
         
         if (!response.ok) {
@@ -155,7 +155,7 @@ async function showLyricsModal(songId) {
     
     try {
         console.log('Fetching lyrics for song ID:', songId);
-        const response = await fetch(`/api/lyrics/lyrics/${songId}`);
+        const response = await fetch(apiUrl(`/api/lyrics/lyrics/${songId}`));
         console.log('Lyrics response status:', response.status);
         
         if (!response.ok) {
@@ -374,7 +374,7 @@ const footerAdContainer = document.getElementById('footer-ad');
 
 async function fetchMatchingAds(searchQuery) {
     try {
-        const response = await fetch(`/api/ads/match?q=${encodeURIComponent(searchQuery)}`);
+        const response = await fetch(apiUrl(`/api/ads/match?q=${encodeURIComponent(searchQuery)}`));
         if (!response.ok) return;
         
         const data = await response.json();
@@ -415,12 +415,12 @@ function displayAd(container, ad) {
 
 function trackAdImpression(adId) {
     if (!adId) return;
-    fetch(`/api/ads/impression/${adId}`, { method: 'POST' }).catch(() => {});
+    fetch(apiUrl(`/api/ads/impression/${adId}`), { method: 'POST' }).catch(() => {});
 }
 
 function trackAdClick(adId) {
     if (!adId) return;
-    fetch(`/api/ads/click/${adId}`, { method: 'POST' }).catch(() => {});
+    fetch(apiUrl(`/api/ads/click/${adId}`), { method: 'POST' }).catch(() => {});
 }
 
 function hideAds() {
@@ -440,7 +440,7 @@ async function fetchModalAds(title, artist) {
         const query = `${title} ${artist}`.trim();
         if (!query) return;
         
-        const response = await fetch(`/api/ads/match-modal?q=${encodeURIComponent(query)}`);
+        const response = await fetch(apiUrl(`/api/ads/match-modal?q=${encodeURIComponent(query)}`));
         if (!response.ok) return;
         
         const data = await response.json();

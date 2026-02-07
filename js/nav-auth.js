@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function verifyToken(t) {
         try {
-            const res = await fetch('/api/auth/verify', {
+            const res = await fetch(apiUrl('/api/auth/verify'), {
                 headers: { 'Authorization': `Bearer ${t}` }
             });
             if (res.ok) {

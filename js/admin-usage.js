@@ -1,5 +1,5 @@
 let authToken = null;
-const API_BASE = '';
+const API_BASE = WORDETH_CONFIG.API_BASE;
 const SEGMENT_COLORS = {
     lyrics: '#4ECDC4',
     community: '#FFD93D',

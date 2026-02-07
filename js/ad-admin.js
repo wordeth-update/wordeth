@@ -19,7 +19,7 @@ class AdAdmin {
 
     async verifyToken() {
         try {
-            const response = await fetch('/api/ads/advertisers/profile', {
+            const response = await fetch(apiUrl('/api/ads/advertisers/profile'), {
                 headers: { 'Authorization': `Bearer ${this.token}` }
             });
 
@@ -84,7 +84,7 @@ class AdAdmin {
         const password = form.password.value;
 
         try {
-            const response = await fetch('/api/ads/advertisers/login', {
+            const response = await fetch(apiUrl('/api/ads/advertisers/login'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
@@ -140,9 +140,9 @@ class AdAdmin {
 
         try {
             const [analyticsRes, partnersRes, appsRes] = await Promise.all([
-                fetch('/api/ads/admin/analytics', { headers: { 'Authorization': `Bearer ${this.token}` } }),
-                fetch('/api/ads/admin/all-advertisers', { headers: { 'Authorization': `Bearer ${this.token}` } }),
-                fetch('/api/ads/admin/pending-applications', { headers: { 'Authorization': `Bearer ${this.token}` } })
+                fetch(apiUrl('/api/ads/admin/analytics'), { headers: { 'Authorization': `Bearer ${this.token}` } }),
+                fetch(apiUrl('/api/ads/admin/all-advertisers'), { headers: { 'Authorization': `Bearer ${this.token}` } }),
+                fetch(apiUrl('/api/ads/admin/pending-applications'), { headers: { 'Authorization': `Bearer ${this.token}` } })
             ]);
 
             if (analyticsRes.ok) {
@@ -203,7 +203,7 @@ class AdAdmin {
 
     async loadApplicationCount() {
         try {
-            const response = await fetch('/api/ads/admin/pending-applications', {
+            const response = await fetch(apiUrl('/api/ads/admin/pending-applications'), {
                 headers: { 'Authorization': `Bearer ${this.token}` }
             });
             if (response.ok) {
@@ -219,7 +219,7 @@ class AdAdmin {
 
     async loadApplications() {
         try {
-            const response = await fetch('/api/ads/admin/pending-applications', {
+            const response = await fetch(apiUrl('/api/ads/admin/pending-applications'), {
                 headers: { 'Authorization': `Bearer ${this.token}` }
             });
 
@@ -298,7 +298,7 @@ class AdAdmin {
         let reviewNotes = prompt('Add review notes (optional):') || '';
 
         try {
-            const response = await fetch(`/api/ads/admin/approve-application/${id}`, {
+            const response = await fetch(apiUrl(`/api/ads/admin/approve-application/${id}`), {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -326,7 +326,7 @@ class AdAdmin {
         if (reviewNotes === null) return;
 
         try {
-            const response = await fetch(`/api/ads/admin/reject-application/${id}`, {
+            const response = await fetch(apiUrl(`/api/ads/admin/reject-application/${id}`), {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -351,7 +351,7 @@ class AdAdmin {
 
     async loadPartners() {
         try {
-            const response = await fetch('/api/ads/admin/all-advertisers', {
+            const response = await fetch(apiUrl('/api/ads/admin/all-advertisers'), {
                 headers: { 'Authorization': `Bearer ${this.token}` }
             });
 
@@ -405,7 +405,7 @@ class AdAdmin {
             let url = '/api/ads/admin/all-ads';
             if (status) url += `?status=${status}`;
 
-            const response = await fetch(url, {
+            const response = await fetch(apiUrl(url), {
                 headers: { 'Authorization': `Bearer ${this.token}` }
             });
 
@@ -458,7 +458,7 @@ class AdAdmin {
 
     async approveAd(adId) {
         try {
-            const response = await fetch(`/api/ads/admin/approve/${adId}`, {
+            const response = await fetch(apiUrl(`/api/ads/admin/approve/${adId}`), {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${this.token}` }
             });
@@ -479,7 +479,7 @@ class AdAdmin {
     async rejectAd(adId) {
         const reason = prompt('Reason for rejection (optional):');
         try {
-            const response = await fetch(`/api/ads/admin/reject/${adId}`, {
+            const response = await fetch(apiUrl(`/api/ads/admin/reject/${adId}`), {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -523,7 +523,7 @@ class AdAdmin {
         };
 
         try {
-            const response = await fetch('/api/ads/admin/upload-for-client', {
+            const response = await fetch(apiUrl('/api/ads/admin/upload-for-client'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -553,7 +553,7 @@ class AdAdmin {
         const form = e.target;
 
         try {
-            const response = await fetch('/api/ads/admin/create-admin', {
+            const response = await fetch(apiUrl('/api/ads/admin/create-admin'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
