@@ -2175,6 +2175,15 @@ class AudioRoomsManager {
         }
 
         try {
+            const logoImg = new Image();
+            logoImg.crossOrigin = 'anonymous';
+            logoImg.src = '/images/logo.png';
+            await new Promise((resolve) => {
+                logoImg.onload = resolve;
+                logoImg.onerror = resolve;
+            });
+            this.recordingLogo = logoImg.complete && logoImg.naturalWidth > 0 ? logoImg : null;
+
             const canvas = document.createElement('canvas');
             canvas.width = 720;
             canvas.height = 1280;
@@ -2284,26 +2293,53 @@ class AudioRoomsManager {
                 ctx.fillText(songArtist, canvas.width / 2, lyricsY - 20);
             }
 
-            ctx.fillStyle = 'rgba(62, 180, 137, 0.9)';
-            ctx.fillRect(0, canvas.height - 70, canvas.width, 70);
-            ctx.fillStyle = '#0a0a0f';
-            ctx.font = 'bold 30px Poppins, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('WORDETH', canvas.width / 2, canvas.height - 32);
-            ctx.fillStyle = '#0a0a0f';
-            ctx.font = '14px Inter, sans-serif';
-            ctx.fillText('wordeth.com', canvas.width / 2, canvas.height - 14);
-
             const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
-            const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
-            const secs = String(elapsed % 60).padStart(2, '0');
-            ctx.fillStyle = 'rgba(220, 38, 38, 0.9)';
-            const recW = 100;
-            ctx.fillRect(canvas.width - recW - 16, 8, recW, 28);
+            const bobOffset = Math.sin(elapsed * 0.8) * 4;
+
+            if (this.recordingLogo) {
+                const logoSize = 70;
+                const logoX = canvas.width - logoSize - 20;
+                const logoY = 16 + bobOffset;
+                ctx.save();
+                ctx.globalAlpha = 0.7;
+                ctx.drawImage(this.recordingLogo, logoX, logoY, logoSize, logoSize);
+                ctx.restore();
+            }
+
+            ctx.save();
+            ctx.globalAlpha = 0.6;
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 14px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(`⏺ ${mins}:${secs}`, canvas.width - recW / 2 - 16, 27);
+            ctx.font = 'bold 22px Poppins, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText('@wordeth', canvas.width - 20, 110 + bobOffset);
+            ctx.restore();
+
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.6)';
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+            ctx.save();
+            ctx.globalAlpha = 0.8;
+            if (this.recordingLogo) {
+                ctx.drawImage(this.recordingLogo, 16, canvas.height - 42, 34, 34);
+            }
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 18px Poppins, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('Wordeth', 58, canvas.height - 20);
+            ctx.fillStyle = '#3EB489';
+            ctx.font = '13px Inter, sans-serif';
+            ctx.fillText('wordeth.com', 58, canvas.height - 6);
+            ctx.restore();
+
+            if (songTitle) {
+                ctx.save();
+                ctx.globalAlpha = 0.7;
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '14px Inter, sans-serif';
+                ctx.textAlign = 'right';
+                const displayTitle = songTitle.length > 30 ? songTitle.substring(0, 30) + '...' : songTitle;
+                ctx.fillText(`♫ ${displayTitle}`, canvas.width - 16, canvas.height - 18);
+                ctx.restore();
+            }
 
             this.recordingRAF = requestAnimationFrame(renderFrame);
         };
