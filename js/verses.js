@@ -2174,6 +2174,16 @@ class AudioRoomsManager {
             return;
         }
 
+        if (!this.localStream || this.localStream.getAudioTracks().length === 0) {
+            try {
+                this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                this.addChatMessage('System', 'Microphone enabled for recording.', true);
+            } catch (e) {
+                console.warn('Could not get microphone for recording:', e);
+                this.addChatMessage('System', 'Recording without microphone — grant mic access for audio.', true);
+            }
+        }
+
         try {
             const logoImg = new Image();
             logoImg.crossOrigin = 'anonymous';
@@ -2244,7 +2254,13 @@ class AudioRoomsManager {
             };
 
             this.mediaRecorder.onstop = () => {
-                this.onRecordingComplete();
+                this.onRecordingComplete().catch(e => {
+                    console.error('Recording complete error:', e);
+                    if (this.recordedChunks.length > 0) {
+                        this.showRecordingDownload(new Blob(this.recordedChunks, { type: 'video/webm' }), 'webm');
+                        this.recordedChunks = [];
+                    }
+                });
             };
 
             this.recordingStartTime = Date.now();
@@ -2440,10 +2456,30 @@ class AudioRoomsManager {
         const webmBlob = new Blob(this.recordedChunks, { type: 'video/webm' });
         this.recordedChunks = [];
 
-        const songTitle = document.getElementById('karaoke-song-title')?.textContent || 'karaoke';
-        const artist = document.getElementById('karaoke-song-artist')?.textContent || '';
-        const safeName = `wordeth-${songTitle}-${artist}`.replace(/[^a-zA-Z0-9-]/g, '_').substring(0, 60);
+        let convertOverlay = null;
+        let finalBlob = webmBlob;
+        let fileExt = 'webm';
 
+        try {
+            if (typeof FFmpeg !== 'undefined' && FFmpeg.FFmpeg) {
+                convertOverlay = this.showConvertingOverlay();
+                finalBlob = await this.convertToMp4(webmBlob, convertOverlay.progressFill, convertOverlay.statusText);
+                fileExt = 'mp4';
+            }
+        } catch (e) {
+            console.warn('MP4 conversion failed, using webm:', e);
+            finalBlob = webmBlob;
+            fileExt = 'webm';
+        }
+
+        if (convertOverlay?.overlay) {
+            convertOverlay.overlay.remove();
+        }
+
+        this.showRecordingDownload(finalBlob, fileExt);
+    }
+
+    showConvertingOverlay() {
         const overlay = document.createElement('div');
         overlay.className = 'recording-download-overlay';
         const card = document.createElement('div');
@@ -2461,9 +2497,9 @@ class AudioRoomsManager {
         statusH3.textContent = 'Converting to MP4...';
         card.appendChild(statusH3);
 
-        const progressDesc = document.createElement('p');
-        progressDesc.textContent = 'Preparing your video for sharing. This may take a moment.';
-        card.appendChild(progressDesc);
+        const statusText = document.createElement('p');
+        statusText.textContent = 'Preparing your video for sharing. This may take a moment.';
+        card.appendChild(statusText);
 
         const progressBar = document.createElement('div');
         progressBar.style.cssText = 'width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; margin:1rem 0; overflow:hidden;';
@@ -2475,80 +2511,78 @@ class AudioRoomsManager {
         overlay.appendChild(card);
         document.body.appendChild(overlay);
 
-        let finalBlob = webmBlob;
-        let fileExt = 'webm';
-        let mimeType = 'video/webm';
+        return { overlay, progressFill, statusText };
+    }
 
-        let ffmpegInstance = null;
+    async convertToMp4(webmBlob, progressFill, statusText) {
+        const ffmpeg = new FFmpeg.FFmpeg();
+        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+
         try {
-            if (typeof FFmpeg !== 'undefined' && FFmpeg.FFmpeg) {
-                ffmpegInstance = new FFmpeg.FFmpeg();
-                const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+            ffmpeg.on('progress', ({ progress }) => {
+                const pct = Math.max(5, Math.min(95, Math.round(progress * 100)));
+                if (progressFill) progressFill.style.width = pct + '%';
+            });
 
-                ffmpegInstance.on('progress', ({ progress }) => {
-                    const pct = Math.max(5, Math.min(95, Math.round(progress * 100)));
-                    progressFill.style.width = pct + '%';
-                });
+            if (statusText) statusText.textContent = 'Loading converter...';
+            await ffmpeg.load({
+                coreURL: `${baseURL}/ffmpeg-core.js`,
+                wasmURL: `${baseURL}/ffmpeg-core.wasm`,
+            });
 
-                progressDesc.textContent = 'Loading converter...';
-                await ffmpegInstance.load({
-                    coreURL: `${baseURL}/ffmpeg-core.js`,
-                    wasmURL: `${baseURL}/ffmpeg-core.wasm`,
-                });
+            if (statusText) statusText.textContent = 'Converting video...';
+            if (progressFill) progressFill.style.width = '10%';
 
-                progressDesc.textContent = 'Converting video...';
-                progressFill.style.width = '10%';
+            const webmData = new Uint8Array(await webmBlob.arrayBuffer());
+            await ffmpeg.writeFile('input.webm', webmData);
+            await ffmpeg.exec([
+                '-i', 'input.webm',
+                '-c:v', 'libx264',
+                '-preset', 'ultrafast',
+                '-crf', '23',
+                '-c:a', 'aac',
+                '-b:a', '128k',
+                '-movflags', 'faststart',
+                '-pix_fmt', 'yuv420p',
+                'output.mp4'
+            ]);
 
-                const webmData = new Uint8Array(await webmBlob.arrayBuffer());
-                await ffmpegInstance.writeFile('input.webm', webmData);
-                await ffmpegInstance.exec([
-                    '-i', 'input.webm',
-                    '-c:v', 'libx264',
-                    '-preset', 'ultrafast',
-                    '-crf', '23',
-                    '-c:a', 'aac',
-                    '-b:a', '128k',
-                    '-movflags', 'faststart',
-                    '-pix_fmt', 'yuv420p',
-                    'output.mp4'
-                ]);
+            const mp4Data = await ffmpeg.readFile('output.mp4');
+            const mp4Blob = new Blob([mp4Data.buffer], { type: 'video/mp4' });
 
-                const mp4Data = await ffmpegInstance.readFile('output.mp4');
-                finalBlob = new Blob([mp4Data.buffer], { type: 'video/mp4' });
-                fileExt = 'mp4';
-                mimeType = 'video/mp4';
+            try {
+                await ffmpeg.deleteFile('input.webm');
+                await ffmpeg.deleteFile('output.mp4');
+            } catch (_) {}
 
-                try {
-                    await ffmpegInstance.deleteFile('input.webm');
-                    await ffmpegInstance.deleteFile('output.mp4');
-                } catch (_) {}
-                ffmpegInstance.terminate();
-                ffmpegInstance = null;
-
-                progressFill.style.width = '100%';
-            }
+            ffmpeg.terminate();
+            return mp4Blob;
         } catch (e) {
-            console.warn('MP4 conversion failed, falling back to webm:', e);
-            progressDesc.textContent = 'Using original format...';
-            finalBlob = webmBlob;
-            fileExt = 'webm';
-            mimeType = 'video/webm';
-            if (ffmpegInstance) {
-                try { ffmpegInstance.terminate(); } catch (_) {}
-            }
+            try { ffmpeg.terminate(); } catch (_) {}
+            throw e;
         }
+    }
 
-        const url = URL.createObjectURL(finalBlob);
+    showRecordingDownload(blob, fileExt) {
+        const songTitle = document.getElementById('karaoke-song-title')?.textContent || 'karaoke';
+        const artist = document.getElementById('karaoke-song-artist')?.textContent || '';
+        const safeName = `wordeth-${songTitle}-${artist}`.replace(/[^a-zA-Z0-9-]/g, '_').substring(0, 60);
 
-        card.innerHTML = '';
+        const url = URL.createObjectURL(blob);
 
-        const logoDiv2 = document.createElement('div');
-        logoDiv2.className = 'recording-download-logo';
-        const logoImg2 = document.createElement('img');
-        logoImg2.src = '/images/logo.png';
-        logoImg2.alt = 'Wordeth';
-        logoDiv2.appendChild(logoImg2);
-        card.appendChild(logoDiv2);
+        const overlay = document.createElement('div');
+        overlay.className = 'recording-download-overlay';
+
+        const card = document.createElement('div');
+        card.className = 'recording-download-card';
+
+        const logoDiv = document.createElement('div');
+        logoDiv.className = 'recording-download-logo';
+        const logoImg = document.createElement('img');
+        logoImg.src = '/images/logo.png';
+        logoImg.alt = 'Wordeth';
+        logoDiv.appendChild(logoImg);
+        card.appendChild(logoDiv);
 
         const h3 = document.createElement('h3');
         h3.textContent = 'Performance Recorded!';
@@ -2596,6 +2630,9 @@ class AudioRoomsManager {
         tip.style.cssText = 'color:#888; font-size:0.75rem; margin-top:0.25rem;';
         tip.textContent = 'Tip: Upload to TikTok, Instagram Reels, or YouTube Shorts to share your talent!';
         card.appendChild(tip);
+
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
 
         this.addChatMessage('System', 'Recording saved! Download your performance to share it.', true);
     }
