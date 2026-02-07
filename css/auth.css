@@ -33,67 +33,6 @@
     margin-bottom: 2rem;
 }
 
-.social-auth-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin-bottom: 2rem;
-}
-
-.social-auth-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    padding: 0.8rem;
-    border: none;
-    border-radius: 25px;
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.social-auth-btn i {
-    font-size: 1.2rem;
-}
-
-.social-auth-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.social-auth-btn.x:hover {
-    background: #1DA1F2;
-}
-
-.social-auth-btn.facebook:hover {
-    background: #4267B2;
-}
-
-.social-auth-btn.instagram:hover {
-    background: linear-gradient(45deg, #405DE6, #5851DB, #833AB4, #C13584, #E1306C, #FD1D1D);
-}
-
-.divider {
-    display: flex;
-    align-items: center;
-    text-align: center;
-    margin: 2rem 0;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-.divider::before,
-.divider::after {
-    content: '';
-    flex: 1;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.divider span {
-    padding: 0 1rem;
-}
-
 .auth-form {
     display: flex;
     flex-direction: column;
@@ -236,7 +175,4 @@
         font-size: 1.5rem;
     }
 
-    .social-auth-btn {
-        font-size: 0.9rem;
-    }
 } 

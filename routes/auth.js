@@ -3,8 +3,6 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
-const passport = require('passport');
-require('../config/passport');
 
 // Traditional sign up
 router.post('/signup', [
@@ -76,55 +74,6 @@ router.post('/signin', [
         res.status(500).json({ message: 'Server error' });
     }
 });
-
-// Social authentication routes
-router.get('/twitter', passport.authenticate('twitter'));
-
-router.get('/twitter/callback', 
-    passport.authenticate('twitter', { failureRedirect: '/signin.html' }),
-    async (req, res) => {
-        try {
-            const token = jwt.sign({ userId: req.user._id }, process.env.JWT_SECRET, { 
-                expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
-            });
-            res.redirect(`${process.env.CLIENT_URL}/auth-callback.html?token=${token}`);
-        } catch (error) {
-            res.redirect('/signin.html?error=auth_failed');
-        }
-    }
-);
-
-router.get('/instagram', passport.authenticate('instagram'));
-
-router.get('/instagram/callback', 
-    passport.authenticate('instagram', { failureRedirect: '/signin.html' }),
-    async (req, res) => {
-        try {
-            const token = jwt.sign({ userId: req.user._id }, process.env.JWT_SECRET, { 
-                expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
-            });
-            res.redirect(`${process.env.CLIENT_URL}/auth-callback.html?token=${token}`);
-        } catch (error) {
-            res.redirect('/signin.html?error=auth_failed');
-        }
-    }
-);
-
-router.get('/facebook', passport.authenticate('facebook', { scope: ['email'] }));
-
-router.get('/facebook/callback', 
-    passport.authenticate('facebook', { failureRedirect: '/signin.html' }),
-    async (req, res) => {
-        try {
-            const token = jwt.sign({ userId: req.user._id }, process.env.JWT_SECRET, { 
-                expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
-            });
-            res.redirect(`${process.env.CLIENT_URL}/auth-callback.html?token=${token}`);
-        } catch (error) {
-            res.redirect('/signin.html?error=auth_failed');
-        }
-    }
-);
 
 // Verify token
 router.get('/verify', async (req, res) => {

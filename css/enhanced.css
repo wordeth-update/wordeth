@@ -364,17 +364,6 @@ button, .btn, .cta-button, .video-cta-button {
     background-clip: text;
 }
 
-.social-auth-btn {
-    border-radius: var(--radius-lg);
-    transition: var(--transition-bounce);
-    font-family: 'Inter', sans-serif;
-    font-weight: 500;
-}
-
-.social-auth-btn:hover {
-    transform: translateY(-2px);
-}
-
 input[type="email"],
 input[type="password"],
 input[type="text"] {

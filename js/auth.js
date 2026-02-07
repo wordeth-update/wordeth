@@ -1,7 +1,6 @@
 // DOM Elements
 const signinForm = document.getElementById('signin-form');
 const signupForm = document.getElementById('signup-form');
-const socialButtons = document.querySelectorAll('.social-auth-btn');
 
 // Handle sign in
 if (signinForm) {
@@ -92,13 +91,6 @@ if (signupForm) {
         }
     });
 }
-
-// Handle social login clicks (disabled until OAuth is configured)
-socialButtons.forEach(button => {
-    button.addEventListener('click', () => {
-        showError('Social login coming soon! Please use email sign in for now.');
-    });
-});
 
 // Show error message
 function showError(message) {
