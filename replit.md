@@ -25,9 +25,11 @@ Wordeth is a social music experience platform designed to create a vibrant, inte
 - **Privacy by Design**: Comprehensive features for user data control and compliance.
 
 ### Technical Implementations & Features
+- **Authentication**: Email/password signup+signin with JWT tokens (7-day expiry), bcrypt password hashing, token verification middleware. OAuth stubs for Twitter/Instagram/Facebook (not yet active). JWT_SECRET stored as a proper secret. Auto-redirect to signin on 401. Nav updates dynamically for logged-in/logged-out state.
+- **User Profiles**: Full profile page with avatar upload (multer, 5MB limit), name/bio editing, tabbed views (history, annotations, friends, merch, settings), account deletion with double confirmation.
 - **Verses (Live Audio Rooms)**: Twitter Spaces/Clubhouse style audio discussions with features like host controls (door lock, karaoke enablement), participant interaction (hand-raise), audio filters (voice effects), and screen sharing.
 - **Karaoke Mode**: Synchronized scrolling lyrics from multiple sources (Musixmatch, LRCLIB, Lyrics.ovh), YouTube audio integration, and advanced features like Mic Tempo Sync for dynamic lyric scrolling based on vocal activity.
-- **Performance Recording**: Capture karaoke performances with video camera, video filters, lyrics overlay, and Wordeth branding for social sharing (optimized for TikTok/Reels/Shorts). Includes ffmpeg.wasm for MP4 conversion.
+- **Performance Recording**: Capture karaoke performances with video camera, video filters, lyrics overlay, and Wordeth branding for social sharing (optimized for TikTok/Reels/Shorts). Includes ffmpeg.wasm (single-threaded core) for MP4 conversion.
 - **Merchandise System**: Integration with InkSoft for artist-specific stores, merchandise customization, and a "Lyrics-to-Merch" feature.
 - **Advertising System**: Contextual keyword-based advertising on lyric search pages, with a robust registration, admin approval, and advertiser portal system.
 - **Usage Metrics & Archival**: Real-time event tracking, audience segmentation, genre propensity analysis, and aggregation for long-term storage in AWS S3, visualized in an admin dashboard with historical trends.

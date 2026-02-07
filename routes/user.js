@@ -47,6 +47,42 @@ router.get('/profile', auth, async (req, res) => {
     }
 });
 
+router.put('/profile', auth, async (req, res) => {
+    try {
+        const { name, bio } = req.body;
+        const updates = {};
+
+        if (name !== undefined) {
+            const trimmed = name.trim();
+            if (trimmed.length < 2) {
+                return res.status(400).json({ message: 'Name must be at least 2 characters' });
+            }
+            if (trimmed.length > 50) {
+                return res.status(400).json({ message: 'Name must be 50 characters or fewer' });
+            }
+            updates.name = trimmed;
+        }
+
+        if (bio !== undefined) {
+            if (bio.length > 300) {
+                return res.status(400).json({ message: 'Bio must be 300 characters or fewer' });
+            }
+            updates.bio = bio.trim();
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({ message: 'No valid fields to update' });
+        }
+
+        Object.assign(req.user, updates);
+        await req.user.save();
+        res.json(req.user.getPublicProfile());
+    } catch (error) {
+        console.error('Profile update error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 // Update avatar
 router.post('/avatar', auth, upload.single('avatar'), async (req, res) => {
     try {

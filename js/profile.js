@@ -1,212 +1,318 @@
-// DOM Elements
-const tabButtons = document.querySelectorAll('.tab-btn');
-const tabContents = document.querySelectorAll('.tab-content');
-const editAvatarBtn = document.querySelector('.edit-avatar');
-const profilePicture = document.getElementById('profile-picture');
-const userName = document.getElementById('user-name');
-const userBio = document.getElementById('user-bio');
-
-// Check authentication
-function checkAuth() {
+document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('authToken');
     if (!token) {
         window.location.href = '/signin.html';
+        return;
     }
-    return token;
-}
 
-// Load user profile data
-async function loadUserProfile() {
-    const token = checkAuth();
-    
-    try {
-        const response = await fetch('/api/user/profile', {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
+    let currentUser = null;
 
-        const data = await response.json();
-
-        if (response.ok) {
-            updateProfileUI(data);
-        } else {
-            throw new Error(data.message);
-        }
-    } catch (error) {
-        showError(error.message);
-    }
-}
-
-// Update profile UI with user data
-function updateProfileUI(userData) {
-    userName.textContent = userData.name;
-    userBio.textContent = userData.bio;
-    if (userData.avatar) {
-        profilePicture.src = userData.avatar;
-    }
-}
-
-// Handle tab switching
-tabButtons.forEach(button => {
-    button.addEventListener('click', () => {
-        const tabName = button.dataset.tab;
-        
-        // Update active states
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabContents.forEach(content => content.classList.add('hidden'));
-        
-        button.classList.add('active');
-        document.getElementById(tabName).classList.remove('hidden');
-        
-        // Load tab content
-        loadTabContent(tabName);
-    });
-});
-
-// Load content for each tab
-async function loadTabContent(tabName) {
-    const token = checkAuth();
-    const container = document.getElementById(tabName);
-    
-    try {
-        const response = await fetch(`/api/user/${tabName}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            switch(tabName) {
-                case 'history':
-                    renderHistory(data, container.querySelector('.history-list'));
-                    break;
-                case 'annotations':
-                    renderAnnotations(data, container.querySelector('.annotations-list'));
-                    break;
-                case 'friends':
-                    renderFriends(data, container.querySelector('.friends-list'));
-                    break;
-                case 'merch':
-                    renderMerch(data, container.querySelector('.merch-grid'));
-                    break;
-            }
-        } else {
-            throw new Error(data.message);
-        }
-    } catch (error) {
-        showError(error.message);
-    }
-}
-
-// Render functions for different content types
-function renderHistory(data, container) {
-    container.innerHTML = data.map(item => `
-        <div class="history-item">
-            <h3>${item.songTitle}</h3>
-            <p>${item.artist}</p>
-            <span class="timestamp">${new Date(item.timestamp).toLocaleDateString()}</span>
-        </div>
-    `).join('');
-}
-
-function renderAnnotations(data, container) {
-    container.innerHTML = data.map(item => `
-        <div class="annotation-item">
-            <h3>${item.songTitle}</h3>
-            <p class="annotation-text">${item.text}</p>
-            <div class="annotation-meta">
-                <span class="likes">${item.likes} likes</span>
-                <span class="timestamp">${new Date(item.timestamp).toLocaleDateString()}</span>
-            </div>
-        </div>
-    `).join('');
-}
-
-function renderFriends(data, container) {
-    container.innerHTML = data.map(friend => `
-        <div class="friend-card">
-            <div class="friend-avatar">
-                <img src="${friend.avatar || 'assets/default-avatar.png'}" alt="${friend.name}">
-            </div>
-            <h3>${friend.name}</h3>
-            <p>${friend.mutualSongs} mutual songs</p>
-        </div>
-    `).join('');
-}
-
-function renderMerch(data, container) {
-    container.innerHTML = data.map(item => `
-        <div class="merch-item">
-            <img src="${item.image}" alt="${item.name}">
-            <div class="merch-info">
-                <h3>${item.name}</h3>
-                <p>${item.type}</p>
-                <span class="timestamp">Created on ${new Date(item.createdAt).toLocaleDateString()}</span>
-            </div>
-        </div>
-    `).join('');
-}
-
-// Handle profile picture upload
-editAvatarBtn.addEventListener('click', () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    
-    input.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const formData = new FormData();
-        formData.append('avatar', file);
-
-        try {
-            const token = checkAuth();
-            const response = await fetch('/api/user/avatar', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                profilePicture.src = data.avatarUrl;
-            } else {
-                throw new Error(data.message);
-            }
-        } catch (error) {
-            showError(error.message);
-        }
+    const els = {
+        loading: document.getElementById('profile-loading'),
+        content: document.getElementById('profile-content'),
+        picture: document.getElementById('profile-picture'),
+        name: document.getElementById('user-name'),
+        email: document.getElementById('user-email'),
+        bio: document.getElementById('user-bio'),
+        joined: document.getElementById('user-joined'),
+        statFollowing: document.getElementById('stat-following'),
+        statFollowers: document.getElementById('stat-followers'),
+        statSearches: document.getElementById('stat-searches'),
+        editBtn: document.getElementById('edit-profile-btn'),
+        editModal: document.getElementById('edit-modal'),
+        editClose: document.getElementById('edit-modal-close'),
+        editCancel: document.getElementById('edit-cancel'),
+        editForm: document.getElementById('edit-profile-form'),
+        editName: document.getElementById('edit-name'),
+        editBio: document.getElementById('edit-bio'),
+        editSave: document.getElementById('edit-save'),
+        bioCharCount: document.getElementById('bio-char-count'),
+        avatarBtn: document.getElementById('edit-avatar-btn'),
+        settingsEmail: document.getElementById('settings-email'),
+        settingsJoined: document.getElementById('settings-joined'),
+        deleteBtn: document.getElementById('delete-account-btn'),
     };
 
-    input.click();
-});
+    async function apiFetch(url, options = {}) {
+        const headers = { 'Authorization': `Bearer ${token}`, ...options.headers };
+        const res = await fetch(url, { ...options, headers });
+        if (res.status === 401) {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+            window.location.href = '/signin.html';
+            return null;
+        }
+        return res;
+    }
 
-// Show error message
-function showError(message) {
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'error-message';
-    errorDiv.textContent = message;
-    
-    document.querySelector('.profile-container').insertBefore(
-        errorDiv,
-        document.querySelector('.profile-header')
-    );
-    
-    setTimeout(() => {
-        errorDiv.remove();
-    }, 5000);
-}
+    async function loadProfile() {
+        try {
+            const res = await apiFetch('/api/user/profile');
+            if (!res) return;
+            if (!res.ok) throw new Error('Failed to load profile');
+            currentUser = await res.json();
+            renderProfile(currentUser);
+            els.loading.style.display = 'none';
+            els.content.style.display = 'block';
+        } catch (e) {
+            els.loading.innerHTML = '<p style="color:#ff6b7a;">Could not load your profile. Please try again.</p>';
+        }
+    }
 
-// Initialize profile page
-document.addEventListener('DOMContentLoaded', () => {
-    loadUserProfile();
-    // Load initial tab content (history)
+    function renderProfile(user) {
+        els.name.textContent = user.name || '-';
+        els.email.textContent = user.email || '-';
+        els.bio.textContent = user.bio || 'No bio yet';
+        if (user.avatar && user.avatar !== 'assets/default-avatar.png') {
+            els.picture.src = user.avatar;
+        }
+        els.statFollowing.textContent = user.following?.length || 0;
+        els.statFollowers.textContent = user.followers?.length || 0;
+        els.statSearches.textContent = user.searchHistory?.length || 0;
+        if (user.createdAt) {
+            const d = new Date(user.createdAt);
+            els.joined.textContent = 'Joined ' + d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            if (els.settingsJoined) els.settingsJoined.textContent = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        }
+        if (els.settingsEmail) els.settingsEmail.textContent = user.email || '-';
+
+        localStorage.setItem('user', JSON.stringify({ name: user.name, email: user.email, avatar: user.avatar }));
+    }
+
+    els.editBtn.addEventListener('click', () => {
+        els.editName.value = currentUser?.name || '';
+        els.editBio.value = currentUser?.bio || '';
+        els.bioCharCount.textContent = (currentUser?.bio || '').length;
+        els.editModal.style.display = 'flex';
+    });
+
+    function closeModal() {
+        els.editModal.style.display = 'none';
+    }
+
+    els.editClose.addEventListener('click', closeModal);
+    els.editCancel.addEventListener('click', closeModal);
+    els.editModal.addEventListener('click', (e) => {
+        if (e.target === els.editModal) closeModal();
+    });
+
+    els.editBio.addEventListener('input', () => {
+        els.bioCharCount.textContent = els.editBio.value.length;
+    });
+
+    els.editForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        els.editSave.disabled = true;
+        els.editSave.textContent = 'Saving...';
+
+        try {
+            const res = await apiFetch('/api/user/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: els.editName.value,
+                    bio: els.editBio.value
+                })
+            });
+
+            if (!res) return;
+            const data = await res.json();
+            if (res.ok) {
+                currentUser = data;
+                renderProfile(data);
+                closeModal();
+                showToast('Profile updated!');
+            } else {
+                showToast(data.message || 'Update failed', true);
+            }
+        } catch (err) {
+            showToast('Something went wrong', true);
+        }
+
+        els.editSave.disabled = false;
+        els.editSave.textContent = 'Save Changes';
+    });
+
+    els.avatarBtn.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/jpeg,image/png,image/gif,image/webp';
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('Image must be under 5MB', true);
+                return;
+            }
+            const formData = new FormData();
+            formData.append('avatar', file);
+            try {
+                const res = await apiFetch('/api/user/avatar', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!res) return;
+                const data = await res.json();
+                if (res.ok) {
+                    els.picture.src = data.avatarUrl + '?t=' + Date.now();
+                    currentUser.avatar = data.avatarUrl;
+                    localStorage.setItem('user', JSON.stringify({ name: currentUser.name, email: currentUser.email, avatar: data.avatarUrl }));
+                    showToast('Photo updated!');
+                } else {
+                    showToast(data.message || 'Upload failed', true);
+                }
+            } catch (err) {
+                showToast('Upload failed', true);
+            }
+        };
+        input.click();
+    });
+
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.tab;
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(tab).classList.add('active');
+            loadTabContent(tab);
+        });
+    });
+
+    async function loadTabContent(tab) {
+        if (tab === 'settings') return;
+
+        try {
+            const res = await apiFetch(`/api/user/${tab}`);
+            if (!res) return;
+            const data = await res.json();
+            if (!res.ok) return;
+
+            const emptyEl = document.getElementById(`${tab}-empty`);
+            const listEl = document.getElementById(`${tab}-list`) || document.getElementById(`${tab}-grid`);
+
+            if (!data || data.length === 0) {
+                if (emptyEl) emptyEl.style.display = 'flex';
+                if (listEl) listEl.innerHTML = '';
+                return;
+            }
+
+            if (emptyEl) emptyEl.style.display = 'none';
+
+            switch (tab) {
+                case 'history':
+                    listEl.innerHTML = data.map(item => `
+                        <div class="history-item">
+                            <div>
+                                <h3>${escHtml(item.songTitle || '')}</h3>
+                                <p>${escHtml(item.artist || '')}</p>
+                            </div>
+                            <span class="timestamp">${new Date(item.timestamp).toLocaleDateString()}</span>
+                        </div>
+                    `).join('');
+                    break;
+                case 'annotations':
+                    listEl.innerHTML = data.map(item => `
+                        <div class="annotation-item">
+                            <h3>${escHtml(item.songTitle || '')}</h3>
+                            <p class="annotation-text">${escHtml(item.text || '')}</p>
+                            <div class="annotation-meta">
+                                <span>${item.likes || 0} likes</span>
+                                <span>${new Date(item.timestamp).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                    break;
+                case 'friends':
+                    listEl.innerHTML = data.map(f => `
+                        <div class="friend-card">
+                            <div class="friend-avatar">
+                                <img src="${escHtml(f.avatar || 'assets/default-avatar.png')}" alt="${escHtml(f.name || '')}">
+                            </div>
+                            <h3>${escHtml(f.name || '')}</h3>
+                            <p>${f.mutualSongs || 0} mutual songs</p>
+                        </div>
+                    `).join('');
+                    break;
+                case 'merch':
+                    listEl.innerHTML = data.map(item => `
+                        <div class="merch-item">
+                            <img src="${escHtml(item.image || '')}" alt="${escHtml(item.name || '')}">
+                            <div class="merch-info">
+                                <h3>${escHtml(item.name || '')}</h3>
+                                <p>${escHtml(item.type || '')}</p>
+                                <span class="timestamp">${new Date(item.createdAt).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                    break;
+            }
+        } catch (e) {
+            console.error('Tab load error:', e);
+        }
+    }
+
+    if (els.deleteBtn) {
+        els.deleteBtn.addEventListener('click', async () => {
+            const confirmed = confirm('Are you sure you want to permanently delete your account? This cannot be undone.');
+            if (!confirmed) return;
+            const doubleCheck = confirm('This will delete all your data including search history, annotations, and connections. Continue?');
+            if (!doubleCheck) return;
+
+            els.deleteBtn.disabled = true;
+            els.deleteBtn.textContent = 'Deleting...';
+
+            try {
+                const res = await apiFetch('/api/user/account', { method: 'DELETE' });
+                if (!res) return;
+                if (res.ok) {
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('user');
+                    window.location.href = '/?deleted=1';
+                } else {
+                    const data = await res.json();
+                    showToast(data.message || 'Delete failed', true);
+                    els.deleteBtn.disabled = false;
+                    els.deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Delete Account';
+                }
+            } catch (e) {
+                showToast('Something went wrong', true);
+                els.deleteBtn.disabled = false;
+                els.deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Delete Account';
+            }
+        });
+    }
+
+    function escHtml(str) {
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+    }
+
+    function showToast(message, isError = false) {
+        const existing = document.querySelector('.profile-toast');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.className = 'profile-toast';
+        if (isError) {
+            toast.style.background = '#dc3545';
+            toast.style.color = '#fff';
+        }
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        requestAnimationFrame(() => {
+            toast.classList.add('visible');
+        });
+        setTimeout(() => {
+            toast.classList.remove('visible');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    loadProfile();
     loadTabContent('history');
-}); 
+});
