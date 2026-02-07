@@ -140,21 +140,27 @@ document.addEventListener('DOMContentLoaded', () => {
         input.onchange = async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            if (file.size > 5 * 1024 * 1024) {
-                showToast('Image must be under 5MB', true);
+            if (file.size > 2 * 1024 * 1024) {
+                showToast('Image must be under 2MB', true);
                 return;
             }
             const formData = new FormData();
             formData.append('avatar', file);
             try {
-                const res = await apiFetch('/api/user/avatar', {
+                const res = await fetch('/api/user/avatar', {
                     method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
                     body: formData
                 });
-                if (!res) return;
+                if (res.status === 401) {
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('user');
+                    window.location.href = '/signin.html';
+                    return;
+                }
                 const data = await res.json();
                 if (res.ok) {
-                    els.picture.src = data.avatarUrl + '?t=' + Date.now();
+                    els.picture.src = data.avatarUrl;
                     currentUser.avatar = data.avatarUrl;
                     localStorage.setItem('user', JSON.stringify({ name: currentUser.name, email: currentUser.email, avatar: data.avatarUrl }));
                     showToast('Photo updated!');
