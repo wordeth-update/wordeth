@@ -10,7 +10,6 @@ integrations = ["javascript_object_storage:2.0.0"]
 [userenv]
 
 [userenv.shared]
-JWT_SECRET = "wordeth-dev-secret-key-change-in-production-2024"
 NODE_ENV = "development"
 PORT = "5000"
 
