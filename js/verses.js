@@ -2516,7 +2516,7 @@ class AudioRoomsManager {
 
     async convertToMp4(webmBlob, progressFill, statusText) {
         const ffmpeg = new FFmpeg.FFmpeg();
-        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+        const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-st@0.12.6/dist/umd';
 
         try {
             ffmpeg.on('progress', ({ progress }) => {
