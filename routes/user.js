@@ -171,20 +171,33 @@ router.get('/friends', auth, async (req, res) => {
 // Follow user
 router.post('/friends/:id', auth, async (req, res) => {
     try {
-        const userToFollow = await User.findById(req.params.id);
+        const targetId = req.params.id;
+
+        if (req.user._id.toString() === targetId) {
+            return res.status(400).json({ message: 'You cannot follow yourself' });
+        }
+
+        const userToFollow = await User.findById(targetId);
         if (!userToFollow) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        if (!req.user.following.includes(userToFollow._id)) {
-            req.user.following.push(userToFollow._id);
-            userToFollow.followers.push(req.user._id);
-            await Promise.all([req.user.save(), userToFollow.save()]);
+        const alreadyFollowing = req.user.following.some(
+            id => id.toString() === targetId
+        );
+
+        if (alreadyFollowing) {
+            return res.json({ message: 'Already following', following: req.user.following });
         }
 
-        res.json(req.user.following);
+        req.user.following.push(userToFollow._id);
+        userToFollow.followers.push(req.user._id);
+        await Promise.all([req.user.save(), userToFollow.save()]);
+
+        res.json({ message: 'Followed successfully', following: req.user.following });
     } catch (error) {
-        res.status(500).json({ message: 'Server error' });
+        console.error('Follow error:', error);
+        res.status(500).json({ message: 'Could not follow user. Please try again.' });
     }
 });
 

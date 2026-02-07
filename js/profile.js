@@ -381,13 +381,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     searchResults.querySelectorAll('.follow-btn').forEach(btn => {
                         btn.addEventListener('click', async (e) => {
                             const userId = e.currentTarget.dataset.userId;
+                            const btn = e.currentTarget;
+                            btn.disabled = true;
+                            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                             try {
                                 const res = await apiFetch(`/api/user/friends/${userId}`, { method: 'POST' });
                                 if (!res) return;
+                                const data = await res.json();
                                 if (res.ok) {
-                                    e.currentTarget.innerHTML = '<i class="fas fa-check"></i> Following';
-                                    e.currentTarget.disabled = true;
-                                    e.currentTarget.classList.add('following');
+                                    btn.innerHTML = '<i class="fas fa-check"></i> Following';
+                                    btn.classList.add('following');
                                     showToast('Following!');
                                     const profileRes = await apiFetch('/api/user/profile');
                                     if (profileRes && profileRes.ok) {
@@ -395,11 +398,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                         renderProfile(currentUser);
                                     }
                                 } else {
-                                    const data = await res.json();
                                     showToast(data.message || 'Could not follow', true);
+                                    btn.disabled = false;
+                                    btn.innerHTML = '<i class="fas fa-user-plus"></i> Follow';
                                 }
                             } catch (err) {
-                                showToast('Something went wrong', true);
+                                console.error('Follow error:', err);
+                                showToast('Network error. Please check your connection.', true);
+                                btn.disabled = false;
+                                btn.innerHTML = '<i class="fas fa-user-plus"></i> Follow';
                             }
                         });
                     });
