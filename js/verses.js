@@ -292,65 +292,39 @@ class AudioRoomsManager {
     }
 
     async fetchActiveRooms() {
-        return [
-            {
-                id: 'room1',
-                name: 'Hip-Hop Classics Deep Dive',
-                topic: 'Analyzing "Lose Yourself" by Eminem - The psychology behind the lyrics',
-                genre: 'hip-hop',
-                participants: [
-                    { name: 'Alex', avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face' },
-                    { name: 'Sam', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face' },
-                    { name: 'Jamie', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face' }
-                ],
-                participantCount: 5,
-                maxParticipants: 8,
-                duration: '23 min',
-                messageCount: 47,
-                isFeatured: true,
-                isLocked: false
-            },
-            {
-                id: 'room2',
-                name: 'Rock Legends Unplugged',
-                topic: 'Queen\'s "Bohemian Rhapsody" - Breaking down the masterpiece',
-                genre: 'rock',
-                participants: [
-                    { name: 'Mike', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face' },
-                    { name: 'Sarah', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face' },
-                    { name: 'David', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face' }
-                ],
-                participantCount: 3,
-                maxParticipants: 6,
-                duration: '15 min',
-                messageCount: 23,
-                isFeatured: false,
-                isLocked: false
-            },
-            {
-                id: 'room3',
-                name: 'Pop Culture & Music',
-                topic: 'Taylor Swift\'s evolution as a songwriter',
-                genre: 'pop',
-                participants: [
-                    { name: 'Emma', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face' },
-                    { name: 'Chris', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face' }
-                ],
-                participantCount: 2,
-                maxParticipants: 4,
-                duration: '8 min',
-                messageCount: 12,
-                isFeatured: false,
-                isLocked: false
-            }
-        ];
+        return [];
     }
 
     renderRooms(rooms) {
         const roomsGrid = document.querySelector('.rooms-grid');
-        if (roomsGrid) {
-            roomsGrid.innerHTML = rooms.map(room => this.createRoomCard(room)).join('');
+        if (!roomsGrid) return;
+
+        if (rooms.length === 0) {
+            roomsGrid.innerHTML = `
+                <div class="empty-rooms-state">
+                    <i class="fas fa-headphones"></i>
+                    <h3>No live rooms right now</h3>
+                    <p>Be the first to start a conversation — create a room and invite friends!</p>
+                </div>`;
+            const friendsList = document.getElementById('friends-list');
+            if (friendsList && !friendsList.innerHTML.trim()) {
+                friendsList.innerHTML = `
+                    <div class="empty-rooms-state" style="padding: 1.5rem;">
+                        <p style="color: rgba(255,255,255,0.5); text-align: center;">No friends are in rooms right now</p>
+                    </div>`;
+            }
+            return;
         }
+
+        roomsGrid.innerHTML = rooms.map(room => this.createRoomCard(room)).join('');
+
+        const statUsers = document.getElementById('stat-active-users');
+        const statRooms = document.getElementById('stat-live-rooms');
+        if (statUsers) {
+            const total = rooms.reduce((sum, r) => sum + (r.participantCount || 0), 0);
+            statUsers.textContent = total.toLocaleString();
+        }
+        if (statRooms) statRooms.textContent = rooms.length;
     }
 
     createRoomCard(room) {

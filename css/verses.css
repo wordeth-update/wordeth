@@ -6,6 +6,33 @@
     color: var(--white);
 }
 
+/* Empty Rooms State */
+.empty-rooms-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem 2rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.empty-rooms-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: rgba(150, 197, 176, 0.4);
+}
+
+.empty-rooms-state h3 {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.3rem;
+    margin-bottom: 0.5rem;
+}
+
+.empty-rooms-state p {
+    font-size: 0.95rem;
+    max-width: 400px;
+    margin: 0 auto;
+    line-height: 1.5;
+}
+
 /* Hero Section */
 .hero-section {
     display: flex;
