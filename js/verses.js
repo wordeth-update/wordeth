@@ -378,26 +378,30 @@ class AudioRoomsManager {
     }
 
     createRoomCard(room) {
-        const participantAvatars = room.participants.slice(0, 3).map(p => 
-            `<div class="participant-avatar">
-                <img src="${p.avatar}" alt="${p.name}">
-                ${p.name === 'Alex' ? '<div class="speaking-indicator"></div>' : ''}
-            </div>`
-        ).join('');
+        const participants = room.participants || [];
+        const participantAvatars = participants.slice(0, 3).map(p => {
+            const name = p.userName || p.name || 'User';
+            const initial = name.charAt(0).toUpperCase();
+            return `<div class="participant-avatar">
+                <div class="avatar-initial" style="width:40px;height:40px;border-radius:50%;background:var(--purple);display:flex;align-items:center;justify-content:center;font-weight:bold;color:white;">${initial}</div>
+            </div>`;
+        }).join('');
 
-        const moreParticipants = room.participantCount > 3 ? 
-            `<div class="more-participants">+${room.participantCount - 3}</div>` : '';
+        const count = room.participantCount || participants.length || 0;
+        const moreParticipants = count > 3 ? 
+            `<div class="more-participants">+${count - 3}</div>` : '';
 
-        const genreIcon = this.getGenreIcon(room.genre);
-        const featuredBadge = room.isFeatured ? 
-            `<div class="room-badge">
-                <i class="fas fa-fire"></i>
-                <span>Trending</span>
-            </div>` : '';
+        const genre = room.genre || 'general';
+        const genreIcon = this.getGenreIcon(genre);
+        const roomName = room.name || `Room ${room.id.replace('room_', '').slice(-4)}`;
+        const host = participants.find(p => p.isHost);
+        const hostName = host ? (host.userName || host.name || 'Unknown') : 'Unknown';
+
+        const elapsed = room.createdAt ? Math.round((Date.now() - room.createdAt) / 60000) : 0;
+        const duration = elapsed < 60 ? `${elapsed}m` : `${Math.round(elapsed / 60)}h`;
 
         return `
-            <div class="room-card ${room.isFeatured ? 'featured' : ''}" data-room-id="${room.id}" data-genre="${room.genre}">
-                ${featuredBadge}
+            <div class="room-card" data-room-id="${room.id}" data-genre="${genre}">
                 <div class="room-preview">
                     <div class="participants-preview">
                         ${participantAvatars}
@@ -406,34 +410,27 @@ class AudioRoomsManager {
                     <div class="room-info">
                         <div class="room-genre">
                             ${genreIcon}
-                            <span>${this.capitalizeFirst(room.genre)}</span>
+                            <span>${this.capitalizeFirst(genre)}</span>
                         </div>
-                        <h3>${room.name}</h3>
-                        <p class="room-topic">${room.topic}</p>
+                        <h3>${this.sanitizeText(roomName)}</h3>
+                        <p class="room-topic">Hosted by ${this.sanitizeText(hostName)}</p>
                         <div class="room-stats">
                             <span class="stat">
                                 <i class="fas fa-users"></i>
-                                ${room.participantCount}/${room.maxParticipants}
+                                ${count}
                             </span>
                             <span class="stat">
                                 <i class="fas fa-clock"></i>
-                                ${room.duration}
+                                ${duration}
                             </span>
-                            <span class="stat">
-                                <i class="fas fa-comments"></i>
-                                ${room.messageCount}
-                            </span>
+                            ${room.isLocked ? '<span class="stat"><i class="fas fa-lock"></i></span>' : ''}
                         </div>
                     </div>
                 </div>
                 <div class="room-actions">
-                    <button class="join-room-btn primary">
+                    <button class="join-room-btn primary" ${room.isLocked ? 'disabled' : ''}>
                         <i class="fas fa-play"></i>
-                        Join Room
-                    </button>
-                    <button class="preview-btn">
-                        <i class="fas fa-eye"></i>
-                        Preview
+                        ${room.isLocked ? 'Locked' : 'Join Room'}
                     </button>
                 </div>
             </div>
