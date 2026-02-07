@@ -2190,15 +2190,31 @@ class AudioRoomsManager {
             this.recordingCanvas = canvas;
             this.recordingCtx = canvas.getContext('2d');
 
-            this.recordingStream = canvas.captureStream(30);
+            const canvasStream = canvas.captureStream(30);
 
-            let micStream = this.localStream;
-            if (micStream) {
-                const audioTracks = micStream.getAudioTracks();
+            const recAudioCtx = this.audioContext || new (window.AudioContext || window.webkitAudioContext)();
+            if (!this.audioContext) this.audioContext = recAudioCtx;
+            const recDest = recAudioCtx.createMediaStreamDestination();
+
+            if (this.localStream) {
+                const audioTracks = this.localStream.getAudioTracks();
                 if (audioTracks.length > 0) {
-                    this.recordingStream.addTrack(audioTracks[0]);
+                    const micSource = recAudioCtx.createMediaStreamSource(
+                        new MediaStream([audioTracks[0]])
+                    );
+                    const micGain = recAudioCtx.createGain();
+                    micGain.gain.value = 1.0;
+                    micSource.connect(micGain);
+                    micGain.connect(recDest);
+                    this.recordingMicSource = micSource;
+                    this.recordingMicGain = micGain;
                 }
             }
+
+            this.recordingStream = new MediaStream([
+                ...canvasStream.getVideoTracks(),
+                ...recDest.stream.getAudioTracks()
+            ]);
 
             const mimeTypes = [
                 'video/webm;codecs=vp9,opus',
@@ -2217,7 +2233,8 @@ class AudioRoomsManager {
             this.recordedChunks = [];
             this.mediaRecorder = new MediaRecorder(this.recordingStream, {
                 mimeType: selectedMime || undefined,
-                videoBitsPerSecond: 2500000
+                videoBitsPerSecond: 2500000,
+                audioBitsPerSecond: 128000
             });
 
             this.mediaRecorder.ondataavailable = (e) => {
@@ -2400,6 +2417,14 @@ class AudioRoomsManager {
         if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
             this.mediaRecorder.stop();
         }
+        if (this.recordingMicSource) {
+            this.recordingMicSource.disconnect();
+            this.recordingMicSource = null;
+        }
+        if (this.recordingMicGain) {
+            this.recordingMicGain.disconnect();
+            this.recordingMicGain = null;
+        }
         if (this.recordingStream) {
             this.recordingStream.getTracks().forEach(t => t.stop());
             this.recordingStream = null;
@@ -2409,11 +2434,11 @@ class AudioRoomsManager {
         this.updateRecordingUI(false);
     }
 
-    onRecordingComplete() {
+    async onRecordingComplete() {
         if (this.recordedChunks.length === 0) return;
 
-        const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
+        const webmBlob = new Blob(this.recordedChunks, { type: 'video/webm' });
+        this.recordedChunks = [];
 
         const songTitle = document.getElementById('karaoke-song-title')?.textContent || 'karaoke';
         const artist = document.getElementById('karaoke-song-artist')?.textContent || '';
@@ -2421,7 +2446,6 @@ class AudioRoomsManager {
 
         const overlay = document.createElement('div');
         overlay.className = 'recording-download-overlay';
-
         const card = document.createElement('div');
         card.className = 'recording-download-card';
 
@@ -2432,6 +2456,99 @@ class AudioRoomsManager {
         logoImg.alt = 'Wordeth';
         logoDiv.appendChild(logoImg);
         card.appendChild(logoDiv);
+
+        const statusH3 = document.createElement('h3');
+        statusH3.textContent = 'Converting to MP4...';
+        card.appendChild(statusH3);
+
+        const progressDesc = document.createElement('p');
+        progressDesc.textContent = 'Preparing your video for sharing. This may take a moment.';
+        card.appendChild(progressDesc);
+
+        const progressBar = document.createElement('div');
+        progressBar.style.cssText = 'width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; margin:1rem 0; overflow:hidden;';
+        const progressFill = document.createElement('div');
+        progressFill.style.cssText = 'height:100%; width:5%; background:linear-gradient(90deg,#3EB489,#7c6aef); border-radius:3px; transition:width 0.3s;';
+        progressBar.appendChild(progressFill);
+        card.appendChild(progressBar);
+
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+
+        let finalBlob = webmBlob;
+        let fileExt = 'webm';
+        let mimeType = 'video/webm';
+
+        let ffmpegInstance = null;
+        try {
+            if (typeof FFmpeg !== 'undefined' && FFmpeg.FFmpeg) {
+                ffmpegInstance = new FFmpeg.FFmpeg();
+                const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+
+                ffmpegInstance.on('progress', ({ progress }) => {
+                    const pct = Math.max(5, Math.min(95, Math.round(progress * 100)));
+                    progressFill.style.width = pct + '%';
+                });
+
+                progressDesc.textContent = 'Loading converter...';
+                await ffmpegInstance.load({
+                    coreURL: `${baseURL}/ffmpeg-core.js`,
+                    wasmURL: `${baseURL}/ffmpeg-core.wasm`,
+                });
+
+                progressDesc.textContent = 'Converting video...';
+                progressFill.style.width = '10%';
+
+                const webmData = new Uint8Array(await webmBlob.arrayBuffer());
+                await ffmpegInstance.writeFile('input.webm', webmData);
+                await ffmpegInstance.exec([
+                    '-i', 'input.webm',
+                    '-c:v', 'libx264',
+                    '-preset', 'ultrafast',
+                    '-crf', '23',
+                    '-c:a', 'aac',
+                    '-b:a', '128k',
+                    '-movflags', 'faststart',
+                    '-pix_fmt', 'yuv420p',
+                    'output.mp4'
+                ]);
+
+                const mp4Data = await ffmpegInstance.readFile('output.mp4');
+                finalBlob = new Blob([mp4Data.buffer], { type: 'video/mp4' });
+                fileExt = 'mp4';
+                mimeType = 'video/mp4';
+
+                try {
+                    await ffmpegInstance.deleteFile('input.webm');
+                    await ffmpegInstance.deleteFile('output.mp4');
+                } catch (_) {}
+                ffmpegInstance.terminate();
+                ffmpegInstance = null;
+
+                progressFill.style.width = '100%';
+            }
+        } catch (e) {
+            console.warn('MP4 conversion failed, falling back to webm:', e);
+            progressDesc.textContent = 'Using original format...';
+            finalBlob = webmBlob;
+            fileExt = 'webm';
+            mimeType = 'video/webm';
+            if (ffmpegInstance) {
+                try { ffmpegInstance.terminate(); } catch (_) {}
+            }
+        }
+
+        const url = URL.createObjectURL(finalBlob);
+
+        card.innerHTML = '';
+
+        const logoDiv2 = document.createElement('div');
+        logoDiv2.className = 'recording-download-logo';
+        const logoImg2 = document.createElement('img');
+        logoImg2.src = '/images/logo.png';
+        logoImg2.alt = 'Wordeth';
+        logoDiv2.appendChild(logoImg2);
+        card.appendChild(logoDiv2);
 
         const h3 = document.createElement('h3');
         h3.textContent = 'Performance Recorded!';
@@ -2454,7 +2571,7 @@ class AudioRoomsManager {
 
         const downloadLink = document.createElement('a');
         downloadLink.href = url;
-        downloadLink.download = `${safeName}.webm`;
+        downloadLink.download = `${safeName}.${fileExt}`;
         downloadLink.className = 'btn-primary';
         downloadLink.style.cssText = 'text-decoration:none; display:inline-flex; align-items:center; gap:8px;';
         downloadLink.innerHTML = '<i class="fas fa-download"></i> Download Video';
@@ -2470,16 +2587,17 @@ class AudioRoomsManager {
         actions.appendChild(closeBtn);
         card.appendChild(actions);
 
+        const formatBadge = document.createElement('p');
+        formatBadge.style.cssText = 'color:#3EB489; font-size:0.8rem; margin-top:0.5rem;';
+        formatBadge.textContent = fileExt === 'mp4' ? 'MP4 format — ready for all platforms' : 'WebM format — compatible with most platforms';
+        card.appendChild(formatBadge);
+
         const tip = document.createElement('p');
-        tip.style.cssText = 'color:#888; font-size:0.75rem; margin-top:0.75rem;';
+        tip.style.cssText = 'color:#888; font-size:0.75rem; margin-top:0.25rem;';
         tip.textContent = 'Tip: Upload to TikTok, Instagram Reels, or YouTube Shorts to share your talent!';
         card.appendChild(tip);
 
-        overlay.appendChild(card);
-        document.body.appendChild(overlay);
-
         this.addChatMessage('System', 'Recording saved! Download your performance to share it.', true);
-        this.recordedChunks = [];
     }
 
     updateRecordingUI(recording) {
