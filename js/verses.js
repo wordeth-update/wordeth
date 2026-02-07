@@ -40,8 +40,6 @@ class AudioRoomsManager {
         this.karaokeEnabled = false;
         this.isRoomHost = false;
         this.pendingRequests = [];
-        this.wasPlayingBeforeHidden = false;
-        this.resumeAttempts = 0;
         
         // Screen share state
         this.screenshareEnabled = false;
@@ -83,70 +81,20 @@ class AudioRoomsManager {
     
     setupVisibilityHandler() {
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                this.handleAppHidden();
-            } else {
+            if (!document.hidden) {
                 this.handleAppVisible();
             }
         });
-        
-        window.addEventListener('blur', () => this.handleAppHidden());
-        window.addEventListener('focus', () => this.handleAppVisible());
-    }
-    
-    handleAppHidden() {
-        if (this.youtubePlayer && this.youtubeReady) {
-            try {
-                const state = this.youtubePlayer.getPlayerState();
-                if (state === YT.PlayerState.PLAYING) {
-                    this.wasPlayingBeforeHidden = true;
-                    this.playbackTimeBeforeHidden = this.youtubePlayer.getCurrentTime();
-                }
-            } catch (e) {
-                console.log('Could not check player state:', e);
-            }
-        }
     }
     
     handleAppVisible() {
-        if (!this.wasPlayingBeforeHidden) return;
-        this.wasPlayingBeforeHidden = false;
-        this.resumeAttempts = 0;
-        this.attemptResume();
-    }
-    
-    attemptResume() {
-        if (this.resumeAttempts > 5) {
-            this.addChatMessage('System', 'Music was paused while away. Tap play to resume.', true);
-            this.updateAudioStatus('ready', 'Tap play to resume');
-            return;
-        }
-        this.resumeAttempts++;
-        
-        try {
-            if (this.youtubePlayer && this.youtubeReady) {
+        if (this.youtubePlayer && this.youtubeReady) {
+            try {
                 const state = this.youtubePlayer.getPlayerState();
-                if (state === YT.PlayerState.PAUSED || state === YT.PlayerState.CUED) {
-                    if (this.playbackTimeBeforeHidden) {
-                        this.youtubePlayer.seekTo(this.playbackTimeBeforeHidden, true);
-                    }
-                    this.youtubePlayer.playVideo();
-                    
-                    setTimeout(() => {
-                        try {
-                            const newState = this.youtubePlayer.getPlayerState();
-                            if (newState === YT.PlayerState.PLAYING || newState === YT.PlayerState.BUFFERING) {
-                                this.playbackTimeBeforeHidden = null;
-                            } else {
-                                this.attemptResume();
-                            }
-                        } catch (e) {}
-                    }, 500);
+                if (state === YT.PlayerState.PAUSED) {
+                    this.updateAudioStatus('ready', 'Tap play to resume');
                 }
-            }
-        } catch (e) {
-            console.log('Resume attempt failed:', e);
-            setTimeout(() => this.attemptResume(), 500);
+            } catch (e) {}
         }
     }
 
@@ -193,6 +141,19 @@ class AudioRoomsManager {
         this.karaokeBtn = document.getElementById('karaoke-btn');
         this.audioFiltersModal = document.getElementById('audio-filters-modal');
         this.karaokeModal = document.getElementById('karaoke-modal');
+        
+        if (this.isMobileDevice() || !this.isScreenShareSupported()) {
+            const screenshareBtn = document.getElementById('screenshare-btn');
+            const screenshareToggleBtn = document.getElementById('screenshare-toggle-btn');
+            if (screenshareBtn) {
+                screenshareBtn.style.opacity = '0.4';
+                screenshareBtn.title = 'Screen sharing is only available on desktop';
+            }
+            if (screenshareToggleBtn) {
+                screenshareToggleBtn.style.opacity = '0.4';
+                screenshareToggleBtn.title = 'Screen sharing is only available on desktop';
+            }
+        }
     }
 
     setupEventListeners() {
@@ -1010,6 +971,11 @@ class AudioRoomsManager {
     }
     
     async startScreenShareAfterApproval() {
+        if (!this.isScreenShareSupported() || this.isMobileDevice()) {
+            this.addChatMessage('System', 'Screen sharing is only available on desktop browsers.', true);
+            return;
+        }
+        
         try {
             this.screenshareStream = await navigator.mediaDevices.getDisplayMedia({
                 video: { cursor: 'always' },
@@ -1034,8 +1000,10 @@ class AudioRoomsManager {
             }
         } catch (error) {
             console.error('Screen share error:', error);
-            if (error.name !== 'NotAllowedError') {
-                this.addChatMessage('System', 'Failed to start screen sharing.', true);
+            if (error.name === 'NotAllowedError') {
+                this.addChatMessage('System', 'Screen sharing was cancelled.', true);
+            } else {
+                this.addChatMessage('System', 'Failed to start screen sharing. Try using a desktop browser.', true);
             }
         }
     }
@@ -1638,11 +1606,30 @@ class AudioRoomsManager {
         }
     }
 
+    isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+            || (window.innerWidth <= 768);
+    }
+    
+    isScreenShareSupported() {
+        return !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+    }
+    
     async startScreenShare() {
         if (!this.isRoomHost) {
+            if (!this.isScreenShareSupported() || this.isMobileDevice()) {
+                this.addChatMessage('System', 'Screen sharing is only available on desktop browsers.', true);
+                return;
+            }
             this.requestPermission('screenshare', 'A participant');
             return;
         }
+        
+        if (!this.isScreenShareSupported() || this.isMobileDevice()) {
+            this.addChatMessage('System', 'Screen sharing is only available on desktop browsers. Mobile devices do not support this feature.', true);
+            return;
+        }
+        
         if (!this.screenshareEnabled) {
             this.screenshareEnabled = true;
             this.updateScreenshareButtonState();
@@ -1677,15 +1664,18 @@ class AudioRoomsManager {
                 this.addChatMessage('System', 'You started sharing your screen.', true);
                 this.notifyParticipants('screenshare-start', { userId: 'currentUser' });
                 
-                // Handle when user stops sharing via browser UI
                 this.screenshareStream.getVideoTracks()[0].onended = () => {
                     this.stopScreenShare();
                 };
             }
         } catch (error) {
             console.error('Screen share error:', error);
-            if (error.name !== 'NotAllowedError') {
-                this.addChatMessage('System', 'Failed to start screen sharing.', true);
+            if (error.name === 'NotAllowedError') {
+                this.addChatMessage('System', 'Screen sharing was cancelled.', true);
+            } else if (error.name === 'NotSupportedError') {
+                this.addChatMessage('System', 'Screen sharing is not supported in this browser.', true);
+            } else {
+                this.addChatMessage('System', 'Failed to start screen sharing. Try using a desktop browser.', true);
             }
         }
     }
@@ -2992,18 +2982,14 @@ class AudioRoomsManager {
                 }
                 break;
             case YT.PlayerState.PAUSED:
-                if (document.hidden && this.wasPlayingBeforeHidden) {
-                    this.updateAudioStatus('playing', 'Resuming...');
-                } else {
-                    this.updateAudioStatus('ready', 'Paused');
-                    if (this.karaokeActive) {
-                        this.karaokeActive = false;
-                        clearInterval(this.karaokeInterval);
-                        this.stopMicTempo();
-                        const playPauseBtn = document.getElementById('karaoke-play-pause');
-                        const icon = playPauseBtn?.querySelector('i');
-                        if (icon) icon.className = 'fas fa-play';
-                    }
+                this.updateAudioStatus('ready', 'Paused');
+                if (this.karaokeActive) {
+                    this.karaokeActive = false;
+                    clearInterval(this.karaokeInterval);
+                    this.stopMicTempo();
+                    const playPauseBtn = document.getElementById('karaoke-play-pause');
+                    const icon = playPauseBtn?.querySelector('i');
+                    if (icon) icon.className = 'fas fa-play';
                 }
                 break;
             case YT.PlayerState.ENDED:
