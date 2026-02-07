@@ -18,8 +18,9 @@ Preferred communication style: Simple, everyday language.
 - **Design**: Mobile-responsive with hamburger menu. Fonts from Google Fonts (Inter, Poppins). Icons from Font Awesome.
 
 ### Backend
-- **Technology**: Node.js with Express.js (`server.js` is the entry point)
+- **Technology**: Node.js with Express.js (`server.js` is the entry point), Socket.io for WebSockets
 - **Entry command**: `node server.js` (or `nodemon server.js` for dev)
+- **Server architecture**: HTTP server wraps Express app, Socket.io attached for real-time WebSocket connections
 - **API Routes**: Modular route files in `/routes/` directory:
   - `/api/auth` — signup, signin (JWT-based)
   - `/api/user` — profile management, avatar upload
@@ -28,6 +29,12 @@ Preferred communication style: Simple, everyday language.
   - `/api/articles` — article content
   - `/api/ads` — advertising system (advertiser registration, ad CRUD, admin approval)
   - `/api/analytics` — usage metrics
+  - `/api/rooms/active` — lists active audio rooms with participants
+- **WebSocket Signaling** (`routes/signaling.js`):
+  - Room management: join/leave with participant tracking, host transfer on disconnect
+  - WebRTC signaling: offer/answer/ICE candidate relay between peers
+  - Room events: chat messages, karaoke state, screen share, permissions, mute status
+  - Audio mix status: notifies room when a user is sharing YouTube audio
 - **Middleware**: 
   - `middleware/auth.js` — JWT authentication middleware
   - `middleware/tracking.js` — automatic usage event tracking based on route patterns
@@ -50,7 +57,7 @@ Preferred communication style: Simple, everyday language.
 - Token verification middleware checks JWT and loads user from database
 
 ### Key Features Architecture
-- **Verses (Audio Rooms)**: WebRTC-based with Web Audio API for audio filters, YouTube integration for karaoke, MediaRecorder for performance recording
+- **Verses (Audio Rooms)**: Real-time WebRTC peer-to-peer audio via Socket.io signaling server. Web Audio API for voice filters and audio mixing (mic + YouTube). YouTube embed integration for karaoke with "Share Audio" button that captures tab audio and mixes it into the outgoing WebRTC stream. MediaRecorder for performance recording.
 - **Lyrics**: Server-side search via Genius API, with fallback sources (LRCLIB, Lyrics.ovh, Musixmatch)
 - **Advertising**: Contextual keyword-based ads on lyrics pages, with self-serve portal, admin approval workflow, and impression/click tracking
 - **Usage Analytics**: Event tracking middleware automatically logs API usage to MongoDB, with admin dashboard for visualization

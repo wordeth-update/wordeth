@@ -47,7 +47,6 @@ class AudioRoomsManager {
         this.karaokeVideoStream = null;
         this.karaokeVideoActive = false;
         
-        // Mic tempo sync state
         this.micTempoEnabled = false;
         this.micAnalyser = null;
         this.micTempoRAF = null;
@@ -56,7 +55,20 @@ class AudioRoomsManager {
         this.manualSpeedOverride = false;
         this.manualOverrideTimeout = null;
         
-        // Recording state
+        this.audioMixEnabled = false;
+        this.mixedStream = null;
+        this.youtubeAudioSource = null;
+        this.micAudioSource = null;
+        this.mixDestination = null;
+        this.remoteAudioElements = new Map();
+        
+        this.rtcConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+        
         this.isRecording = false;
         this.mediaRecorder = null;
         this.recordedChunks = [];
@@ -322,6 +334,14 @@ class AudioRoomsManager {
     }
 
     async fetchActiveRooms() {
+        try {
+            const response = await fetch(apiUrl('/api/rooms/active'));
+            if (response.ok) {
+                return await response.json();
+            }
+        } catch (error) {
+            console.error('Error fetching active rooms:', error);
+        }
         return [];
     }
 
@@ -677,7 +697,12 @@ class AudioRoomsManager {
             this.chatInput.value = '';
         }
         
-        this.notifyParticipants('chat-message', { message, sender: 'currentUser' });
+        if (this.socket && this.socket.connected && this.currentRoom) {
+            this.socket.emit('chat-message', {
+                roomId: this.currentRoom,
+                message
+            });
+        }
     }
 
     addChatMessage(sender, message, isSystem = false) {
@@ -829,25 +854,27 @@ class AudioRoomsManager {
 
     async joinRoom(roomId, isHost = false) {
         try {
-            // Check if room is locked (door lock feature)
             const roomData = await this.checkRoomLockStatus(roomId);
             if (roomData && roomData.isLocked) {
                 alert('This room is currently locked. The host has prevented new participants from joining.');
                 return;
             }
             
-            // Set host status
             this.isRoomHost = isHost;
-            
-            // Reset karaoke and screen share state for new room
+            this.isSpeaker = isHost;
             this.karaokeEnabled = isHost ? false : (roomData?.karaokeEnabled || false);
             this.screenshareEnabled = isHost ? false : (roomData?.screenshareEnabled || false);
             this.updateKaraokeButtonState();
             this.updateScreenshareButtonState();
             this.updateHostControls();
             
-            if (this.isSpeaker) {
-                await this.initializeMedia();
+            if (isHost || this.isSpeaker) {
+                try {
+                    await this.initializeMedia();
+                } catch (e) {
+                    console.warn('Mic access denied, joining as listener:', e.message);
+                    this.isSpeaker = false;
+                }
             }
             
             if (this.roomSelection) this.roomSelection.style.display = 'none';
@@ -856,7 +883,19 @@ class AudioRoomsManager {
             this.currentRoom = roomId;
             this.roomJoinTime = Date.now();
             this.updateRoomInfo(roomId);
-            this.initializeWebRTC();
+            
+            this.connectSocket();
+            
+            const user = JSON.parse(localStorage.getItem('wordeth_user') || '{}');
+            const userName = user.name || user.username || 'Anonymous';
+            
+            this.socket.emit('join-room', {
+                roomId,
+                userId: user.id || this.socket.id,
+                userName,
+                isHost
+            });
+            
             this.addChatMessage('System', 'Welcome to the room!', true);
 
             fetch(apiUrl('/api/analytics/track'), {
@@ -902,6 +941,234 @@ class AudioRoomsManager {
         }
     }
 
+    connectSocket() {
+        if (this.socket && this.socket.connected) return;
+        
+        const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
+        this.socket = io(serverUrl, {
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: 10,
+            reconnectionDelay: 1000
+        });
+        
+        this.socket.on('connect', () => {
+            console.log('Socket.io connected:', this.socket.id);
+        });
+        
+        this.socket.on('disconnect', (reason) => {
+            console.log('Socket.io disconnected:', reason);
+            if (reason === 'io server disconnect') {
+                this.socket.connect();
+            }
+        });
+        
+        this.socket.on('room-joined', async (data) => {
+            console.log('Room joined via signaling:', data);
+            this.updateParticipantDisplay(data.participants);
+            
+            if (this.localStream) {
+                for (const p of data.participants) {
+                    if (p.socketId !== this.socket.id) {
+                        await this.createPeerConnection(p.socketId, p.userName, true);
+                    }
+                }
+            }
+        });
+        
+        this.socket.on('participant-joined', async (data) => {
+            console.log('Participant joined:', data.userName);
+            this.addChatMessage('System', `${data.userName} joined the room.`, true);
+            this.updateParticipantDisplay(data.participants);
+        });
+        
+        this.socket.on('participant-left', (data) => {
+            console.log('Participant left:', data.userName);
+            this.addChatMessage('System', `${data.userName} left the room.`, true);
+            this.closePeerConnection(data.socketId);
+            this.removeRemoteParticipant(data.socketId);
+            this.updateParticipantDisplay(data.participants);
+        });
+        
+        this.socket.on('webrtc-offer', async ({ senderId, senderName, offer }) => {
+            console.log('Received WebRTC offer from:', senderName);
+            const pc = await this.createPeerConnection(senderId, senderName, false);
+            if (pc) {
+                await pc.setRemoteDescription(new RTCSessionDescription(offer));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                this.socket.emit('webrtc-answer', { targetId: senderId, answer });
+            }
+        });
+        
+        this.socket.on('webrtc-answer', async ({ senderId, answer }) => {
+            const pc = this.peerConnections.get(senderId);
+            if (pc) {
+                await pc.setRemoteDescription(new RTCSessionDescription(answer));
+            }
+        });
+        
+        this.socket.on('webrtc-ice-candidate', async ({ senderId, candidate }) => {
+            const pc = this.peerConnections.get(senderId);
+            if (pc && candidate) {
+                try {
+                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (e) {
+                    console.error('Error adding ICE candidate:', e);
+                }
+            }
+        });
+        
+        this.socket.on('chat-message', ({ sender, message, timestamp }) => {
+            this.addChatMessage(sender, message, false);
+        });
+        
+        this.socket.on('room-event', ({ event, data }) => {
+            this.handleRemoteRoomEvent(event, data);
+        });
+        
+        this.socket.on('audio-mix-status', ({ userName, mixing, videoId }) => {
+            if (mixing) {
+                this.addChatMessage('System', `${userName} is sharing YouTube audio with the room.`, true);
+            }
+        });
+    }
+    
+    async createPeerConnection(remoteId, remoteName, isInitiator) {
+        if (this.peerConnections.has(remoteId)) {
+            this.closePeerConnection(remoteId);
+        }
+        
+        const pc = new RTCPeerConnection(this.rtcConfig);
+        this.peerConnections.set(remoteId, pc);
+        
+        const streamToSend = this.mixedStream || this.localStream;
+        if (streamToSend) {
+            streamToSend.getTracks().forEach(track => {
+                pc.addTrack(track, streamToSend);
+            });
+        }
+        
+        pc.onicecandidate = (event) => {
+            if (event.candidate) {
+                this.socket.emit('webrtc-ice-candidate', {
+                    targetId: remoteId,
+                    candidate: event.candidate
+                });
+            }
+        };
+        
+        pc.ontrack = (event) => {
+            console.log('Received remote track from:', remoteName);
+            this.handleRemoteStream(remoteId, remoteName, event.streams[0]);
+        };
+        
+        pc.onconnectionstatechange = () => {
+            console.log(`Peer ${remoteName} connection state: ${pc.connectionState}`);
+            if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+                this.closePeerConnection(remoteId);
+            }
+        };
+        
+        if (isInitiator) {
+            try {
+                const offer = await pc.createOffer({ offerToReceiveAudio: true });
+                await pc.setLocalDescription(offer);
+                this.socket.emit('webrtc-offer', { targetId: remoteId, offer });
+            } catch (e) {
+                console.error('Error creating offer:', e);
+            }
+        }
+        
+        return pc;
+    }
+    
+    closePeerConnection(remoteId) {
+        const pc = this.peerConnections.get(remoteId);
+        if (pc) {
+            pc.close();
+            this.peerConnections.delete(remoteId);
+        }
+        const audioEl = this.remoteAudioElements.get(remoteId);
+        if (audioEl) {
+            audioEl.srcObject = null;
+            audioEl.remove();
+            this.remoteAudioElements.delete(remoteId);
+        }
+    }
+    
+    handleRemoteStream(remoteId, remoteName, stream) {
+        let audioEl = this.remoteAudioElements.get(remoteId);
+        if (!audioEl) {
+            audioEl = document.createElement('audio');
+            audioEl.autoplay = true;
+            audioEl.playsInline = true;
+            audioEl.id = `remote-audio-${remoteId}`;
+            document.body.appendChild(audioEl);
+            this.remoteAudioElements.set(remoteId, audioEl);
+        }
+        audioEl.srcObject = stream;
+        
+        this.addRemoteSpeaker(remoteId, remoteName, stream, true);
+    }
+    
+    handleRemoteRoomEvent(event, data) {
+        switch (event) {
+            case 'room-lock':
+                this.isRoomLocked = data.locked;
+                this.addChatMessage('System', `Room ${data.locked ? 'locked' : 'unlocked'} by host.`, true);
+                break;
+            case 'topic-change':
+                const topicEl = document.getElementById('current-song');
+                if (topicEl) topicEl.textContent = data.topic;
+                this.addChatMessage('System', `Topic changed to: ${data.topic}`, true);
+                break;
+            case 'karaoke-permission':
+                this.karaokeEnabled = data.enabled;
+                this.updateKaraokeButtonState();
+                this.addChatMessage('System', `Karaoke ${data.enabled ? 'enabled' : 'disabled'} by host.`, true);
+                break;
+            case 'screenshare-permission':
+                this.screenshareEnabled = data.enabled;
+                this.updateScreenshareButtonState();
+                this.addChatMessage('System', `Screen share ${data.enabled ? 'enabled' : 'disabled'} by host.`, true);
+                break;
+            case 'permission-request':
+                this.handlePermissionRequest(data);
+                break;
+            case 'permission-approved':
+                this.handlePermissionApproved(data);
+                break;
+            case 'permission-denied':
+                this.handlePermissionDenied(data);
+                break;
+            case 'hand-raise':
+                this.addChatMessage('System', `${data.userName} ${data.raised ? 'raised' : 'lowered'} their hand.`, true);
+                break;
+            case 'mute-status':
+                break;
+            case 'host-changed':
+                this.addChatMessage('System', `${data.newHostName} is now the host.`, true);
+                break;
+            case 'youtube-embed':
+                this.addChatMessage('System', `${data.userName} is playing a YouTube video for karaoke.`, true);
+                break;
+            case 'karaoke-start':
+                this.addChatMessage('System', `${data.userName} started karaoke!`, true);
+                break;
+            case 'karaoke-stop':
+                this.addChatMessage('System', `${data.userName} stopped karaoke.`, true);
+                break;
+        }
+    }
+    
+    updateParticipantDisplay(participants) {
+        if (this.participantCount) {
+            const count = participants.length;
+            this.participantCount.textContent = `${count} participant${count !== 1 ? 's' : ''}`;
+        }
+    }
+    
     initializeWebRTC() {
         console.log('Initializing WebRTC connections...');
     }
@@ -942,6 +1209,14 @@ class AudioRoomsManager {
 
     notifyParticipants(event, data) {
         console.log('Notifying participants:', event, data);
+        
+        if (this.socket && this.socket.connected && this.currentRoom) {
+            this.socket.emit('room-event', {
+                roomId: this.currentRoom,
+                event,
+                data
+            });
+        }
         
         if (event === 'permission-request') {
             this.handlePermissionRequest(data);
@@ -1020,6 +1295,8 @@ class AudioRoomsManager {
             }).catch(() => {});
         }
 
+        this.stopAudioMix();
+        
         if (this.localStream) {
             this.localStream.getTracks().forEach(track => track.stop());
             this.localStream = null;
@@ -1027,6 +1304,17 @@ class AudioRoomsManager {
         
         this.peerConnections.forEach(pc => pc.close());
         this.peerConnections.clear();
+        
+        this.remoteAudioElements.forEach(el => {
+            el.srcObject = null;
+            el.remove();
+        });
+        this.remoteAudioElements.clear();
+        
+        if (this.socket) {
+            this.socket.disconnect();
+            this.socket = null;
+        }
         
         this.isSpeaker = false;
         this.handRaised = false;
@@ -2933,6 +3221,28 @@ class AudioRoomsManager {
         wrapper.style.display = '';
         this.currentVideoId = videoId;
         this.updateAudioStatus('playing', 'Playing');
+        
+        this.showShareAudioButton();
+        
+        if (this.socket && this.currentRoom) {
+            this.notifyParticipants('youtube-embed', { videoId });
+        }
+    }
+    
+    showShareAudioButton() {
+        let shareBtn = document.getElementById('yt-share-audio-btn');
+        if (!shareBtn) {
+            const wrapper = document.getElementById('yt-embed-wrapper');
+            if (!wrapper) return;
+            
+            shareBtn = document.createElement('button');
+            shareBtn.id = 'yt-share-audio-btn';
+            shareBtn.className = 'yt-share-audio-btn';
+            shareBtn.innerHTML = '<i class="fas fa-broadcast-tower"></i> Share Audio with Room';
+            shareBtn.addEventListener('click', () => this.captureYouTubeAudio());
+            wrapper.appendChild(shareBtn);
+        }
+        shareBtn.style.display = '';
     }
     
     embedYouTubeFromInput() {
@@ -2957,8 +3267,190 @@ class AudioRoomsManager {
         const iframe = document.getElementById('yt-embed-iframe');
         if (iframe) iframe.src = '';
         if (wrapper) wrapper.style.display = 'none';
+        const shareBtn = document.getElementById('yt-share-audio-btn');
+        if (shareBtn) shareBtn.style.display = 'none';
         this.currentVideoId = null;
+        this.stopAudioMix();
         this.updateAudioStatus('ready', 'Video closed');
+    }
+    
+    async startAudioMix() {
+        if (this.audioMixEnabled) return;
+        if (!this.localStream) {
+            console.warn('No local stream for audio mixing');
+            return;
+        }
+        
+        try {
+            if (!this.audioContext || this.audioContext.state === 'closed') {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
+            }
+            
+            this.mixDestination = this.audioContext.createMediaStreamDestination();
+            
+            const micTrack = this.localStream.getAudioTracks()[0];
+            if (micTrack) {
+                const micStream = new MediaStream([micTrack]);
+                this.micAudioSource = this.audioContext.createMediaStreamSource(micStream);
+                
+                const micGain = this.audioContext.createGain();
+                micGain.gain.value = 1.0;
+                this.micAudioSource.connect(micGain);
+                micGain.connect(this.mixDestination);
+                this.micGainNode = micGain;
+            }
+            
+            this.mixedStream = this.mixDestination.stream;
+            this.audioMixEnabled = true;
+            
+            this.replaceOutgoingAudioTrack(this.mixedStream.getAudioTracks()[0]);
+            
+            this.addChatMessage('System', 'Audio mixing enabled — your mic is ready for YouTube audio.', true);
+            console.log('Audio mixing initialized (mic only, waiting for YouTube audio)');
+            
+        } catch (error) {
+            console.error('Error starting audio mix:', error);
+            this.addChatMessage('System', 'Could not start audio mixing.', true);
+        }
+    }
+    
+    captureYouTubeAudio() {
+        if (!this.audioMixEnabled || !this.audioContext || !this.mixDestination) {
+            this.startAudioMix().then(() => this.captureYouTubeAudio());
+            return;
+        }
+        
+        try {
+            if (this.youtubeAudioSource) {
+                try { this.youtubeAudioSource.disconnect(); } catch(e) {}
+                this.youtubeAudioSource = null;
+            }
+            
+            const iframe = document.getElementById('yt-embed-iframe');
+            if (!iframe) {
+                console.warn('No YouTube iframe found for audio capture');
+                return;
+            }
+            
+            if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+                this.captureTabAudio();
+            } else {
+                this.addChatMessage('System', 'YouTube audio sharing requires tab audio capture. Other participants will hear the music through your microphone.', true);
+            }
+        } catch (error) {
+            console.error('Error capturing YouTube audio:', error);
+        }
+    }
+    
+    async captureTabAudio() {
+        try {
+            const displayStream = await navigator.mediaDevices.getDisplayMedia({
+                video: { width: 1, height: 1 },
+                audio: true,
+                preferCurrentTab: true,
+                selfBrowserSurface: 'include',
+                systemAudio: 'include'
+            });
+            
+            const audioTracks = displayStream.getAudioTracks();
+            if (audioTracks.length === 0) {
+                this.addChatMessage('System', 'No audio was shared. Please select "Share tab audio" when prompted.', true);
+                displayStream.getTracks().forEach(t => t.stop());
+                return;
+            }
+            
+            displayStream.getVideoTracks().forEach(t => t.stop());
+            
+            this.youtubeAudioSource = this.audioContext.createMediaStreamSource(
+                new MediaStream(audioTracks)
+            );
+            
+            const ytGain = this.audioContext.createGain();
+            ytGain.gain.value = 0.8;
+            this.youtubeAudioSource.connect(ytGain);
+            ytGain.connect(this.mixDestination);
+            this.ytGainNode = ytGain;
+            
+            audioTracks[0].onended = () => {
+                this.removeYouTubeFromMix();
+                this.addChatMessage('System', 'YouTube audio sharing stopped.', true);
+            };
+            
+            this.addChatMessage('System', 'YouTube audio is now being shared with the room!', true);
+            
+            if (this.socket && this.currentRoom) {
+                this.socket.emit('audio-mix-status', {
+                    roomId: this.currentRoom,
+                    mixing: true,
+                    videoId: this.currentVideoId
+                });
+            }
+            
+            console.log('YouTube audio captured and mixed into outgoing stream');
+            
+        } catch (error) {
+            if (error.name === 'NotAllowedError') {
+                this.addChatMessage('System', 'Audio capture was cancelled. Other participants will hear music through your mic.', true);
+            } else {
+                console.error('Error capturing tab audio:', error);
+                this.addChatMessage('System', 'Could not capture audio. Others will hear music through your mic.', true);
+            }
+        }
+    }
+    
+    removeYouTubeFromMix() {
+        if (this.youtubeAudioSource) {
+            try { this.youtubeAudioSource.disconnect(); } catch(e) {}
+            this.youtubeAudioSource = null;
+        }
+        if (this.ytGainNode) {
+            try { this.ytGainNode.disconnect(); } catch(e) {}
+            this.ytGainNode = null;
+        }
+        
+        if (this.socket && this.currentRoom) {
+            this.socket.emit('audio-mix-status', {
+                roomId: this.currentRoom,
+                mixing: false,
+                videoId: null
+            });
+        }
+    }
+    
+    stopAudioMix() {
+        this.removeYouTubeFromMix();
+        
+        if (this.micAudioSource) {
+            try { this.micAudioSource.disconnect(); } catch(e) {}
+            this.micAudioSource = null;
+        }
+        if (this.micGainNode) {
+            try { this.micGainNode.disconnect(); } catch(e) {}
+            this.micGainNode = null;
+        }
+        if (this.mixDestination) {
+            this.mixDestination = null;
+        }
+        
+        this.audioMixEnabled = false;
+        this.mixedStream = null;
+        
+        if (this.localStream && this.localStream.getAudioTracks().length > 0) {
+            this.replaceOutgoingAudioTrack(this.localStream.getAudioTracks()[0]);
+        }
+    }
+    
+    replaceOutgoingAudioTrack(newTrack) {
+        if (!newTrack) return;
+        this.peerConnections.forEach((pc) => {
+            const sender = pc.getSenders().find(s => s.track?.kind === 'audio');
+            if (sender) {
+                sender.replaceTrack(newTrack);
+            }
+        });
     }
     
     async loadYouTubeAudio(artist, title) {

@@ -1,10 +1,13 @@
 require('dotenv').config();
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const { setupSignaling, getActiveRooms } = require('./routes/signaling');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -16,10 +19,15 @@ const adsRoutes = require('./routes/ads'); // Advertising system
 const analyticsRoutes = require('./routes/analytics'); // Usage metrics
 const trackingMiddleware = require('./middleware/tracking'); // Event tracking
 
-// Create Express app
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: { origin: true, credentials: true },
+    transports: ['websocket', 'polling']
+});
 
-// Trust proxy for Replit (needed for rate limiting)
+setupSignaling(io);
+
 app.set('trust proxy', 1);
 
 // Security middleware
@@ -120,6 +128,10 @@ app.use('/api/articles', articleRoutes);
 app.use('/api/ads', adsRoutes); // Advertising system
 app.use('/api/analytics', analyticsRoutes); // Usage metrics & admin dashboard
 
+app.get('/api/rooms/active', (req, res) => {
+    res.json(getActiveRooms());
+});
+
 // Serve frontend files in production
 if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname)));
@@ -147,10 +159,10 @@ app.use('*', (req, res) => {
 // Start server (only if not in test mode and not being imported)
 if (process.env.NODE_ENV !== 'test' && !module.parent) {
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+    console.log('🔌 WebSocket signaling server active');
 }); 
 }
 
-// Export app for testing
-module.exports = app; 
+module.exports = { app, server, io };

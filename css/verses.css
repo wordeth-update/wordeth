@@ -2186,6 +2186,36 @@
     background: rgba(255, 0, 0, 0.8);
 }
 
+.yt-share-audio-btn {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--purple), var(--mint));
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.yt-share-audio-btn:hover {
+    transform: translateX(-50%) scale(1.05);
+    box-shadow: 0 4px 12px rgba(var(--mint-rgb, 0, 255, 200), 0.3);
+}
+
+.yt-share-audio-btn i {
+    font-size: 0.75rem;
+}
+
 .audio-status {
     display: flex;
     align-items: center;
