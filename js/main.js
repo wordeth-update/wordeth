@@ -94,51 +94,28 @@ async function getSongDetails(songId) {
 
 // Search Functionality
 let searchTimeout;
-searchInput.addEventListener('input', (e) => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(async () => {
-        const query = e.target.value;
-        if (query.length < 3) return;
+if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(async () => {
+            const query = e.target.value;
+            if (query.length < 3) return;
 
-        const searchResults = document.createElement('div');
-        searchResults.classList.add('search-results');
-        searchResults.innerHTML = '<div class="loading"></div>';
-        
-        const results = await searchLyrics(query);
-        searchResults.innerHTML = results.map(track => `
-            <div class="search-result" data-track-id="${track.track.track_id}">
-                <h4>${track.track.track_name}</h4>
-                <p>${track.track.artist_name}</p>
-            </div>
-        `).join('');
-    }, 300);
-});
-
-
-    mobileMenuClose.addEventListener('click', () => {
-        mobileMenu.classList.remove('active');
-        menuToggle.classList.remove('active');
-        document.body.classList.remove('menu-open');
-    });
-
-    // Close menu when clicking outside
-    mobileMenu.addEventListener('click', (e) => {
-        if (e.target === mobileMenu) {
-            mobileMenu.classList.remove('active');
-            menuToggle.classList.remove('active');
-            document.body.classList.remove('menu-open');
-        }
-    });
-
-    // Close menu on escape key
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && mobileMenu.classList.contains('active')) {
-            mobileMenu.classList.remove('active');
-            menuToggle.classList.remove('active');
-            document.body.classList.remove('menu-open');
-        }
+            const searchResults = document.createElement('div');
+            searchResults.classList.add('search-results');
+            searchResults.innerHTML = '<div class="loading"></div>';
+            
+            const results = await searchLyrics(query);
+            searchResults.innerHTML = results.map(track => `
+                <div class="search-result" data-track-id="${track.track.track_id}">
+                    <h4>${track.track.track_name}</h4>
+                    <p>${track.track.artist_name}</p>
+                </div>
+            `).join('');
+        }, 300);
     });
 }
+
 // Page Transitions
 function navigateTo(url) {
     const transition = document.createElement('div');
@@ -153,9 +130,11 @@ function navigateTo(url) {
 // Initialize Carousel
 function initCarousel() {
     const carousel = document.querySelector('.video-carousel');
+    if (!carousel) return;
     const prevBtn = carousel.querySelector('.prev');
     const nextBtn = carousel.querySelector('.next');
     const videoGrid = carousel.querySelector('.video-grid');
+    if (!prevBtn || !nextBtn || !videoGrid) return;
 
     let scrollPosition = 0;
     const scrollAmount = 300;
