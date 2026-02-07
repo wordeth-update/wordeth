@@ -337,6 +337,79 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 3000);
     }
 
+    const searchInput = document.getElementById('user-search-input');
+    const searchResults = document.getElementById('user-search-results');
+    let searchTimeout;
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            const query = searchInput.value.trim();
+            if (query.length < 2) {
+                searchResults.style.display = 'none';
+                searchResults.innerHTML = '';
+                return;
+            }
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(apiUrl(`/api/user/search?q=${encodeURIComponent(query)}`));
+                    if (!res.ok) return;
+                    const users = await res.json();
+                    if (users.length === 0) {
+                        searchResults.innerHTML = '<p class="search-no-results">No users found</p>';
+                        searchResults.style.display = 'block';
+                        return;
+                    }
+                    searchResults.innerHTML = users
+                        .filter(u => !currentUser || u._id !== currentUser._id)
+                        .map(u => `
+                            <div class="search-result-card" data-user-id="${u._id}">
+                                <div class="search-result-avatar">
+                                    <img src="${escHtml(u.avatar)}" alt="${escHtml(u.name)}" onerror="this.src='assets/default-avatar.png'">
+                                </div>
+                                <div class="search-result-info">
+                                    <h4>${escHtml(u.name)}</h4>
+                                    <p>${escHtml(u.bio || 'No bio')}</p>
+                                </div>
+                                <button class="follow-btn" data-user-id="${u._id}">
+                                    <i class="fas fa-user-plus"></i> Follow
+                                </button>
+                            </div>
+                        `).join('');
+                    searchResults.style.display = 'block';
+
+                    searchResults.querySelectorAll('.follow-btn').forEach(btn => {
+                        btn.addEventListener('click', async (e) => {
+                            const userId = e.currentTarget.dataset.userId;
+                            try {
+                                const res = await apiFetch(`/api/user/friends/${userId}`, { method: 'POST' });
+                                if (!res) return;
+                                if (res.ok) {
+                                    e.currentTarget.innerHTML = '<i class="fas fa-check"></i> Following';
+                                    e.currentTarget.disabled = true;
+                                    e.currentTarget.classList.add('following');
+                                    showToast('Following!');
+                                    const profileRes = await apiFetch('/api/user/profile');
+                                    if (profileRes && profileRes.ok) {
+                                        currentUser = await profileRes.json();
+                                        renderProfile(currentUser);
+                                    }
+                                } else {
+                                    const data = await res.json();
+                                    showToast(data.message || 'Could not follow', true);
+                                }
+                            } catch (err) {
+                                showToast('Something went wrong', true);
+                            }
+                        });
+                    });
+                } catch (err) {
+                    console.error('Search error:', err);
+                }
+            }, 400);
+        });
+    }
+
     loadProfile();
     loadTabContent('history');
 });

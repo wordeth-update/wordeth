@@ -56,6 +56,8 @@ function setupSignaling(io) {
             });
 
             console.log(`${socket.userName} joined room ${roomId} (${room.participants.size} participants)`);
+
+            io.emit('rooms-updated', getActiveRooms());
         });
 
         socket.on('webrtc-offer', ({ targetId, offer }) => {
@@ -201,6 +203,8 @@ function setupSignaling(io) {
                         });
                     }
                 }
+
+                io.emit('rooms-updated', getActiveRooms());
 
                 console.log(`${socket.userName} left room ${socket.roomId} (${room.participants.size} remaining)`);
             }

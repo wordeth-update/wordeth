@@ -19,6 +19,32 @@ const upload = multer({
     }
 });
 
+router.get('/search', async (req, res) => {
+    try {
+        const { q } = req.query;
+        if (!q || q.trim().length < 2) {
+            return res.json([]);
+        }
+        const searchTerm = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const users = await User.find({
+            name: { $regex: searchTerm, $options: 'i' }
+        })
+        .select('name bio avatar createdAt')
+        .limit(20);
+        
+        res.json(users.map(u => ({
+            _id: u._id,
+            name: u.name,
+            bio: u.bio || '',
+            avatar: u.avatar || 'assets/default-avatar.png',
+            joinedAt: u.createdAt
+        })));
+    } catch (error) {
+        console.error('User search error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 router.get('/check-name', async (req, res) => {
     try {
         const { name } = req.query;

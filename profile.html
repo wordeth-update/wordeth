@@ -127,9 +127,17 @@
             </div>
 
             <div class="tab-content" id="friends">
+                <div class="user-search-section">
+                    <div class="user-search-bar">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="user-search-input" placeholder="Search users by name..." autocomplete="off">
+                    </div>
+                    <div class="user-search-results" id="user-search-results" style="display:none;"></div>
+                </div>
+                <h3 class="friends-section-title">Your Connections</h3>
                 <div class="tab-empty" id="friends-empty">
                     <i class="fas fa-user-friends"></i>
-                    <p>No connections yet. Join a Verse to meet fellow music lovers!</p>
+                    <p>No connections yet. Search for users above or join a Verse to meet fellow music lovers!</p>
                     <a href="/verses.html" class="btn-primary-sm">Browse Verses</a>
                 </div>
                 <div class="friends-list" id="friends-list"></div>

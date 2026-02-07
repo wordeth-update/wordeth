@@ -319,9 +319,26 @@ class AudioRoomsManager {
 
     connectToServer() {
         console.log('Connecting to signaling server...');
-        setTimeout(() => {
+        const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
+        this.lobbySocket = io(serverUrl, {
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: 10,
+            reconnectionDelay: 1000
+        });
+
+        this.lobbySocket.on('connect', () => {
             console.log('Connected to signaling server');
-        }, 1000);
+        });
+
+        this.lobbySocket.on('rooms-updated', (rooms) => {
+            console.log('Rooms updated in real-time:', rooms.length, 'rooms');
+            this.renderRooms(rooms);
+        });
+
+        this.lobbySocket.on('disconnect', () => {
+            console.log('Lobby socket disconnected');
+        });
     }
 
     async loadActiveRooms() {
