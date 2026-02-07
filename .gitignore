@@ -17,6 +17,7 @@ dist/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.bak
 
 # Logs
 logs
@@ -42,6 +43,16 @@ Thumbs.db
 *.swo
 *~
 
+# Replit-specific files
+.replit
+replit.md
+.replit_integration_files/
+.config/
+.cache/
+.local/
+.upm/
+.nix/
+
 # Test database
 wordeth_test
 
@@ -54,13 +65,15 @@ www/
 
 # Capacitor native build artifacts
 android/app/build/
+android/.gradle/
 ios/App/Pods/
 ios/DerivedData/
 
+# User uploads (if stored locally)
+uploads/
+
 # Misc
-.cache/
 .temp/
-.env.bak
 *.backup
 *.backup2
 *.tmp
