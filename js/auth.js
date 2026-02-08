@@ -28,8 +28,15 @@ if (signinForm) {
             if (response.ok) {
                 localStorage.setItem('authToken', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
-                const returnTo = new URLSearchParams(window.location.search).get('return');
-                window.location.href = returnTo || '/';
+                const savedReturn = localStorage.getItem('wordeth_return_url');
+                if (savedReturn && savedReturn.startsWith('/') && !savedReturn.startsWith('//')) {
+                    localStorage.removeItem('wordeth_return_url');
+                    window.location.href = savedReturn;
+                } else {
+                    localStorage.removeItem('wordeth_return_url');
+                    const returnTo = new URLSearchParams(window.location.search).get('return');
+                    window.location.href = returnTo || '/';
+                }
             } else {
                 throw new Error(data.message || 'Sign in failed');
             }
@@ -80,7 +87,14 @@ if (signupForm) {
             if (response.ok) {
                 localStorage.setItem('authToken', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
-                window.location.href = '/profile.html';
+                const savedReturn = localStorage.getItem('wordeth_return_url');
+                if (savedReturn && savedReturn.startsWith('/') && !savedReturn.startsWith('//')) {
+                    localStorage.removeItem('wordeth_return_url');
+                    window.location.href = savedReturn;
+                } else {
+                    localStorage.removeItem('wordeth_return_url');
+                    window.location.href = '/profile.html';
+                }
             } else {
                 throw new Error(data.message || data.errors?.[0]?.msg || 'Sign up failed');
             }

@@ -197,6 +197,9 @@ class AudioRoomsManager {
         this.addUsersBtn?.addEventListener('click', () => this.showAddUsersModal());
         this.replayBtn?.addEventListener('click', () => this.showReplayModal());
         
+        document.getElementById('share-room-btn')?.addEventListener('click', () => this.shareRoom());
+        document.getElementById('share-room-mobile-btn')?.addEventListener('click', () => this.shareRoom());
+
         // New feature event listeners
         this.lockRoomBtn?.addEventListener('click', () => this.toggleRoomLock());
         this.audioFilterBtn?.addEventListener('click', () => this.showAudioFiltersModal());
@@ -468,6 +471,63 @@ class AudioRoomsManager {
 
     capitalizeFirst(str) {
         return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    async shareRoom() {
+        if (!this.currentRoom) return;
+
+        const roomName = document.getElementById('room-name')?.textContent || 'a room';
+        const baseUrl = window.location.origin;
+        const shareUrl = `${baseUrl}/verses.html?room=${encodeURIComponent(this.currentRoom)}`;
+        const shareText = `Join me in "${roomName}" on Wordeth! Live music discussion happening now.`;
+
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: `Wordeth - ${roomName}`,
+                    text: shareText,
+                    url: shareUrl
+                });
+                this.addChatMessage('System', 'Room link shared!', true);
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    this.copyShareLink(shareUrl);
+                }
+            }
+        } else {
+            this.copyShareLink(shareUrl);
+        }
+    }
+
+    copyShareLink(url) {
+        navigator.clipboard.writeText(url).then(() => {
+            this.showShareToast('Room link copied to clipboard!');
+            this.addChatMessage('System', 'Room link copied to clipboard!', true);
+        }).catch(() => {
+            const input = document.createElement('input');
+            input.value = url;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            this.showShareToast('Room link copied!');
+            this.addChatMessage('System', 'Room link copied to clipboard!', true);
+        });
+    }
+
+    showShareToast(message) {
+        const existing = document.querySelector('.share-toast');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.className = 'share-toast';
+        toast.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+        document.body.appendChild(toast);
+        requestAnimationFrame(() => toast.classList.add('visible'));
+        setTimeout(() => {
+            toast.classList.remove('visible');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
     }
 
     filterRooms(filter) {
@@ -3521,8 +3581,28 @@ const urlParams = new URLSearchParams(window.location.search);
 const roomToJoin = urlParams.get('room');
 if (roomToJoin) {
     document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => {
-            window.audioRoomsManager?.joinRoom(roomToJoin);
-        }, 1000);
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            const returnUrl = `/verses.html?room=${encodeURIComponent(roomToJoin)}`;
+            localStorage.setItem('wordeth_return_url', returnUrl);
+
+            const joinBanner = document.createElement('div');
+            joinBanner.className = 'join-invite-banner';
+            joinBanner.innerHTML = `
+                <div class="invite-content">
+                    <i class="fas fa-headphones"></i>
+                    <p>You've been invited to a live room! Sign up or sign in to join.</p>
+                    <div class="invite-actions">
+                        <a href="/signup.html" class="invite-btn primary">Sign Up Free</a>
+                        <a href="/signin.html" class="invite-btn secondary">Sign In</a>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(joinBanner);
+        } else {
+            setTimeout(() => {
+                window.audioRoomsManager?.joinRoom(roomToJoin);
+            }, 1500);
+        }
     });
-} 
+}

@@ -3242,3 +3242,105 @@
         gap: 0.25rem;
     }
 }
+
+.share-toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: linear-gradient(135deg, #8B5CF6, #6D28D9);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    z-index: 10000;
+    opacity: 0;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.share-toast.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.join-invite-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    background: linear-gradient(135deg, #1a1a2e, #2d1b69);
+    border-top: 2px solid #8B5CF6;
+    padding: 1.5rem;
+    animation: slideUpBanner 0.5s ease-out;
+}
+
+@keyframes slideUpBanner {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+.invite-content {
+    max-width: 500px;
+    margin: 0 auto;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.invite-content i {
+    font-size: 2rem;
+    color: #8B5CF6;
+}
+
+.invite-content p {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1rem;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.invite-actions {
+    display: flex;
+    gap: 0.75rem;
+    width: 100%;
+    justify-content: center;
+}
+
+.invite-btn {
+    padding: 0.7rem 1.5rem;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+    min-width: 120px;
+    text-align: center;
+}
+
+.invite-btn.primary {
+    background: linear-gradient(135deg, #8B5CF6, #6D28D9);
+    color: white;
+}
+
+.invite-btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+}
+
+.invite-btn.secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.invite-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
