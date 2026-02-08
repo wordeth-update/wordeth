@@ -16,7 +16,7 @@ let ogLogoBase64 = '';
     try {
         const logoPath = path.join(__dirname, 'images', 'logo.png');
         if (fs.existsSync(logoPath)) {
-            const buf = await sharp(logoPath).resize(120, 120, { fit: 'inside' }).png().toBuffer();
+            const buf = await sharp(logoPath).resize(240, 240, { fit: 'inside' }).png().toBuffer();
             ogLogoBase64 = buf.toString('base64');
             console.log('OG logo cached for link previews');
         } else {
@@ -243,7 +243,7 @@ app.get('/og-image/:roomId', ogCrawlerHeaders, async (req, res) => {
             : 'Be the first to join';
 
         const logoImg = ogLogoBase64
-            ? `<image x="920" y="70" width="100" height="100" href="data:image/png;base64,${ogLogoBase64}" opacity="0.95"/>`
+            ? `<image x="880" y="50" width="210" height="210" href="data:image/png;base64,${ogLogoBase64}" opacity="0.95"/>`
             : '';
 
         const svg = `<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -271,60 +271,52 @@ app.get('/og-image/:roomId', ogCrawlerHeaders, async (req, res) => {
       <stop offset="100%" stop-color="#8B5CF6"/>
     </linearGradient>
     <filter id="glow">
-      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feGaussianBlur stdDeviation="15" result="blur"/>
       <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
     <filter id="shadow">
-      <feDropShadow dx="0" dy="10" stdDeviation="25" flood-color="#000" flood-opacity="0.6"/>
-      <feDropShadow dx="0" dy="0" stdDeviation="40" flood-color="#8B5CF6" flood-opacity="0.25"/>
+      <feDropShadow dx="0" dy="8" stdDeviation="20" flood-color="#000" flood-opacity="0.5"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="35" flood-color="#8B5CF6" flood-opacity="0.2"/>
     </filter>
-    <clipPath id="clip"><rect x="100" y="40" width="1000" height="550" rx="48"/></clipPath>
+    <clipPath id="clip"><rect x="40" y="20" width="1120" height="590" rx="40"/></clipPath>
   </defs>
 
   <rect width="1200" height="630" fill="#0a0a12"/>
 
-  <rect x="100" y="40" width="1000" height="550" rx="48" fill="url(#bg)" filter="url(#shadow)"/>
+  <rect x="40" y="20" width="1120" height="590" rx="40" fill="url(#bg)" filter="url(#shadow)"/>
 
   <g clip-path="url(#clip)">
-    <circle cx="900" cy="100" r="300" fill="#96c5b0" opacity="0.06"/>
-    <circle cx="250" cy="500" r="280" fill="#8B5CF6" opacity="0.08"/>
-    <circle cx="600" cy="320" r="400" fill="#8B5CF6" opacity="0.03"/>
+    <circle cx="950" cy="80" r="320" fill="#96c5b0" opacity="0.07"/>
+    <circle cx="200" cy="520" r="300" fill="#8B5CF6" opacity="0.09"/>
   </g>
 
-  <rect x="155" y="100" width="170" height="44" rx="22" fill="#96c5b0" fill-opacity="0.15" stroke="#96c5b0" stroke-opacity="0.4" stroke-width="1.5"/>
-  <circle cx="185" cy="122" r="6" fill="#96c5b0"/>
-  <text x="202" y="130" font-family="Inter,Arial,Helvetica,sans-serif" font-size="17" font-weight="700" fill="#96c5b0" letter-spacing="2">LIVE NOW</text>
+  <rect x="100" y="70" width="230" height="58" rx="29" fill="#96c5b0" fill-opacity="0.18" stroke="#96c5b0" stroke-opacity="0.5" stroke-width="2"/>
+  <circle cx="138" cy="99" r="9" fill="#96c5b0"/>
+  <text x="162" y="110" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="700" fill="#96c5b0" letter-spacing="2.5">LIVE NOW</text>
 
   <g filter="url(#glow)">
     ${logoImg}
   </g>
 
-  <text x="155" y="255" font-family="Inter,Arial,Helvetica,sans-serif" font-size="56" font-weight="800" fill="url(#roomGrad)">${displayName}</text>
+  <text x="100" y="265" font-family="Arial,Helvetica,sans-serif" font-size="78" font-weight="900" fill="url(#roomGrad)">${displayName}</text>
 
-  <circle cx="180" cy="325" r="22" fill="url(#avatarGrad)"/>
-  <text x="180" y="333" font-family="Inter,Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="white" text-anchor="middle">${hostInitial}</text>
-  <text x="212" y="333" font-family="Inter,Arial,Helvetica,sans-serif" font-size="22" fill="rgba(255,255,255,0.9)" font-weight="600">${inviteLine}</text>
+  <circle cx="130" cy="340" r="30" fill="url(#avatarGrad)"/>
+  <text x="130" y="350" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="700" fill="white" text-anchor="middle">${hostInitial}</text>
+  <text x="172" y="350" font-family="Arial,Helvetica,sans-serif" font-size="30" fill="rgba(255,255,255,0.9)" font-weight="700">${inviteLine}</text>
 
-  <circle cx="162" cy="385" r="5" fill="#8B5CF6" opacity="0.5"/>
-  <circle cx="178" cy="385" r="5" fill="#8B5CF6" opacity="0.4"/>
-  <circle cx="194" cy="385" r="5" fill="#8B5CF6" opacity="0.3"/>
-  <text x="212" y="392" font-family="Inter,Arial,Helvetica,sans-serif" font-size="18" fill="rgba(255,255,255,0.45)">${listenerText}</text>
+  <rect x="100" y="430" width="290" height="76" rx="22" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+  <text x="245" y="478" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="700" fill="rgba(255,255,255,0.6)" text-anchor="middle">Not now</text>
 
-  <rect x="155" y="435" width="220" height="60" rx="18" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
-  <text x="265" y="473" font-family="Inter,Arial,Helvetica,sans-serif" font-size="22" font-weight="700" fill="rgba(255,255,255,0.55)" text-anchor="middle">Not now</text>
-
-  <rect x="395" y="435" width="260" height="60" rx="18" fill="url(#joinGrad)"/>
-  <g transform="translate(440, 451)">
-    <path d="M4,15 C4,15 4,9 4,7.5 C4,3.4 7.4,0 11.5,0 C15.6,0 19,3.4 19,7.5 L19,15" stroke="#0a0a0a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-    <rect x="0" y="13" width="5.5" height="9" rx="2" fill="#0a0a0a"/>
-    <rect x="17" y="13" width="5.5" height="9" rx="2" fill="#0a0a0a"/>
+  <rect x="420" y="430" width="340" height="76" rx="22" fill="url(#joinGrad)"/>
+  <g transform="translate(478, 450)">
+    <path d="M5,20 C5,20 5,12 5,10 C5,4.5 9.5,0 15,0 C20.5,0 25,4.5 25,10 L25,20" stroke="#0a0a0a" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <rect x="0" y="17" width="8" height="13" rx="3" fill="#0a0a0a"/>
+    <rect x="22" y="17" width="8" height="13" rx="3" fill="#0a0a0a"/>
   </g>
-  <text x="478" y="473" font-family="Inter,Arial,Helvetica,sans-serif" font-size="22" font-weight="700" fill="#0a0a0a">Join</text>
+  <text x="525" y="478" font-family="Arial,Helvetica,sans-serif" font-size="32" font-weight="800" fill="#0a0a0a">Join</text>
 
-  <rect x="100" y="580" width="1000" height="6" fill="rgba(0,0,0,0.3)"/>
-  <rect x="100" y="580" width="650" height="6" fill="url(#timerGrad)" opacity="0.5"/>
-
-  <text x="155" y="565" font-family="Inter,Arial,Helvetica,sans-serif" font-size="14" fill="rgba(255,255,255,0.25)" letter-spacing="3" font-weight="600">WORDETH</text>
+  <rect x="40" y="600" width="1120" height="10" fill="rgba(0,0,0,0.4)"/>
+  <rect x="40" y="600" width="730" height="10" fill="url(#timerGrad)" opacity="0.6"/>
 </svg>`;
 
         const pngBuffer = await sharp(Buffer.from(svg))
