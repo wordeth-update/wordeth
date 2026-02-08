@@ -45,8 +45,15 @@
     position: relative;
     padding: 1.25rem 1.5rem 0.75rem;
     display: flex;
-    align-items: flex-start;
-    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.invite-logo {
+    height: 22px;
+    width: auto;
+    opacity: 0.7;
+    flex-shrink: 0;
 }
 
 .invite-live-badge {

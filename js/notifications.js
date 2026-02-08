@@ -49,6 +49,7 @@
                         <span class="invite-live-dot"></span>
                         LIVE NOW
                     </div>
+                    <img src="/images/logo.png" alt="Wordeth" class="invite-logo">
                 </div>
                 <div class="invite-card-body">
                     <div class="invite-room-name">${escapeHtml(roomName)}</div>
