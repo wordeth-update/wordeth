@@ -3420,7 +3420,7 @@ class AudioRoomsManager {
         } else {
             try {
                 this.karaokeVideoStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'user', width: 320, height: 240 },
+                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
                     audio: false
                 });
                 
@@ -3512,6 +3512,34 @@ class AudioRoomsManager {
         document.querySelectorAll('.ar-filter-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.arFilter === filter);
         });
+
+        if (!this.karaokeVideoActive) {
+            this.addChatMessage('System', 'Starting camera for AR filter...', true);
+            const videoEl = document.getElementById('karaoke-video');
+            const placeholder = document.getElementById('video-placeholder');
+            const cameraBtn = document.getElementById('karaoke-camera-toggle');
+            try {
+                this.karaokeVideoStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+                    audio: false
+                });
+                if (videoEl && this.karaokeVideoStream) {
+                    videoEl.srcObject = this.karaokeVideoStream;
+                    placeholder?.classList.add('hidden');
+                    cameraBtn?.classList.add('active');
+                    this.karaokeVideoActive = true;
+                    this.previewMode = true;
+                    await new Promise(resolve => {
+                        videoEl.onloadeddata = resolve;
+                        setTimeout(resolve, 2000);
+                    });
+                }
+            } catch (err) {
+                console.error('Camera start failed for AR:', err);
+                this.addChatMessage('System', 'Could not access camera for AR filter.', true);
+                return;
+            }
+        }
 
         if (!this.arFilterEngine) {
             this.arFilterEngine = new ARFilterEngine();
@@ -4956,10 +4984,6 @@ class AudioRoomsManager {
     
     async startAudioMix() {
         if (this.audioMixEnabled) return;
-        if (!this.localStream) {
-            console.warn('No local stream for audio mixing');
-            return;
-        }
         
         try {
             if (!this.audioContext || this.audioContext.state === 'closed') {
@@ -4971,25 +4995,31 @@ class AudioRoomsManager {
             
             this.mixDestination = this.audioContext.createMediaStreamDestination();
             
-            const micTrack = this.localStream.getAudioTracks()[0];
-            if (micTrack) {
-                const micStream = new MediaStream([micTrack]);
-                this.micAudioSource = this.audioContext.createMediaStreamSource(micStream);
-                
-                const micGain = this.audioContext.createGain();
-                micGain.gain.value = 1.0;
-                this.micAudioSource.connect(micGain);
-                micGain.connect(this.mixDestination);
-                this.micGainNode = micGain;
+            if (this.localStream) {
+                const micTrack = this.localStream.getAudioTracks()[0];
+                if (micTrack) {
+                    const micStream = new MediaStream([micTrack]);
+                    this.micAudioSource = this.audioContext.createMediaStreamSource(micStream);
+                    
+                    const micGain = this.audioContext.createGain();
+                    micGain.gain.value = 1.0;
+                    this.micAudioSource.connect(micGain);
+                    micGain.connect(this.mixDestination);
+                    this.micGainNode = micGain;
+                }
+            } else {
+                console.warn('No local stream — audio mix will only contain music/media');
             }
             
             this.mixedStream = this.mixDestination.stream;
             this.audioMixEnabled = true;
             
-            this.replaceOutgoingAudioTrack(this.mixedStream.getAudioTracks()[0]);
+            const mixedTrack = this.mixedStream.getAudioTracks()[0];
+            if (mixedTrack) {
+                await this.replaceOutgoingAudioTrack(mixedTrack);
+            }
             
-            this.addChatMessage('System', 'Audio mixing enabled — your mic is ready for YouTube audio.', true);
-            console.log('Audio mixing initialized (mic only, waiting for YouTube audio)');
+            console.log('Audio mixing initialized, audioContext state:', this.audioContext.state);
             
         } catch (error) {
             console.error('Error starting audio mix:', error);

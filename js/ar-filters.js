@@ -81,6 +81,7 @@ class ARFilterEngine {
 
     detectLandmarks(videoEl, timestamp) {
         if (!this.faceLandmarker || !this.ready) return null;
+        if (videoEl.readyState < 2) return this.landmarks;
         if (videoEl.currentTime === this.lastVideoTime) return this.landmarks;
         this.lastVideoTime = videoEl.currentTime;
 
@@ -92,6 +93,7 @@ class ARFilterEngine {
                 this.landmarks = null;
             }
         } catch (e) {
+            console.warn('AR detectForVideo error:', e.message);
             this.landmarks = null;
         }
         return this.landmarks;
