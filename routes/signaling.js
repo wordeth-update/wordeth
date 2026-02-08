@@ -49,11 +49,12 @@ function setupSignaling(io) {
             }
         });
 
-        socket.on('join-room', ({ roomId, userId, userName, isHost, roomName }) => {
+        socket.on('join-room', ({ roomId, userId, userName, isHost, roomName, avatar }) => {
             socket.join(roomId);
             socket.roomId = roomId;
             socket.userId = userId || socket.id;
             socket.userName = userName || 'Anonymous';
+            socket.avatar = avatar || null;
 
             if (!rooms.has(roomId)) {
                 rooms.set(roomId, {
@@ -77,6 +78,7 @@ function setupSignaling(io) {
                 socketId: socket.id,
                 userId: socket.userId,
                 userName: socket.userName,
+                avatar: socket.avatar || null,
                 isHost: isHost || false,
                 isMuted: false,
                 joinedAt: Date.now()
@@ -102,6 +104,7 @@ function setupSignaling(io) {
                 socketId: socket.id,
                 userId: socket.userId,
                 userName: socket.userName,
+                avatar: socket.avatar || null,
                 isHost: isHost || false,
                 participants: participantList
             });

@@ -57,6 +57,10 @@ class AudioRoomsManager {
         this.karaokeVideoStream = null;
         this.karaokeVideoActive = false;
         
+        // Permission tracking
+        this.pendingPermissionRequestId = null;
+        this.karaokeStartNotified = false;
+        
         this.micTempoEnabled = false;
         this.micAnalyser = null;
         this.micTempoRAF = null;
@@ -282,6 +286,7 @@ class AudioRoomsManager {
         // Karaoke controls
         document.getElementById('karaoke-play-pause')?.addEventListener('click', () => this.toggleKaraokePlayback());
         document.getElementById('karaoke-restart')?.addEventListener('click', () => this.restartKaraoke());
+        document.getElementById('karaoke-new-song')?.addEventListener('click', () => this.newKaraokeSong());
         document.getElementById('karaoke-stop')?.addEventListener('click', () => this.stopKaraoke());
         document.getElementById('karaoke-record-btn')?.addEventListener('click', () => this.toggleRecording());
 
@@ -1152,19 +1157,24 @@ class AudioRoomsManager {
                 userId: user._id || user.id || this.socket.id,
                 userName,
                 isHost,
-                roomName: currentRoomName || null
+                roomName: currentRoomName || null,
+                avatar: user.avatar || null
             });
             
             this.updateRoomInfo(roomId);
             
             const selfInitial = userName.charAt(0).toUpperCase();
+            const selfAvatarUrl = user.avatar || null;
             if (this.speakersStage) {
                 const selfAvatar = document.createElement('div');
                 selfAvatar.className = 'speaker-avatar self-speaker';
                 selfAvatar.setAttribute('data-participant-id', 'self');
+                const selfAvatarContent = selfAvatarUrl 
+                    ? `<img src="${selfAvatarUrl}" alt="${userName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.outerHTML='<div class=\\'avatar-initial\\' style=\\'width:100%;height:100%;border-radius:50%;background:var(--mint,#98ff98);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:#1a1a2e;\\'>${selfInitial}</div>'">`
+                    : `<div class="avatar-initial" style="width:100%;height:100%;border-radius:50%;background:var(--mint,#98ff98);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:#1a1a2e;">${selfInitial}</div>`;
                 selfAvatar.innerHTML = `
                     <div class="avatar-ring">
-                        <div class="avatar-initial" style="width:80px;height:80px;border-radius:50%;background:var(--mint,#98ff98);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:bold;color:#1a1a2e;">${selfInitial}</div>
+                        ${selfAvatarContent}
                     </div>
                     <div class="speaker-info">
                         <span class="speaker-name">${userName} (You)</span>
@@ -1260,7 +1270,7 @@ class AudioRoomsManager {
             for (const p of data.participants) {
                 if (p.socketId !== this.socket.id) {
                     await this.createPeerConnection(p.socketId, p.userName, true);
-                    this.addRemoteSpeaker(p.socketId, p.userName, null, false, p.userId);
+                    this.addRemoteSpeaker(p.socketId, p.userName, null, false, p.userId, p.avatar);
                 }
             }
         });
@@ -1271,7 +1281,7 @@ class AudioRoomsManager {
             this.updateParticipantDisplay(data.participants);
             
             if (!document.querySelector(`[data-participant-id="${data.socketId}"]`)) {
-                this.addRemoteSpeaker(data.socketId, data.userName, null, false, data.userId);
+                this.addRemoteSpeaker(data.socketId, data.userName, null, false, data.userId, data.avatar);
             }
         });
         
@@ -1338,6 +1348,7 @@ class AudioRoomsManager {
         this.socket.on('room-image', ({ sender, imageData }) => {
             this.addImageChatMessage(sender, imageData);
             this.showToast(`${sender} shared a photo`, 'fa-image');
+            this.showSharedImageOverlay(imageData, sender);
         });
         
         this.socket.on('room-event', ({ event, data }) => {
@@ -1582,10 +1593,8 @@ class AudioRoomsManager {
                 this.addChatMessage('System', `${data.newHostName} is now the host.`, true);
                 break;
             case 'youtube-embed':
-                this.addChatMessage('System', `${data.userName} is playing a YouTube video for karaoke.`, true);
                 break;
             case 'karaoke-start':
-                this.addChatMessage('System', `${data.userName} started karaoke!`, true);
                 break;
             case 'karaoke-stop':
                 this.addChatMessage('System', `${data.userName} stopped karaoke.`, true);
@@ -1694,10 +1703,13 @@ class AudioRoomsManager {
         const featureLabel = data.feature === 'karaoke' ? 'Karaoke' : 'Screen Share';
         this.addChatMessage('System', `${data.userName}'s ${featureLabel} request was approved.`, true);
         
-        if (data.feature === 'karaoke') {
-            this.karaokeModal?.classList.add('active');
-        } else if (data.feature === 'screenshare') {
-            this.startScreenShareAfterApproval().catch(e => console.error('Screen share after approval error:', e));
+        if (this.pendingPermissionRequestId && this.pendingPermissionRequestId === data.requestId) {
+            this.pendingPermissionRequestId = null;
+            if (data.feature === 'karaoke') {
+                this.karaokeModal?.classList.add('active');
+            } else if (data.feature === 'screenshare') {
+                this.startScreenShareAfterApproval().catch(e => console.error('Screen share after approval error:', e));
+            }
         }
     }
     
@@ -1823,7 +1835,7 @@ class AudioRoomsManager {
         this.loadActiveRooms();
     }
 
-    addRemoteSpeaker(participantId, name, stream, isSpeaking = false, userId = null) {
+    addRemoteSpeaker(participantId, name, stream, isSpeaking = false, userId = null, avatarUrl = null) {
         if (document.querySelector(`[data-participant-id="${participantId}"]`)) return;
         
         const initial = (name || '?').charAt(0).toUpperCase();
@@ -1832,9 +1844,12 @@ class AudioRoomsManager {
         speakerAvatar.setAttribute('data-participant-id', participantId);
         if (userId) speakerAvatar.setAttribute('data-user-id', userId);
         speakerAvatar.style.cursor = userId ? 'pointer' : 'default';
+        const avatarContent = avatarUrl 
+            ? `<img src="${avatarUrl}" alt="${name}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.outerHTML='<div class=\\'avatar-initial\\' style=\\'width:100%;height:100%;border-radius:50%;background:var(--purple,#8a2be2);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:white;\\'>${initial}</div>'">`
+            : `<div class="avatar-initial" style="width:100%;height:100%;border-radius:50%;background:var(--purple,#8a2be2);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:white;">${initial}</div>`;
         speakerAvatar.innerHTML = `
             <div class="avatar-ring ${isSpeaking ? 'speaking' : ''}">
-                <div class="avatar-initial" style="width:80px;height:80px;border-radius:50%;background:var(--purple,#8a2be2);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:bold;color:white;">${initial}</div>
+                ${avatarContent}
             </div>
             <div class="speaker-info">
                 <span class="speaker-name">${name}</span>
@@ -1992,16 +2007,16 @@ class AudioRoomsManager {
                 case 'helium': {
                     const highShelf = this.audioContext.createBiquadFilter();
                     highShelf.type = 'highshelf';
-                    highShelf.frequency.value = 1000;
-                    highShelf.gain.value = 12;
+                    highShelf.frequency.value = 800;
+                    highShelf.gain.value = 20;
 
                     const lowShelf = this.audioContext.createBiquadFilter();
                     lowShelf.type = 'lowshelf';
-                    lowShelf.frequency.value = 300;
-                    lowShelf.gain.value = -18;
+                    lowShelf.frequency.value = 250;
+                    lowShelf.gain.value = -25;
 
                     const ringOsc = this.audioContext.createOscillator();
-                    ringOsc.frequency.value = 200;
+                    ringOsc.frequency.value = 400;
                     ringOsc.type = 'sine';
                     const ringGain = this.audioContext.createGain();
                     ringGain.gain.value = 0;
@@ -2010,15 +2025,21 @@ class AudioRoomsManager {
                     this._filterOscillators = this._filterOscillators || [];
                     this._filterOscillators.push(ringOsc);
 
+                    const heliumMid = this.audioContext.createBiquadFilter();
+                    heliumMid.type = 'peaking';
+                    heliumMid.frequency.value = 3000;
+                    heliumMid.gain.value = 10;
+                    heliumMid.Q.value = 1;
+
                     source.connect(ringGain);
                     ringGain.connect(highShelf);
                     highShelf.connect(lowShelf);
+                    lowShelf.connect(heliumMid);
 
                     const heliumBoost = this.audioContext.createGain();
-                    heliumBoost.gain.value = 1.8;
-                    lowShelf.connect(heliumBoost);
+                    heliumBoost.gain.value = 2.5;
+                    heliumMid.connect(heliumBoost);
                     outputNode = heliumBoost;
-                    console.log('Helium filter applied');
                     break;
                 }
 
@@ -2027,71 +2048,90 @@ class AudioRoomsManager {
                     modGain.gain.value = 0;
 
                     const alienOsc = this.audioContext.createOscillator();
-                    alienOsc.frequency.value = 40;
-                    alienOsc.type = 'square';
+                    alienOsc.frequency.value = 20;
+                    alienOsc.type = 'sawtooth';
                     alienOsc.connect(modGain.gain);
                     alienOsc.start();
                     this._filterOscillators = this._filterOscillators || [];
                     this._filterOscillators.push(alienOsc);
 
+                    const alienOsc2 = this.audioContext.createOscillator();
+                    alienOsc2.frequency.value = 7;
+                    alienOsc2.type = 'sine';
+                    const lfoGain = this.audioContext.createGain();
+                    lfoGain.gain.value = 0.3;
+                    alienOsc2.connect(lfoGain);
+                    alienOsc2.start();
+                    this._filterOscillators.push(alienOsc2);
+
                     source.connect(modGain);
 
                     const alienHighpass = this.audioContext.createBiquadFilter();
                     alienHighpass.type = 'highpass';
-                    alienHighpass.frequency.value = 500;
-                    alienHighpass.Q.value = 2;
+                    alienHighpass.frequency.value = 300;
+                    alienHighpass.Q.value = 3;
 
                     const alienDistortion = this.audioContext.createWaveShaper();
-                    alienDistortion.curve = this.makeDistortionCurve(30);
+                    alienDistortion.curve = this.makeDistortionCurve(60);
                     alienDistortion.oversample = '4x';
 
                     modGain.connect(alienHighpass);
                     alienHighpass.connect(alienDistortion);
 
                     const alienOut = this.audioContext.createGain();
-                    alienOut.gain.value = 1.5;
+                    alienOut.gain.value = 2.0;
                     alienDistortion.connect(alienOut);
                     outputNode = alienOut;
-                    console.log('Alien filter applied');
                     break;
                 }
 
                 case 'deep': {
                     const lowpass = this.audioContext.createBiquadFilter();
                     lowpass.type = 'lowpass';
-                    lowpass.frequency.value = 600;
-                    lowpass.Q.value = 2;
+                    lowpass.frequency.value = 350;
+                    lowpass.Q.value = 3;
 
                     const lowBoost = this.audioContext.createBiquadFilter();
                     lowBoost.type = 'lowshelf';
-                    lowBoost.frequency.value = 200;
-                    lowBoost.gain.value = 15;
+                    lowBoost.frequency.value = 150;
+                    lowBoost.gain.value = 22;
+
+                    const subBass = this.audioContext.createBiquadFilter();
+                    subBass.type = 'peaking';
+                    subBass.frequency.value = 80;
+                    subBass.gain.value = 12;
+                    subBass.Q.value = 1;
 
                     const deepGain = this.audioContext.createGain();
-                    deepGain.gain.value = 2.0;
+                    deepGain.gain.value = 2.5;
 
                     source.connect(lowpass);
                     lowpass.connect(lowBoost);
-                    lowBoost.connect(deepGain);
+                    lowBoost.connect(subBass);
+                    subBass.connect(deepGain);
                     outputNode = deepGain;
-                    console.log('Deep filter applied');
                     break;
                 }
 
                 case 'echo': {
                     const merger = this.audioContext.createGain();
-                    merger.gain.value = 0.7;
+                    merger.gain.value = 0.6;
                     source.connect(merger);
 
                     const delay1 = this.audioContext.createDelay(2.0);
-                    delay1.delayTime.value = 0.25;
+                    delay1.delayTime.value = 0.3;
                     const fb1 = this.audioContext.createGain();
-                    fb1.gain.value = 0.45;
+                    fb1.gain.value = 0.55;
 
                     const delay2 = this.audioContext.createDelay(2.0);
-                    delay2.delayTime.value = 0.5;
+                    delay2.delayTime.value = 0.65;
                     const fb2 = this.audioContext.createGain();
-                    fb2.gain.value = 0.25;
+                    fb2.gain.value = 0.35;
+
+                    const delay3 = this.audioContext.createDelay(2.0);
+                    delay3.delayTime.value = 1.0;
+                    const fb3 = this.audioContext.createGain();
+                    fb3.gain.value = 0.2;
 
                     source.connect(delay1);
                     delay1.connect(fb1);
@@ -2103,8 +2143,12 @@ class AudioRoomsManager {
                     fb2.connect(delay2);
                     delay2.connect(merger);
 
+                    source.connect(delay3);
+                    delay3.connect(fb3);
+                    fb3.connect(delay3);
+                    delay3.connect(merger);
+
                     outputNode = merger;
-                    console.log('Echo filter applied');
                     break;
                 }
 
@@ -2112,20 +2156,33 @@ class AudioRoomsManager {
                     const bandpass = this.audioContext.createBiquadFilter();
                     bandpass.type = 'bandpass';
                     bandpass.frequency.value = 2000;
-                    bandpass.Q.value = 1.5;
+                    bandpass.Q.value = 4.0;
+
+                    const radioHigh = this.audioContext.createBiquadFilter();
+                    radioHigh.type = 'highpass';
+                    radioHigh.frequency.value = 500;
+                    radioHigh.Q.value = 1;
 
                     const distortion = this.audioContext.createWaveShaper();
-                    distortion.curve = this.makeDistortionCurve(80);
+                    distortion.curve = this.makeDistortionCurve(150);
                     distortion.oversample = '4x';
 
+                    const radioComp = this.audioContext.createDynamicsCompressor();
+                    radioComp.threshold.value = -30;
+                    radioComp.knee.value = 10;
+                    radioComp.ratio.value = 12;
+                    radioComp.attack.value = 0.003;
+                    radioComp.release.value = 0.1;
+
                     const radioGain = this.audioContext.createGain();
-                    radioGain.gain.value = 1.3;
+                    radioGain.gain.value = 1.5;
 
                     source.connect(bandpass);
-                    bandpass.connect(distortion);
-                    distortion.connect(radioGain);
+                    bandpass.connect(radioHigh);
+                    radioHigh.connect(distortion);
+                    distortion.connect(radioComp);
+                    radioComp.connect(radioGain);
                     outputNode = radioGain;
-                    console.log('Radio filter applied');
                     break;
                 }
 
@@ -2371,6 +2428,7 @@ class AudioRoomsManager {
     
     requestPermission(feature, userName) {
         const requestId = Date.now().toString();
+        this.pendingPermissionRequestId = requestId;
         const featureLabel = feature === 'karaoke' ? 'Karaoke' : 'Screen Share';
         
         this.addChatMessage('System', `Your ${featureLabel} request has been sent to the host.`, true);
@@ -2854,6 +2912,7 @@ class AudioRoomsManager {
             }
             
             this.showToast('Photo shared with the room', 'fa-check-circle');
+            this.showSharedImageOverlay(dataUrl, 'You');
         };
         reader.readAsDataURL(file);
     }
@@ -2949,7 +3008,10 @@ class AudioRoomsManager {
                     this.setVideoFilter(this.currentVideoFilter);
                     
                     await this.addVideoTrackToPeers(this.karaokeVideoStream);
-                    this.notifyParticipants('karaoke-start', {});
+                    if (!this.karaokeStartNotified) {
+                        this.karaokeStartNotified = true;
+                        this.notifyParticipants('karaoke-start', {});
+                    }
                 }
             } catch (error) {
                 console.error('Camera error:', error);
@@ -3425,12 +3487,27 @@ class AudioRoomsManager {
             this.toggleKaraokePlayback();
         }
     }
+
+    newKaraokeSong() {
+        this.stopKaraoke();
+        const player = document.getElementById('karaoke-player');
+        const results = document.getElementById('karaoke-results');
+        player?.classList.add('hidden');
+        results?.classList.remove('hidden');
+        if (results) results.innerHTML = '<p class="karaoke-hint">Search for a different song!</p>';
+        const searchInput = document.getElementById('karaoke-search-input');
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.focus();
+        }
+    }
     
     stopKaraoke() {
         if (this.isRecording) this.stopRecording();
         this.stopMicTempo();
 
         this.karaokeActive = false;
+        this.karaokeStartNotified = false;
         clearInterval(this.karaokeInterval);
         
         const playPauseBtn = document.getElementById('karaoke-play-pause');
