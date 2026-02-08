@@ -3558,3 +3558,332 @@
 .chat-message .shared-image-thumb:hover {
     opacity: 0.8;
 }
+
+/* Music Upload Area */
+.music-upload-area {
+    border: 2px dashed rgba(138, 43, 226, 0.4);
+    border-radius: 12px;
+    padding: 30px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(138, 43, 226, 0.05);
+}
+
+.music-upload-area:hover,
+.music-upload-area.dragover {
+    border-color: var(--purple, #8a2be2);
+    background: rgba(138, 43, 226, 0.1);
+}
+
+.music-upload-area p {
+    margin: 0;
+    font-weight: 600;
+    color: var(--text-primary, #fff);
+}
+
+.music-file-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(138, 43, 226, 0.1);
+    border-radius: 8px;
+    border: 1px solid rgba(138, 43, 226, 0.2);
+}
+
+.music-file-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.music-file-name {
+    font-weight: 600;
+    color: var(--text-primary, #fff);
+    font-size: 0.9rem;
+    word-break: break-all;
+}
+
+.music-file-size {
+    font-size: 0.8rem;
+    color: var(--text-secondary, #999);
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--purple, #8a2be2), var(--mint, #00d4aa));
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.3s;
+}
+
+#music-progress-text {
+    font-size: 0.8rem;
+    color: var(--text-secondary, #999);
+}
+
+/* Shared Audio Player Overlay */
+.shared-audio-overlay {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9998;
+    width: 380px;
+    max-width: 95vw;
+    animation: slideUpAudio 0.4s ease-out;
+}
+
+.shared-audio-overlay.hidden {
+    display: none;
+}
+
+@keyframes slideUpAudio {
+    from { opacity: 0; transform: translateX(-50%) translateY(30px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.shared-audio-content {
+    background: linear-gradient(135deg, #1a1a2e, #2d1b4e);
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid rgba(138, 43, 226, 0.4);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    position: relative;
+}
+
+.shared-audio-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+}
+
+.shared-audio-art {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--purple, #8a2be2), var(--mint, #00d4aa));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+    font-size: 1.5rem;
+    color: #fff;
+    animation: pulseGlow 2s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 15px rgba(138, 43, 226, 0.3); }
+    50% { box-shadow: 0 0 25px rgba(138, 43, 226, 0.6); }
+}
+
+.shared-audio-info {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.shared-audio-info h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #fff;
+    font-weight: 700;
+}
+
+.shared-audio-info p {
+    margin: 3px 0 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary, #999);
+}
+
+.audio-progress-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+#audio-current-time,
+#audio-total-time {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #999);
+    min-width: 32px;
+    text-align: center;
+}
+
+.audio-progress-bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px;
+    cursor: pointer;
+    position: relative;
+}
+
+.audio-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--purple, #8a2be2), var(--mint, #00d4aa));
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.1s linear;
+}
+
+.audio-playback-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.audio-control-btn {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.audio-control-btn:hover {
+    background: rgba(138, 43, 226, 0.3);
+}
+
+.audio-control-btn.play-btn {
+    width: 44px;
+    height: 44px;
+    background: var(--purple, #8a2be2);
+    font-size: 1.1rem;
+}
+
+.audio-control-btn.play-btn:hover {
+    background: #9b3ce8;
+    transform: scale(1.05);
+}
+
+.audio-volume {
+    width: 60px;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+
+.audio-volume::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--mint, #00d4aa);
+    cursor: pointer;
+}
+
+/* Chat audio message */
+.chat-audio-player {
+    background: rgba(138, 43, 226, 0.15);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    border: 1px solid rgba(138, 43, 226, 0.2);
+    transition: background 0.2s;
+}
+
+.chat-audio-player:hover {
+    background: rgba(138, 43, 226, 0.25);
+}
+
+.chat-audio-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: var(--purple, #8a2be2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+.chat-audio-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    overflow: hidden;
+}
+
+.chat-audio-title {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-primary, #fff);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chat-audio-artist {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #999);
+}
+
+.chat-audio-play-hint {
+    margin-left: auto;
+    color: var(--mint, #00d4aa);
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .shared-audio-overlay {
+        bottom: 80px;
+        width: calc(100% - 20px);
+    }
+    
+    .shared-audio-content {
+        padding: 15px;
+    }
+    
+    .shared-audio-art {
+        width: 50px;
+        height: 50px;
+        font-size: 1.2rem;
+    }
+    
+    .audio-volume {
+        width: 45px;
+    }
+}

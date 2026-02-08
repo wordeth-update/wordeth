@@ -222,12 +222,26 @@ function setupSignaling(io) {
 
         socket.on('room-image', ({ roomId, imageData }) => {
             if (!roomId || !imageData) return;
-            if (imageData.length > 3 * 1024 * 1024) return;
+            if (imageData.length > 14 * 1024 * 1024) return;
             const room = rooms.get(roomId);
             if (!room || !room.participants.has(socket.id)) return;
             socket.to(roomId).emit('room-image', {
                 sender: socket.userName || 'Someone',
                 imageData
+            });
+        });
+
+        socket.on('room-audio-share', ({ roomId, audioUrl, songTitle, artistName, duration }) => {
+            if (!roomId || !audioUrl) return;
+            const room = rooms.get(roomId);
+            if (!room || !room.participants.has(socket.id)) return;
+            socket.to(roomId).emit('room-audio-share', {
+                sender: socket.userName || 'Someone',
+                senderId: socket.userId,
+                audioUrl,
+                songTitle: songTitle || 'Untitled Track',
+                artistName: artistName || 'Unknown Artist',
+                duration: duration || 0
             });
         });
 

@@ -300,8 +300,16 @@
                             <span>Take or choose a photo to share</span>
                         </div>
                     </button>
+                    <button class="mobile-share-option" id="mobile-music-share-btn">
+                        <div class="share-option-icon"><i class="fas fa-music"></i></div>
+                        <div class="share-option-info">
+                            <strong>Share Music</strong>
+                            <span>Share an MP3 or audio file</span>
+                        </div>
+                    </button>
                 </div>
                 <input type="file" id="mobile-image-input" accept="image/*" style="display:none;">
+                <input type="file" id="mobile-audio-input" accept="audio/*" style="display:none;">
             </div>
         </div>
 
@@ -312,6 +320,82 @@
                 <button class="shared-image-close" id="shared-image-close"><i class="fas fa-times"></i></button>
             </div>
             <img id="shared-image-display" src="" alt="Shared image">
+        </div>
+
+        <!-- Music Share Modal -->
+        <div class="modal" id="music-share-modal">
+            <div class="modal-content" style="max-width:450px;">
+                <div class="modal-header">
+                    <h3><i class="fas fa-music"></i> Share Music</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="music-share-body">
+                    <p style="color:var(--text-secondary);margin-bottom:15px;">Share a track with the room. Everyone will be able to preview and listen.</p>
+                    <div class="music-upload-area" id="music-upload-area">
+                        <i class="fas fa-cloud-upload-alt" style="font-size:2.5rem;color:var(--purple);margin-bottom:10px;"></i>
+                        <p>Drag & drop an audio file here</p>
+                        <span style="color:var(--text-secondary);font-size:0.85rem;">or click to browse</span>
+                        <span style="color:var(--text-secondary);font-size:0.75rem;margin-top:5px;">MP3, WAV, M4A, AAC, OGG, FLAC (max 50MB)</span>
+                        <input type="file" id="music-file-input" accept="audio/*" style="display:none;">
+                    </div>
+                    <div class="music-upload-details hidden" id="music-upload-details">
+                        <div class="music-file-info">
+                            <i class="fas fa-file-audio" style="font-size:1.5rem;color:var(--purple);"></i>
+                            <div class="music-file-meta">
+                                <span class="music-file-name" id="music-file-name"></span>
+                                <span class="music-file-size" id="music-file-size"></span>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top:12px;">
+                            <label for="music-song-title">Song Title</label>
+                            <input type="text" id="music-song-title" placeholder="Enter song title">
+                        </div>
+                        <div class="form-group">
+                            <label for="music-artist-name">Artist</label>
+                            <input type="text" id="music-artist-name" placeholder="Enter artist name">
+                        </div>
+                        <div class="music-upload-progress hidden" id="music-upload-progress">
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" id="music-progress-fill"></div>
+                            </div>
+                            <span id="music-progress-text">Uploading...</span>
+                        </div>
+                        <button class="btn-primary" id="music-share-submit" style="width:100%;margin-top:10px;">
+                            <i class="fas fa-share"></i> Share with Room
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shared Audio Player Overlay -->
+        <div class="shared-audio-overlay hidden" id="shared-audio-overlay">
+            <div class="shared-audio-content">
+                <button class="shared-audio-close" id="shared-audio-close"><i class="fas fa-times"></i></button>
+                <div class="shared-audio-art">
+                    <i class="fas fa-music"></i>
+                </div>
+                <div class="shared-audio-info">
+                    <h3 id="shared-audio-title">Untitled Track</h3>
+                    <p id="shared-audio-artist">Unknown Artist</p>
+                    <p id="shared-audio-sharer" style="color:var(--text-secondary);font-size:0.8rem;"></p>
+                </div>
+                <div class="shared-audio-controls">
+                    <div class="audio-progress-container" id="audio-progress-container">
+                        <span id="audio-current-time">0:00</span>
+                        <div class="audio-progress-bar" id="audio-progress-bar">
+                            <div class="audio-progress-fill" id="audio-progress-fill"></div>
+                        </div>
+                        <span id="audio-total-time">0:00</span>
+                    </div>
+                    <div class="audio-playback-controls">
+                        <button class="audio-control-btn" id="audio-rewind-btn"><i class="fas fa-backward"></i></button>
+                        <button class="audio-control-btn play-btn" id="audio-play-btn"><i class="fas fa-play"></i></button>
+                        <button class="audio-control-btn" id="audio-forward-btn"><i class="fas fa-forward"></i></button>
+                        <input type="range" class="audio-volume" id="audio-volume" min="0" max="1" step="0.05" value="0.8">
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Room Creation Modal -->

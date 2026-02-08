@@ -247,6 +247,7 @@ class AudioRoomsManager {
         document.getElementById('screenshare-stop')?.addEventListener('click', () => this.stopScreenShare());
 
         this.setupMobileShareListeners();
+        this.initMusicSharing();
         
         // Karaoke scroll speed controls
         document.getElementById('karaoke-slower')?.addEventListener('click', () => this.adjustScrollSpeed(-0.25));
@@ -1350,6 +1351,12 @@ class AudioRoomsManager {
             this.showToast(`${sender} shared a photo`, 'fa-image');
             this.showSharedImageOverlay(imageData, sender);
         });
+
+        this.socket.on('room-audio-share', ({ sender, audioUrl, songTitle, artistName }) => {
+            this.addAudioChatMessage(sender, songTitle, artistName, audioUrl);
+            this.showToast(`${sender} shared a track: ${songTitle}`, 'fa-music', 6000);
+            this.showAudioPlayerOverlay(audioUrl, songTitle, artistName, sender);
+        });
         
         this.socket.on('room-event', ({ event, data }) => {
             this.handleRemoteRoomEvent(event, data);
@@ -1669,9 +1676,322 @@ class AudioRoomsManager {
     }
 
     shareMusic() {
-        // Open a song search modal or share current song being discussed
-        console.log('Share music functionality - search for a song to share');
-        // This could integrate with the lyrics search API
+        const modal = document.getElementById('music-share-modal');
+        if (!modal) return;
+        
+        document.getElementById('music-upload-details')?.classList.add('hidden');
+        document.getElementById('music-upload-area')?.classList.remove('hidden');
+        document.getElementById('music-upload-progress')?.classList.add('hidden');
+        document.getElementById('music-song-title').value = '';
+        document.getElementById('music-artist-name').value = '';
+        document.getElementById('music-file-input').value = '';
+        this.pendingMusicFile = null;
+        
+        modal.classList.add('active');
+    }
+
+    initMusicSharing() {
+        const uploadArea = document.getElementById('music-upload-area');
+        const fileInput = document.getElementById('music-file-input');
+        const submitBtn = document.getElementById('music-share-submit');
+        const mobileAudioInput = document.getElementById('mobile-audio-input');
+        
+        if (uploadArea && fileInput) {
+            uploadArea.addEventListener('click', () => fileInput.click());
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('audio/')) {
+                    this.handleMusicFileSelected(file);
+                } else {
+                    this.showToast('Please drop an audio file', 'fa-exclamation-circle');
+                }
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) this.handleMusicFileSelected(file);
+            });
+        }
+        
+        submitBtn?.addEventListener('click', () => this.uploadAndShareMusic());
+        
+        document.getElementById('mobile-music-share-btn')?.addEventListener('click', () => {
+            document.getElementById('mobile-share-modal')?.classList.remove('active');
+            if (mobileAudioInput) {
+                mobileAudioInput.click();
+            } else {
+                this.shareMusic();
+            }
+        });
+        
+        mobileAudioInput?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                this.handleMusicFileSelected(file);
+                document.getElementById('music-share-modal')?.classList.add('active');
+            }
+            e.target.value = '';
+        });
+        
+        this.initAudioPlayer();
+    }
+
+    handleMusicFileSelected(file) {
+        if (file.size > 50 * 1024 * 1024) {
+            this.showToast('File too large (max 50MB)', 'fa-exclamation-circle');
+            return;
+        }
+        
+        this.pendingMusicFile = file;
+        
+        document.getElementById('music-upload-area')?.classList.add('hidden');
+        document.getElementById('music-upload-details')?.classList.remove('hidden');
+        
+        const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+        document.getElementById('music-file-name').textContent = file.name;
+        document.getElementById('music-file-size').textContent = this.formatFileSize(file.size);
+        
+        const parts = nameWithoutExt.split(/[-–—]/).map(s => s.trim());
+        if (parts.length >= 2) {
+            document.getElementById('music-artist-name').value = parts[0];
+            document.getElementById('music-song-title').value = parts.slice(1).join(' - ');
+        } else {
+            document.getElementById('music-song-title').value = nameWithoutExt;
+        }
+    }
+
+    formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    async uploadAndShareMusic() {
+        if (!this.pendingMusicFile) {
+            this.showToast('No file selected', 'fa-exclamation-circle');
+            return;
+        }
+        
+        const songTitle = document.getElementById('music-song-title')?.value?.trim() || 'Untitled Track';
+        const artistName = document.getElementById('music-artist-name')?.value?.trim() || 'Unknown Artist';
+        
+        const progressContainer = document.getElementById('music-upload-progress');
+        const progressFill = document.getElementById('music-progress-fill');
+        const progressText = document.getElementById('music-progress-text');
+        const submitBtn = document.getElementById('music-share-submit');
+        
+        progressContainer?.classList.remove('hidden');
+        if (submitBtn) submitBtn.disabled = true;
+        
+        try {
+            const formData = new FormData();
+            formData.append('audio', this.pendingMusicFile);
+            
+            const xhr = new XMLHttpRequest();
+            
+            await new Promise((resolve, reject) => {
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        if (progressFill) progressFill.style.width = pct + '%';
+                        if (progressText) progressText.textContent = `Uploading... ${pct}%`;
+                    }
+                });
+                
+                xhr.addEventListener('load', () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        resolve(JSON.parse(xhr.responseText));
+                    } else {
+                        reject(new Error('Upload failed'));
+                    }
+                });
+                
+                xhr.addEventListener('error', () => reject(new Error('Upload failed')));
+                xhr.open('POST', '/api/rooms/upload-audio');
+                xhr.send(formData);
+            }).then((data) => {
+                const audioUrl = data.url;
+                
+                this.addAudioChatMessage('You', songTitle, artistName, audioUrl);
+                
+                if (this.socket && this.socket.connected && this.currentRoom) {
+                    this.socket.emit('room-audio-share', {
+                        roomId: this.currentRoom,
+                        audioUrl,
+                        songTitle,
+                        artistName
+                    });
+                }
+                
+                this.showAudioPlayerOverlay(audioUrl, songTitle, artistName, 'You');
+                this.showToast('Music shared with the room!', 'fa-check-circle');
+                
+                document.getElementById('music-share-modal')?.classList.remove('active');
+                this.pendingMusicFile = null;
+            });
+            
+        } catch (err) {
+            console.error('Music upload error:', err);
+            this.showToast('Failed to upload music file', 'fa-exclamation-circle');
+        } finally {
+            if (submitBtn) submitBtn.disabled = false;
+            progressContainer?.classList.add('hidden');
+            if (progressFill) progressFill.style.width = '0%';
+        }
+    }
+
+    addAudioChatMessage(sender, songTitle, artistName, audioUrl) {
+        if (!this.chatMessagesContainer) return;
+        
+        const messageElement = document.createElement('div');
+        messageElement.className = `chat-message ${sender === 'You' ? 'own' : ''}`;
+        
+        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        messageElement.innerHTML = `
+            <div class="chat-message-header">
+                <span class="sender">${this.escapeHtml(sender)}</span>
+                <span class="timestamp">${timestamp}</span>
+            </div>
+            <div class="chat-audio-player" data-audio-url="${this.escapeHtml(audioUrl)}">
+                <div class="chat-audio-icon"><i class="fas fa-music"></i></div>
+                <div class="chat-audio-meta">
+                    <span class="chat-audio-title">${this.escapeHtml(songTitle)}</span>
+                    <span class="chat-audio-artist">${this.escapeHtml(artistName)}</span>
+                </div>
+                <span class="chat-audio-play-hint"><i class="fas fa-play"></i> Play</span>
+            </div>
+        `;
+        
+        const player = messageElement.querySelector('.chat-audio-player');
+        player?.addEventListener('click', () => {
+            this.showAudioPlayerOverlay(audioUrl, songTitle, artistName, sender);
+        });
+        
+        this.chatMessagesContainer.appendChild(messageElement);
+        this.chatMessagesContainer.scrollTop = this.chatMessagesContainer.scrollHeight;
+    }
+
+    showAudioPlayerOverlay(audioUrl, songTitle, artistName, sharer) {
+        const overlay = document.getElementById('shared-audio-overlay');
+        if (!overlay) return;
+        
+        document.getElementById('shared-audio-title').textContent = songTitle;
+        document.getElementById('shared-audio-artist').textContent = artistName;
+        document.getElementById('shared-audio-sharer').textContent = `Shared by ${sharer}`;
+        
+        if (this.sharedAudioElement) {
+            this.sharedAudioElement.pause();
+            this.sharedAudioElement.src = '';
+        }
+        
+        this.sharedAudioElement = new Audio(audioUrl);
+        this.sharedAudioElement.volume = parseFloat(document.getElementById('audio-volume')?.value || 0.8);
+        this.sharedAudioElement.preload = 'auto';
+        
+        const playBtn = document.getElementById('audio-play-btn');
+        if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>';
+        document.getElementById('audio-progress-fill').style.width = '0%';
+        document.getElementById('audio-current-time').textContent = '0:00';
+        document.getElementById('audio-total-time').textContent = '0:00';
+        
+        this.sharedAudioElement.addEventListener('loadedmetadata', () => {
+            document.getElementById('audio-total-time').textContent = this.formatAudioTime(this.sharedAudioElement.duration);
+        });
+        
+        this.sharedAudioElement.addEventListener('timeupdate', () => {
+            if (this.sharedAudioElement.duration) {
+                const pct = (this.sharedAudioElement.currentTime / this.sharedAudioElement.duration) * 100;
+                document.getElementById('audio-progress-fill').style.width = pct + '%';
+                document.getElementById('audio-current-time').textContent = this.formatAudioTime(this.sharedAudioElement.currentTime);
+            }
+        });
+        
+        this.sharedAudioElement.addEventListener('ended', () => {
+            if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>';
+        });
+        
+        overlay.classList.remove('hidden');
+        
+        this.sharedAudioElement.play().then(() => {
+            if (playBtn) playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        }).catch(() => {
+            if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>';
+        });
+    }
+
+    formatAudioTime(seconds) {
+        if (!seconds || isNaN(seconds)) return '0:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    initAudioPlayer() {
+        const playBtn = document.getElementById('audio-play-btn');
+        const rewindBtn = document.getElementById('audio-rewind-btn');
+        const forwardBtn = document.getElementById('audio-forward-btn');
+        const volumeSlider = document.getElementById('audio-volume');
+        const progressBar = document.getElementById('audio-progress-bar');
+        const closeBtn = document.getElementById('shared-audio-close');
+        
+        playBtn?.addEventListener('click', () => {
+            if (!this.sharedAudioElement) return;
+            if (this.sharedAudioElement.paused) {
+                this.sharedAudioElement.play();
+                playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+            } else {
+                this.sharedAudioElement.pause();
+                playBtn.innerHTML = '<i class="fas fa-play"></i>';
+            }
+        });
+        
+        rewindBtn?.addEventListener('click', () => {
+            if (this.sharedAudioElement) {
+                this.sharedAudioElement.currentTime = Math.max(0, this.sharedAudioElement.currentTime - 10);
+            }
+        });
+        
+        forwardBtn?.addEventListener('click', () => {
+            if (this.sharedAudioElement) {
+                this.sharedAudioElement.currentTime = Math.min(
+                    this.sharedAudioElement.duration || 0,
+                    this.sharedAudioElement.currentTime + 10
+                );
+            }
+        });
+        
+        volumeSlider?.addEventListener('input', (e) => {
+            if (this.sharedAudioElement) {
+                this.sharedAudioElement.volume = parseFloat(e.target.value);
+            }
+        });
+        
+        progressBar?.addEventListener('click', (e) => {
+            if (!this.sharedAudioElement || !this.sharedAudioElement.duration) return;
+            const rect = progressBar.getBoundingClientRect();
+            const pct = (e.clientX - rect.left) / rect.width;
+            this.sharedAudioElement.currentTime = pct * this.sharedAudioElement.duration;
+        });
+        
+        closeBtn?.addEventListener('click', () => {
+            if (this.sharedAudioElement) {
+                this.sharedAudioElement.pause();
+                this.sharedAudioElement.src = '';
+                this.sharedAudioElement = null;
+            }
+            document.getElementById('shared-audio-overlay')?.classList.add('hidden');
+        });
     }
 
     knockOnRoom(friendRoom) {
@@ -1783,6 +2103,13 @@ class AudioRoomsManager {
         }
 
         this.stopAudioMix();
+
+        if (this.sharedAudioElement) {
+            this.sharedAudioElement.pause();
+            this.sharedAudioElement.src = '';
+            this.sharedAudioElement = null;
+        }
+        document.getElementById('shared-audio-overlay')?.classList.add('hidden');
         
         if (this.nativeScreenCapture) {
             this.nativeScreenCapture.stop().catch(() => {});
@@ -2893,8 +3220,8 @@ class AudioRoomsManager {
     }
 
     async shareImage(file) {
-        if (file.size > 2 * 1024 * 1024) {
-            this.showToast('Image too large (max 2MB)', 'fa-exclamation-circle');
+        if (file.size > 10 * 1024 * 1024) {
+            this.showToast('Image too large (max 10MB)', 'fa-exclamation-circle');
             return;
         }
 
