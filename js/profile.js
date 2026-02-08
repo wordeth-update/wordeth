@@ -251,15 +251,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     `).join('');
                     break;
                 case 'friends':
-                    listEl.innerHTML = data.map(f => `
-                        <div class="friend-card" data-user-id="${escHtml(f._id || '')}" style="cursor:pointer;" onclick="viewUserProfile('${escHtml(f._id || '')}')">
+                    listEl.innerHTML = data.map(f => {
+                        const fid = String(f._id || '');
+                        return `
+                        <div class="friend-card" data-user-id="${escHtml(fid)}" style="cursor:pointer;">
                             <div class="friend-avatar">
                                 <img src="${escHtml(f.avatar || 'assets/default-avatar.png')}" alt="${escHtml(f.name || '')}">
                             </div>
                             <h3>${escHtml(f.name || '')}</h3>
                             <p>${f.mutualSongs || 0} mutual songs</p>
                         </div>
-                    `).join('');
+                    `;}).join('');
+                    listEl.querySelectorAll('.friend-card').forEach(card => {
+                        card.addEventListener('click', () => {
+                            const uid = card.getAttribute('data-user-id');
+                            if (uid) viewUserProfile(uid);
+                        });
+                    });
                     break;
                 case 'merch':
                     listEl.innerHTML = data.map(item => `
