@@ -7,36 +7,43 @@ const cors = require('cors');
 const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const sharp = require('sharp');
 const fs = require('fs');
-
-process.env.FONTCONFIG_PATH = path.join(__dirname, 'fonts');
-process.env.FONTCONFIG_FILE = path.join(__dirname, 'fonts', 'fonts.conf');
+const puppeteer = require('puppeteer');
 const { setupSignaling, getActiveRooms } = require('./routes/signaling');
 
 let ogLogoBase64 = '';
-let ogFontBase64 = '';
+let ogBrowser = null;
+
 (async () => {
     try {
         const logoPath = path.join(__dirname, 'images', 'logo.png');
         if (fs.existsSync(logoPath)) {
-            const buf = await sharp(logoPath).resize(240, 240, { fit: 'inside' }).png().toBuffer();
+            const buf = fs.readFileSync(logoPath);
             ogLogoBase64 = buf.toString('base64');
             console.log('OG logo cached for link previews');
-        } else {
-            console.warn('OG logo not found at images/logo.png - link previews will render without logo');
         }
     } catch(e) {
         console.warn('Failed to cache OG logo:', e.message);
     }
     try {
-        const fontSubsetPath = path.join(__dirname, 'fonts', 'inter-subset-base64.txt');
-        if (fs.existsSync(fontSubsetPath)) {
-            ogFontBase64 = fs.readFileSync(fontSubsetPath, 'utf8').trim();
-            console.log('OG font subset cached for link previews');
+        const launchOpts = {
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--font-render-hinting=none']
+        };
+        if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+            launchOpts.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+        } else {
+            const { execSync } = require('child_process');
+            try {
+                const sysChromium = execSync('which chromium 2>/dev/null || which google-chrome 2>/dev/null').toString().trim();
+                if (sysChromium) launchOpts.executablePath = sysChromium;
+            } catch(e) {}
         }
+        console.log('Launching browser:', launchOpts.executablePath || 'bundled');
+        ogBrowser = await puppeteer.launch(launchOpts);
+        console.log('Puppeteer browser launched for OG image generation');
     } catch(e) {
-        console.warn('Failed to cache OG font:', e.message);
+        console.warn('Failed to launch Puppeteer:', e.message);
     }
 })();
 
@@ -219,7 +226,7 @@ app.get('/room/:roomId', ogCrawlerHeaders, (req, res) => {
     <meta property="og:title" content="${roomName}">
     <meta property="og:description" content="${description}">
     <meta property="og:image" content="${ogImageUrl}">
-    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:type" content="image/jpeg">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:url" content="${baseUrl}/room/${encodeURIComponent(roomId)}">
@@ -236,115 +243,212 @@ app.get('/room/:roomId', ogCrawlerHeaders, (req, res) => {
 </html>`);
 });
 
-// Dynamic OG image as PNG (matches the invite card design)
 app.get('/og-image/:roomId', ogCrawlerHeaders, async (req, res) => {
     try {
+        if (!ogBrowser) {
+            return res.status(503).send('Image service not ready');
+        }
+
         const roomId = req.params.roomId;
         const activeRooms = getActiveRooms();
         const room = activeRooms.find(r => r.id === roomId);
 
         const roomName = room?.name || 'Live Verse';
-        const participantCount = room?.participantCount || 0;
         const hostName = room?.participants?.find(p => p.isHost)?.userName || '';
-        const displayName = escapeXml(roomName.length > 30 ? roomName.substring(0, 30) + '...' : roomName);
-        const hostInitial = hostName ? escapeXml(hostName.charAt(0).toUpperCase()) : 'W';
+        const hostInitial = hostName ? escapeHtml(hostName.charAt(0).toUpperCase()) : 'W';
         const inviteLine = hostName
-            ? escapeXml(hostName) + ' invited you'
-            : 'You&#39;re invited';
-        const listenerText = participantCount > 0
-            ? participantCount + ' listening now'
-            : 'Be the first to join';
+            ? `<strong>${escapeHtml(hostName)}</strong> invited you`
+            : `You're invited`;
+        const displayName = escapeHtml(roomName.length > 28 ? roomName.substring(0, 28) + '...' : roomName);
+        const logoSrc = ogLogoBase64 ? `data:image/png;base64,${ogLogoBase64}` : '';
 
-        const logoImg = ogLogoBase64
-            ? `<image x="880" y="50" width="210" height="210" href="data:image/png;base64,${ogLogoBase64}" opacity="0.95"/>`
-            : '';
+        const html = `<!DOCTYPE html>
+<html><head>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    width: 1200px; height: 630px;
+    font-family: 'Inter', sans-serif;
+    background: #0a0a12;
+    overflow: hidden;
+}
+.card {
+    position: absolute;
+    top: 20px; left: 40px;
+    width: 1120px; height: 590px;
+    border-radius: 40px;
+    background: linear-gradient(160deg, #1a1033 0%, #2d1b69 40%, #1a1033 100%);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 70px rgba(139,92,246,0.2);
+    overflow: hidden;
+}
+.glow {
+    position: absolute; top: -50%; right: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle at 70% 30%, rgba(150,197,176,0.12) 0%, transparent 50%),
+                radial-gradient(circle at 30% 70%, rgba(139,92,246,0.15) 0%, transparent 50%);
+    pointer-events: none;
+}
+.top-row {
+    position: relative;
+    padding: 40px 50px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, rgba(150,197,176,0.2), rgba(150,197,176,0.1));
+    border: 2px solid rgba(150,197,176,0.5);
+    color: #96c5b0;
+    padding: 10px 24px;
+    border-radius: 30px;
+    font-size: 22px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2.5px;
+}
+.live-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #96c5b0;
+}
+.logo {
+    height: 180px;
+    filter: drop-shadow(0 0 20px rgba(150,197,176,0.5)) drop-shadow(0 0 40px rgba(139,92,246,0.3));
+}
+.body {
+    position: relative;
+    padding: 30px 50px 0;
+}
+.room-name {
+    font-size: 72px;
+    font-weight: 900;
+    line-height: 1.15;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #96c5b0 0%, #fff 40%, #c4b5fd 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.invite-from {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+.avatar {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8B5CF6, #6D28D9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+}
+.invite-text {
+    color: rgba(255,255,255,0.85);
+    font-size: 28px;
+    font-weight: 400;
+}
+.invite-text strong {
+    color: white;
+    font-weight: 700;
+}
+.actions {
+    position: absolute;
+    bottom: 50px; left: 50px; right: 50px;
+    display: flex;
+    gap: 20px;
+}
+.btn {
+    flex: 1;
+    padding: 22px;
+    border-radius: 22px;
+    font-size: 28px;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+.btn-dismiss {
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.6);
+    border: 2px solid rgba(255,255,255,0.1);
+}
+.btn-join {
+    background: linear-gradient(135deg, #96c5b0 0%, #7ab89e 100%);
+    color: #0a0a0a;
+    font-weight: 800;
+    box-shadow: 0 4px 20px rgba(150,197,176,0.35);
+}
+.headphones {
+    width: 28px; height: 28px;
+}
+.timer-bar {
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 65%;
+    height: 6px;
+    background: linear-gradient(90deg, #96c5b0, #8B5CF6);
+    border-radius: 0 0 40px 40px;
+}
+</style>
+</head>
+<body>
+<div class="card">
+    <div class="glow"></div>
+    <div class="top-row">
+        <div class="live-badge">
+            <span class="live-dot"></span>
+            LIVE NOW
+        </div>
+        ${logoSrc ? `<img src="${logoSrc}" class="logo" />` : ''}
+    </div>
+    <div class="body">
+        <div class="room-name">${displayName}</div>
+        <div class="invite-from">
+            <div class="avatar">${hostInitial}</div>
+            <div class="invite-text">${inviteLine}</div>
+        </div>
+    </div>
+    <div class="actions">
+        <div class="btn btn-dismiss">Not now</div>
+        <div class="btn btn-join">
+            <svg class="headphones" viewBox="0 0 30 30" fill="none">
+                <path d="M5,22 C5,22 5,14 5,12 C5,5.5 10.5,0 17,0 C23.5,0 29,5.5 29,12 L29,22" stroke="#0a0a0a" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+                <rect x="0" y="19" width="9" height="14" rx="4" fill="#0a0a0a"/>
+                <rect x="25" y="19" width="9" height="14" rx="4" fill="#0a0a0a"/>
+            </svg>
+            Join
+        </div>
+    </div>
+    <div class="timer-bar"></div>
+</div>
+</body></html>`;
 
-        const fontStyle = ogFontBase64
-            ? `<style>@font-face { font-family: 'Inter'; src: url('data:font/truetype;base64,${ogFontBase64}') format('truetype'); font-weight: 100 900; }</style>`
-            : '';
-
-        const svg = `<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-  ${fontStyle}
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1a1033"/>
-      <stop offset="40%" stop-color="#2d1b69"/>
-      <stop offset="100%" stop-color="#1a1033"/>
-    </linearGradient>
-    <linearGradient id="roomGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#96c5b0"/>
-      <stop offset="40%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#c4b5fd"/>
-    </linearGradient>
-    <linearGradient id="joinGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#96c5b0"/>
-      <stop offset="100%" stop-color="#7ab89e"/>
-    </linearGradient>
-    <linearGradient id="avatarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#8B5CF6"/>
-      <stop offset="100%" stop-color="#6D28D9"/>
-    </linearGradient>
-    <linearGradient id="timerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#96c5b0"/>
-      <stop offset="100%" stop-color="#8B5CF6"/>
-    </linearGradient>
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="15" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-    <filter id="shadow">
-      <feDropShadow dx="0" dy="8" stdDeviation="20" flood-color="#000" flood-opacity="0.5"/>
-      <feDropShadow dx="0" dy="0" stdDeviation="35" flood-color="#8B5CF6" flood-opacity="0.2"/>
-    </filter>
-    <clipPath id="clip"><rect x="40" y="20" width="1120" height="590" rx="40"/></clipPath>
-  </defs>
-
-  <rect width="1200" height="630" fill="#0a0a12"/>
-
-  <rect x="40" y="20" width="1120" height="590" rx="40" fill="url(#bg)" filter="url(#shadow)"/>
-
-  <g clip-path="url(#clip)">
-    <circle cx="950" cy="80" r="320" fill="#96c5b0" opacity="0.07"/>
-    <circle cx="200" cy="520" r="300" fill="#8B5CF6" opacity="0.09"/>
-  </g>
-
-  <rect x="100" y="70" width="230" height="58" rx="29" fill="#96c5b0" fill-opacity="0.18" stroke="#96c5b0" stroke-opacity="0.5" stroke-width="2"/>
-  <circle cx="138" cy="99" r="9" fill="#96c5b0"/>
-  <text x="162" y="110" font-family="Inter, Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#96c5b0" letter-spacing="2.5">LIVE NOW</text>
-
-  <g filter="url(#glow)">
-    ${logoImg}
-  </g>
-
-  <text x="100" y="265" font-family="Inter, Arial, Helvetica, sans-serif" font-size="78" font-weight="900" fill="url(#roomGrad)">${displayName}</text>
-
-  <circle cx="130" cy="340" r="30" fill="url(#avatarGrad)"/>
-  <text x="130" y="350" font-family="Inter, Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="white" text-anchor="middle">${hostInitial}</text>
-  <text x="172" y="350" font-family="Inter, Arial, Helvetica, sans-serif" font-size="30" fill="rgba(255,255,255,0.9)" font-weight="700">${inviteLine}</text>
-
-  <rect x="100" y="430" width="290" height="76" rx="22" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
-  <text x="245" y="478" font-family="Inter, Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="rgba(255,255,255,0.6)" text-anchor="middle">Not now</text>
-
-  <rect x="420" y="430" width="340" height="76" rx="22" fill="url(#joinGrad)"/>
-  <g transform="translate(478, 450)">
-    <path d="M5,20 C5,20 5,12 5,10 C5,4.5 9.5,0 15,0 C20.5,0 25,4.5 25,10 L25,20" stroke="#0a0a0a" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-    <rect x="0" y="17" width="8" height="13" rx="3" fill="#0a0a0a"/>
-    <rect x="22" y="17" width="8" height="13" rx="3" fill="#0a0a0a"/>
-  </g>
-  <text x="525" y="478" font-family="Inter, Arial, Helvetica, sans-serif" font-size="32" font-weight="800" fill="#0a0a0a">Join</text>
-
-  <rect x="40" y="600" width="1120" height="10" fill="rgba(0,0,0,0.4)"/>
-  <rect x="40" y="600" width="730" height="10" fill="url(#timerGrad)" opacity="0.6"/>
-</svg>`;
-
-        const pngBuffer = await sharp(Buffer.from(svg))
-            .png({ quality: 90 })
-            .toBuffer();
-
-        res.setHeader('Content-Type', 'image/png');
-        res.setHeader('Cache-Control', 'public, max-age=60');
-        res.setHeader('Content-Length', pngBuffer.length);
-        res.send(pngBuffer);
+        const page = await ogBrowser.newPage();
+        try {
+            await page.setViewport({ width: 1200, height: 630, deviceScaleFactor: 1 });
+            await page.setContent(html, { waitUntil: 'networkidle0', timeout: 8000 });
+            await page.evaluate(() => document.fonts.ready);
+            const imgBuffer = await page.screenshot({ type: 'jpeg', quality: 85, clip: { x: 0, y: 0, width: 1200, height: 630 } });
+            res.setHeader('Content-Type', 'image/jpeg');
+            res.setHeader('Cache-Control', 'public, max-age=60');
+            res.setHeader('Content-Length', imgBuffer.length);
+            res.send(imgBuffer);
+        } finally {
+            await page.close();
+        }
     } catch (err) {
         console.error('OG image generation error:', err);
         res.status(500).send('Image generation failed');
