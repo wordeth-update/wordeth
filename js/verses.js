@@ -72,6 +72,9 @@ class AudioRoomsManager {
         this.audioMixEnabled = false;
         this.mixedStream = null;
         this.youtubeAudioSource = null;
+        this.musicAudioSource = null;
+        this.musicAudioElement = null;
+        this.musicGainNode = null;
         this.micAudioSource = null;
         this.mixDestination = null;
         this.remoteAudioElements = new Map();
@@ -1352,10 +1355,13 @@ class AudioRoomsManager {
             this.showSharedImageOverlay(imageData, sender);
         });
 
-        this.socket.on('room-audio-share', ({ sender, audioUrl, songTitle, artistName }) => {
-            this.addAudioChatMessage(sender, songTitle, artistName, audioUrl);
-            this.showToast(`${sender} shared a track: ${songTitle}`, 'fa-music', 6000);
-            this.showAudioPlayerOverlay(audioUrl, songTitle, artistName, sender);
+        this.socket.on('music-stream-status', ({ sender, songTitle, artistName, playing }) => {
+            if (playing) {
+                this.addMusicStreamChatMessage(sender, songTitle, artistName);
+                this.showToast(`${sender} is playing: ${songTitle}`, 'fa-music', 6000);
+            } else {
+                this.addChatMessage('System', `${sender} stopped sharing music.`, true);
+            }
         });
         
         this.socket.on('room-event', ({ event, data }) => {
