@@ -56,6 +56,7 @@ class AudioRoomsManager {
         // Karaoke video state
         this.karaokeVideoStream = null;
         this.karaokeVideoActive = false;
+        this._videoRenegotiating = false;
         
         // Permission tracking
         this.pendingPermissionRequestId = null;
@@ -3354,7 +3355,6 @@ class AudioRoomsManager {
     // ==========================================
     
     async toggleKaraokeCamera() {
-        // Check if karaoke is enabled
         if (!this.karaokeEnabled) {
             this.addChatMessage('System', 'Karaoke must be enabled by the host to use the camera.', true);
             return;
@@ -3377,6 +3377,7 @@ class AudioRoomsManager {
             if (canvas) canvas.style.display = 'none';
             if (videoEl) videoEl.style.display = '';
 
+            this.karaokeVideoActive = false;
             await this.removeVideoTrackFromPeers();
             
             if (this.karaokeVideoStream) {
@@ -3386,9 +3387,17 @@ class AudioRoomsManager {
             if (videoEl) videoEl.srcObject = null;
             placeholder?.classList.remove('hidden');
             cameraBtn?.classList.remove('active');
-            this.karaokeVideoActive = false;
-            this.restoreOriginalVideoTrack();
+            this.previewMode = false;
+
+            const previewBtn = document.getElementById('karaoke-preview-toggle');
+            const previewIcon = previewBtn?.querySelector('i');
+            const previewLabel = previewBtn?.querySelector('.btn-label');
+            if (previewIcon) previewIcon.className = 'fas fa-eye';
+            if (previewLabel) previewLabel.textContent = 'Preview';
+            previewBtn?.classList.add('active');
+
             this.notifyParticipants('karaoke-stop', {});
+            this.karaokeStartNotified = false;
         } else {
             try {
                 this.karaokeVideoStream = await navigator.mediaDevices.getUserMedia({
@@ -3402,13 +3411,17 @@ class AudioRoomsManager {
                     cameraBtn?.classList.add('active');
                     this.karaokeVideoActive = true;
                     
-                    this.setVideoFilter(this.currentVideoFilter);
+                    this.previewMode = true;
+                    const previewBtn = document.getElementById('karaoke-preview-toggle');
+                    const previewIcon = previewBtn?.querySelector('i');
+                    const previewLabel = previewBtn?.querySelector('.btn-label');
+                    if (previewIcon) previewIcon.className = 'fas fa-eye';
+                    if (previewLabel) previewLabel.textContent = 'Preview';
+                    previewBtn?.classList.add('active');
                     
-                    await this.addVideoTrackToPeers(this.karaokeVideoStream);
-                    if (!this.karaokeStartNotified) {
-                        this.karaokeStartNotified = true;
-                        this.notifyParticipants('karaoke-start', {});
-                    }
+                    this.setVideoFilter(this.currentVideoFilter || 'none');
+                    
+                    this.addChatMessage('System', 'Camera on in preview mode. Tap "Go Live" when ready to broadcast.', true);
                 }
             } catch (error) {
                 console.error('Camera error:', error);
@@ -3430,24 +3443,38 @@ class AudioRoomsManager {
             this.canvasFilterRAF = null;
         }
 
-        const canvas = document.getElementById('karaoke-canvas');
-
-        if (filter === 'beautify' || filter === 'bg-blur') {
-            this.startCanvasFilter(filter);
-            if (canvas) canvas.style.display = 'block';
-            if (videoEl) videoEl.style.display = 'none';
-        } else {
-            if (canvas) canvas.style.display = 'none';
-            if (videoEl) videoEl.style.display = '';
-            videoEl?.classList.add(`filter-${filter}`);
-            this.restoreOriginalVideoTrack();
+        if (this.canvasStream) {
+            this.canvasStream.getTracks().forEach(t => t.stop());
+            this.canvasStream = null;
         }
 
         this.currentVideoFilter = filter;
+
+        if (filter === 'none') {
+            const canvas = document.getElementById('karaoke-canvas');
+            if (canvas) canvas.style.display = 'none';
+            if (videoEl) videoEl.style.display = '';
+            if (!this.previewMode && this.karaokeVideoActive) {
+                this.broadcastVideoTrack();
+            }
+        } else {
+            this.startCanvasFilter(filter);
+        }
         
         document.querySelectorAll('.video-filter-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.filter === filter);
         });
+    }
+
+    getCanvasFilterString(filter) {
+        switch (filter) {
+            case 'grayscale': return 'grayscale(100%)';
+            case 'sepia': return 'sepia(100%)';
+            case 'saturate': return 'saturate(2.5)';
+            case 'hue-rotate': return 'hue-rotate(90deg)';
+            case 'blur': return 'blur(2px)';
+            default: return 'none';
+        }
     }
 
     startCanvasFilter(filter) {
@@ -3465,6 +3492,9 @@ class AudioRoomsManager {
         }
 
         if (!canvas || !videoEl) return;
+
+        canvas.style.display = 'block';
+        videoEl.style.display = 'none';
 
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         this.karaokeCanvas = canvas;
@@ -3503,6 +3533,10 @@ class AudioRoomsManager {
                 ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
                 ctx.restore();
                 ctx.filter = 'none';
+            } else {
+                ctx.filter = this.getCanvasFilterString(filter);
+                ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+                ctx.filter = 'none';
             }
 
             this.canvasFilterRAF = requestAnimationFrame(renderFrame);
@@ -3510,13 +3544,12 @@ class AudioRoomsManager {
 
         this.canvasFilterRAF = requestAnimationFrame(renderFrame);
 
-        this.updateBroadcastStream();
+        if (!this.previewMode) {
+            this.broadcastCanvasStream(canvas);
+        }
     }
 
-    updateBroadcastStream() {
-        if (this.previewMode) return;
-
-        const canvas = document.getElementById('karaoke-canvas');
+    async broadcastCanvasStream(canvas) {
         if (!canvas || !this.karaokeVideoActive) return;
 
         try {
@@ -3526,55 +3559,114 @@ class AudioRoomsManager {
             const canvasTrack = this.canvasStream.getVideoTracks()[0];
             if (!canvasTrack) return;
 
-            this.peerConnections.forEach((pc) => {
-                const sender = pc.getSenders().find(s => s.track?.kind === 'video');
-                if (sender) {
-                    sender.replaceTrack(canvasTrack);
+            let needsRenegotiation = false;
+            for (const [, pc] of this.peerConnections) {
+                if (pc._videoSender) {
+                    pc._videoSender.replaceTrack(canvasTrack);
+                } else {
+                    const stream = new MediaStream([canvasTrack]);
+                    pc._videoSender = pc.addTrack(canvasTrack, stream);
+                    needsRenegotiation = true;
                 }
-            });
+            }
+            if (needsRenegotiation && !this._videoRenegotiating) {
+                await this._renegotiateAllPeers();
+            }
         } catch (e) {
-            console.error('Error updating broadcast stream:', e);
+            console.error('Error broadcasting canvas stream:', e);
         }
     }
 
-    restoreOriginalVideoTrack() {
-        if (!this.karaokeVideoStream) return;
-        const originalTrack = this.karaokeVideoStream.getVideoTracks()[0];
-        if (!originalTrack) return;
+    async broadcastVideoTrack() {
+        if (!this.karaokeVideoStream || !this.karaokeVideoActive) return;
+        const videoTrack = this.karaokeVideoStream.getVideoTracks()[0];
+        if (!videoTrack) return;
 
-        this.peerConnections.forEach((pc) => {
-            const sender = pc.getSenders().find(s => s.track?.kind === 'video');
-            if (sender) {
-                sender.replaceTrack(originalTrack);
+        let needsRenegotiation = false;
+        for (const [, pc] of this.peerConnections) {
+            if (pc._videoSender) {
+                pc._videoSender.replaceTrack(videoTrack);
+            } else {
+                const stream = new MediaStream([videoTrack]);
+                pc._videoSender = pc.addTrack(videoTrack, stream);
+                needsRenegotiation = true;
             }
-        });
+        }
+        if (needsRenegotiation && !this._videoRenegotiating) {
+            await this._renegotiateAllPeers();
+        }
     }
 
-    togglePreviewMode() {
-        this.previewMode = !this.previewMode;
+    async _renegotiateAllPeers() {
+        if (this._videoRenegotiating) return;
+        this._videoRenegotiating = true;
+        try {
+            for (const [peerId, pc] of this.peerConnections) {
+                try {
+                    await this.renegotiatePeer(peerId, pc);
+                } catch (e) {
+                    console.error('Error renegotiating with peer:', peerId, e);
+                }
+            }
+        } finally {
+            this._videoRenegotiating = false;
+        }
+    }
+
+    async goLive() {
+        if (!this.karaokeVideoActive) {
+            this.addChatMessage('System', 'Turn on your camera first before going live.', true);
+            return;
+        }
+
+        this.previewMode = false;
         const btn = document.getElementById('karaoke-preview-toggle');
         const icon = btn?.querySelector('i');
         const label = btn?.querySelector('.btn-label');
+        if (icon) icon.className = 'fas fa-broadcast-tower';
+        if (label) label.textContent = 'Live';
+        btn?.classList.remove('active');
 
+        let streamToSend;
+        const canvas = document.getElementById('karaoke-canvas');
+        if (this.currentVideoFilter && this.currentVideoFilter !== 'none' && canvas) {
+            if (!this.canvasStream) {
+                this.canvasStream = canvas.captureStream(15);
+            }
+            streamToSend = this.canvasStream;
+        } else {
+            streamToSend = this.karaokeVideoStream;
+        }
+
+        if (streamToSend) {
+            await this.addVideoTrackToPeers(streamToSend);
+        }
+
+        if (!this.karaokeStartNotified) {
+            this.karaokeStartNotified = true;
+            this.notifyParticipants('karaoke-start', {});
+        }
+
+        this.addChatMessage('System', 'You are now LIVE — camera visible to the room!', true);
+    }
+
+    async togglePreviewMode() {
         if (this.previewMode) {
+            await this.goLive();
+        } else {
+            this.previewMode = true;
+            const btn = document.getElementById('karaoke-preview-toggle');
+            const icon = btn?.querySelector('i');
+            const label = btn?.querySelector('.btn-label');
             if (icon) icon.className = 'fas fa-eye';
             if (label) label.textContent = 'Preview';
             btn?.classList.add('active');
             this.peerConnections.forEach((pc) => {
-                const sender = pc.getSenders().find(s => s.track?.kind === 'video');
-                if (sender) sender.replaceTrack(null);
+                if (pc._videoSender) {
+                    pc._videoSender.replaceTrack(null);
+                }
             });
             this.addChatMessage('System', 'Preview mode ON — camera visible only to you.', true);
-        } else {
-            if (icon) icon.className = 'fas fa-broadcast-tower';
-            if (label) label.textContent = 'Live';
-            btn?.classList.remove('active');
-            if (this.currentVideoFilter === 'beautify' || this.currentVideoFilter === 'bg-blur') {
-                this.updateBroadcastStream();
-            } else {
-                this.restoreOriginalVideoTrack();
-            }
-            this.addChatMessage('System', 'You are now LIVE — camera visible to the room.', true);
         }
     }
     
