@@ -13,6 +13,7 @@ const { setupSignaling, getActiveRooms } = require('./routes/signaling');
 
 let ogLogoBase64 = '';
 let ogBrowser = null;
+let ogBrowserLaunching = null;
 
 (async () => {
     try {
@@ -26,24 +27,10 @@ let ogBrowser = null;
         console.warn('Failed to cache OG logo:', e.message);
     }
     try {
-        const launchOpts = {
-            headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--font-render-hinting=none']
-        };
-        if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-            launchOpts.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-        } else {
-            const { execSync } = require('child_process');
-            try {
-                const sysChromium = execSync('which chromium 2>/dev/null || which google-chrome 2>/dev/null').toString().trim();
-                if (sysChromium) launchOpts.executablePath = sysChromium;
-            } catch(e) {}
-        }
-        console.log('Launching browser:', launchOpts.executablePath || 'bundled');
-        ogBrowser = await puppeteer.launch(launchOpts);
-        console.log('Puppeteer browser launched for OG image generation');
+        await ensureOgBrowser();
+        console.log('Puppeteer browser pre-launched for OG image generation');
     } catch(e) {
-        console.warn('Failed to launch Puppeteer:', e.message);
+        console.warn('Puppeteer pre-launch failed (will retry on first request):', e.message);
     }
 })();
 
@@ -243,24 +230,56 @@ app.get('/room/:roomId', ogCrawlerHeaders, (req, res) => {
 </html>`);
 });
 
+async function ensureOgBrowser() {
+    if (ogBrowser && ogBrowser.isConnected()) return ogBrowser;
+    if (ogBrowserLaunching) return ogBrowserLaunching;
+    ogBrowserLaunching = (async () => {
+        try {
+            if (ogBrowser) await ogBrowser.close().catch(() => {});
+        } catch(e) {}
+        const launchOpts = {
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--font-render-hinting=none']
+        };
+        if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+            launchOpts.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+        } else {
+            const { execSync } = require('child_process');
+            try {
+                const sysChromium = execSync('which chromium 2>/dev/null || which google-chrome 2>/dev/null').toString().trim();
+                if (sysChromium) launchOpts.executablePath = sysChromium;
+            } catch(e) {}
+        }
+        ogBrowser = await puppeteer.launch(launchOpts);
+        console.log('Puppeteer browser (re)launched');
+        return ogBrowser;
+    })().finally(() => { ogBrowserLaunching = null; });
+    return ogBrowserLaunching;
+}
+
 app.get('/og-image/:roomId', ogCrawlerHeaders, async (req, res) => {
     try {
-        if (!ogBrowser) {
-            return res.status(503).send('Image service not ready');
-        }
+        const browser = await ensureOgBrowser();
 
         const roomId = req.params.roomId;
         const activeRooms = getActiveRooms();
         const room = activeRooms.find(r => r.id === roomId);
 
         const roomName = room?.name || 'Live Verse';
-        const hostName = room?.participants?.find(p => p.isHost)?.userName || '';
+        const participantCount = room?.participantCount || 0;
+        const participants = room?.participants || [];
+        const hostName = participants.find(p => p.isHost)?.userName || '';
         const hostInitial = hostName ? escapeHtml(hostName.charAt(0).toUpperCase()) : 'W';
         const inviteLine = hostName
             ? `<strong>${escapeHtml(hostName)}</strong> invited you`
             : `You're invited`;
         const displayName = escapeHtml(roomName.length > 28 ? roomName.substring(0, 28) + '...' : roomName);
         const logoSrc = ogLogoBase64 ? `data:image/png;base64,${ogLogoBase64}` : '';
+        const listenerText = participantCount > 0 ? `${participantCount} listening now` : 'Be the first to join';
+        const miniAvatars = participants.slice(0, 3).map(p => {
+            const initial = (p.userName || 'U').charAt(0).toUpperCase();
+            return `<div class="mini-avatar">${initial}</div>`;
+        }).join('');
 
         const html = `<!DOCTYPE html>
 <html><head>
@@ -361,6 +380,33 @@ body {
     color: white;
     font-weight: 700;
 }
+.participants-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+.mini-avatars {
+    display: flex;
+}
+.mini-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(139,92,246,0.4);
+    border: 3px solid #1a1033;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    margin-left: -8px;
+}
+.mini-avatar:first-child { margin-left: 0; }
+.listener-count {
+    color: rgba(255,255,255,0.5);
+    font-size: 20px;
+}
 .actions {
     position: absolute;
     bottom: 50px; left: 50px; right: 50px;
@@ -420,6 +466,10 @@ body {
             <div class="avatar">${hostInitial}</div>
             <div class="invite-text">${inviteLine}</div>
         </div>
+        <div class="participants-row">
+            <div class="mini-avatars">${miniAvatars}</div>
+            <span class="listener-count">${listenerText}</span>
+        </div>
     </div>
     <div class="actions">
         <div class="btn btn-dismiss">Not now</div>
@@ -436,7 +486,7 @@ body {
 </div>
 </body></html>`;
 
-        const page = await ogBrowser.newPage();
+        const page = await browser.newPage();
         try {
             await page.setViewport({ width: 1200, height: 630, deviceScaleFactor: 1 });
             await page.setContent(html, { waitUntil: 'networkidle0', timeout: 8000 });

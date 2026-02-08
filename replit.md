@@ -95,7 +95,7 @@ Preferred communication style: Simple, everyday language.
 - **axios** — HTTP client (for external API calls)
 - **multer** — File upload handling (avatar images, 5MB limit)
 - **@aws-sdk/client-s3** — AWS S3 for data archival
-- **sharp** — SVG-to-PNG conversion for OG link preview images
+- **puppeteer** — HTML-to-image rendering for OG link preview cards (uses headless Chromium)
 
 ### NPM Packages (Dev)
 - **nodemon** — Auto-restart during development
