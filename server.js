@@ -9,6 +9,9 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const sharp = require('sharp');
 const fs = require('fs');
+
+process.env.FONTCONFIG_PATH = path.join(__dirname, 'fonts');
+process.env.FONTCONFIG_FILE = path.join(__dirname, 'fonts', 'fonts.conf');
 const { setupSignaling, getActiveRooms } = require('./routes/signaling');
 
 let ogLogoBase64 = '';
@@ -292,20 +295,20 @@ app.get('/og-image/:roomId', ogCrawlerHeaders, async (req, res) => {
 
   <rect x="100" y="70" width="230" height="58" rx="29" fill="#96c5b0" fill-opacity="0.18" stroke="#96c5b0" stroke-opacity="0.5" stroke-width="2"/>
   <circle cx="138" cy="99" r="9" fill="#96c5b0"/>
-  <text x="162" y="110" font-family="'Inter','Inter Variable',Arial,Helvetica,sans-serif" font-size="26" font-weight="700" fill="#96c5b0" letter-spacing="2.5">LIVE NOW</text>
+  <text x="162" y="110" font-family="Inter, Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#96c5b0" letter-spacing="2.5">LIVE NOW</text>
 
   <g filter="url(#glow)">
     ${logoImg}
   </g>
 
-  <text x="100" y="265" font-family="'Inter','Inter Variable',Arial,Helvetica,sans-serif" font-size="78" font-weight="900" fill="url(#roomGrad)">${displayName}</text>
+  <text x="100" y="265" font-family="Inter, Arial, Helvetica, sans-serif" font-size="78" font-weight="900" fill="url(#roomGrad)">${displayName}</text>
 
   <circle cx="130" cy="340" r="30" fill="url(#avatarGrad)"/>
-  <text x="130" y="350" font-family="'Inter','Inter Variable',Arial,Helvetica,sans-serif" font-size="24" font-weight="700" fill="white" text-anchor="middle">${hostInitial}</text>
-  <text x="172" y="350" font-family="'Inter','Inter Variable',Arial,Helvetica,sans-serif" font-size="30" fill="rgba(255,255,255,0.9)" font-weight="700">${inviteLine}</text>
+  <text x="130" y="350" font-family="Inter, Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="white" text-anchor="middle">${hostInitial}</text>
+  <text x="172" y="350" font-family="Inter, Arial, Helvetica, sans-serif" font-size="30" fill="rgba(255,255,255,0.9)" font-weight="700">${inviteLine}</text>
 
   <rect x="100" y="430" width="290" height="76" rx="22" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
-  <text x="245" y="478" font-family="'Inter','Inter Variable',Arial,Helvetica,sans-serif" font-size="30" font-weight="700" fill="rgba(255,255,255,0.6)" text-anchor="middle">Not now</text>
+  <text x="245" y="478" font-family="Inter, Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="rgba(255,255,255,0.6)" text-anchor="middle">Not now</text>
 
   <rect x="420" y="430" width="340" height="76" rx="22" fill="url(#joinGrad)"/>
   <g transform="translate(478, 450)">
@@ -313,7 +316,7 @@ app.get('/og-image/:roomId', ogCrawlerHeaders, async (req, res) => {
     <rect x="0" y="17" width="8" height="13" rx="3" fill="#0a0a0a"/>
     <rect x="22" y="17" width="8" height="13" rx="3" fill="#0a0a0a"/>
   </g>
-  <text x="525" y="478" font-family="'Inter','Inter Variable',Arial,Helvetica,sans-serif" font-size="32" font-weight="800" fill="#0a0a0a">Join</text>
+  <text x="525" y="478" font-family="Inter, Arial, Helvetica, sans-serif" font-size="32" font-weight="800" fill="#0a0a0a">Join</text>
 
   <rect x="40" y="600" width="1120" height="10" fill="rgba(0,0,0,0.4)"/>
   <rect x="40" y="600" width="730" height="10" fill="url(#timerGrad)" opacity="0.6"/>
