@@ -3344,3 +3344,24 @@
 .invite-btn.secondary:hover {
     background: rgba(255, 255, 255, 0.15);
 }
+
+.search-section-label {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 0.25rem;
+}
+
+.in-room-badge {
+    background: rgba(139, 92, 246, 0.2);
+    color: #8B5CF6;
+    padding: 0.35rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+}

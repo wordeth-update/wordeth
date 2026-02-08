@@ -591,6 +591,9 @@ class AudioRoomsManager {
 
     showAddUsersModal() {
         this.addUsersModal?.classList.add('active');
+        const userSearchInput = document.getElementById('user-search-input');
+        if (userSearchInput) userSearchInput.value = '';
+        this.loadFriendsForInvite();
     }
 
     showReplayModal() {
@@ -639,108 +642,138 @@ class AudioRoomsManager {
         const query = userSearchInput?.value;
         if (!query || !query.trim()) return;
 
-        const users = await this.mockUserSearch(query);
-        this.renderSearchResults(users);
-    }
-
-    async mockUserSearch(query) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const mockUsers = [
-            { 
-                id: 'user1', 
-                username: 'musiclover123', 
-                displayName: 'Alex Johnson', 
-                phoneNumber: '+1 (555) 123-4567',
-                avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face' 
-            },
-            { 
-                id: 'user2', 
-                username: 'hiphopfan', 
-                displayName: 'Sam Wilson', 
-                phoneNumber: '+1 (555) 234-5678',
-                avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face' 
-            },
-            { 
-                id: 'user3', 
-                username: 'rockstar', 
-                displayName: 'Jamie Brown', 
-                phoneNumber: '+1 (555) 345-6789',
-                avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face' 
-            },
-            { 
-                id: 'user4', 
-                username: 'jazzcat', 
-                displayName: 'Mia Davis', 
-                phoneNumber: '+1 (555) 456-7890',
-                avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face' 
-            }
-        ];
-
-        const searchTerm = query.toLowerCase();
-        return mockUsers.filter(user => 
-            user.username.toLowerCase().includes(searchTerm) ||
-            user.displayName.toLowerCase().includes(searchTerm) ||
-            user.id.includes(searchTerm) ||
-            user.phoneNumber.includes(searchTerm)
-        );
-    }
-
-    renderSearchResults(users) {
         const resultsContainer = document.getElementById('search-results');
         if (resultsContainer) {
-            if (users.length === 0) {
-                resultsContainer.innerHTML = `
-                    <div class="no-results">
-                        <p>No users found matching "${document.getElementById('user-search-input').value}"</p>
-                    </div>
-                `;
+            resultsContainer.innerHTML = '<div class="no-results"><p>Searching...</p></div>';
+        }
+
+        try {
+            const token = localStorage.getItem('authToken');
+            const res = await fetch(`/api/user/search?q=${encodeURIComponent(query.trim())}`, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
+            const users = await res.json();
+            this.renderSearchResults(users, query.trim());
+        } catch (error) {
+            console.error('User search error:', error);
+            if (resultsContainer) {
+                resultsContainer.innerHTML = '<div class="no-results"><p>Search failed. Please try again.</p></div>';
+            }
+        }
+    }
+
+    async loadFriendsForInvite() {
+        const resultsContainer = document.getElementById('search-results');
+        if (!resultsContainer) return;
+
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            resultsContainer.innerHTML = '<div class="no-results"><p>Sign in to see your friends</p></div>';
+            return;
+        }
+
+        resultsContainer.innerHTML = '<div class="no-results"><p>Loading friends...</p></div>';
+
+        try {
+            const res = await fetch('/api/user/friends', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const friends = await res.json();
+
+            if (!friends || friends.length === 0) {
+                resultsContainer.innerHTML = '<div class="no-results"><p>No friends yet. Search for users above to invite them!</p></div>';
                 return;
             }
 
-            resultsContainer.innerHTML = users.map(user => `
-                <div class="search-result-item">
-                    <div class="search-result-avatar">
-                        <img src="${user.avatar}" alt="${user.displayName}">
-                    </div>
-                    <div class="search-result-info">
-                        <div class="search-result-name">${user.displayName}</div>
-                        <div class="search-result-id">@${user.username}</div>
-                        <div class="search-result-phone">📞 ${user.phoneNumber}</div>
-                    </div>
-                    <button class="invite-btn" data-user-id="${user.id}">Invite</button>
-                </div>
-            `).join('');
+            this.renderSearchResults(friends, null, true);
+        } catch (error) {
+            console.error('Load friends error:', error);
+            resultsContainer.innerHTML = '<div class="no-results"><p>Could not load friends. Try searching instead.</p></div>';
         }
+    }
+
+    renderSearchResults(users, searchQuery, isFriendsList = false) {
+        const resultsContainer = document.getElementById('search-results');
+        if (!resultsContainer) return;
+
+        if (!users || users.length === 0) {
+            resultsContainer.innerHTML = `
+                <div class="no-results">
+                    <p>${searchQuery ? `No users found matching "${searchQuery}"` : 'No results found'}</p>
+                </div>
+            `;
+            return;
+        }
+
+        const currentUserId = (() => {
+            try { return JSON.parse(localStorage.getItem('user'))?._id; } catch(e) { return null; }
+        })();
+
+        const roomParticipants = this.currentRoom && this.socket ? 
+            Array.from(document.querySelectorAll('.participant-item')).map(el => el.dataset?.userId).filter(Boolean) : [];
+
+        if (isFriendsList) {
+            resultsContainer.innerHTML = '<div class="search-section-label">Your Friends</div>' + 
+                users.filter(u => (u._id || u.id) !== currentUserId).map(user => this.renderUserCard(user, roomParticipants)).join('');
+        } else {
+            resultsContainer.innerHTML = users.filter(u => (u._id || u.id) !== currentUserId).map(user => this.renderUserCard(user, roomParticipants)).join('');
+        }
+    }
+
+    renderUserCard(user, roomParticipants = []) {
+        const userId = user._id || user.id;
+        const displayName = user.name || user.displayName || 'User';
+        const avatar = user.avatar || '';
+        const avatarHtml = avatar 
+            ? `<img src="${avatar}" alt="${displayName}" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'fas fa-user\\'></i>'">`
+            : `<i class="fas fa-user"></i>`;
+        const isInRoom = roomParticipants.includes(userId);
+        const buttonHtml = isInRoom 
+            ? `<span class="in-room-badge">In Room</span>`
+            : `<button class="invite-btn" data-user-id="${userId}">Invite</button>`;
+
+        return `
+            <div class="search-result-item">
+                <div class="search-result-avatar">${avatarHtml}</div>
+                <div class="search-result-info">
+                    <div class="search-result-name">${displayName}</div>
+                    ${user.bio ? `<div class="search-result-id">${user.bio.substring(0, 50)}</div>` : ''}
+                </div>
+                ${buttonHtml}
+            </div>
+        `;
     }
 
     inviteUser(userId) {
-        console.log('Inviting user:', userId);
-        
-        // Get user details for the invitation
-        const userElement = document.querySelector(`[data-user-id="${userId}"]`).closest('.search-result-item');
-        const userName = userElement.querySelector('.search-result-name').textContent;
-        const userPhone = userElement.querySelector('.search-result-phone').textContent.replace('📞 ', '');
-        
-        // Show invitation confirmation
-        const confirmed = confirm(`Send invitation to ${userName}?\n\nPhone: ${userPhone}\n\nThis will send an SMS invitation to join the room.`);
-        
-        if (confirmed) {
-            // Simulate sending SMS invitation
-            this.sendSMSInvitation(userPhone, userName);
-            alert('Invitation sent successfully! 📱');
-        }
-    }
+        const userElement = document.querySelector(`[data-user-id="${userId}"]`)?.closest('.search-result-item');
+        const userName = userElement?.querySelector('.search-result-name')?.textContent || 'User';
 
-    sendSMSInvitation(phoneNumber, userName) {
-        // This would integrate with an SMS service like Twilio
-        console.log(`Sending SMS invitation to ${phoneNumber} for user ${userName}`);
-        
-        // Mock SMS content
-        const message = `🎵 You're invited to join a music discussion room on Wordeth!\n\nClick here to join: https://wordeth.com/join/${this.currentRoom}\n\nFrom: Wordeth Team`;
-        
-        // In a real implementation, this would call an SMS API
-        console.log('SMS Content:', message);
+        const shareUrl = `${window.location.origin}/verses.html?room=${encodeURIComponent(this.currentRoom)}`;
+        const shareText = `Join me in "${this.currentRoom}" on Wordeth!`;
+
+        if (navigator.share) {
+            navigator.share({
+                title: `Wordeth - ${this.currentRoom}`,
+                text: shareText,
+                url: shareUrl
+            }).then(() => {
+                this.showShareToast(`Invite sent for ${userName}!`);
+            }).catch(() => {});
+        } else {
+            navigator.clipboard?.writeText(shareUrl).then(() => {
+                this.showShareToast(`Room link copied - send it to ${userName}!`);
+            }).catch(() => {
+                const textArea = document.createElement('textarea');
+                textArea.value = shareUrl;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                this.showShareToast(`Room link copied - send it to ${userName}!`);
+            });
+        }
     }
 
     // Chat Management
