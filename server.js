@@ -181,7 +181,7 @@ app.get('/room/:roomId', (req, res) => {
 </html>`);
 });
 
-// Dynamic OG image as PNG (SVG not supported by most link preview crawlers)
+// Dynamic OG image as PNG (matches the invite card design)
 app.get('/og-image/:roomId', async (req, res) => {
     try {
         const roomId = req.params.roomId;
@@ -191,46 +191,115 @@ app.get('/og-image/:roomId', async (req, res) => {
         const roomName = room?.name || 'Live Verse';
         const participantCount = room?.participantCount || 0;
         const hostName = room?.participants?.find(p => p.isHost)?.userName || '';
-        const displayName = escapeXml(roomName.length > 28 ? roomName.substring(0, 28) + '...' : roomName);
-        const hostLine = hostName 
-            ? escapeXml(hostName) + ' is hosting' + (participantCount > 0 ? '  ·  ' + participantCount + ' listening' : '')
-            : 'Join the conversation' + (participantCount > 0 ? '  ·  ' + participantCount + ' listening' : '');
+        const displayName = escapeXml(roomName.length > 24 ? roomName.substring(0, 24) + '...' : roomName);
+        const hostInitial = hostName ? escapeXml(hostName.charAt(0).toUpperCase()) : 'W';
+        const inviteLine = hostName
+            ? escapeXml(hostName) + ' invited you'
+            : 'You&#39;re invited';
+        const listenerText = participantCount > 0
+            ? participantCount + ' listening now'
+            : 'Be the first to join';
 
         const svg = `<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="cardBg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#1a1033"/>
-      <stop offset="50%" style="stop-color:#2d1b69"/>
+      <stop offset="40%" style="stop-color:#2d1b69"/>
       <stop offset="100%" style="stop-color:#1a1033"/>
     </linearGradient>
-    <linearGradient id="mint" x1="0%" y1="0%" x2="100%" y2="0%">
+    <linearGradient id="roomGrad" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" style="stop-color:#96c5b0"/>
-      <stop offset="50%" style="stop-color:#ffffff"/>
+      <stop offset="40%" style="stop-color:#ffffff"/>
       <stop offset="100%" style="stop-color:#c4b5fd"/>
     </linearGradient>
-    <linearGradient id="btnGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+    <linearGradient id="joinBtnGrad" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" style="stop-color:#96c5b0"/>
       <stop offset="100%" style="stop-color:#7ab89e"/>
     </linearGradient>
+    <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#553555"/>
+      <stop offset="100%" style="stop-color:#5F0E82"/>
+    </linearGradient>
+    <linearGradient id="avatarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8B5CF6"/>
+      <stop offset="100%" style="stop-color:#6D28D9"/>
+    </linearGradient>
+    <filter id="logoGlow">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="cardShadow">
+      <feDropShadow dx="0" dy="8" stdDeviation="20" flood-color="#000000" flood-opacity="0.5"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="30" flood-color="#8B5CF6" flood-opacity="0.2"/>
+    </filter>
+    <clipPath id="cardClip">
+      <rect x="60" y="40" width="1080" height="550" rx="40"/>
+    </clipPath>
   </defs>
-  <rect width="1200" height="630" fill="url(#bg)"/>
-  <circle cx="1050" cy="120" r="200" fill="rgba(150,197,176,0.06)"/>
-  <circle cx="150" cy="500" r="180" fill="rgba(139,92,246,0.08)"/>
-  <rect x="60" y="60" width="160" height="44" rx="22" fill="rgba(150,197,176,0.15)" stroke="rgba(150,197,176,0.35)" stroke-width="1.5"/>
-  <circle cx="92" cy="82" r="6" fill="#96c5b0"/>
-  <text x="112" y="89" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#96c5b0" letter-spacing="1.5">LIVE NOW</text>
-  <text x="60" y="200" font-family="Arial,sans-serif" font-size="56" font-weight="800" fill="url(#mint)">${displayName}</text>
-  <text x="60" y="260" font-family="Arial,sans-serif" font-size="24" fill="rgba(255,255,255,0.6)">${hostLine}</text>
-  <rect x="60" y="340" width="260" height="60" rx="18" fill="url(#btnGrad)"/>
-  <text x="100" y="378" font-family="Arial,sans-serif" font-size="22" font-weight="700" fill="#0a0a0a">Tap to Join Room</text>
-  <text x="60" y="570" font-family="Arial,sans-serif" font-size="32" font-weight="800" fill="rgba(255,255,255,0.3)" letter-spacing="2">WORDETH</text>
-  <circle cx="1100" cy="550" r="8" fill="rgba(150,197,176,0.2)"/>
-  <circle cx="1060" cy="570" r="5" fill="rgba(139,92,246,0.3)"/>
-  <circle cx="1120" cy="580" r="6" fill="rgba(150,197,176,0.15)"/>
+
+  <!-- Full background -->
+  <rect width="1200" height="630" fill="#0d0817"/>
+
+  <!-- Card with rounded corners and shadow -->
+  <rect x="60" y="40" width="1080" height="550" rx="40" fill="url(#cardBg)" filter="url(#cardShadow)"/>
+
+  <!-- Glow effects inside card -->
+  <g clip-path="url(#cardClip)">
+    <circle cx="950" cy="120" r="280" fill="rgba(150,197,176,0.08)"/>
+    <circle cx="200" cy="480" r="250" fill="rgba(139,92,246,0.1)"/>
+    <circle cx="600" cy="300" r="350" fill="rgba(139,92,246,0.03)"/>
+  </g>
+
+  <!-- LIVE NOW badge (top-left) -->
+  <rect x="110" y="85" width="190" height="50" rx="25" fill="rgba(150,197,176,0.15)" stroke="rgba(150,197,176,0.4)" stroke-width="1.5"/>
+  <circle cx="145" cy="110" r="7" fill="#96c5b0"/>
+  <text x="165" y="118" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="700" fill="#96c5b0" letter-spacing="2">LIVE NOW</text>
+
+  <!-- Wordeth W logo (top-right) with glow -->
+  <g transform="translate(940, 65)" filter="url(#logoGlow)">
+    <circle cx="55" cy="55" r="45" stroke="#96c5b0" stroke-width="3" fill="rgba(150,197,176,0.08)"/>
+    <path d="M22,55 L33,30 L44,55 L55,30 L66,55 L77,30 L88,55" stroke="url(#logoGrad)" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Room name in large gradient text -->
+  <text x="110" y="235" font-family="Arial,Helvetica,sans-serif" font-size="62" font-weight="800" fill="url(#roomGrad)" letter-spacing="-0.5">${displayName}</text>
+
+  <!-- Host avatar + invited text -->
+  <circle cx="135" cy="305" r="24" fill="url(#avatarGrad)"/>
+  <text x="125" y="313" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="700" fill="white" text-anchor="middle">${hostInitial}</text>
+  <text x="170" y="312" font-family="Arial,Helvetica,sans-serif" font-size="24" fill="rgba(255,255,255,0.65)"><tspan fill="rgba(255,255,255,0.9)" font-weight="600">${inviteLine}</tspan></text>
+
+  <!-- Listener count with dots -->
+  <circle cx="118" cy="365" r="5" fill="rgba(139,92,246,0.5)"/>
+  <circle cx="134" cy="365" r="5" fill="rgba(139,92,246,0.4)"/>
+  <circle cx="150" cy="365" r="5" fill="rgba(139,92,246,0.3)"/>
+  <text x="168" y="372" font-family="Arial,Helvetica,sans-serif" font-size="20" fill="rgba(255,255,255,0.45)">${listenerText}</text>
+
+  <!-- Action buttons -->
+  <!-- Not now button -->
+  <rect x="110" y="420" width="240" height="64" rx="20" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
+  <text x="230" y="460" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="700" fill="rgba(255,255,255,0.55)" text-anchor="middle">Not now</text>
+
+  <!-- Join button -->
+  <rect x="380" y="420" width="280" height="64" rx="20" fill="url(#joinBtnGrad)"/>
+  <!-- Headphone icon -->
+  <g transform="translate(425, 438)">
+    <path d="M4,16 C4,16 4,10 4,8 C4,3.6 7.6,0 12,0 C16.4,0 20,3.6 20,8 L20,16" stroke="#0a0a0a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <rect x="0" y="14" width="6" height="10" rx="2" fill="#0a0a0a"/>
+    <rect x="18" y="14" width="6" height="10" rx="2" fill="#0a0a0a"/>
+  </g>
+  <text x="460" y="460" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="700" fill="#0a0a0a">Join</text>
+
+  <!-- Bottom gradient bar (timer bar style) -->
+  <rect x="60" y="580" width="1080" height="10" rx="0 0 40 40" fill="rgba(0,0,0,0.3)"/>
+  <rect x="60" y="580" width="1080" height="10" rx="0" fill="url(#roomGrad)" opacity="0.4"/>
 </svg>`;
 
         const pngBuffer = await sharp(Buffer.from(svg))
-            .png()
+            .png({ quality: 90 })
             .toBuffer();
 
         res.setHeader('Content-Type', 'image/png');
