@@ -208,6 +208,19 @@ class AudioRoomsManager {
         // Karaoke permission toggle (host/moderator only)
         document.getElementById('karaoke-toggle-btn')?.addEventListener('click', () => this.toggleKaraokePermission());
         
+        window.addEventListener('resize', () => {
+            const isMobile = window.innerWidth <= 768;
+            if (this.chatSection) {
+                if (isMobile) {
+                    this.chatVisible = this.chatSection.classList.contains('mobile-visible');
+                } else {
+                    this.chatSection.classList.remove('mobile-visible');
+                    this.chatVisible = !this.chatSection.classList.contains('hidden');
+                }
+                this.toggleChatBtn?.classList.toggle('active', this.chatVisible);
+            }
+        });
+
         // Screen share controls
         document.getElementById('screenshare-toggle-btn')?.addEventListener('click', () => this.toggleScreensharePermission());
         document.getElementById('screenshare-btn')?.addEventListener('click', () => this.startScreenShare());
@@ -870,11 +883,19 @@ class AudioRoomsManager {
 
     // Chat Management
     toggleChat() {
-        this.chatVisible = !this.chatVisible;
         const isMobile = window.innerWidth <= 768;
         if (isMobile) {
-            this.chatSection?.classList.toggle('mobile-visible');
+            const isVisible = this.chatSection?.classList.contains('mobile-visible');
+            if (isVisible) {
+                this.chatSection?.classList.remove('mobile-visible');
+                this.chatVisible = false;
+            } else {
+                this.chatSection?.classList.add('mobile-visible');
+                this.chatVisible = true;
+                this.chatInput?.focus();
+            }
         } else {
+            this.chatVisible = !this.chatVisible;
             this.chatSection?.classList.toggle('hidden', !this.chatVisible);
         }
         this.toggleChatBtn?.classList.toggle('active', this.chatVisible);
@@ -928,6 +949,25 @@ class AudioRoomsManager {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    showToast(message, icon = 'fa-info-circle', duration = 4000) {
+        let container = document.getElementById('room-toasts');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'room-toasts';
+            container.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
+            document.body.appendChild(container);
+        }
+        const toast = document.createElement('div');
+        toast.style.cssText = 'background:rgba(30,0,50,0.95);color:#e0d0ff;padding:10px 18px;border-radius:20px;font-size:14px;display:flex;align-items:center;gap:8px;border:1px solid rgba(138,43,226,0.4);backdrop-filter:blur(10px);opacity:0;transition:opacity 0.3s;white-space:nowrap;pointer-events:auto;';
+        toast.innerHTML = `<i class="fas ${icon}" style="color:#b388ff;"></i> ${this.escapeHtml(message)}`;
+        container.appendChild(toast);
+        requestAnimationFrame(() => toast.style.opacity = '1');
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
     }
 
     // Hand Raise Management
@@ -1509,6 +1549,9 @@ class AudioRoomsManager {
                 break;
             case 'hand-raise':
                 this.addChatMessage('System', `${data.userName} ${data.raised ? 'raised' : 'lowered'} their hand.`, true);
+                if (data.raised) {
+                    this.showToast(`${data.userName} raised their hand`, 'fa-hand-paper');
+                }
                 break;
             case 'mute-status':
                 break;

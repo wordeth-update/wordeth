@@ -3015,8 +3015,10 @@
     .audio-room {
         height: 100vh;
         height: -webkit-fill-available;
-        overflow: hidden;
+        overflow-y: auto;
+        overflow-x: hidden;
         position: relative;
+        padding-bottom: 110px;
     }
 
     /* Room Header - Compact */
@@ -3155,35 +3157,42 @@
         left: 0;
         right: 0;
         z-index: 90;
-        padding: 1rem 1rem;
-        padding-bottom: calc(1rem + env(safe-area-inset-bottom, 16px));
+        padding: 0.75rem 0.5rem;
+        padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 16px));
         background: linear-gradient(180deg, rgba(26,26,46,0.95) 0%, rgba(10,10,10,0.98) 100%);
         border-radius: 20px 20px 0 0;
         border-top: 1px solid rgba(150, 197, 176, 0.15);
         box-shadow: 0 -8px 30px rgba(0,0,0,0.4);
-        gap: 0.75rem;
-        flex-wrap: nowrap;
-        justify-content: space-around;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+        justify-content: center;
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
     }
     .room-controls::before {
         content: '';
         position: absolute;
-        top: 8px;
+        top: 6px;
         left: 50%;
         transform: translateX(-50%);
-        width: 40px;
-        height: 4px;
+        width: 36px;
+        height: 3px;
         background: rgba(255,255,255,0.2);
         border-radius: 2px;
     }
 
     .control-btn {
-        width: 48px;
-        height: 48px;
-        font-size: 1.1rem;
+        width: 42px;
+        height: 42px;
+        font-size: 1rem;
         flex-shrink: 0;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: rgba(150, 197, 176, 0.3);
+    }
+
+    .control-btn.danger {
+        position: relative;
+        z-index: 91;
     }
 
     /* Modals on mobile */
