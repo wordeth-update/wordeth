@@ -217,6 +217,17 @@ function setupSignaling(io) {
             }
         });
 
+        socket.on('room-image', ({ roomId, imageData }) => {
+            if (!roomId || !imageData) return;
+            if (imageData.length > 3 * 1024 * 1024) return;
+            const room = rooms.get(roomId);
+            if (!room || !room.participants.has(socket.id)) return;
+            socket.to(roomId).emit('room-image', {
+                sender: socket.userName || 'Someone',
+                imageData
+            });
+        });
+
         socket.on('audio-mix-status', ({ roomId, mixing, videoId }) => {
             socket.to(roomId).emit('audio-mix-status', {
                 userId: socket.userId,

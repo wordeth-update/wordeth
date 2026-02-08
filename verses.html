@@ -271,6 +271,42 @@
             <div class="host-notifications" id="host-notifications"></div>
         </div>
 
+        <!-- Mobile Share Modal -->
+        <div class="modal" id="mobile-share-modal">
+            <div class="modal-content mobile-share-modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-share-square"></i> Share with Room</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="mobile-share-options">
+                    <button class="mobile-share-option" id="mobile-camera-share-btn">
+                        <div class="share-option-icon"><i class="fas fa-video"></i></div>
+                        <div class="share-option-info">
+                            <strong>Share Camera</strong>
+                            <span>Stream your camera live to the room</span>
+                        </div>
+                    </button>
+                    <button class="mobile-share-option" id="mobile-image-share-btn">
+                        <div class="share-option-icon"><i class="fas fa-image"></i></div>
+                        <div class="share-option-info">
+                            <strong>Share Photo</strong>
+                            <span>Take or choose a photo to share</span>
+                        </div>
+                    </button>
+                </div>
+                <input type="file" id="mobile-image-input" accept="image/*" capture="environment" style="display:none;">
+            </div>
+        </div>
+
+        <!-- Shared Image Overlay -->
+        <div class="shared-image-overlay hidden" id="shared-image-overlay">
+            <div class="shared-image-header">
+                <span id="shared-image-sender"><i class="fas fa-image"></i> Shared Photo</span>
+                <button class="shared-image-close" id="shared-image-close"><i class="fas fa-times"></i></button>
+            </div>
+            <img id="shared-image-display" src="" alt="Shared image">
+        </div>
+
         <!-- Room Creation Modal -->
         <div class="modal" id="create-room-modal">
             <div class="modal-content">

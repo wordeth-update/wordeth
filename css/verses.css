@@ -3374,3 +3374,166 @@
     font-weight: 500;
     white-space: nowrap;
 }
+
+/* ==========================================
+   MOBILE SHARE MODAL
+   ========================================== */
+
+.mobile-share-modal-content {
+    max-width: 380px;
+}
+
+.mobile-share-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 1rem;
+}
+
+.mobile-share-option {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: rgba(138, 43, 226, 0.1);
+    border: 1px solid rgba(138, 43, 226, 0.3);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: var(--white);
+    text-align: left;
+    width: 100%;
+}
+
+.mobile-share-option:hover,
+.mobile-share-option:active {
+    background: rgba(138, 43, 226, 0.25);
+    border-color: var(--purple-accent);
+    transform: translateY(-1px);
+}
+
+.share-option-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--purple-dark), var(--purple-accent));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.share-option-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.share-option-info strong {
+    font-size: 1rem;
+}
+
+.share-option-info span {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* Camera share header bar */
+.screenshare-header .camera-flip-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: var(--white);
+    padding: 0.4rem 0.8rem;
+    border-radius: 16px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    margin-right: 8px;
+    transition: background 0.2s;
+}
+
+.screenshare-header .camera-flip-btn:hover,
+.screenshare-header .camera-flip-btn:active {
+    background: rgba(255, 255, 255, 0.35);
+}
+
+/* Shared Image Overlay */
+.shared-image-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.92);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.shared-image-overlay.hidden {
+    display: none;
+}
+
+.shared-image-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+    color: var(--white);
+    font-weight: 600;
+}
+
+.shared-image-header i {
+    margin-right: 8px;
+    color: var(--purple-accent);
+}
+
+.shared-image-close {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: var(--white);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.shared-image-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+#shared-image-display {
+    max-width: 90%;
+    max-height: 80vh;
+    object-fit: contain;
+    border-radius: 12px;
+    border: 2px solid rgba(138, 43, 226, 0.4);
+}
+
+/* Chat message with shared image thumbnail */
+.chat-message .shared-image-thumb {
+    max-width: 180px;
+    max-height: 120px;
+    border-radius: 8px;
+    margin-top: 6px;
+    cursor: pointer;
+    border: 1px solid rgba(138, 43, 226, 0.3);
+    transition: opacity 0.2s;
+}
+
+.chat-message .shared-image-thumb:hover {
+    opacity: 0.8;
+}
