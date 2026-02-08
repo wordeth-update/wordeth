@@ -592,22 +592,37 @@ class AudioRoomsManager {
             return div.innerHTML;
         };
 
+        const inviterInitial = (data.inviterName || 'U').charAt(0).toUpperCase();
+        const roomName = data.roomName || 'a Verse';
+
         const notification = document.createElement('div');
         notification.id = 'wordeth-invite-notification';
         notification.className = 'invite-notification';
         notification.innerHTML = `
-            <div class="invite-notif-content">
-                <div class="invite-notif-icon"><i class="fas fa-headphones"></i></div>
-                <div class="invite-notif-text">
-                    <strong>${escapeHtml(data.inviterName)}</strong> invited you to join
-                    <strong>"${escapeHtml(data.roomName)}"</strong>
+            <div class="invite-card">
+                <div class="invite-card-glow"></div>
+                <div class="invite-card-top">
+                    <div class="invite-live-badge">
+                        <span class="invite-live-dot"></span>
+                        LIVE NOW
+                    </div>
+                    <img src="/images/logo.png" alt="Wordeth" class="invite-logo">
                 </div>
-                <div class="invite-notif-actions">
-                    <button class="invite-notif-btn join" id="invite-join-btn">Join</button>
-                    <button class="invite-notif-btn dismiss" id="invite-dismiss-btn">Dismiss</button>
+                <div class="invite-card-body">
+                    <div class="invite-room-name">${escapeHtml(roomName)}</div>
+                    <div class="invite-from">
+                        <div class="invite-from-avatar">${inviterInitial}</div>
+                        <div class="invite-from-text"><strong>${escapeHtml(data.inviterName)}</strong> invited you</div>
+                    </div>
                 </div>
+                <div class="invite-card-actions">
+                    <button class="invite-action-btn dismiss" id="invite-dismiss-btn">Not now</button>
+                    <button class="invite-action-btn join" id="invite-join-btn">
+                        <i class="fas fa-headphones"></i> Join
+                    </button>
+                </div>
+                <div class="invite-timer-bar"></div>
             </div>
-            <div class="invite-notif-timer"></div>
         `;
         document.body.appendChild(notification);
         requestAnimationFrame(() => notification.classList.add('visible'));
@@ -854,12 +869,15 @@ class AudioRoomsManager {
             currentUserName = JSON.parse(localStorage.getItem('user'))?.name || 'Someone';
         } catch(e) {}
 
+        const roomNameEl = document.getElementById('room-name');
+        const displayRoomName = roomNameEl?.textContent || this.currentRoom;
+
         const activeSocket = this.socket || this.lobbySocket;
         if (activeSocket && activeSocket.connected) {
             activeSocket.emit('room-invite', {
                 targetUserId: userId,
                 roomId: this.currentRoom,
-                roomName: this.currentRoom,
+                roomName: displayRoomName,
                 inviterName: currentUserName
             });
 
@@ -880,12 +898,14 @@ class AudioRoomsManager {
     }
 
     fallbackInvite(userName) {
+        const roomNameEl = document.getElementById('room-name');
+        const displayRoomName = roomNameEl?.textContent || this.currentRoom;
         const shareUrl = `${window.location.origin}/verses.html?room=${encodeURIComponent(this.currentRoom)}`;
-        const shareText = `Join me in "${this.currentRoom}" on Wordeth!`;
+        const shareText = `Join me in "${displayRoomName}" on Wordeth!`;
 
         if (navigator.share) {
             navigator.share({
-                title: `Wordeth - ${this.currentRoom}`,
+                title: `Wordeth - ${displayRoomName}`,
                 text: shareText,
                 url: shareUrl
             }).then(() => {
