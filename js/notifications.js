@@ -60,7 +60,7 @@
                 </div>
                 <div class="invite-card-actions">
                     <button class="invite-action-btn dismiss" onclick="this.closest('.invite-notification').remove()">Not now</button>
-                    <button class="invite-action-btn join" onclick="window.location.href='/verses.html?room=${encodeURIComponent(data.roomId)}'">
+                    <button class="invite-action-btn join" onclick="window.location.href='/room/${encodeURIComponent(data.roomId)}'">
                         <i class="fas fa-headphones"></i> Join
                     </button>
                 </div>

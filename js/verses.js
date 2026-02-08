@@ -528,7 +528,7 @@ class AudioRoomsManager {
 
         const roomName = document.getElementById('room-name')?.textContent || 'a room';
         const baseUrl = window.location.origin;
-        const shareUrl = `${baseUrl}/verses.html?room=${encodeURIComponent(this.currentRoom)}`;
+        const shareUrl = `${baseUrl}/room/${encodeURIComponent(this.currentRoom)}`;
         const shareText = `Join me in "${roomName}" on Wordeth! Live music discussion happening now.`;
 
         if (navigator.share) {
@@ -900,7 +900,7 @@ class AudioRoomsManager {
     fallbackInvite(userName) {
         const roomNameEl = document.getElementById('room-name');
         const displayRoomName = roomNameEl?.textContent || this.currentRoom;
-        const shareUrl = `${window.location.origin}/verses.html?room=${encodeURIComponent(this.currentRoom)}`;
+        const shareUrl = `${window.location.origin}/room/${encodeURIComponent(this.currentRoom)}`;
         const shareText = `Join me in "${displayRoomName}" on Wordeth!`;
 
         if (navigator.share) {
