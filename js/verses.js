@@ -4573,7 +4573,40 @@ class AudioRoomsManager {
         if (statusEl) {
             statusEl.className = `audio-status ${state}`;
             statusEl.querySelector('span').textContent = message;
+            let retryBtn = statusEl.querySelector('.yt-retry-btn');
+            if (state === 'error') {
+                if (!retryBtn) {
+                    retryBtn = document.createElement('button');
+                    retryBtn.className = 'yt-retry-btn';
+                    retryBtn.innerHTML = '<i class="fas fa-redo"></i> Try Another';
+                    retryBtn.addEventListener('click', () => this.resetYouTubePlayer());
+                    statusEl.appendChild(retryBtn);
+                }
+                retryBtn.style.display = '';
+            } else if (retryBtn) {
+                retryBtn.style.display = 'none';
+            }
         }
+    }
+
+    resetYouTubePlayer() {
+        if (this.ytPlayer) {
+            try { this.ytPlayer.destroy(); } catch(e) {}
+            this.ytPlayer = null;
+        }
+        const wrapper = document.getElementById('yt-embed-wrapper');
+        const container = document.getElementById('yt-player-container');
+        if (container) container.innerHTML = '';
+        if (wrapper) wrapper.style.display = 'none';
+        this.currentVideoId = null;
+        const urlInput = document.getElementById('yt-url-input');
+        if (urlInput) {
+            urlInput.value = '';
+            urlInput.focus();
+        }
+        const inputRow = document.getElementById('yt-embed-input-row');
+        if (inputRow) inputRow.style.display = '';
+        this.updateAudioStatus('ready', 'Paste a new YouTube link or search another song');
     }
     
     async searchYouTubeAudio(artist, title) {

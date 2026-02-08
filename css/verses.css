@@ -2331,6 +2331,27 @@
     color: #ff6b6b;
 }
 
+.yt-retry-btn {
+    background: rgba(150, 197, 176, 0.15);
+    border: 1px solid rgba(150, 197, 176, 0.4);
+    color: var(--mint);
+    padding: 0.35rem 0.9rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: 0.5rem;
+}
+
+.yt-retry-btn:hover {
+    background: rgba(150, 197, 176, 0.3);
+    transform: scale(1.05);
+}
+
 .audio-status.ready span {
     color: rgba(255, 255, 255, 0.8);
 }
