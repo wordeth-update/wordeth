@@ -170,6 +170,14 @@ app.get('/room/:roomId', ogCrawlerHeaders, (req, res) => {
     const ogImageUrl = `${baseUrl}/og-image/${encodeURIComponent(roomId)}`;
     const joinUrl = `${baseUrl}/verses.html?room=${encodeURIComponent(roomId)}`;
 
+    const ua = (req.get('user-agent') || '').toLowerCase();
+    const isCrawler = /bot|crawl|spider|preview|fetch|facebookexternalhit|twitterbot|whatsapp|telegram|slack|discord|imessagebot|applebot|linkedinbot|skype|viber|line\//i.test(ua);
+
+    if (!isCrawler) {
+        res.setHeader('Cache-Control', 'no-store, no-cache');
+        return res.redirect(302, joinUrl);
+    }
+
     res.setHeader('Cache-Control', 'no-cache');
     res.send(`<!DOCTYPE html>
 <html lang="en" prefix="og: https://ogp.me/ns#">
@@ -190,11 +198,10 @@ app.get('/room/:roomId', ogCrawlerHeaders, (req, res) => {
     <meta name="twitter:title" content="${roomName}">
     <meta name="twitter:description" content="${description}">
     <meta name="twitter:image" content="${ogImageUrl}">
-    <meta http-equiv="refresh" content="1;url=${joinUrl}">
+    <meta http-equiv="refresh" content="2;url=${joinUrl}">
 </head>
 <body style="background:#1a1033;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
     <p>Joining room...</p>
-    <script>window.location.href = "${joinUrl}";</script>
 </body>
 </html>`);
 });

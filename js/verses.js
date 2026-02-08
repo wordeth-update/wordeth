@@ -326,8 +326,9 @@ class AudioRoomsManager {
             this.refreshFriendsRooms();
         });
 
-        // Delegated click events for room actions
         document.addEventListener('click', (e) => {
+            if (this._joiningFromInvite) return;
+
             const joinBtn = e.target.closest('.join-room-btn');
             if (joinBtn) {
                 const roomCard = joinBtn.closest('.room-card');
@@ -4963,9 +4964,13 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Handle page parameters (if joining via direct link)
-const urlParams = new URLSearchParams(window.location.search);
-const roomToJoin = urlParams.get('room');
-if (roomToJoin) {
+(function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomToJoin = urlParams.get('room');
+    if (!roomToJoin) return;
+
+    window.history.replaceState({}, '', '/verses.html');
+
     document.addEventListener('DOMContentLoaded', () => {
         const token = localStorage.getItem('authToken');
         if (!token) {
@@ -4985,35 +4990,45 @@ if (roomToJoin) {
                 </div>
             `;
             document.body.appendChild(joinBanner);
-        } else {
-            const tryJoinRoom = async () => {
-                const mgr = window.audioRoomsManager;
-                if (!mgr) {
-                    setTimeout(tryJoinRoom, 500);
+            return;
+        }
+
+        const lobby = document.getElementById('room-selection') || document.querySelector('.room-selection');
+        if (lobby) lobby.style.display = 'none';
+
+        const tryJoinRoom = async () => {
+            const mgr = window.audioRoomsManager;
+            if (!mgr) {
+                setTimeout(tryJoinRoom, 300);
+                return;
+            }
+
+            mgr._joiningFromInvite = true;
+
+            try {
+                const rooms = await mgr.fetchActiveRooms();
+                const targetRoom = rooms.find(r => r.id === roomToJoin);
+                if (!targetRoom) {
+                    console.warn('Room not found or no longer active:', roomToJoin);
+                    mgr._joiningFromInvite = false;
+                    if (lobby) lobby.style.display = '';
+                    mgr.loadActiveRooms();
+                    mgr.showToast?.('This room is no longer active', 'fa-exclamation-circle');
                     return;
                 }
-                try {
-                    const rooms = await mgr.fetchActiveRooms();
-                    const targetRoom = rooms.find(r => r.id === roomToJoin);
-                    if (!targetRoom) {
-                        console.warn('Room not found or no longer active:', roomToJoin);
-                        const lobby = document.getElementById('room-selection') || document.querySelector('.room-selection');
-                        if (lobby) lobby.style.display = '';
-                        mgr.showToast?.('This room is no longer active', 'fa-exclamation-circle');
-                        window.history.replaceState({}, '', '/verses.html');
-                        return;
-                    }
-                    const roomNameEl = document.getElementById('room-name');
-                    if (roomNameEl && targetRoom.name) {
-                        roomNameEl.textContent = targetRoom.name;
-                    }
-                    mgr.joinRoom(roomToJoin);
-                } catch(e) {
-                    console.error('Error joining room from link:', e);
-                    mgr.joinRoom(roomToJoin);
+                const roomNameEl = document.getElementById('room-name');
+                if (roomNameEl && targetRoom.name) {
+                    roomNameEl.textContent = targetRoom.name;
                 }
-            };
-            setTimeout(tryJoinRoom, 800);
-        }
+                await mgr.joinRoom(roomToJoin);
+            } catch(e) {
+                console.error('Error joining room from link:', e);
+                if (lobby) lobby.style.display = '';
+                mgr.loadActiveRooms();
+            } finally {
+                if (mgr) mgr._joiningFromInvite = false;
+            }
+        };
+        setTimeout(tryJoinRoom, 500);
     });
-}
+})();
