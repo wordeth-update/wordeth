@@ -50,6 +50,37 @@ function setupSignaling(io) {
         });
 
         socket.on('join-room', ({ roomId, userId, userName, isHost, roomName, avatar }) => {
+            if (socket.roomId && socket.roomId !== roomId && rooms.has(socket.roomId)) {
+                const prevRoom = rooms.get(socket.roomId);
+                prevRoom.participants.delete(socket.id);
+                socket.leave(socket.roomId);
+
+                const prevParticipantList = Array.from(prevRoom.participants.values());
+                socket.to(socket.roomId).emit('participant-left', {
+                    socketId: socket.id,
+                    userId: socket.userId,
+                    userName: socket.userName,
+                    participants: prevParticipantList
+                });
+
+                if (prevRoom.participants.size === 0) {
+                    rooms.delete(socket.roomId);
+                    console.log(`Room ${socket.roomId} removed (empty after room switch)`);
+                } else if (socket.id === prevRoom.hostId) {
+                    const firstParticipant = prevRoom.participants.values().next().value;
+                    if (firstParticipant) {
+                        prevRoom.hostId = firstParticipant.socketId;
+                        firstParticipant.isHost = true;
+                        io.to(socket.roomId).emit('room-event', {
+                            event: 'host-changed',
+                            data: { newHostId: firstParticipant.socketId, newHostName: firstParticipant.userName }
+                        });
+                    }
+                }
+
+                io.emit('rooms-updated', getActiveRooms());
+            }
+
             socket.join(roomId);
             socket.roomId = roomId;
             socket.userId = userId || socket.id;

@@ -328,34 +328,49 @@ class AudioRoomsManager {
 
         // Delegated click events for room actions
         document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('join-room-btn')) {
-                const roomId = e.target.closest('.room-card').dataset.roomId;
-                this.joinRoom(roomId);
+            const joinBtn = e.target.closest('.join-room-btn');
+            if (joinBtn) {
+                const roomCard = joinBtn.closest('.room-card');
+                if (roomCard) {
+                    const roomId = roomCard.dataset.roomId;
+                    this.joinRoom(roomId);
+                }
+                return;
             }
             
-            if (e.target.classList.contains('preview-btn')) {
-                const roomCard = e.target.closest('.room-card');
-                this.previewRoom(roomCard);
+            const previewBtn = e.target.closest('.preview-btn');
+            if (previewBtn) {
+                const roomCard = previewBtn.closest('.room-card');
+                if (roomCard) this.previewRoom(roomCard);
+                return;
             }
             
-            if (e.target.classList.contains('knock-btn')) {
-                const friendRoom = e.target.closest('.friend-room');
-                this.knockOnRoom(friendRoom);
+            const knockBtn = e.target.closest('.knock-btn');
+            if (knockBtn) {
+                const friendRoom = knockBtn.closest('.friend-room');
+                if (friendRoom) this.knockOnRoom(friendRoom);
+                return;
             }
 
-            if (e.target.classList.contains('join-friend-btn')) {
-                const friendRoom = e.target.closest('.friend-room');
-                this.joinFriendRoom(friendRoom);
+            const joinFriendBtn = e.target.closest('.join-friend-btn');
+            if (joinFriendBtn) {
+                const friendRoom = joinFriendBtn.closest('.friend-room');
+                if (friendRoom) this.joinFriendRoom(friendRoom);
+                return;
             }
 
-            if (e.target.classList.contains('invite-btn')) {
-                const userId = e.target.dataset.userId;
-                this.inviteUser(userId);
+            const inviteBtn = e.target.closest('.invite-btn');
+            if (inviteBtn) {
+                const userId = inviteBtn.dataset.userId;
+                if (userId) this.inviteUser(userId);
+                return;
             }
 
-            if (e.target.classList.contains('replay-item')) {
-                const replayId = e.target.dataset.replayId;
-                this.playReplay(replayId);
+            const replayItem = e.target.closest('.replay-item');
+            if (replayItem) {
+                const replayId = replayItem.dataset.replayId;
+                if (replayId) this.playReplay(replayId);
+                return;
             }
         });
     }
@@ -1139,6 +1154,10 @@ class AudioRoomsManager {
     }
 
     async joinRoom(roomId, isHost = false) {
+        if (!roomId) {
+            console.warn('joinRoom called with empty roomId');
+            return;
+        }
         try {
             const roomData = await this.checkRoomLockStatus(roomId);
             if (roomData && roomData.isLocked) {
@@ -1168,7 +1187,7 @@ class AudioRoomsManager {
             this.currentRoom = roomId;
             this.roomJoinTime = Date.now();
             
-            this.connectSocket();
+            await this.connectSocket();
             
             const user = JSON.parse(localStorage.getItem('user') || '{}');
             const userName = user.name || user.username || 'Anonymous';
@@ -1261,8 +1280,20 @@ class AudioRoomsManager {
     }
 
     connectSocket() {
-        if (this.socket && this.socket.connected) return;
+        if (this.socket && this.socket.connected) return Promise.resolve();
         
+        if (this.socket && !this.socket.connected) {
+            return new Promise((resolve) => {
+                this.socket.once('connect', () => {
+                    console.log('Socket.io reconnected:', this.socket.id);
+                    resolve();
+                });
+                if (this.socket.disconnected) {
+                    this.socket.connect();
+                }
+            });
+        }
+
         const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
         this.socket = io(serverUrl, {
             transports: ['websocket', 'polling'],
@@ -1270,11 +1301,7 @@ class AudioRoomsManager {
             reconnectionAttempts: 10,
             reconnectionDelay: 1000
         });
-        
-        this.socket.on('connect', () => {
-            console.log('Socket.io connected:', this.socket.id);
-        });
-        
+
         this.socket.on('disconnect', (reason) => {
             console.log('Socket.io disconnected:', reason);
             if (reason === 'io server disconnect') {
@@ -1391,6 +1418,17 @@ class AudioRoomsManager {
         this.socket.on('audio-mix-status', ({ userName, mixing, videoId }) => {
             if (mixing) {
                 this.addChatMessage('System', `${userName} is sharing YouTube audio with the room.`, true);
+            }
+        });
+
+        return new Promise((resolve) => {
+            if (this.socket.connected) {
+                resolve();
+            } else {
+                this.socket.once('connect', () => {
+                    console.log('Socket.io connected:', this.socket.id);
+                    resolve();
+                });
             }
         });
     }
@@ -4948,9 +4986,34 @@ if (roomToJoin) {
             `;
             document.body.appendChild(joinBanner);
         } else {
-            setTimeout(() => {
-                window.audioRoomsManager?.joinRoom(roomToJoin);
-            }, 1500);
+            const tryJoinRoom = async () => {
+                const mgr = window.audioRoomsManager;
+                if (!mgr) {
+                    setTimeout(tryJoinRoom, 500);
+                    return;
+                }
+                try {
+                    const rooms = await mgr.fetchActiveRooms();
+                    const targetRoom = rooms.find(r => r.id === roomToJoin);
+                    if (!targetRoom) {
+                        console.warn('Room not found or no longer active:', roomToJoin);
+                        const lobby = document.getElementById('room-selection') || document.querySelector('.room-selection');
+                        if (lobby) lobby.style.display = '';
+                        mgr.showToast?.('This room is no longer active', 'fa-exclamation-circle');
+                        window.history.replaceState({}, '', '/verses.html');
+                        return;
+                    }
+                    const roomNameEl = document.getElementById('room-name');
+                    if (roomNameEl && targetRoom.name) {
+                        roomNameEl.textContent = targetRoom.name;
+                    }
+                    mgr.joinRoom(roomToJoin);
+                } catch(e) {
+                    console.error('Error joining room from link:', e);
+                    mgr.joinRoom(roomToJoin);
+                }
+            };
+            setTimeout(tryJoinRoom, 800);
         }
     });
 }
