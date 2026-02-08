@@ -50,11 +50,11 @@
 }
 
 .invite-logo {
-    height: 32px;
+    height: 64px;
     width: auto;
     opacity: 0.95;
     flex-shrink: 0;
-    filter: drop-shadow(0 0 8px rgba(150, 197, 176, 0.4));
+    filter: drop-shadow(0 0 12px rgba(150, 197, 176, 0.5)) drop-shadow(0 0 24px rgba(139, 92, 246, 0.3));
 }
 
 .invite-live-badge {
