@@ -279,6 +279,13 @@
                     <button class="close-modal">&times;</button>
                 </div>
                 <div class="mobile-share-options">
+                    <button class="mobile-share-option" id="mobile-screen-share-btn" style="display:none;">
+                        <div class="share-option-icon"><i class="fas fa-desktop"></i></div>
+                        <div class="share-option-info">
+                            <strong>Share Screen</strong>
+                            <span>Share your screen live to the room</span>
+                        </div>
+                    </button>
                     <button class="mobile-share-option" id="mobile-camera-share-btn">
                         <div class="share-option-icon"><i class="fas fa-video"></i></div>
                         <div class="share-option-info">
@@ -602,6 +609,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/util.min.js"></script>
     <script src="js/config.js"></script>
     <script src="js/main.js"></script>
+    <script src="js/native-screen-capture.js"></script>
     <script src="js/verses.js"></script>
     <script src="js/nav-auth.js"></script>
     <script src="js/notifications.js"></script>

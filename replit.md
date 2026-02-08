@@ -60,7 +60,12 @@ Preferred communication style: Simple, everyday language.
 - Token verification middleware checks JWT and loads user from database
 
 ### Key Features Architecture
-- **Verses (Audio Rooms)**: Real-time WebRTC peer-to-peer audio via Socket.io signaling server. Web Audio API for voice filters and audio mixing (mic + YouTube). YouTube embed integration for karaoke with "Share Audio" button that captures tab audio and mixes it into the outgoing WebRTC stream. MediaRecorder for performance recording.
+- **Verses (Audio Rooms)**: Real-time WebRTC peer-to-peer audio via Socket.io signaling server. Web Audio API for voice filters and audio mixing (mic + YouTube). YouTube embed integration for karaoke with "Share Audio" button that captures tab audio and mixes it into the outgoing WebRTC stream. MediaRecorder for performance recording. Mobile share modal with camera stream, photo share, and native screen capture options.
+- **Native Screen Capture Plugin** (Custom Capacitor Plugin):
+  - **Android** (`android/app/src/main/java/com/wordeth/app/screencapture/`): Kotlin plugin using MediaProjection API with foreground service (`ScreenCaptureService`), VirtualDisplay, ImageReader. Captures frames at configurable FPS, encodes as JPEG, sends base64 to JS via plugin events.
+  - **iOS** (`ios/App/App/ScreenCapturePlugin.swift`): Swift plugin using ReplayKit `RPScreenRecorder.startCapture`. Processes `CMSampleBuffer` video frames, scales down, encodes as JPEG, sends base64 to JS.
+  - **JS Bridge** (`js/native-screen-capture.js`): Receives native frames, renders on canvas, creates `MediaStream` via `canvas.captureStream()` for WebRTC peer connections. Auto-detects Capacitor native environment.
+  - **Integration**: "Share Screen" option appears in mobile share modal only when running in Capacitor native app. Uses same WebRTC video track infrastructure as camera share.
 - **Lyrics**: Server-side search via Genius API, with fallback sources (LRCLIB, Lyrics.ovh, Musixmatch)
 - **Advertising**: Contextual keyword-based ads on lyrics pages, with self-serve portal, admin approval workflow, and impression/click tracking
 - **Usage Analytics**: Event tracking middleware automatically logs API usage to MongoDB, with admin dashboard for visualization

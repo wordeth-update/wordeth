@@ -24,6 +24,12 @@
 
         </activity>
 
+        <service
+            android:name=".screencapture.ScreenCaptureService"
+            android:foregroundServiceType="mediaProjection"
+            android:exported="false"
+            android:stopWithTask="true" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -43,4 +49,6 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
 </manifest>
