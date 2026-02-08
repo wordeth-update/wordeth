@@ -1879,7 +1879,7 @@ class AudioRoomsManager {
             if (this.audioContext && this.mixDestination) {
                 this.musicAudioSource = this.audioContext.createMediaElementSource(this.musicAudioElement);
                 this.musicGainNode = this.audioContext.createGain();
-                this.musicGainNode.gain.value = 0.8;
+                this.musicGainNode.gain.value = 1.0;
                 this.musicAudioSource.connect(this.musicGainNode);
                 this.musicGainNode.connect(this.mixDestination);
                 this.musicGainNode.connect(this.audioContext.destination);
@@ -3390,7 +3390,11 @@ class AudioRoomsManager {
             }
             const canvas = document.getElementById('karaoke-canvas');
             if (canvas) canvas.style.display = 'none';
-            if (videoEl) videoEl.style.display = '';
+            if (videoEl) {
+                videoEl.style.visibility = '';
+                videoEl.style.position = '';
+                videoEl.style.pointerEvents = '';
+            }
 
             this.karaokeVideoActive = false;
             await this.removeVideoTrackFromPeers();
@@ -3481,7 +3485,11 @@ class AudioRoomsManager {
         if (filter === 'none') {
             const canvas = document.getElementById('karaoke-canvas');
             if (canvas) canvas.style.display = 'none';
-            if (videoEl) videoEl.style.display = '';
+            if (videoEl) {
+                videoEl.style.visibility = '';
+                videoEl.style.position = '';
+                videoEl.style.pointerEvents = '';
+            }
             if (!this.previewMode && this.karaokeVideoActive) {
                 this.broadcastVideoTrack();
             }
@@ -3550,19 +3558,27 @@ class AudioRoomsManager {
         let canvas = document.getElementById('karaoke-canvas');
         const container = document.getElementById('karaoke-video-container');
 
+        const vw = videoEl?.videoWidth || 320;
+        const vh = videoEl?.videoHeight || 240;
+
         if (!canvas && container) {
             canvas = document.createElement('canvas');
             canvas.id = 'karaoke-canvas';
-            canvas.width = 320;
-            canvas.height = 240;
+            canvas.width = vw;
+            canvas.height = vh;
             canvas.className = 'karaoke-canvas-overlay';
             container.appendChild(canvas);
+        } else if (canvas) {
+            canvas.width = vw;
+            canvas.height = vh;
         }
 
         if (!canvas || !videoEl) return;
 
         canvas.style.display = 'block';
-        videoEl.style.display = 'none';
+        videoEl.style.visibility = 'hidden';
+        videoEl.style.position = 'absolute';
+        videoEl.style.pointerEvents = 'none';
 
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         this.karaokeCanvas = canvas;
@@ -5032,7 +5048,7 @@ class AudioRoomsManager {
             );
             
             const ytGain = this.audioContext.createGain();
-            ytGain.gain.value = 0.8;
+            ytGain.gain.value = 1.0;
             this.youtubeAudioSource.connect(ytGain);
             ytGain.connect(this.mixDestination);
             this.ytGainNode = ytGain;
