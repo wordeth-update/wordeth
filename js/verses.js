@@ -1868,8 +1868,7 @@ class AudioRoomsManager {
 
         const objectUrl = URL.createObjectURL(this.pendingMusicFile);
         this.musicAudioElement = new Audio(objectUrl);
-        this.musicAudioElement.crossOrigin = 'anonymous';
-        this.musicAudioElement.volume = 0.8;
+        this.musicAudioElement.volume = 1.0;
 
         try {
             if (!this.audioMixEnabled) {
@@ -1885,8 +1884,12 @@ class AudioRoomsManager {
                 this.musicGainNode.connect(this.audioContext.destination);
 
                 if (this.mixedStream) {
-                    this.replaceOutgoingAudioTrack(this.mixedStream.getAudioTracks()[0]);
+                    await this.replaceOutgoingAudioTrack(this.mixedStream.getAudioTracks()[0]);
                 }
+                console.log('Music connected to audio mix, audioContext state:', this.audioContext.state);
+            } else {
+                console.error('Audio mix not ready — audioContext:', !!this.audioContext, 'mixDestination:', !!this.mixDestination);
+                this.addChatMessage('System', 'Could not connect music to room audio. Try again.', true);
             }
 
             await this.musicAudioElement.play();
@@ -3530,8 +3533,12 @@ class AudioRoomsManager {
                     this.karaokeVideoActive = true;
                     this.previewMode = true;
                     await new Promise(resolve => {
-                        videoEl.onloadeddata = resolve;
-                        setTimeout(resolve, 2000);
+                        const checkReady = () => {
+                            if (videoEl.readyState >= 2) { resolve(); return; }
+                            videoEl.addEventListener('canplay', resolve, { once: true });
+                        };
+                        checkReady();
+                        setTimeout(resolve, 3000);
                     });
                 }
             } catch (err) {
@@ -5153,14 +5160,36 @@ class AudioRoomsManager {
         }
     }
     
-    replaceOutgoingAudioTrack(newTrack) {
-        if (!newTrack) return;
-        this.peerConnections.forEach((pc) => {
-            const sender = pc.getSenders().find(s => s.track?.kind === 'audio');
+    async replaceOutgoingAudioTrack(newTrack) {
+        if (!newTrack) {
+            console.warn('replaceOutgoingAudioTrack: no track provided');
+            return;
+        }
+        const promises = [];
+        let needsRenegotiation = false;
+        this.peerConnections.forEach((pc, peerId) => {
+            const sender = pc.getSenders().find(s => s.track?.kind === 'audio' || s.track === null);
             if (sender) {
-                sender.replaceTrack(newTrack);
+                promises.push(
+                    sender.replaceTrack(newTrack)
+                        .then(() => console.log('Replaced audio track for peer:', peerId))
+                        .catch(e => console.error('Failed to replace audio track for peer:', peerId, e))
+                );
+            } else {
+                const stream = new MediaStream([newTrack]);
+                try {
+                    pc.addTrack(newTrack, stream);
+                    needsRenegotiation = true;
+                    console.log('Added new audio track for peer:', peerId);
+                } catch (e) {
+                    console.error('Failed to add audio track for peer:', peerId, e);
+                }
             }
         });
+        await Promise.all(promises);
+        if (needsRenegotiation) {
+            await this._renegotiateAllPeers();
+        }
     }
     
     async loadYouTubeAudio(artist, title) {
