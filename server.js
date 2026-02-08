@@ -7,6 +7,7 @@ const cors = require('cors');
 const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const sharp = require('sharp');
 const { setupSignaling, getActiveRooms } = require('./routes/signaling');
 
 // Import routes
@@ -138,19 +139,22 @@ app.get('/room/:roomId', (req, res) => {
     const activeRooms = getActiveRooms();
     const room = activeRooms.find(r => r.id === roomId);
 
-    const roomName = room?.name || 'a Live Verse';
+    const roomName = escapeHtml(room?.name || 'a Live Verse');
     const participantCount = room?.participantCount || 0;
     const hostName = room?.participants?.find(p => p.isHost)?.userName || '';
-    const description = hostName
+    const description = escapeHtml(hostName
         ? `${hostName} is live on Wordeth${participantCount > 1 ? ` with ${participantCount - 1} other${participantCount > 2 ? 's' : ''}` : ''}. Tap to join the conversation.`
-        : `A live audio room on Wordeth${participantCount > 0 ? ` with ${participantCount} listener${participantCount > 1 ? 's' : ''}` : ''}. Tap to join.`;
+        : `A live audio room on Wordeth${participantCount > 0 ? ` with ${participantCount} listener${participantCount > 1 ? 's' : ''}` : ''}. Tap to join.`);
 
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const ogImageUrl = `${baseUrl}/api/og-image/${encodeURIComponent(roomId)}`;
+    const baseUrl = req.get('x-forwarded-proto') 
+        ? `${req.get('x-forwarded-proto')}://${req.get('host')}`
+        : `${req.protocol}://${req.get('host')}`;
+    const ogImageUrl = `${baseUrl}/og-image/${encodeURIComponent(roomId)}`;
     const joinUrl = `${baseUrl}/verses.html?room=${encodeURIComponent(roomId)}`;
 
+    res.setHeader('Cache-Control', 'no-cache');
     res.send(`<!DOCTYPE html>
-<html lang="en">
+<html lang="en" prefix="og: https://ogp.me/ns#">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -159,6 +163,7 @@ app.get('/room/:roomId', (req, res) => {
     <meta property="og:title" content="${roomName}">
     <meta property="og:description" content="${description}">
     <meta property="og:image" content="${ogImageUrl}">
+    <meta property="og:image:type" content="image/png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:url" content="${baseUrl}/room/${encodeURIComponent(roomId)}">
@@ -167,25 +172,31 @@ app.get('/room/:roomId', (req, res) => {
     <meta name="twitter:title" content="${roomName}">
     <meta name="twitter:description" content="${description}">
     <meta name="twitter:image" content="${ogImageUrl}">
-    <meta http-equiv="refresh" content="0;url=${joinUrl}">
+    <meta http-equiv="refresh" content="1;url=${joinUrl}">
 </head>
-<body>
+<body style="background:#1a1033;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
+    <p>Joining room...</p>
     <script>window.location.href = "${joinUrl}";</script>
 </body>
 </html>`);
 });
 
-// Dynamic OG image for room invites
-app.get('/api/og-image/:roomId', (req, res) => {
-    const roomId = req.params.roomId;
-    const activeRooms = getActiveRooms();
-    const room = activeRooms.find(r => r.id === roomId);
+// Dynamic OG image as PNG (SVG not supported by most link preview crawlers)
+app.get('/og-image/:roomId', async (req, res) => {
+    try {
+        const roomId = req.params.roomId;
+        const activeRooms = getActiveRooms();
+        const room = activeRooms.find(r => r.id === roomId);
 
-    const roomName = room?.name || 'Live Verse';
-    const participantCount = room?.participantCount || 0;
-    const hostName = room?.participants?.find(p => p.isHost)?.userName || '';
+        const roomName = room?.name || 'Live Verse';
+        const participantCount = room?.participantCount || 0;
+        const hostName = room?.participants?.find(p => p.isHost)?.userName || '';
+        const displayName = escapeXml(roomName.length > 28 ? roomName.substring(0, 28) + '...' : roomName);
+        const hostLine = hostName 
+            ? escapeXml(hostName) + ' is hosting' + (participantCount > 0 ? '  ·  ' + participantCount + ' listening' : '')
+            : 'Join the conversation' + (participantCount > 0 ? '  ·  ' + participantCount + ' listening' : '');
 
-    const svg = `<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+        const svg = `<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#1a1033"/>
@@ -205,38 +216,39 @@ app.get('/api/og-image/:roomId', (req, res) => {
   <rect width="1200" height="630" fill="url(#bg)"/>
   <circle cx="1050" cy="120" r="200" fill="rgba(150,197,176,0.06)"/>
   <circle cx="150" cy="500" r="180" fill="rgba(139,92,246,0.08)"/>
-
-  <!-- LIVE badge -->
   <rect x="60" y="60" width="160" height="44" rx="22" fill="rgba(150,197,176,0.15)" stroke="rgba(150,197,176,0.35)" stroke-width="1.5"/>
   <circle cx="92" cy="82" r="6" fill="#96c5b0"/>
   <text x="112" y="89" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#96c5b0" letter-spacing="1.5">LIVE NOW</text>
-
-  <!-- Room name -->
-  <text x="60" y="200" font-family="Arial,sans-serif" font-size="56" font-weight="800" fill="url(#mint)">${escapeXml(roomName.length > 28 ? roomName.substring(0, 28) + '...' : roomName)}</text>
-
-  <!-- Host / participants -->
-  <text x="60" y="260" font-family="Arial,sans-serif" font-size="24" fill="rgba(255,255,255,0.6)">${hostName ? escapeXml(hostName) + ' is hosting' : 'Join the conversation'}${participantCount > 0 ? '  ·  ' + participantCount + ' listening' : ''}</text>
-
-  <!-- Join button -->
-  <rect x="60" y="340" width="220" height="60" rx="18" fill="url(#btnGrad)"/>
-  <text x="120" y="378" font-family="Arial,sans-serif" font-size="22" font-weight="700" fill="#0a0a0a">🎧  Join Room</text>
-
-  <!-- Wordeth branding -->
+  <text x="60" y="200" font-family="Arial,sans-serif" font-size="56" font-weight="800" fill="url(#mint)">${displayName}</text>
+  <text x="60" y="260" font-family="Arial,sans-serif" font-size="24" fill="rgba(255,255,255,0.6)">${hostLine}</text>
+  <rect x="60" y="340" width="260" height="60" rx="18" fill="url(#btnGrad)"/>
+  <text x="100" y="378" font-family="Arial,sans-serif" font-size="22" font-weight="700" fill="#0a0a0a">Tap to Join Room</text>
   <text x="60" y="570" font-family="Arial,sans-serif" font-size="32" font-weight="800" fill="rgba(255,255,255,0.3)" letter-spacing="2">WORDETH</text>
-
-  <!-- Decorative dots -->
   <circle cx="1100" cy="550" r="8" fill="rgba(150,197,176,0.2)"/>
   <circle cx="1060" cy="570" r="5" fill="rgba(139,92,246,0.3)"/>
   <circle cx="1120" cy="580" r="6" fill="rgba(150,197,176,0.15)"/>
 </svg>`;
 
-    res.setHeader('Content-Type', 'image/svg+xml');
-    res.setHeader('Cache-Control', 'public, max-age=60');
-    res.send(svg);
+        const pngBuffer = await sharp(Buffer.from(svg))
+            .png()
+            .toBuffer();
+
+        res.setHeader('Content-Type', 'image/png');
+        res.setHeader('Cache-Control', 'public, max-age=60');
+        res.setHeader('Content-Length', pngBuffer.length);
+        res.send(pngBuffer);
+    } catch (err) {
+        console.error('OG image generation error:', err);
+        res.status(500).send('Image generation failed');
+    }
 });
 
 function escapeXml(str) {
     return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+
+function escapeHtml(str) {
+    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 // Serve frontend files in production
