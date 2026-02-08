@@ -32,7 +32,7 @@ class AudioRoomsManager {
         this.videoQueueIndex = 0;
         this.scrollSpeed = 1.0;
         this.baseScrollInterval = 3000;
-        this.previewMode = true;
+        this.previewMode = false;
         this.karaokeCanvas = null;
         this.karaokeCanvasCtx = null;
         this.karaokeEnabled = false;
@@ -264,7 +264,6 @@ class AudioRoomsManager {
 
         // Karaoke video controls
         document.getElementById('karaoke-camera-toggle')?.addEventListener('click', () => this.toggleKaraokeCamera());
-        document.getElementById('karaoke-preview-toggle')?.addEventListener('click', () => this.togglePreviewMode());
         document.querySelectorAll('.video-filter-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const filter = e.currentTarget.dataset.filter;
@@ -1875,6 +1874,10 @@ class AudioRoomsManager {
                 await this.startAudioMix();
             }
 
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
+            }
+
             if (this.audioContext && this.mixDestination) {
                 this.musicAudioSource = this.audioContext.createMediaElementSource(this.musicAudioElement);
                 this.musicGainNode = this.audioContext.createGain();
@@ -1883,16 +1886,19 @@ class AudioRoomsManager {
                 this.musicGainNode.connect(this.mixDestination);
                 this.musicGainNode.connect(this.audioContext.destination);
 
-                if (this.mixedStream) {
-                    await this.replaceOutgoingAudioTrack(this.mixedStream.getAudioTracks()[0]);
+                const mixedTrack = this.mixedStream?.getAudioTracks()[0];
+                if (mixedTrack) {
+                    console.log('Replacing outgoing audio with mixed track, track state:', mixedTrack.readyState, 'enabled:', mixedTrack.enabled);
+                    await this.replaceOutgoingAudioTrack(mixedTrack);
                 }
-                console.log('Music connected to audio mix, audioContext state:', this.audioContext.state);
+                console.log('Music connected to audio mix, audioContext state:', this.audioContext.state, 'peers:', this.peerConnections.size);
             } else {
                 console.error('Audio mix not ready — audioContext:', !!this.audioContext, 'mixDestination:', !!this.mixDestination);
                 this.addChatMessage('System', 'Could not connect music to room audio. Try again.', true);
             }
 
             await this.musicAudioElement.play();
+            console.log('Music element playing, paused:', this.musicAudioElement.paused, 'volume:', this.musicAudioElement.volume);
 
             this.musicAudioElement.addEventListener('ended', () => {
                 this.stopMusicStream();
@@ -3400,6 +3406,7 @@ class AudioRoomsManager {
             }
 
             this.karaokeVideoActive = false;
+            this.previewMode = false;
             await this.removeVideoTrackFromPeers();
             
             if (this.karaokeVideoStream) {
@@ -3409,17 +3416,10 @@ class AudioRoomsManager {
             if (videoEl) videoEl.srcObject = null;
             placeholder?.classList.remove('hidden');
             cameraBtn?.classList.remove('active');
-            this.previewMode = false;
-
-            const previewBtn = document.getElementById('karaoke-preview-toggle');
-            const previewIcon = previewBtn?.querySelector('i');
-            const previewLabel = previewBtn?.querySelector('.btn-label');
-            if (previewIcon) previewIcon.className = 'fas fa-eye';
-            if (previewLabel) previewLabel.textContent = 'Preview';
-            previewBtn?.classList.add('active');
 
             this.notifyParticipants('karaoke-stop', {});
             this.karaokeStartNotified = false;
+            this.addChatMessage('System', 'Camera off — no longer broadcasting.', true);
         } else {
             try {
                 this.karaokeVideoStream = await navigator.mediaDevices.getUserMedia({
@@ -3432,18 +3432,28 @@ class AudioRoomsManager {
                     placeholder?.classList.add('hidden');
                     cameraBtn?.classList.add('active');
                     this.karaokeVideoActive = true;
+                    this.previewMode = false;
                     
-                    this.previewMode = true;
-                    const previewBtn = document.getElementById('karaoke-preview-toggle');
-                    const previewIcon = previewBtn?.querySelector('i');
-                    const previewLabel = previewBtn?.querySelector('.btn-label');
-                    if (previewIcon) previewIcon.className = 'fas fa-eye';
-                    if (previewLabel) previewLabel.textContent = 'Preview';
-                    previewBtn?.classList.add('active');
+                    await new Promise(resolve => {
+                        if (videoEl.readyState >= 2) { resolve(); return; }
+                        videoEl.addEventListener('canplay', resolve, { once: true });
+                        setTimeout(resolve, 3000);
+                    });
                     
-                    this.setVideoFilter(this.currentVideoFilter || 'none');
+                    const activeFilter = this.currentVideoFilter || 'none';
                     
-                    this.addChatMessage('System', 'Camera on in preview mode. Tap "Go Live" when ready to broadcast.', true);
+                    if (activeFilter === 'none') {
+                        await this.addVideoTrackToPeers(this.karaokeVideoStream);
+                    }
+                    
+                    this.setVideoFilter(activeFilter);
+                    
+                    if (!this.karaokeStartNotified) {
+                        this.karaokeStartNotified = true;
+                        this.notifyParticipants('karaoke-start', {});
+                    }
+                    
+                    this.addChatMessage('System', 'Camera on — you are LIVE!', true);
                 }
             } catch (error) {
                 console.error('Camera error:', error);
@@ -3493,7 +3503,7 @@ class AudioRoomsManager {
                 videoEl.style.position = '';
                 videoEl.style.pointerEvents = '';
             }
-            if (!this.previewMode && this.karaokeVideoActive) {
+            if (this.karaokeVideoActive) {
                 this.broadcastVideoTrack();
             }
         } else {
@@ -3531,13 +3541,10 @@ class AudioRoomsManager {
                     placeholder?.classList.add('hidden');
                     cameraBtn?.classList.add('active');
                     this.karaokeVideoActive = true;
-                    this.previewMode = true;
+                    this.previewMode = false;
                     await new Promise(resolve => {
-                        const checkReady = () => {
-                            if (videoEl.readyState >= 2) { resolve(); return; }
-                            videoEl.addEventListener('canplay', resolve, { once: true });
-                        };
-                        checkReady();
+                        if (videoEl.readyState >= 2) { resolve(); return; }
+                        videoEl.addEventListener('canplay', resolve, { once: true });
                         setTimeout(resolve, 3000);
                     });
                 }
@@ -3572,6 +3579,9 @@ class AudioRoomsManager {
 
         if (this.canvasFilterRAF && this._activeCanvasFilter) {
             this._activeCanvasFilter = filter;
+            if (this.karaokeVideoActive) {
+                this.broadcastCanvasStream(document.getElementById('karaoke-canvas'));
+            }
         } else {
             this.startCanvasFilter(filter);
         }
@@ -3672,7 +3682,7 @@ class AudioRoomsManager {
 
         this.canvasFilterRAF = requestAnimationFrame(renderFrame);
 
-        if (!this.previewMode) {
+        if (this.karaokeVideoActive) {
             this.broadcastCanvasStream(canvas);
         }
     }
@@ -3685,18 +3695,29 @@ class AudioRoomsManager {
                 this.canvasStream = canvas.captureStream(15);
             }
             const canvasTrack = this.canvasStream.getVideoTracks()[0];
-            if (!canvasTrack) return;
+            if (!canvasTrack) {
+                console.warn('broadcastCanvasStream: no video track from canvas');
+                return;
+            }
 
+            console.log('Broadcasting canvas stream, track state:', canvasTrack.readyState);
             let needsRenegotiation = false;
-            for (const [, pc] of this.peerConnections) {
+            const replacePromises = [];
+            for (const [peerId, pc] of this.peerConnections) {
                 if (pc._videoSender) {
-                    pc._videoSender.replaceTrack(canvasTrack);
+                    replacePromises.push(
+                        pc._videoSender.replaceTrack(canvasTrack)
+                            .then(() => console.log('Replaced canvas video track for peer:', peerId))
+                            .catch(e => console.error('Failed to replace canvas track for peer:', peerId, e))
+                    );
                 } else {
                     const stream = new MediaStream([canvasTrack]);
                     pc._videoSender = pc.addTrack(canvasTrack, stream);
                     needsRenegotiation = true;
+                    console.log('Added canvas video track for peer:', peerId);
                 }
             }
+            await Promise.all(replacePromises);
             if (needsRenegotiation && !this._videoRenegotiating) {
                 await this._renegotiateAllPeers();
             }
@@ -3741,62 +3762,7 @@ class AudioRoomsManager {
         }
     }
 
-    async goLive() {
-        if (!this.karaokeVideoActive) {
-            this.addChatMessage('System', 'Turn on your camera first before going live.', true);
-            return;
-        }
-
-        this.previewMode = false;
-        const btn = document.getElementById('karaoke-preview-toggle');
-        const icon = btn?.querySelector('i');
-        const label = btn?.querySelector('.btn-label');
-        if (icon) icon.className = 'fas fa-broadcast-tower';
-        if (label) label.textContent = 'Live';
-        btn?.classList.remove('active');
-
-        let streamToSend;
-        const canvas = document.getElementById('karaoke-canvas');
-        if (this.currentVideoFilter && this.currentVideoFilter !== 'none' && canvas) {
-            if (!this.canvasStream) {
-                this.canvasStream = canvas.captureStream(15);
-            }
-            streamToSend = this.canvasStream;
-        } else {
-            streamToSend = this.karaokeVideoStream;
-        }
-
-        if (streamToSend) {
-            await this.addVideoTrackToPeers(streamToSend);
-        }
-
-        if (!this.karaokeStartNotified) {
-            this.karaokeStartNotified = true;
-            this.notifyParticipants('karaoke-start', {});
-        }
-
-        this.addChatMessage('System', 'You are now LIVE — camera visible to the room!', true);
-    }
-
-    async togglePreviewMode() {
-        if (this.previewMode) {
-            await this.goLive();
-        } else {
-            this.previewMode = true;
-            const btn = document.getElementById('karaoke-preview-toggle');
-            const icon = btn?.querySelector('i');
-            const label = btn?.querySelector('.btn-label');
-            if (icon) icon.className = 'fas fa-eye';
-            if (label) label.textContent = 'Preview';
-            btn?.classList.add('active');
-            this.peerConnections.forEach((pc) => {
-                if (pc._videoSender) {
-                    pc._videoSender.replaceTrack(null);
-                }
-            });
-            this.addChatMessage('System', 'Preview mode ON — camera visible only to you.', true);
-        }
-    }
+    
     
     async searchKaraokeSongs() {
         const searchInput = document.getElementById('karaoke-search-input');
@@ -5023,10 +4989,13 @@ class AudioRoomsManager {
             
             const mixedTrack = this.mixedStream.getAudioTracks()[0];
             if (mixedTrack) {
+                console.log('startAudioMix: replacing outgoing track, track readyState:', mixedTrack.readyState, 'enabled:', mixedTrack.enabled);
                 await this.replaceOutgoingAudioTrack(mixedTrack);
+            } else {
+                console.warn('startAudioMix: no audio track in mixedStream');
             }
             
-            console.log('Audio mixing initialized, audioContext state:', this.audioContext.state);
+            console.log('Audio mixing initialized, audioContext state:', this.audioContext.state, 'hasMic:', !!this.localStream);
             
         } catch (error) {
             console.error('Error starting audio mix:', error);
