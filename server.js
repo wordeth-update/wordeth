@@ -133,8 +133,26 @@ app.get('/api/rooms/active', (req, res) => {
     res.json(getActiveRooms());
 });
 
+// Middleware to strip restrictive headers for OG crawler routes
+function ogCrawlerHeaders(req, res, next) {
+    res.removeHeader('Content-Security-Policy');
+    res.removeHeader('Cross-Origin-Opener-Policy');
+    res.removeHeader('Cross-Origin-Resource-Policy');
+    res.removeHeader('Origin-Agent-Cluster');
+    res.removeHeader('X-Frame-Options');
+    res.removeHeader('X-Content-Type-Options');
+    res.removeHeader('Strict-Transport-Security');
+    res.removeHeader('Referrer-Policy');
+    res.removeHeader('X-DNS-Prefetch-Control');
+    res.removeHeader('X-Download-Options');
+    res.removeHeader('X-Permitted-Cross-Domain-Policies');
+    res.removeHeader('X-XSS-Protection');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    next();
+}
+
 // Rich link preview for room invites (Open Graph / SMS / iMessage / social cards)
-app.get('/room/:roomId', (req, res) => {
+app.get('/room/:roomId', ogCrawlerHeaders, (req, res) => {
     const roomId = req.params.roomId;
     const activeRooms = getActiveRooms();
     const room = activeRooms.find(r => r.id === roomId);
@@ -182,7 +200,7 @@ app.get('/room/:roomId', (req, res) => {
 });
 
 // Dynamic OG image as PNG (matches the invite card design)
-app.get('/og-image/:roomId', async (req, res) => {
+app.get('/og-image/:roomId', ogCrawlerHeaders, async (req, res) => {
     try {
         const roomId = req.params.roomId;
         const activeRooms = getActiveRooms();
