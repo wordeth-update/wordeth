@@ -1083,7 +1083,7 @@ class AudioRoomsManager {
             
             this.connectSocket();
             
-            const user = JSON.parse(localStorage.getItem('wordeth_user') || '{}');
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
             const userName = user.name || user.username || 'Anonymous';
             
             const roomNameEl = document.getElementById('room-name');
@@ -1091,7 +1091,7 @@ class AudioRoomsManager {
             
             this.socket.emit('join-room', {
                 roomId,
-                userId: user.id || this.socket.id,
+                userId: user._id || user.id || this.socket.id,
                 userName,
                 isHost,
                 roomName: currentRoomName || null
@@ -1155,7 +1155,11 @@ class AudioRoomsManager {
             // Audio-only for audio rooms (Twitter Spaces style)
             this.localStream = await navigator.mediaDevices.getUserMedia({
                 video: false,
-                audio: true
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                }
             });
             
         } catch (error) {
@@ -1198,7 +1202,7 @@ class AudioRoomsManager {
             for (const p of data.participants) {
                 if (p.socketId !== this.socket.id) {
                     await this.createPeerConnection(p.socketId, p.userName, true);
-                    this.addRemoteSpeaker(p.socketId, p.userName, null, false);
+                    this.addRemoteSpeaker(p.socketId, p.userName, null, false, p.userId);
                 }
             }
         });
@@ -1209,7 +1213,7 @@ class AudioRoomsManager {
             this.updateParticipantDisplay(data.participants);
             
             if (!document.querySelector(`[data-participant-id="${data.socketId}"]`)) {
-                this.addRemoteSpeaker(data.socketId, data.userName, null, false);
+                this.addRemoteSpeaker(data.socketId, data.userName, null, false, data.userId);
             }
         });
         
@@ -1223,12 +1227,31 @@ class AudioRoomsManager {
         
         this.socket.on('webrtc-offer', async ({ senderId, senderName, offer }) => {
             console.log('Received WebRTC offer from:', senderName);
-            const pc = await this.createPeerConnection(senderId, senderName, false);
-            if (pc) {
-                await pc.setRemoteDescription(new RTCSessionDescription(offer));
-                const answer = await pc.createAnswer();
-                await pc.setLocalDescription(answer);
-                this.socket.emit('webrtc-answer', { targetId: senderId, answer });
+            let pc = this.peerConnections.get(senderId);
+            if (pc && pc.signalingState !== 'closed') {
+                try {
+                    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
+                    this.socket.emit('webrtc-answer', { targetId: senderId, answer });
+                } catch (e) {
+                    console.warn('Renegotiation failed, recreating connection:', e);
+                    pc = await this.createPeerConnection(senderId, senderName, false);
+                    if (pc) {
+                        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+                        this.socket.emit('webrtc-answer', { targetId: senderId, answer });
+                    }
+                }
+            } else {
+                pc = await this.createPeerConnection(senderId, senderName, false);
+                if (pc) {
+                    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
+                    this.socket.emit('webrtc-answer', { targetId: senderId, answer });
+                }
             }
         });
         
@@ -1290,8 +1313,12 @@ class AudioRoomsManager {
         };
         
         pc.ontrack = (event) => {
-            console.log('Received remote track from:', remoteName);
-            this.handleRemoteStream(remoteId, remoteName, event.streams[0]);
+            console.log('Received remote track from:', remoteName, 'kind:', event.track.kind);
+            if (event.track.kind === 'video') {
+                this.handleRemoteVideoTrack(remoteId, remoteName, event.streams[0]);
+            } else {
+                this.handleRemoteStream(remoteId, remoteName, event.streams[0]);
+            }
         };
         
         pc.onconnectionstatechange = () => {
@@ -1303,7 +1330,7 @@ class AudioRoomsManager {
         
         if (isInitiator) {
             try {
-                const offer = await pc.createOffer({ offerToReceiveAudio: true });
+                const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
                 await pc.setLocalDescription(offer);
                 this.socket.emit('webrtc-offer', { targetId: remoteId, offer });
             } catch (e) {
@@ -1341,6 +1368,113 @@ class AudioRoomsManager {
         audioEl.srcObject = stream;
         
         this.addRemoteSpeaker(remoteId, remoteName, stream, true);
+    }
+    
+    handleRemoteVideoTrack(remoteId, remoteName, stream) {
+        console.log('Received remote video from:', remoteName);
+        if (this.isScreenSharing) return;
+        
+        const container = document.getElementById('screenshare-container');
+        const videoEl = document.getElementById('screenshare-video');
+        const stopBtn = document.getElementById('screenshare-stop');
+        const headerSpan = container?.querySelector('.screenshare-header span');
+        
+        if (videoEl && stream) {
+            videoEl.srcObject = stream;
+            container?.classList.remove('hidden');
+            if (stopBtn) stopBtn.style.display = 'none';
+            if (headerSpan) headerSpan.innerHTML = `<i class="fas fa-desktop"></i> ${remoteName} is sharing`;
+            this._remoteVideoActive = true;
+            this._remoteVideoSenderId = remoteId;
+            
+            stream.getVideoTracks()[0].onended = () => {
+                this.hideRemoteVideo();
+            };
+        }
+    }
+    
+    hideRemoteVideo() {
+        if (this.isScreenSharing) return;
+        
+        const container = document.getElementById('screenshare-container');
+        const videoEl = document.getElementById('screenshare-video');
+        const stopBtn = document.getElementById('screenshare-stop');
+        const headerSpan = container?.querySelector('.screenshare-header span');
+        
+        if (videoEl) videoEl.srcObject = null;
+        container?.classList.add('hidden');
+        if (stopBtn) stopBtn.style.display = '';
+        if (headerSpan) headerSpan.innerHTML = '<i class="fas fa-desktop"></i> Screen Share';
+        this._remoteVideoActive = false;
+        this._remoteVideoSenderId = null;
+    }
+    
+    async renegotiatePeer(peerId, pc) {
+        if (pc.signalingState !== 'stable') {
+            await new Promise(resolve => {
+                const check = () => {
+                    if (pc.signalingState === 'stable') resolve();
+                    else setTimeout(check, 100);
+                };
+                check();
+                setTimeout(resolve, 3000);
+            });
+        }
+        if (pc.signalingState === 'stable') {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            this.socket.emit('webrtc-offer', { targetId: peerId, offer });
+        }
+    }
+    
+    async addVideoTrackToPeers(stream) {
+        const videoTrack = stream.getVideoTracks()[0];
+        if (!videoTrack) return;
+        
+        for (const [peerId, pc] of this.peerConnections) {
+            try {
+                if (pc._videoSender) {
+                    pc._videoSender.replaceTrack(videoTrack);
+                } else {
+                    pc._videoSender = pc.addTrack(videoTrack, stream);
+                }
+            } catch (e) {
+                console.error('Error adding video track to peer:', peerId, e);
+            }
+        }
+        
+        for (const [peerId, pc] of this.peerConnections) {
+            try {
+                await this.renegotiatePeer(peerId, pc);
+            } catch (e) {
+                console.error('Error renegotiating with peer:', peerId, e);
+            }
+        }
+    }
+    
+    async removeVideoTrackFromPeers() {
+        let needsRenegotiation = false;
+        for (const [peerId, pc] of this.peerConnections) {
+            try {
+                if (pc._videoSender) {
+                    pc.removeTrack(pc._videoSender);
+                    pc._videoSender = null;
+                    needsRenegotiation = true;
+                }
+            } catch (e) {
+                console.error('Error removing video track from peer:', peerId, e);
+            }
+        }
+        
+        if (needsRenegotiation) {
+            for (const [peerId, pc] of this.peerConnections) {
+                try {
+                    await this.renegotiatePeer(peerId, pc);
+                } catch (e) {
+                    console.error('Error renegotiating with peer:', peerId, e);
+                }
+            }
+        }
     }
     
     handleRemoteRoomEvent(event, data) {
@@ -1389,8 +1523,37 @@ class AudioRoomsManager {
                 break;
             case 'karaoke-stop':
                 this.addChatMessage('System', `${data.userName} stopped karaoke.`, true);
+                if (this._remoteVideoSenderId && data.userId) {
+                    const senderSocketId = this.findSocketByUserId(data.userId);
+                    if (!senderSocketId || senderSocketId === this._remoteVideoSenderId) {
+                        this.hideRemoteVideo();
+                    }
+                }
+                break;
+            case 'screenshare-start':
+                this.addChatMessage('System', `${data.userName || 'A participant'} started sharing their screen.`, true);
+                break;
+            case 'screenshare-stop':
+                this.addChatMessage('System', `${data.userName || 'A participant'} stopped sharing their screen.`, true);
+                if (this._remoteVideoSenderId && data.userId) {
+                    const senderSocketId = this.findSocketByUserId(data.userId);
+                    if (!senderSocketId || senderSocketId === this._remoteVideoSenderId) {
+                        this.hideRemoteVideo();
+                    }
+                } else {
+                    this.hideRemoteVideo();
+                }
                 break;
         }
+    }
+    
+    findSocketByUserId(userId) {
+        for (const el of document.querySelectorAll('[data-user-id]')) {
+            if (el.getAttribute('data-user-id') === userId) {
+                return el.getAttribute('data-participant-id');
+            }
+        }
+        return null;
     }
     
     updateParticipantDisplay(participants) {
@@ -1468,7 +1631,7 @@ class AudioRoomsManager {
         if (data.feature === 'karaoke') {
             this.karaokeModal?.classList.add('active');
         } else if (data.feature === 'screenshare') {
-            this.startScreenShareAfterApproval();
+            this.startScreenShareAfterApproval().catch(e => console.error('Screen share after approval error:', e));
         }
     }
     
@@ -1495,6 +1658,9 @@ class AudioRoomsManager {
                 this.isScreenSharing = true;
                 
                 this.addChatMessage('System', 'You started sharing your screen.', true);
+                this.notifyParticipants('screenshare-start', { userId: 'currentUser' });
+                
+                await this.addVideoTrackToPeers(this.screenshareStream);
                 
                 this.screenshareStream.getVideoTracks()[0].onended = () => {
                     this.stopScreenShare();
@@ -1570,13 +1736,15 @@ class AudioRoomsManager {
         this.loadActiveRooms();
     }
 
-    addRemoteSpeaker(participantId, name, stream, isSpeaking = false) {
+    addRemoteSpeaker(participantId, name, stream, isSpeaking = false, userId = null) {
         if (document.querySelector(`[data-participant-id="${participantId}"]`)) return;
         
         const initial = (name || '?').charAt(0).toUpperCase();
         const speakerAvatar = document.createElement('div');
         speakerAvatar.className = 'speaker-avatar';
         speakerAvatar.setAttribute('data-participant-id', participantId);
+        if (userId) speakerAvatar.setAttribute('data-user-id', userId);
+        speakerAvatar.style.cursor = userId ? 'pointer' : 'default';
         speakerAvatar.innerHTML = `
             <div class="avatar-ring ${isSpeaking ? 'speaking' : ''}">
                 <div class="avatar-initial" style="width:80px;height:80px;border-radius:50%;background:var(--purple,#8a2be2);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:bold;color:white;">${initial}</div>
@@ -1592,20 +1760,30 @@ class AudioRoomsManager {
         
         speakerAvatar.audioStream = stream;
         
+        if (userId && typeof viewUserProfile === 'function') {
+            speakerAvatar.addEventListener('click', () => viewUserProfile(userId));
+        }
+        
         this.speakersStage?.appendChild(speakerAvatar);
         
         return speakerAvatar;
     }
 
-    addRemoteListener(participantId, name, handRaised = false) {
+    addRemoteListener(participantId, name, handRaised = false, userId = null) {
         const initial = (name || '?').charAt(0).toUpperCase();
         const listenerAvatar = document.createElement('div');
         listenerAvatar.className = `listener-avatar ${handRaised ? 'hand-raised' : ''}`;
         listenerAvatar.setAttribute('data-participant-id', participantId);
+        if (userId) listenerAvatar.setAttribute('data-user-id', userId);
+        listenerAvatar.style.cursor = userId ? 'pointer' : 'default';
         listenerAvatar.innerHTML = `
             <div class="avatar-initial" style="width:40px;height:40px;border-radius:50%;background:var(--purple,#8a2be2);display:flex;align-items:center;justify-content:center;font-weight:bold;color:white;">${initial}</div>
         `;
         listenerAvatar.title = name;
+        
+        if (userId && typeof viewUserProfile === 'function') {
+            listenerAvatar.addEventListener('click', () => viewUserProfile(userId));
+        }
         
         this.listenersGrid?.appendChild(listenerAvatar);
         
@@ -2180,6 +2358,8 @@ class AudioRoomsManager {
                 this.addChatMessage('System', 'You started sharing your screen.', true);
                 this.notifyParticipants('screenshare-start', { userId: 'currentUser' });
                 
+                await this.addVideoTrackToPeers(this.screenshareStream);
+                
                 this.screenshareStream.getVideoTracks()[0].onended = () => {
                     this.stopScreenShare();
                 };
@@ -2196,7 +2376,9 @@ class AudioRoomsManager {
         }
     }
     
-    stopScreenShare() {
+    async stopScreenShare() {
+        await this.removeVideoTrackFromPeers();
+        
         if (this.screenshareStream) {
             this.screenshareStream.getTracks().forEach(track => track.stop());
             this.screenshareStream = null;
@@ -2245,6 +2427,8 @@ class AudioRoomsManager {
             if (canvas) canvas.style.display = 'none';
             if (videoEl) videoEl.style.display = '';
 
+            await this.removeVideoTrackFromPeers();
+            
             if (this.karaokeVideoStream) {
                 this.karaokeVideoStream.getTracks().forEach(track => track.stop());
                 this.karaokeVideoStream = null;
@@ -2254,8 +2438,8 @@ class AudioRoomsManager {
             cameraBtn?.classList.remove('active');
             this.karaokeVideoActive = false;
             this.restoreOriginalVideoTrack();
+            this.notifyParticipants('karaoke-stop', {});
         } else {
-            // Start camera
             try {
                 this.karaokeVideoStream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: 'user', width: 320, height: 240 },
@@ -2268,8 +2452,10 @@ class AudioRoomsManager {
                     cameraBtn?.classList.add('active');
                     this.karaokeVideoActive = true;
                     
-                    // Apply current filter
                     this.setVideoFilter(this.currentVideoFilter);
+                    
+                    await this.addVideoTrackToPeers(this.karaokeVideoStream);
+                    this.notifyParticipants('karaoke-start', {});
                 }
             } catch (error) {
                 console.error('Camera error:', error);

@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/cookie-consent.css">
     <link rel="stylesheet" href="css/notifications.css">
+    <link rel="stylesheet" href="css/profile.css">
 </head>
 <body>
     <nav class="main-nav">
@@ -550,6 +551,16 @@
         </div>
     </main>
 
+    <div class="user-profile-modal" id="user-profile-modal" style="display:none;">
+        <div class="user-profile-modal-content">
+            <button class="user-profile-modal-close" id="user-profile-modal-close">&times;</button>
+            <div class="user-profile-modal-loading" id="user-profile-modal-loading">
+                <i class="fas fa-spinner fa-spin"></i> Loading profile...
+            </div>
+            <div class="user-profile-modal-body" id="user-profile-modal-body" style="display:none;"></div>
+        </div>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/util.min.js"></script>
@@ -557,5 +568,38 @@
     <script src="js/verses.js"></script>
     <script src="js/nav-auth.js"></script>
     <script src="js/cookie-consent.js"></script>
+    <script>
+    function viewUserProfile(userId) {
+        if (!userId) return;
+        const modal = document.getElementById('user-profile-modal');
+        const loading = document.getElementById('user-profile-modal-loading');
+        const body = document.getElementById('user-profile-modal-body');
+        const closeBtn = document.getElementById('user-profile-modal-close');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        loading.style.display = 'block';
+        body.style.display = 'none';
+        closeBtn.onclick = () => { modal.style.display = 'none'; };
+        modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+        const baseUrl = typeof apiUrl === 'function' ? apiUrl('/api/user/profile/' + userId) : '/api/user/profile/' + userId;
+        fetch(baseUrl)
+            .then(res => { if (!res.ok) throw new Error('Not found'); return res.json(); })
+            .then(user => {
+                loading.style.display = 'none';
+                body.style.display = 'block';
+                const joined = user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : '';
+                const safeAvatar = (user.avatar && (user.avatar.startsWith('data:image/') || user.avatar.startsWith('assets/') || user.avatar.startsWith('http'))) ? user.avatar : 'assets/default-avatar.png';
+                body.innerHTML = '<div class="user-profile-view"><div class="user-profile-view-avatar"><img id="vpv-img" src="assets/default-avatar.png" alt="Profile"></div><h2 id="vpv-name"></h2><p class="user-profile-view-bio" id="vpv-bio"></p><div class="user-profile-view-stats"><div class="stat"><span class="stat-value">' + (parseInt(user.followingCount)||0) + '</span><span class="stat-label">Following</span></div><div class="stat"><span class="stat-value">' + (parseInt(user.followersCount)||0) + '</span><span class="stat-label">Followers</span></div><div class="stat"><span class="stat-value">' + (parseInt(user.searchCount)||0) + '</span><span class="stat-label">Searches</span></div></div>' + (joined ? '<p class="user-profile-view-joined">Joined ' + joined + '</p>' : '') + '</div>';
+                const n = document.getElementById('vpv-name'); if(n) n.textContent = user.name || 'Unknown';
+                const b = document.getElementById('vpv-bio'); if(b) b.textContent = user.bio || 'No bio yet';
+                const i = document.getElementById('vpv-img'); if(i) { i.src = safeAvatar; i.onerror = function(){ this.src='assets/default-avatar.png'; }; }
+            })
+            .catch(() => {
+                loading.style.display = 'none';
+                body.style.display = 'block';
+                body.innerHTML = '<p style="text-align:center;padding:2rem;color:#aaa;">Could not load this profile.</p>';
+            });
+    }
+    </script>
 </body>
 </html> 
