@@ -49,7 +49,7 @@ function setupSignaling(io) {
             }
         });
 
-        socket.on('join-room', ({ roomId, userId, userName, isHost }) => {
+        socket.on('join-room', ({ roomId, userId, userName, isHost, roomName }) => {
             socket.join(roomId);
             socket.roomId = roomId;
             socket.userId = userId || socket.id;
@@ -58,6 +58,7 @@ function setupSignaling(io) {
             if (!rooms.has(roomId)) {
                 rooms.set(roomId, {
                     id: roomId,
+                    name: roomName || null,
                     hostId: isHost ? socket.id : null,
                     participants: new Map(),
                     karaokeEnabled: false,
@@ -68,6 +69,10 @@ function setupSignaling(io) {
             }
 
             const room = rooms.get(roomId);
+            if (roomName && isHost) {
+                room.name = roomName;
+            }
+
             room.participants.set(socket.id, {
                 socketId: socket.id,
                 userId: socket.userId,
@@ -85,6 +90,7 @@ function setupSignaling(io) {
 
             socket.emit('room-joined', {
                 roomId,
+                roomName: room.name || null,
                 participants: participantList,
                 isHost: isHost || false,
                 karaokeEnabled: room.karaokeEnabled,
@@ -272,6 +278,7 @@ function getActiveRooms() {
     rooms.forEach((room, roomId) => {
         activeRooms.push({
             id: roomId,
+            name: room.name || null,
             participantCount: room.participants.size,
             participants: Array.from(room.participants.values()).map(p => ({
                 userId: p.userId,

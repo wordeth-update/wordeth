@@ -30,6 +30,7 @@ Preferred communication style: Simple, everyday language.
   - `/api/ads` — advertising system (advertiser registration, ad CRUD, admin approval)
   - `/api/analytics` — usage metrics
   - `/api/rooms/active` — lists active audio rooms with participants
+  - `/api/user/profile/:id` — public profile view (returns name, bio, avatar, stats)
 - **WebSocket Signaling** (`routes/signaling.js`):
   - Room management: join/leave with participant tracking, host transfer on disconnect
   - WebRTC signaling: offer/answer/ICE candidate relay between peers

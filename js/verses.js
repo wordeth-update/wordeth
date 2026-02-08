@@ -1067,13 +1067,12 @@ class AudioRoomsManager {
             this.updateScreenshareButtonState();
             this.updateHostControls();
             
-            if (isHost || this.isSpeaker) {
-                try {
-                    await this.initializeMedia();
-                } catch (e) {
-                    console.warn('Mic access denied, joining as listener:', e.message);
-                    this.isSpeaker = false;
-                }
+            try {
+                await this.initializeMedia();
+                if (!isHost) this.isSpeaker = true;
+            } catch (e) {
+                console.warn('Mic access denied, joining as listener:', e.message);
+                this.isSpeaker = false;
             }
             
             if (this.roomSelection) this.roomSelection.style.display = 'none';
@@ -1081,19 +1080,44 @@ class AudioRoomsManager {
             
             this.currentRoom = roomId;
             this.roomJoinTime = Date.now();
-            this.updateRoomInfo(roomId);
             
             this.connectSocket();
             
             const user = JSON.parse(localStorage.getItem('wordeth_user') || '{}');
             const userName = user.name || user.username || 'Anonymous';
             
+            const roomNameEl = document.getElementById('room-name');
+            const currentRoomName = roomNameEl?.textContent || '';
+            
             this.socket.emit('join-room', {
                 roomId,
                 userId: user.id || this.socket.id,
                 userName,
-                isHost
+                isHost,
+                roomName: currentRoomName || null
             });
+            
+            this.updateRoomInfo(roomId);
+            
+            const selfInitial = userName.charAt(0).toUpperCase();
+            if (this.speakersStage) {
+                const selfAvatar = document.createElement('div');
+                selfAvatar.className = 'speaker-avatar self-speaker';
+                selfAvatar.setAttribute('data-participant-id', 'self');
+                selfAvatar.innerHTML = `
+                    <div class="avatar-ring">
+                        <div class="avatar-initial" style="width:80px;height:80px;border-radius:50%;background:var(--mint,#98ff98);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:bold;color:#1a1a2e;">${selfInitial}</div>
+                    </div>
+                    <div class="speaker-info">
+                        <span class="speaker-name">${userName} (You)</span>
+                        <span class="speaker-role">${isHost ? 'Host' : 'Speaker'}</span>
+                    </div>
+                    <div class="speaker-status">
+                        <i class="fas fa-microphone"></i>
+                    </div>
+                `;
+                this.speakersStage.appendChild(selfAvatar);
+            }
             
             this.addChatMessage('System', 'Welcome to the room!', true);
 
@@ -1166,11 +1190,15 @@ class AudioRoomsManager {
             console.log('Room joined via signaling:', data);
             this.updateParticipantDisplay(data.participants);
             
-            if (this.localStream) {
-                for (const p of data.participants) {
-                    if (p.socketId !== this.socket.id) {
-                        await this.createPeerConnection(p.socketId, p.userName, true);
-                    }
+            if (data.roomName) {
+                const roomNameEl = document.getElementById('room-name');
+                if (roomNameEl) roomNameEl.textContent = data.roomName;
+            }
+            
+            for (const p of data.participants) {
+                if (p.socketId !== this.socket.id) {
+                    await this.createPeerConnection(p.socketId, p.userName, true);
+                    this.addRemoteSpeaker(p.socketId, p.userName, null, false);
                 }
             }
         });
@@ -1179,6 +1207,10 @@ class AudioRoomsManager {
             console.log('Participant joined:', data.userName);
             this.addChatMessage('System', `${data.userName} joined the room.`, true);
             this.updateParticipantDisplay(data.participants);
+            
+            if (!document.querySelector(`[data-participant-id="${data.socketId}"]`)) {
+                this.addRemoteSpeaker(data.socketId, data.userName, null, false);
+            }
         });
         
         this.socket.on('participant-left', (data) => {
@@ -1373,8 +1405,11 @@ class AudioRoomsManager {
     }
 
     updateRoomInfo(roomId) {
-        const roomName = document.getElementById('room-name');
+        const roomNameEl = document.getElementById('room-name');
         const currentSong = document.getElementById('current-song');
+        if (roomNameEl && !roomNameEl.textContent.trim()) {
+            roomNameEl.textContent = `Room ${roomId.replace('room_', '').slice(-4)}`;
+        }
         if (this.participantCount) this.participantCount.textContent = '1 participant';
     }
 
@@ -1525,17 +1560,26 @@ class AudioRoomsManager {
         this.roomJoinTime = null;
         
         if (this.chatMessagesContainer) this.chatMessagesContainer.innerHTML = '';
+        if (this.speakersStage) this.speakersStage.innerHTML = '';
+        if (this.listenersGrid) this.listenersGrid.innerHTML = '';
+        const roomNameEl = document.getElementById('room-name');
+        if (roomNameEl) roomNameEl.textContent = '';
+        const currentSongEl = document.getElementById('current-song');
+        if (currentSongEl) currentSongEl.textContent = '';
         
         this.loadActiveRooms();
     }
 
     addRemoteSpeaker(participantId, name, stream, isSpeaking = false) {
+        if (document.querySelector(`[data-participant-id="${participantId}"]`)) return;
+        
+        const initial = (name || '?').charAt(0).toUpperCase();
         const speakerAvatar = document.createElement('div');
         speakerAvatar.className = 'speaker-avatar';
         speakerAvatar.setAttribute('data-participant-id', participantId);
         speakerAvatar.innerHTML = `
             <div class="avatar-ring ${isSpeaking ? 'speaking' : ''}">
-                <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face" alt="${name}">
+                <div class="avatar-initial" style="width:80px;height:80px;border-radius:50%;background:var(--purple,#8a2be2);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:bold;color:white;">${initial}</div>
             </div>
             <div class="speaker-info">
                 <span class="speaker-name">${name}</span>
@@ -1546,7 +1590,6 @@ class AudioRoomsManager {
             </div>
         `;
         
-        // Store audio stream for audio processing
         speakerAvatar.audioStream = stream;
         
         this.speakersStage?.appendChild(speakerAvatar);
@@ -1555,11 +1598,12 @@ class AudioRoomsManager {
     }
 
     addRemoteListener(participantId, name, handRaised = false) {
+        const initial = (name || '?').charAt(0).toUpperCase();
         const listenerAvatar = document.createElement('div');
         listenerAvatar.className = `listener-avatar ${handRaised ? 'hand-raised' : ''}`;
         listenerAvatar.setAttribute('data-participant-id', participantId);
         listenerAvatar.innerHTML = `
-            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face" alt="${name}">
+            <div class="avatar-initial" style="width:40px;height:40px;border-radius:50%;background:var(--purple,#8a2be2);display:flex;align-items:center;justify-content:center;font-weight:bold;color:white;">${initial}</div>
         `;
         listenerAvatar.title = name;
         

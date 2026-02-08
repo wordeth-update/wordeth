@@ -66,6 +66,29 @@ router.get('/profile', auth, async (req, res) => {
     }
 });
 
+router.get('/profile/:id', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id)
+            .select('name bio avatar createdAt following followers searchHistory');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.json({
+            _id: user._id,
+            name: user.name,
+            bio: user.bio || '',
+            avatar: user.avatar || 'assets/default-avatar.png',
+            createdAt: user.createdAt,
+            followingCount: user.following?.length || 0,
+            followersCount: user.followers?.length || 0,
+            searchCount: user.searchHistory?.length || 0
+        });
+    } catch (error) {
+        console.error('Public profile error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 router.put('/profile', auth, async (req, res) => {
     try {
         const { name, bio } = req.body;

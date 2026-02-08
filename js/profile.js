@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case 'friends':
                     listEl.innerHTML = data.map(f => `
-                        <div class="friend-card">
+                        <div class="friend-card" data-user-id="${escHtml(f._id || '')}" style="cursor:pointer;" onclick="viewUserProfile('${escHtml(f._id || '')}')">
                             <div class="friend-avatar">
                                 <img src="${escHtml(f.avatar || 'assets/default-avatar.png')}" alt="${escHtml(f.name || '')}">
                             </div>
@@ -417,6 +417,74 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    searchResults?.addEventListener('click', (e) => {
+        const card = e.target.closest('.search-result-card');
+        if (card && !e.target.closest('.follow-btn')) {
+            viewUserProfile(card.dataset.userId);
+        }
+    });
+
     loadProfile();
     loadTabContent('history');
 });
+
+function viewUserProfile(userId) {
+    if (!userId) return;
+    const modal = document.getElementById('user-profile-modal');
+    const loading = document.getElementById('user-profile-modal-loading');
+    const body = document.getElementById('user-profile-modal-body');
+    if (!modal) return;
+
+    modal.style.display = 'flex';
+    loading.style.display = 'flex';
+    body.style.display = 'none';
+
+    fetch(apiUrl(`/api/user/profile/${userId}`))
+        .then(res => {
+            if (!res.ok) throw new Error('Not found');
+            return res.json();
+        })
+        .then(user => {
+            loading.style.display = 'none';
+            body.style.display = 'block';
+            const joined = user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : '';
+            
+            const esc = (str) => { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; };
+            const safeAvatar = (user.avatar && (user.avatar.startsWith('data:image/') || user.avatar.startsWith('assets/') || user.avatar.startsWith('http'))) ? user.avatar : 'assets/default-avatar.png';
+            
+            body.innerHTML = `
+                <div class="user-profile-view">
+                    <div class="user-profile-view-avatar">
+                        <img id="user-profile-view-img" src="assets/default-avatar.png" alt="Profile">
+                    </div>
+                    <h2 id="user-profile-view-name"></h2>
+                    <p class="user-profile-view-bio" id="user-profile-view-bio"></p>
+                    <div class="user-profile-view-stats">
+                        <div class="stat"><span class="stat-value">${parseInt(user.followingCount) || 0}</span><span class="stat-label">Following</span></div>
+                        <div class="stat"><span class="stat-value">${parseInt(user.followersCount) || 0}</span><span class="stat-label">Followers</span></div>
+                        <div class="stat"><span class="stat-value">${parseInt(user.searchCount) || 0}</span><span class="stat-label">Searches</span></div>
+                    </div>
+                    ${joined ? `<p class="user-profile-view-joined">Joined ${esc(joined)}</p>` : ''}
+                </div>
+            `;
+            
+            const nameEl = document.getElementById('user-profile-view-name');
+            const bioEl = document.getElementById('user-profile-view-bio');
+            const imgEl = document.getElementById('user-profile-view-img');
+            if (nameEl) nameEl.textContent = user.name || 'Unknown';
+            if (bioEl) bioEl.textContent = user.bio || 'No bio yet';
+            if (imgEl) { imgEl.src = safeAvatar; imgEl.onerror = function() { this.src = 'assets/default-avatar.png'; }; }
+        })
+        .catch(err => {
+            loading.style.display = 'none';
+            body.style.display = 'block';
+            body.innerHTML = '<p style="text-align:center;padding:2rem;color:#aaa;">Could not load this profile.</p>';
+        });
+
+    document.getElementById('user-profile-modal-close').onclick = () => {
+        modal.style.display = 'none';
+    };
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.style.display = 'none';
+    });
+}
