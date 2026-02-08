@@ -1,8 +1,53 @@
 const rooms = new Map();
+const connectedUsers = new Map();
 
 function setupSignaling(io) {
     io.on('connection', (socket) => {
         console.log(`Socket connected: ${socket.id}`);
+
+        socket.on('register-user', ({ userId, userName }) => {
+            if (userId) {
+                socket.registeredUserId = userId;
+                socket.registeredUserName = userName || 'User';
+                if (!connectedUsers.has(userId)) {
+                    connectedUsers.set(userId, new Set());
+                }
+                connectedUsers.get(userId).add(socket.id);
+                console.log(`User registered: ${userName} (${userId}) on socket ${socket.id}`);
+            }
+        });
+
+        socket.on('room-invite', ({ targetUserId, roomId, roomName, inviterName }) => {
+            if (!socket.registeredUserId) {
+                socket.emit('invite-sent', { targetUserId, success: false, reason: 'not_registered' });
+                return;
+            }
+
+            if (!socket.inviteTimestamps) socket.inviteTimestamps = [];
+            const now = Date.now();
+            socket.inviteTimestamps = socket.inviteTimestamps.filter(t => now - t < 60000);
+            if (socket.inviteTimestamps.length >= 10) {
+                socket.emit('invite-sent', { targetUserId, success: false, reason: 'rate_limited' });
+                return;
+            }
+            socket.inviteTimestamps.push(now);
+
+            const targetSockets = connectedUsers.get(targetUserId);
+            if (targetSockets && targetSockets.size > 0) {
+                targetSockets.forEach(socketId => {
+                    io.to(socketId).emit('room-invite', {
+                        roomId,
+                        roomName: roomName || roomId,
+                        inviterName: inviterName || socket.registeredUserName || 'Someone',
+                        inviterId: socket.registeredUserId,
+                        timestamp: now
+                    });
+                });
+                socket.emit('invite-sent', { targetUserId, success: true });
+            } else {
+                socket.emit('invite-sent', { targetUserId, success: false, reason: 'offline' });
+            }
+        });
 
         socket.on('join-room', ({ roomId, userId, userName, isHost }) => {
             socket.join(roomId);
@@ -176,6 +221,14 @@ function setupSignaling(io) {
         });
 
         socket.on('disconnect', () => {
+            if (socket.registeredUserId && connectedUsers.has(socket.registeredUserId)) {
+                const userSockets = connectedUsers.get(socket.registeredUserId);
+                userSockets.delete(socket.id);
+                if (userSockets.size === 0) {
+                    connectedUsers.delete(socket.registeredUserId);
+                }
+            }
+
             if (socket.roomId && rooms.has(socket.roomId)) {
                 const room = rooms.get(socket.roomId);
                 room.participants.delete(socket.id);

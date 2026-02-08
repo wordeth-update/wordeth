@@ -332,11 +332,21 @@ class AudioRoomsManager {
 
         this.lobbySocket.on('connect', () => {
             console.log('Connected to signaling server');
+            try {
+                const user = JSON.parse(localStorage.getItem('user'));
+                if (user && user._id) {
+                    this.lobbySocket.emit('register-user', { userId: user._id, userName: user.name || 'User' });
+                }
+            } catch(e) {}
         });
 
         this.lobbySocket.on('rooms-updated', (rooms) => {
             console.log('Rooms updated in real-time:', rooms.length, 'rooms');
             this.renderRooms(rooms);
+        });
+
+        this.lobbySocket.on('room-invite', (data) => {
+            this.showRoomInviteNotification(data);
         });
 
         this.lobbySocket.on('disconnect', () => {
@@ -528,6 +538,57 @@ class AudioRoomsManager {
             toast.classList.remove('visible');
             setTimeout(() => toast.remove(), 300);
         }, 3000);
+    }
+
+    showRoomInviteNotification(data) {
+        if (this.currentRoom === data.roomId) return;
+
+        const existing = document.getElementById('wordeth-invite-notification');
+        if (existing) existing.remove();
+
+        const escapeHtml = (str) => {
+            const div = document.createElement('div');
+            div.textContent = str || '';
+            return div.innerHTML;
+        };
+
+        const notification = document.createElement('div');
+        notification.id = 'wordeth-invite-notification';
+        notification.className = 'invite-notification';
+        notification.innerHTML = `
+            <div class="invite-notif-content">
+                <div class="invite-notif-icon"><i class="fas fa-headphones"></i></div>
+                <div class="invite-notif-text">
+                    <strong>${escapeHtml(data.inviterName)}</strong> invited you to join
+                    <strong>"${escapeHtml(data.roomName)}"</strong>
+                </div>
+                <div class="invite-notif-actions">
+                    <button class="invite-notif-btn join" id="invite-join-btn">Join</button>
+                    <button class="invite-notif-btn dismiss" id="invite-dismiss-btn">Dismiss</button>
+                </div>
+            </div>
+            <div class="invite-notif-timer"></div>
+        `;
+        document.body.appendChild(notification);
+        requestAnimationFrame(() => notification.classList.add('visible'));
+
+        document.getElementById('invite-join-btn').addEventListener('click', () => {
+            notification.remove();
+            if (this.currentRoom) {
+                this.leaveRoom();
+            }
+            this.joinRoom(data.roomId);
+        });
+
+        document.getElementById('invite-dismiss-btn').addEventListener('click', () => {
+            notification.classList.remove('visible');
+            setTimeout(() => notification.remove(), 400);
+        });
+
+        setTimeout(() => {
+            notification.classList.remove('visible');
+            setTimeout(() => notification.remove(), 400);
+        }, 15000);
     }
 
     filterRooms(filter) {
@@ -748,6 +809,37 @@ class AudioRoomsManager {
         const userElement = document.querySelector(`[data-user-id="${userId}"]`)?.closest('.search-result-item');
         const userName = userElement?.querySelector('.search-result-name')?.textContent || 'User';
 
+        let currentUserName = 'Someone';
+        try {
+            currentUserName = JSON.parse(localStorage.getItem('user'))?.name || 'Someone';
+        } catch(e) {}
+
+        const activeSocket = this.socket || this.lobbySocket;
+        if (activeSocket && activeSocket.connected) {
+            activeSocket.emit('room-invite', {
+                targetUserId: userId,
+                roomId: this.currentRoom,
+                roomName: this.currentRoom,
+                inviterName: currentUserName
+            });
+
+            activeSocket.once('invite-sent', (response) => {
+                if (response.success) {
+                    this.showShareToast(`Invite sent to ${userName}!`);
+                } else {
+                    this.fallbackInvite(userName);
+                }
+            });
+
+            setTimeout(() => {
+                activeSocket.off('invite-sent');
+            }, 3000);
+        } else {
+            this.fallbackInvite(userName);
+        }
+    }
+
+    fallbackInvite(userName) {
         const shareUrl = `${window.location.origin}/verses.html?room=${encodeURIComponent(this.currentRoom)}`;
         const shareText = `Join me in "${this.currentRoom}" on Wordeth!`;
 
@@ -757,11 +849,11 @@ class AudioRoomsManager {
                 text: shareText,
                 url: shareUrl
             }).then(() => {
-                this.showShareToast(`Invite sent for ${userName}!`);
+                this.showShareToast(`Invite link shared for ${userName}!`);
             }).catch(() => {});
         } else {
             navigator.clipboard?.writeText(shareUrl).then(() => {
-                this.showShareToast(`Room link copied - send it to ${userName}!`);
+                this.showShareToast(`${userName} is offline — room link copied!`);
             }).catch(() => {
                 const textArea = document.createElement('textarea');
                 textArea.value = shareUrl;
@@ -771,7 +863,7 @@ class AudioRoomsManager {
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
-                this.showShareToast(`Room link copied - send it to ${userName}!`);
+                this.showShareToast(`${userName} is offline — room link copied!`);
             });
         }
     }

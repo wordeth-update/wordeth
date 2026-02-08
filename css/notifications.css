@@ -1,0 +1,120 @@
+.invite-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 99999;
+    background: linear-gradient(135deg, #1a1a2e, #2d1b69);
+    border: 1px solid rgba(139, 92, 246, 0.5);
+    border-radius: 16px;
+    padding: 1rem 1.25rem;
+    max-width: 380px;
+    width: calc(100% - 40px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(139, 92, 246, 0.2);
+    transform: translateX(120%);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    overflow: hidden;
+}
+
+.invite-notification.visible {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.invite-notif-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.invite-notif-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #8B5CF6, #6D28D9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.invite-notif-icon i {
+    color: white;
+    font-size: 1.2rem;
+}
+
+.invite-notif-text {
+    flex: 1;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+    line-height: 1.4;
+    min-width: 150px;
+}
+
+.invite-notif-text strong {
+    color: #fff;
+}
+
+.invite-notif-actions {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+    margin-top: 0.5rem;
+}
+
+.invite-notif-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex: 1;
+}
+
+.invite-notif-btn.join {
+    background: linear-gradient(135deg, #8B5CF6, #6D28D9);
+    color: white;
+}
+
+.invite-notif-btn.join:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+}
+
+.invite-notif-btn.dismiss {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.invite-notif-btn.dismiss:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+
+.invite-notif-timer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #8B5CF6, #6D28D9);
+    animation: notifTimer 15s linear forwards;
+    border-radius: 0 0 16px 16px;
+}
+
+@keyframes notifTimer {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+
+@media (max-width: 480px) {
+    .invite-notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        width: auto;
+        max-width: none;
+    }
+}

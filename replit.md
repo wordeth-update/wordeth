@@ -35,6 +35,8 @@ Preferred communication style: Simple, everyday language.
   - WebRTC signaling: offer/answer/ICE candidate relay between peers
   - Room events: chat messages, karaoke state, screen share, permissions, mute status
   - Audio mix status: notifies room when a user is sharing YouTube audio
+  - **Real-time invite system**: Global `connectedUsers` Map tracks userId→socketIds across all pages. `room-invite` event routes invites to target users with rate limiting (10/min). `register-user` event links authenticated users to their socket connections.
+  - **Global notifications** (`js/notifications.js`): Loaded on all main pages, connects to Socket.io and registers the logged-in user. Receives `room-invite` events and shows slide-in notification with Join/Dismiss buttons. Auto-dismisses after 15 seconds.
 - **Middleware**: 
   - `middleware/auth.js` — JWT authentication middleware
   - `middleware/tracking.js` — automatic usage event tracking based on route patterns
