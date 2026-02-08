@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invite Preview</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/notifications.css">
+<style>
+  body { margin: 0; background: #0a0a0a; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Inter', sans-serif; }
+  .invite-notification { position: relative; top: auto; right: auto; transform: scale(1); opacity: 1; }
+</style>
+</head>
+<body>
+<div class="invite-notification visible">
+  <div class="invite-card">
+    <div class="invite-card-glow"></div>
+    <div class="invite-card-top">
+      <div class="invite-live-badge">
+        <span class="invite-live-dot"></span>
+        LIVE NOW
+      </div>
+    </div>
+    <div class="invite-card-body">
+      <div class="invite-room-name">Late Night R&B Vibes</div>
+      <div class="invite-from">
+        <div class="invite-from-avatar">M</div>
+        <div class="invite-from-text"><strong>Marcus</strong> invited you</div>
+      </div>
+    </div>
+    <div class="invite-card-actions">
+      <button class="invite-action-btn dismiss">Not now</button>
+      <button class="invite-action-btn join">
+        <i class="fas fa-headphones"></i> Join
+      </button>
+    </div>
+    <div class="invite-timer-bar" style="animation: none; width: 65%;"></div>
+  </div>
+</div>
+</body>
+</html>
