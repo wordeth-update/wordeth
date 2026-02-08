@@ -855,31 +855,64 @@
 .room-controls {
     display: flex;
     justify-content: center;
-    gap: 1rem;
-    padding: 1.5rem;
+    padding: 0.75rem 0;
     background: linear-gradient(135deg, var(--purple-dark) 0%, var(--black) 100%);
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.controls-slider {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    padding: 0.25rem 1rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+}
+
+.controls-slider::-webkit-scrollbar {
+    display: none;
+}
+
 .control-btn {
-    width: 55px;
-    height: 55px;
-    border-radius: 50%;
+    min-width: 52px;
+    height: auto;
+    border-radius: 14px;
     border: none;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     color: var(--white);
     cursor: pointer;
     transition: all 0.3s ease;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
+    gap: 4px;
+    font-size: 1.1rem;
+    padding: 0.5rem 0.6rem;
+    flex-shrink: 0;
+}
+
+.ctrl-label {
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    opacity: 0.7;
+    white-space: nowrap;
 }
 
 .control-btn:hover {
     background: var(--mint);
     color: var(--black);
-    transform: scale(1.1);
+    transform: scale(1.08);
+}
+
+.control-btn:hover .ctrl-label {
+    opacity: 1;
 }
 
 .control-btn.disabled {
@@ -888,7 +921,7 @@
 }
 
 .control-btn.disabled:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     color: var(--white);
     transform: none;
 }
@@ -3178,15 +3211,12 @@
         left: 0;
         right: 0;
         z-index: 90;
-        padding: 0.5rem 0.25rem;
-        padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 12px));
-        background: linear-gradient(180deg, rgba(26,26,46,0.95) 0%, rgba(10,10,10,0.98) 100%);
+        padding: 0;
+        padding-bottom: env(safe-area-inset-bottom, 8px);
+        background: linear-gradient(180deg, rgba(26,26,46,0.97) 0%, rgba(10,10,10,0.99) 100%);
         border-radius: 20px 20px 0 0;
         border-top: 1px solid rgba(150, 197, 176, 0.15);
         box-shadow: 0 -8px 30px rgba(0,0,0,0.4);
-        gap: 0.35rem;
-        flex-wrap: wrap;
-        justify-content: center;
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
     }
@@ -3200,15 +3230,26 @@
         height: 3px;
         background: rgba(255,255,255,0.2);
         border-radius: 2px;
+        z-index: 1;
+    }
+
+    .controls-slider {
+        gap: 0.4rem;
+        padding: 0.6rem 0.75rem 0.4rem;
+        justify-content: flex-start;
     }
 
     .control-btn {
-        width: 38px;
-        height: 38px;
-        font-size: 0.9rem;
-        flex-shrink: 0;
+        min-width: 44px;
+        font-size: 0.85rem;
+        padding: 0.4rem 0.5rem;
+        border-radius: 12px;
         touch-action: manipulation;
         -webkit-tap-highlight-color: rgba(150, 197, 176, 0.3);
+    }
+
+    .ctrl-label {
+        font-size: 0.55rem;
     }
 
     .control-btn.danger {

@@ -240,33 +240,44 @@
             </div>
 
             <div class="room-controls">
-                <button class="control-btn" id="toggle-audio">
-                    <i class="fas fa-microphone"></i>
-                </button>
-                <button class="control-btn" id="audio-filter-btn" title="Voice effects">
-                    <i class="fas fa-magic"></i>
-                </button>
-                <button class="control-btn" id="karaoke-btn" title="Karaoke mode">
-                    <i class="fas fa-compact-disc"></i>
-                </button>
-                <button class="control-btn disabled" id="screenshare-btn" title="Screen share disabled by host">
-                    <i class="fas fa-desktop"></i>
-                </button>
-                <button class="control-btn" id="raise-hand" title="Raise hand to speak">
-                    <i class="fas fa-hand-paper"></i>
-                </button>
-                <button class="control-btn" id="toggle-chat">
-                    <i class="fas fa-comment"></i>
-                </button>
-                <button class="control-btn" id="share-room-mobile-btn" title="Share room link">
-                    <i class="fas fa-share-alt"></i>
-                </button>
-                <button class="control-btn" id="share-music" title="Share a song">
-                    <i class="fas fa-music"></i>
-                </button>
-                <button class="control-btn danger" id="leave-room-btn">
-                    <i class="fas fa-sign-out-alt"></i>
-                </button>
+                <div class="controls-slider">
+                    <button class="control-btn" id="toggle-audio">
+                        <i class="fas fa-microphone"></i>
+                        <span class="ctrl-label">Mic</span>
+                    </button>
+                    <button class="control-btn" id="audio-filter-btn" title="Voice effects">
+                        <i class="fas fa-magic"></i>
+                        <span class="ctrl-label">Effects</span>
+                    </button>
+                    <button class="control-btn" id="karaoke-btn" title="Karaoke mode">
+                        <i class="fas fa-compact-disc"></i>
+                        <span class="ctrl-label">Karaoke</span>
+                    </button>
+                    <button class="control-btn disabled" id="screenshare-btn" title="Screen share disabled by host">
+                        <i class="fas fa-desktop"></i>
+                        <span class="ctrl-label">Screen</span>
+                    </button>
+                    <button class="control-btn" id="raise-hand" title="Raise hand to speak">
+                        <i class="fas fa-hand-paper"></i>
+                        <span class="ctrl-label">Hand</span>
+                    </button>
+                    <button class="control-btn" id="toggle-chat">
+                        <i class="fas fa-comment"></i>
+                        <span class="ctrl-label">Chat</span>
+                    </button>
+                    <button class="control-btn" id="share-room-mobile-btn" title="Share room link">
+                        <i class="fas fa-share-alt"></i>
+                        <span class="ctrl-label">Share</span>
+                    </button>
+                    <button class="control-btn" id="share-music" title="Play a song">
+                        <i class="fas fa-music"></i>
+                        <span class="ctrl-label">Music</span>
+                    </button>
+                    <button class="control-btn danger" id="leave-room-btn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span class="ctrl-label">Leave</span>
+                    </button>
+                </div>
             </div>
             <div class="host-notifications" id="host-notifications"></div>
         </div>

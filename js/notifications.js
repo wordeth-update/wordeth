@@ -35,24 +35,36 @@
         const existing = document.getElementById('wordeth-invite-notification');
         if (existing) existing.remove();
 
+        const inviterInitial = (data.inviterName || 'U').charAt(0).toUpperCase();
+        const roomName = data.roomName || 'a Verse';
+
         const notification = document.createElement('div');
         notification.id = 'wordeth-invite-notification';
         notification.className = 'invite-notification';
         notification.innerHTML = `
-            <div class="invite-notif-content">
-                <div class="invite-notif-icon">
-                    <i class="fas fa-headphones"></i>
+            <div class="invite-card">
+                <div class="invite-card-glow"></div>
+                <div class="invite-card-top">
+                    <div class="invite-live-badge">
+                        <span class="invite-live-dot"></span>
+                        LIVE NOW
+                    </div>
                 </div>
-                <div class="invite-notif-text">
-                    <strong>${escapeHtml(data.inviterName)}</strong> invited you to join
-                    <strong>"${escapeHtml(data.roomName)}"</strong>
+                <div class="invite-card-body">
+                    <div class="invite-room-name">${escapeHtml(roomName)}</div>
+                    <div class="invite-from">
+                        <div class="invite-from-avatar">${inviterInitial}</div>
+                        <div class="invite-from-text"><strong>${escapeHtml(data.inviterName)}</strong> invited you</div>
+                    </div>
                 </div>
-                <div class="invite-notif-actions">
-                    <button class="invite-notif-btn join" onclick="window.location.href='/verses.html?room=${encodeURIComponent(data.roomId)}'">Join</button>
-                    <button class="invite-notif-btn dismiss" onclick="this.closest('.invite-notification').remove()">Dismiss</button>
+                <div class="invite-card-actions">
+                    <button class="invite-action-btn dismiss" onclick="this.closest('.invite-notification').remove()">Not now</button>
+                    <button class="invite-action-btn join" onclick="window.location.href='/verses.html?room=${encodeURIComponent(data.roomId)}'">
+                        <i class="fas fa-headphones"></i> Join
+                    </button>
                 </div>
+                <div class="invite-timer-bar"></div>
             </div>
-            <div class="invite-notif-timer"></div>
         `;
 
         document.body.appendChild(notification);
@@ -63,7 +75,7 @@
 
         setTimeout(() => {
             notification.classList.remove('visible');
-            setTimeout(() => notification.remove(), 400);
+            setTimeout(() => notification.remove(), 500);
         }, 15000);
     }
 
