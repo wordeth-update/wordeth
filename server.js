@@ -15,6 +15,7 @@ process.env.FONTCONFIG_FILE = path.join(__dirname, 'fonts', 'fonts.conf');
 const { setupSignaling, getActiveRooms } = require('./routes/signaling');
 
 let ogLogoBase64 = '';
+let ogFontBase64 = '';
 (async () => {
     try {
         const logoPath = path.join(__dirname, 'images', 'logo.png');
@@ -27,6 +28,15 @@ let ogLogoBase64 = '';
         }
     } catch(e) {
         console.warn('Failed to cache OG logo:', e.message);
+    }
+    try {
+        const fontSubsetPath = path.join(__dirname, 'fonts', 'inter-subset-base64.txt');
+        if (fs.existsSync(fontSubsetPath)) {
+            ogFontBase64 = fs.readFileSync(fontSubsetPath, 'utf8').trim();
+            console.log('OG font subset cached for link previews');
+        }
+    } catch(e) {
+        console.warn('Failed to cache OG font:', e.message);
     }
 })();
 
@@ -249,7 +259,12 @@ app.get('/og-image/:roomId', ogCrawlerHeaders, async (req, res) => {
             ? `<image x="880" y="50" width="210" height="210" href="data:image/png;base64,${ogLogoBase64}" opacity="0.95"/>`
             : '';
 
+        const fontStyle = ogFontBase64
+            ? `<style>@font-face { font-family: 'Inter'; src: url('data:font/truetype;base64,${ogFontBase64}') format('truetype'); font-weight: 100 900; }</style>`
+            : '';
+
         const svg = `<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  ${fontStyle}
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#1a1033"/>
