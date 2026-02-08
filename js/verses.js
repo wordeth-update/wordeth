@@ -4652,7 +4652,8 @@ class AudioRoomsManager {
                             5: 'Video cannot be played in HTML5',
                             100: 'Video not found or removed',
                             101: 'Video owner does not allow embedded playback',
-                            150: 'Video owner does not allow embedded playback'
+                            150: 'Video owner does not allow embedded playback',
+                            153: 'Playback blocked — try disabling ad blockers or try a different video'
                         };
                         const msg = errorMessages[event.data] || `Playback error (code ${event.data})`;
                         console.error('YouTube player error:', event.data, msg);
