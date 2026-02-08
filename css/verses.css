@@ -2775,6 +2775,48 @@
     color: var(--white);
 }
 
+.ar-filter-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    align-items: center;
+    margin-top: 0.3rem;
+}
+
+.ar-filter-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: var(--mint-accent, #a0ffcf);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 4px;
+    border-radius: 3px;
+    background: rgba(160, 255, 207, 0.1);
+}
+
+.ar-filter-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid rgba(160, 255, 207, 0.2);
+    background: rgba(160, 255, 207, 0.08);
+    color: var(--white);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.75rem;
+}
+
+.ar-filter-btn:hover {
+    background: rgba(160, 255, 207, 0.2);
+    border-color: rgba(160, 255, 207, 0.4);
+}
+
+.ar-filter-btn.active {
+    background: var(--mint-accent, #a0ffcf);
+    color: #111;
+    border-color: var(--mint-accent, #a0ffcf);
+}
+
 /* Video filter effects */
 #karaoke-video.filter-none {
     filter: none;

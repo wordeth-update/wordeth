@@ -58,6 +58,11 @@ class AudioRoomsManager {
         this.karaokeVideoActive = false;
         this._videoRenegotiating = false;
         
+        // AR filter engine
+        this.arFilterEngine = null;
+        this.arFilterLoading = false;
+        this._activeCanvasFilter = null;
+        
         // Permission tracking
         this.pendingPermissionRequestId = null;
         this.karaokeStartNotified = false;
@@ -264,6 +269,16 @@ class AudioRoomsManager {
             btn.addEventListener('click', (e) => {
                 const filter = e.currentTarget.dataset.filter;
                 this.setVideoFilter(filter);
+            });
+        });
+        document.querySelectorAll('.ar-filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const filter = e.currentTarget.dataset.arFilter;
+                if (this.currentVideoFilter === filter) {
+                    this.setVideoFilter('none');
+                } else {
+                    this.setVideoFilter(filter);
+                }
             });
         });
         
@@ -3450,6 +3465,19 @@ class AudioRoomsManager {
 
         this.currentVideoFilter = filter;
 
+        const isAR = filter && filter.startsWith('ar-');
+
+        if (isAR) {
+            this._activateARFilter(filter);
+            return;
+        }
+
+        if (this.arFilterEngine) {
+            this.arFilterEngine.setFilter(null);
+        }
+
+        this._activeCanvasFilter = null;
+
         if (filter === 'none') {
             const canvas = document.getElementById('karaoke-canvas');
             if (canvas) canvas.style.display = 'none';
@@ -3464,6 +3492,46 @@ class AudioRoomsManager {
         document.querySelectorAll('.video-filter-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.filter === filter);
         });
+        document.querySelectorAll('.ar-filter-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+    }
+
+    async _activateARFilter(filter) {
+        document.querySelectorAll('.video-filter-btn').forEach(btn => {
+            btn.classList.toggle('active', false);
+        });
+        document.querySelectorAll('.ar-filter-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.arFilter === filter);
+        });
+
+        if (!this.arFilterEngine) {
+            this.arFilterEngine = new ARFilterEngine();
+        }
+
+        if (!this.arFilterEngine.ready) {
+            if (this.arFilterLoading) return;
+            this.arFilterLoading = true;
+            this.addChatMessage('System', 'Loading AR face filter... (first time may take a moment)', true);
+            const ok = await this.arFilterEngine.init();
+            this.arFilterLoading = false;
+            if (!ok) {
+                this.addChatMessage('System', 'AR filter failed to load. Try again.', true);
+                return;
+            }
+            if (this.currentVideoFilter !== filter) {
+                return;
+            }
+            this.addChatMessage('System', 'AR face filter ready!', true);
+        }
+
+        this.arFilterEngine.setFilter(filter);
+
+        if (this.canvasFilterRAF && this._activeCanvasFilter) {
+            this._activeCanvasFilter = filter;
+        } else {
+            this.startCanvasFilter(filter);
+        }
     }
 
     getCanvasFilterString(filter) {
@@ -3500,17 +3568,26 @@ class AudioRoomsManager {
         this.karaokeCanvas = canvas;
         this.karaokeCanvasCtx = ctx;
 
+        this._activeCanvasFilter = filter;
+
         const renderFrame = () => {
             if (!this.karaokeVideoActive) return;
+            const currentFilter = this._activeCanvasFilter;
 
-            if (filter === 'beautify') {
+            if (currentFilter && currentFilter.startsWith('ar-')) {
+                ctx.filter = 'none';
+                ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+                if (this.arFilterEngine && this.arFilterEngine.isActive()) {
+                    this.arFilterEngine.drawFilter(ctx, canvas, videoEl, performance.now());
+                }
+            } else if (currentFilter === 'beautify') {
                 ctx.filter = 'blur(1px) brightness(1.08) contrast(0.95) saturate(1.1)';
                 ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
                 ctx.filter = 'none';
                 ctx.globalAlpha = 0.5;
                 ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
                 ctx.globalAlpha = 1.0;
-            } else if (filter === 'bg-blur') {
+            } else if (currentFilter === 'bg-blur') {
                 const cx = canvas.width / 2;
                 const cy = canvas.height * 0.4;
                 const rx = canvas.width * 0.3;
@@ -3534,7 +3611,7 @@ class AudioRoomsManager {
                 ctx.restore();
                 ctx.filter = 'none';
             } else {
-                ctx.filter = this.getCanvasFilterString(filter);
+                ctx.filter = this.getCanvasFilterString(currentFilter);
                 ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
                 ctx.filter = 'none';
             }
