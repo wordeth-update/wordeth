@@ -1684,37 +1684,36 @@ class AudioRoomsManager {
     shareMusic() {
         const modal = document.getElementById('music-share-modal');
         if (!modal) return;
-        
-        document.getElementById('music-upload-details')?.classList.add('hidden');
-        document.getElementById('music-upload-area')?.classList.remove('hidden');
-        document.getElementById('music-upload-progress')?.classList.add('hidden');
+
+        document.getElementById('music-file-details')?.classList.add('hidden');
+        document.getElementById('music-pick-area')?.classList.remove('hidden');
         document.getElementById('music-song-title').value = '';
         document.getElementById('music-artist-name').value = '';
         document.getElementById('music-file-input').value = '';
         this.pendingMusicFile = null;
-        
+
         modal.classList.add('active');
     }
 
     initMusicSharing() {
-        const uploadArea = document.getElementById('music-upload-area');
+        const pickArea = document.getElementById('music-pick-area');
         const fileInput = document.getElementById('music-file-input');
         const submitBtn = document.getElementById('music-share-submit');
         const mobileAudioInput = document.getElementById('mobile-audio-input');
-        
-        if (uploadArea && fileInput) {
-            uploadArea.addEventListener('click', () => fileInput.click());
-            
-            uploadArea.addEventListener('dragover', (e) => {
+
+        if (pickArea && fileInput) {
+            pickArea.addEventListener('click', () => fileInput.click());
+
+            pickArea.addEventListener('dragover', (e) => {
                 e.preventDefault();
-                uploadArea.classList.add('dragover');
+                pickArea.classList.add('dragover');
             });
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.classList.remove('dragover');
+            pickArea.addEventListener('dragleave', () => {
+                pickArea.classList.remove('dragover');
             });
-            uploadArea.addEventListener('drop', (e) => {
+            pickArea.addEventListener('drop', (e) => {
                 e.preventDefault();
-                uploadArea.classList.remove('dragover');
+                pickArea.classList.remove('dragover');
                 const file = e.dataTransfer.files[0];
                 if (file && file.type.startsWith('audio/')) {
                     this.handleMusicFileSelected(file);
@@ -1722,15 +1721,15 @@ class AudioRoomsManager {
                     this.showToast('Please drop an audio file', 'fa-exclamation-circle');
                 }
             });
-            
+
             fileInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (file) this.handleMusicFileSelected(file);
             });
         }
-        
-        submitBtn?.addEventListener('click', () => this.uploadAndShareMusic());
-        
+
+        submitBtn?.addEventListener('click', () => this.playAndStreamMusic());
+
         document.getElementById('mobile-music-share-btn')?.addEventListener('click', () => {
             document.getElementById('mobile-share-modal')?.classList.remove('active');
             if (mobileAudioInput) {
@@ -1739,7 +1738,7 @@ class AudioRoomsManager {
                 this.shareMusic();
             }
         });
-        
+
         mobileAudioInput?.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
@@ -1748,25 +1747,24 @@ class AudioRoomsManager {
             }
             e.target.value = '';
         });
-        
-        this.initAudioPlayer();
+
+        this.initMusicPlayerControls();
     }
 
     handleMusicFileSelected(file) {
-        if (file.size > 50 * 1024 * 1024) {
-            this.showToast('File too large (max 50MB)', 'fa-exclamation-circle');
+        if (file.size > 500 * 1024 * 1024) {
+            this.showToast('File too large (max 500MB)', 'fa-exclamation-circle');
             return;
         }
-        
         this.pendingMusicFile = file;
-        
-        document.getElementById('music-upload-area')?.classList.add('hidden');
-        document.getElementById('music-upload-details')?.classList.remove('hidden');
-        
+
+        document.getElementById('music-pick-area')?.classList.add('hidden');
+        document.getElementById('music-file-details')?.classList.remove('hidden');
+
         const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
         document.getElementById('music-file-name').textContent = file.name;
         document.getElementById('music-file-size').textContent = this.formatFileSize(file.size);
-        
+
         const parts = nameWithoutExt.split(/[-–—]/).map(s => s.trim());
         if (parts.length >= 2) {
             document.getElementById('music-artist-name').value = parts[0];
@@ -1782,158 +1780,162 @@ class AudioRoomsManager {
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
-    async uploadAndShareMusic() {
+    async playAndStreamMusic() {
         if (!this.pendingMusicFile) {
             this.showToast('No file selected', 'fa-exclamation-circle');
             return;
         }
-        
+
         const songTitle = document.getElementById('music-song-title')?.value?.trim() || 'Untitled Track';
         const artistName = document.getElementById('music-artist-name')?.value?.trim() || 'Unknown Artist';
-        
-        const progressContainer = document.getElementById('music-upload-progress');
-        const progressFill = document.getElementById('music-progress-fill');
-        const progressText = document.getElementById('music-progress-text');
-        const submitBtn = document.getElementById('music-share-submit');
-        
-        progressContainer?.classList.remove('hidden');
-        if (submitBtn) submitBtn.disabled = true;
-        
+
+        this.stopMusicStream();
+
+        const objectUrl = URL.createObjectURL(this.pendingMusicFile);
+        this.musicAudioElement = new Audio(objectUrl);
+        this.musicAudioElement.crossOrigin = 'anonymous';
+        this.musicAudioElement.volume = 0.8;
+
         try {
-            const formData = new FormData();
-            formData.append('audio', this.pendingMusicFile);
-            
-            const xhr = new XMLHttpRequest();
-            
-            await new Promise((resolve, reject) => {
-                xhr.upload.addEventListener('progress', (e) => {
-                    if (e.lengthComputable) {
-                        const pct = Math.round((e.loaded / e.total) * 100);
-                        if (progressFill) progressFill.style.width = pct + '%';
-                        if (progressText) progressText.textContent = `Uploading... ${pct}%`;
-                    }
-                });
-                
-                xhr.addEventListener('load', () => {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        resolve(JSON.parse(xhr.responseText));
-                    } else {
-                        reject(new Error('Upload failed'));
-                    }
-                });
-                
-                xhr.addEventListener('error', () => reject(new Error('Upload failed')));
-                xhr.open('POST', '/api/rooms/upload-audio');
-                xhr.send(formData);
-            }).then((data) => {
-                const audioUrl = data.url;
-                
-                this.addAudioChatMessage('You', songTitle, artistName, audioUrl);
-                
+            if (!this.audioMixEnabled) {
+                await this.startAudioMix();
+            }
+
+            if (this.audioContext && this.mixDestination) {
+                this.musicAudioSource = this.audioContext.createMediaElementSource(this.musicAudioElement);
+                this.musicGainNode = this.audioContext.createGain();
+                this.musicGainNode.gain.value = 0.8;
+                this.musicAudioSource.connect(this.musicGainNode);
+                this.musicGainNode.connect(this.mixDestination);
+                this.musicGainNode.connect(this.audioContext.destination);
+
+                if (this.mixedStream) {
+                    this.replaceOutgoingAudioTrack(this.mixedStream.getAudioTracks()[0]);
+                }
+            }
+
+            await this.musicAudioElement.play();
+
+            this.musicAudioElement.addEventListener('ended', () => {
+                this.stopMusicStream();
+                this.addChatMessage('System', `Finished playing: ${songTitle}`, true);
                 if (this.socket && this.socket.connected && this.currentRoom) {
-                    this.socket.emit('room-audio-share', {
+                    this.socket.emit('music-stream-status', {
                         roomId: this.currentRoom,
-                        audioUrl,
                         songTitle,
-                        artistName
+                        artistName,
+                        playing: false
                     });
                 }
-                
-                this.showAudioPlayerOverlay(audioUrl, songTitle, artistName, 'You');
-                this.showToast('Music shared with the room!', 'fa-check-circle');
-                
-                document.getElementById('music-share-modal')?.classList.remove('active');
-                this.pendingMusicFile = null;
             });
-            
+
+            this.addMusicStreamChatMessage('You', songTitle, artistName);
+            this.showMusicPlayerOverlay(songTitle, artistName);
+
+            if (this.socket && this.socket.connected && this.currentRoom) {
+                this.socket.emit('music-stream-status', {
+                    roomId: this.currentRoom,
+                    songTitle,
+                    artistName,
+                    playing: true
+                });
+            }
+
+            this.showToast('Playing music — room can hear it live!', 'fa-check-circle');
+            document.getElementById('music-share-modal')?.classList.remove('active');
+            this.pendingMusicFile = null;
+
         } catch (err) {
-            console.error('Music upload error:', err);
-            this.showToast('Failed to upload music file', 'fa-exclamation-circle');
-        } finally {
-            if (submitBtn) submitBtn.disabled = false;
-            progressContainer?.classList.add('hidden');
-            if (progressFill) progressFill.style.width = '0%';
+            console.error('Music playback error:', err);
+            this.showToast('Could not play this audio file', 'fa-exclamation-circle');
+            this.stopMusicStream();
         }
     }
 
-    addAudioChatMessage(sender, songTitle, artistName, audioUrl) {
+    stopMusicStream() {
+        if (this.musicAudioElement) {
+            this.musicAudioElement.pause();
+            if (this.musicAudioElement.src) {
+                URL.revokeObjectURL(this.musicAudioElement.src);
+            }
+            this.musicAudioElement = null;
+        }
+        if (this.musicAudioSource) {
+            try { this.musicAudioSource.disconnect(); } catch(e) {}
+            this.musicAudioSource = null;
+        }
+        if (this.musicGainNode) {
+            try { this.musicGainNode.disconnect(); } catch(e) {}
+            this.musicGainNode = null;
+        }
+        const overlay = document.getElementById('shared-audio-overlay');
+        if (overlay) overlay.classList.add('hidden');
+    }
+
+    addMusicStreamChatMessage(sender, songTitle, artistName) {
         if (!this.chatMessagesContainer) return;
-        
+
         const messageElement = document.createElement('div');
         messageElement.className = `chat-message ${sender === 'You' ? 'own' : ''}`;
-        
+
         const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
+
         messageElement.innerHTML = `
             <div class="chat-message-header">
                 <span class="sender">${this.escapeHtml(sender)}</span>
                 <span class="timestamp">${timestamp}</span>
             </div>
-            <div class="chat-audio-player" data-audio-url="${this.escapeHtml(audioUrl)}">
-                <div class="chat-audio-icon"><i class="fas fa-music"></i></div>
+            <div class="chat-audio-player">
+                <div class="chat-audio-icon"><i class="fas fa-broadcast-tower"></i></div>
                 <div class="chat-audio-meta">
                     <span class="chat-audio-title">${this.escapeHtml(songTitle)}</span>
                     <span class="chat-audio-artist">${this.escapeHtml(artistName)}</span>
                 </div>
-                <span class="chat-audio-play-hint"><i class="fas fa-play"></i> Play</span>
+                <span class="chat-audio-play-hint"><i class="fas fa-volume-up"></i> Live</span>
             </div>
         `;
-        
-        const player = messageElement.querySelector('.chat-audio-player');
-        player?.addEventListener('click', () => {
-            this.showAudioPlayerOverlay(audioUrl, songTitle, artistName, sender);
-        });
-        
+
         this.chatMessagesContainer.appendChild(messageElement);
         this.chatMessagesContainer.scrollTop = this.chatMessagesContainer.scrollHeight;
     }
 
-    showAudioPlayerOverlay(audioUrl, songTitle, artistName, sharer) {
+    showMusicPlayerOverlay(songTitle, artistName) {
         const overlay = document.getElementById('shared-audio-overlay');
         if (!overlay) return;
-        
+
         document.getElementById('shared-audio-title').textContent = songTitle;
         document.getElementById('shared-audio-artist').textContent = artistName;
-        document.getElementById('shared-audio-sharer').textContent = `Shared by ${sharer}`;
-        
-        if (this.sharedAudioElement) {
-            this.sharedAudioElement.pause();
-            this.sharedAudioElement.src = '';
-        }
-        
-        this.sharedAudioElement = new Audio(audioUrl);
-        this.sharedAudioElement.volume = parseFloat(document.getElementById('audio-volume')?.value || 0.8);
-        this.sharedAudioElement.preload = 'auto';
-        
+        document.getElementById('shared-audio-sharer').textContent = 'Playing from your device';
+
         const playBtn = document.getElementById('audio-play-btn');
-        if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>';
+        if (playBtn) playBtn.innerHTML = '<i class="fas fa-pause"></i>';
         document.getElementById('audio-progress-fill').style.width = '0%';
         document.getElementById('audio-current-time').textContent = '0:00';
         document.getElementById('audio-total-time').textContent = '0:00';
-        
-        this.sharedAudioElement.addEventListener('loadedmetadata', () => {
-            document.getElementById('audio-total-time').textContent = this.formatAudioTime(this.sharedAudioElement.duration);
-        });
-        
-        this.sharedAudioElement.addEventListener('timeupdate', () => {
-            if (this.sharedAudioElement.duration) {
-                const pct = (this.sharedAudioElement.currentTime / this.sharedAudioElement.duration) * 100;
-                document.getElementById('audio-progress-fill').style.width = pct + '%';
-                document.getElementById('audio-current-time').textContent = this.formatAudioTime(this.sharedAudioElement.currentTime);
+
+        if (this.musicAudioElement) {
+            this.musicAudioElement.addEventListener('loadedmetadata', () => {
+                document.getElementById('audio-total-time').textContent = this.formatAudioTime(this.musicAudioElement.duration);
+            });
+
+            this.musicAudioElement.addEventListener('timeupdate', () => {
+                if (this.musicAudioElement && this.musicAudioElement.duration) {
+                    const pct = (this.musicAudioElement.currentTime / this.musicAudioElement.duration) * 100;
+                    document.getElementById('audio-progress-fill').style.width = pct + '%';
+                    document.getElementById('audio-current-time').textContent = this.formatAudioTime(this.musicAudioElement.currentTime);
+                }
+            });
+
+            this.musicAudioElement.addEventListener('ended', () => {
+                if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>';
+            });
+
+            if (this.musicAudioElement.duration) {
+                document.getElementById('audio-total-time').textContent = this.formatAudioTime(this.musicAudioElement.duration);
             }
-        });
-        
-        this.sharedAudioElement.addEventListener('ended', () => {
-            if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>';
-        });
-        
+        }
+
         overlay.classList.remove('hidden');
-        
-        this.sharedAudioElement.play().then(() => {
-            if (playBtn) playBtn.innerHTML = '<i class="fas fa-pause"></i>';
-        }).catch(() => {
-            if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>';
-        });
     }
 
     formatAudioTime(seconds) {
@@ -1943,60 +1945,69 @@ class AudioRoomsManager {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
 
-    initAudioPlayer() {
+    initMusicPlayerControls() {
         const playBtn = document.getElementById('audio-play-btn');
         const rewindBtn = document.getElementById('audio-rewind-btn');
         const forwardBtn = document.getElementById('audio-forward-btn');
         const volumeSlider = document.getElementById('audio-volume');
         const progressBar = document.getElementById('audio-progress-bar');
         const closeBtn = document.getElementById('shared-audio-close');
-        
+
         playBtn?.addEventListener('click', () => {
-            if (!this.sharedAudioElement) return;
-            if (this.sharedAudioElement.paused) {
-                this.sharedAudioElement.play();
+            if (!this.musicAudioElement) return;
+            if (this.musicAudioElement.paused) {
+                this.musicAudioElement.play();
                 playBtn.innerHTML = '<i class="fas fa-pause"></i>';
             } else {
-                this.sharedAudioElement.pause();
+                this.musicAudioElement.pause();
                 playBtn.innerHTML = '<i class="fas fa-play"></i>';
             }
         });
-        
+
         rewindBtn?.addEventListener('click', () => {
-            if (this.sharedAudioElement) {
-                this.sharedAudioElement.currentTime = Math.max(0, this.sharedAudioElement.currentTime - 10);
+            if (this.musicAudioElement) {
+                this.musicAudioElement.currentTime = Math.max(0, this.musicAudioElement.currentTime - 10);
             }
         });
-        
+
         forwardBtn?.addEventListener('click', () => {
-            if (this.sharedAudioElement) {
-                this.sharedAudioElement.currentTime = Math.min(
-                    this.sharedAudioElement.duration || 0,
-                    this.sharedAudioElement.currentTime + 10
+            if (this.musicAudioElement) {
+                this.musicAudioElement.currentTime = Math.min(
+                    this.musicAudioElement.duration || 0,
+                    this.musicAudioElement.currentTime + 10
                 );
             }
         });
-        
+
         volumeSlider?.addEventListener('input', (e) => {
-            if (this.sharedAudioElement) {
-                this.sharedAudioElement.volume = parseFloat(e.target.value);
+            const vol = parseFloat(e.target.value);
+            if (this.musicGainNode) {
+                this.musicGainNode.gain.value = vol;
+            }
+            if (this.musicAudioElement) {
+                this.musicAudioElement.volume = vol;
             }
         });
-        
+
         progressBar?.addEventListener('click', (e) => {
-            if (!this.sharedAudioElement || !this.sharedAudioElement.duration) return;
+            if (!this.musicAudioElement || !this.musicAudioElement.duration) return;
             const rect = progressBar.getBoundingClientRect();
             const pct = (e.clientX - rect.left) / rect.width;
-            this.sharedAudioElement.currentTime = pct * this.sharedAudioElement.duration;
+            this.musicAudioElement.currentTime = pct * this.musicAudioElement.duration;
         });
-        
+
         closeBtn?.addEventListener('click', () => {
-            if (this.sharedAudioElement) {
-                this.sharedAudioElement.pause();
-                this.sharedAudioElement.src = '';
-                this.sharedAudioElement = null;
+            const songTitle = document.getElementById('shared-audio-title')?.textContent || '';
+            const artistName = document.getElementById('shared-audio-artist')?.textContent || '';
+            this.stopMusicStream();
+            if (this.socket && this.socket.connected && this.currentRoom) {
+                this.socket.emit('music-stream-status', {
+                    roomId: this.currentRoom,
+                    songTitle,
+                    artistName,
+                    playing: false
+                });
             }
-            document.getElementById('shared-audio-overlay')?.classList.add('hidden');
         });
     }
 
@@ -2108,14 +2119,8 @@ class AudioRoomsManager {
             }).catch(() => {});
         }
 
+        this.stopMusicStream();
         this.stopAudioMix();
-
-        if (this.sharedAudioElement) {
-            this.sharedAudioElement.pause();
-            this.sharedAudioElement.src = '';
-            this.sharedAudioElement = null;
-        }
-        document.getElementById('shared-audio-overlay')?.classList.add('hidden');
         
         if (this.nativeScreenCapture) {
             this.nativeScreenCapture.stop().catch(() => {});
@@ -4818,6 +4823,7 @@ class AudioRoomsManager {
     
     stopAudioMix() {
         this.removeYouTubeFromMix();
+        this.stopMusicStream();
         
         if (this.micAudioSource) {
             try { this.micAudioSource.disconnect(); } catch(e) {}

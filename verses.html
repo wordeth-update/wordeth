@@ -326,19 +326,19 @@
         <div class="modal" id="music-share-modal">
             <div class="modal-content" style="max-width:450px;">
                 <div class="modal-header">
-                    <h3><i class="fas fa-music"></i> Share Music</h3>
+                    <h3><i class="fas fa-music"></i> Play Music for Room</h3>
                     <button class="close-modal">&times;</button>
                 </div>
                 <div class="music-share-body">
-                    <p style="color:var(--text-secondary);margin-bottom:15px;">Share a track with the room. Everyone will be able to preview and listen.</p>
-                    <div class="music-upload-area" id="music-upload-area">
-                        <i class="fas fa-cloud-upload-alt" style="font-size:2.5rem;color:var(--purple);margin-bottom:10px;"></i>
+                    <p style="color:var(--text-secondary);margin-bottom:15px;">Pick a song from your device. It plays locally and streams live to the room — no uploading needed.</p>
+                    <div class="music-upload-area" id="music-pick-area">
+                        <i class="fas fa-headphones" style="font-size:2.5rem;color:var(--purple);margin-bottom:10px;"></i>
                         <p>Drag & drop an audio file here</p>
                         <span style="color:var(--text-secondary);font-size:0.85rem;">or click to browse</span>
-                        <span style="color:var(--text-secondary);font-size:0.75rem;margin-top:5px;">MP3, WAV, M4A, AAC, OGG, FLAC (max 50MB)</span>
+                        <span style="color:var(--text-secondary);font-size:0.75rem;margin-top:5px;">MP3, WAV, M4A, AAC, OGG, FLAC</span>
                         <input type="file" id="music-file-input" accept="audio/*" style="display:none;">
                     </div>
-                    <div class="music-upload-details hidden" id="music-upload-details">
+                    <div class="music-upload-details hidden" id="music-file-details">
                         <div class="music-file-info">
                             <i class="fas fa-file-audio" style="font-size:1.5rem;color:var(--purple);"></i>
                             <div class="music-file-meta">
@@ -354,14 +354,8 @@
                             <label for="music-artist-name">Artist</label>
                             <input type="text" id="music-artist-name" placeholder="Enter artist name">
                         </div>
-                        <div class="music-upload-progress hidden" id="music-upload-progress">
-                            <div class="progress-bar-container">
-                                <div class="progress-bar-fill" id="music-progress-fill"></div>
-                            </div>
-                            <span id="music-progress-text">Uploading...</span>
-                        </div>
                         <button class="btn-primary" id="music-share-submit" style="width:100%;margin-top:10px;">
-                            <i class="fas fa-share"></i> Share with Room
+                            <i class="fas fa-play"></i> Play for Room
                         </button>
                     </div>
                 </div>

@@ -17,7 +17,6 @@ const merchRoutes = require('./routes/merch');
 const articleRoutes = require('./routes/articles');
 const adsRoutes = require('./routes/ads'); // Advertising system
 const analyticsRoutes = require('./routes/analytics'); // Usage metrics
-const roomsRoutes = require('./routes/rooms'); // Room file sharing
 const trackingMiddleware = require('./middleware/tracking'); // Event tracking
 
 const app = express();
@@ -106,16 +105,6 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
-    setHeaders: (res, filePath) => {
-        if (filePath.match(/\.(mp3|wav|m4a|aac|ogg|flac)$/i)) {
-            res.setHeader('Content-Type', 'audio/' + path.extname(filePath).slice(1));
-            res.setHeader('Accept-Ranges', 'bytes');
-        }
-    }
-}));
-
 // Serve static files with cache control
 app.use(express.static(path.join(__dirname), {
     setHeaders: (res) => {
@@ -139,8 +128,6 @@ app.use('/api/merch', merchRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/ads', adsRoutes); // Advertising system
 app.use('/api/analytics', analyticsRoutes); // Usage metrics & admin dashboard
-app.use('/api/rooms', roomsRoutes); // Room file sharing
-
 app.get('/api/rooms/active', (req, res) => {
     res.json(getActiveRooms());
 });

@@ -231,17 +231,16 @@ function setupSignaling(io) {
             });
         });
 
-        socket.on('room-audio-share', ({ roomId, audioUrl, songTitle, artistName, duration }) => {
-            if (!roomId || !audioUrl) return;
+        socket.on('music-stream-status', ({ roomId, songTitle, artistName, playing }) => {
+            if (!roomId) return;
             const room = rooms.get(roomId);
             if (!room || !room.participants.has(socket.id)) return;
-            socket.to(roomId).emit('room-audio-share', {
+            socket.to(roomId).emit('music-stream-status', {
                 sender: socket.userName || 'Someone',
                 senderId: socket.userId,
-                audioUrl,
                 songTitle: songTitle || 'Untitled Track',
                 artistName: artistName || 'Unknown Artist',
-                duration: duration || 0
+                playing: !!playing
             });
         });
 
