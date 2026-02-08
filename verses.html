@@ -301,7 +301,7 @@
                         </div>
                     </button>
                 </div>
-                <input type="file" id="mobile-image-input" accept="image/*" capture="environment" style="display:none;">
+                <input type="file" id="mobile-image-input" accept="image/*" style="display:none;">
             </div>
         </div>
 
@@ -545,7 +545,7 @@
                             </button>
                         </div>
                         <div class="yt-embed-wrapper" id="yt-embed-wrapper" style="display:none;">
-                            <iframe id="yt-embed-iframe" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                            <div id="yt-player-container"></div>
                             <button class="yt-embed-close" id="yt-embed-close" title="Close video">&times;</button>
                         </div>
                         <div class="audio-status" id="audio-status">
@@ -605,6 +605,7 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
     <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/util.min.js"></script>
     <script src="js/config.js"></script>

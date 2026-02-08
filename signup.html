@@ -23,7 +23,49 @@
             <a href="lyrics.html">Lyrics</a>
             <a href="merch.html">Merch</a>
         </div>
+        <button class="menu-toggle" id="menuToggle">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
     </nav>
+
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-content">
+            <div class="mobile-menu-header">
+                <img src="images/logo.png" alt="Wordeth Logo" class="mobile-logo">
+                <button class="mobile-menu-close" id="mobileMenuClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mobile-menu-links">
+                <a href="verses.html" class="mobile-menu-link">
+                    <i class="fas fa-headphones"></i>
+                    <span>Verses</span>
+                </a>
+                <a href="lyrics.html" class="mobile-menu-link">
+                    <i class="fas fa-music"></i>
+                    <span>Lyrics</span>
+                </a>
+                <a href="merch.html" class="mobile-menu-link">
+                    <i class="fas fa-tshirt"></i>
+                    <span>Merch</span>
+                </a>
+            </div>
+            <div class="mobile-menu-search">
+                <input type="text" placeholder="Search..." class="mobile-search-input">
+                <button class="mobile-search-btn">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <div class="mobile-menu-auth">
+                <a href="/signin.html" class="mobile-signin-btn">
+                    <i class="fas fa-user"></i>
+                    <span>Sign In</span>
+                </a>
+            </div>
+        </div>
+    </div>
 
     <main class="auth-container">
         <div class="auth-box">
@@ -102,6 +144,7 @@
     })();
     </script>
     <script src="js/config.js"></script>
+    <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/cookie-consent.js"></script>
 </body>

@@ -26,6 +26,7 @@ class AudioRoomsManager {
         
         // YouTube player state
         this.youtubeReady = false;
+        this.ytPlayer = null;
         this.currentVideoId = null;
         this.videoQueue = [];
         this.videoQueueIndex = 0;
@@ -1955,102 +1956,181 @@ class AudioRoomsManager {
         if (!this.localStream) return;
         
         try {
-            // Create audio context if it doesn't exist
-            if (!this.audioContext) {
+            if (this._filterOscillators) {
+                this._filterOscillators.forEach(osc => {
+                    try { osc.stop(); } catch(e) {}
+                });
+            }
+            this._filterOscillators = [];
+
+            if (!this.audioContext || this.audioContext.state === 'closed') {
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             }
+            if (this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
+            }
             
-            // Get the audio track
-            const audioTrack = this.localStream.getAudioTracks()[0];
+            const audioTrack = this.originalAudioTrack || this.localStream.getAudioTracks()[0];
             if (!audioTrack) return;
-            
-            // Create media stream source
-            const source = this.audioContext.createMediaStreamSource(this.localStream);
-            
-            // Create destination
+
+            if (!this.originalAudioTrack) {
+                this.originalAudioTrack = audioTrack;
+            }
+
+            const sourceStream = new MediaStream([this.originalAudioTrack]);
+            const source = this.audioContext.createMediaStreamSource(sourceStream);
             const destination = this.audioContext.createMediaStreamDestination();
             
-            // Clear previous filter chain
             if (this.audioFilterNodes.source) {
-                this.audioFilterNodes.source.disconnect();
+                try { this.audioFilterNodes.source.disconnect(); } catch(e) {}
             }
             
             // Apply filter based on type
             let outputNode = source;
             
             switch (filterType) {
-                case 'helium':
-                    // Pitch shift up (high-pitched voice)
-                    // Using a simple gain and playback rate simulation
-                    const heliumGain = this.audioContext.createGain();
-                    heliumGain.gain.value = 1.2;
-                    source.connect(heliumGain);
-                    outputNode = heliumGain;
-                    console.log('Helium filter applied - voice pitched up');
+                case 'helium': {
+                    const highShelf = this.audioContext.createBiquadFilter();
+                    highShelf.type = 'highshelf';
+                    highShelf.frequency.value = 1000;
+                    highShelf.gain.value = 12;
+
+                    const lowShelf = this.audioContext.createBiquadFilter();
+                    lowShelf.type = 'lowshelf';
+                    lowShelf.frequency.value = 300;
+                    lowShelf.gain.value = -18;
+
+                    const ringOsc = this.audioContext.createOscillator();
+                    ringOsc.frequency.value = 200;
+                    ringOsc.type = 'sine';
+                    const ringGain = this.audioContext.createGain();
+                    ringGain.gain.value = 0;
+                    ringOsc.connect(ringGain.gain);
+                    ringOsc.start();
+                    this._filterOscillators = this._filterOscillators || [];
+                    this._filterOscillators.push(ringOsc);
+
+                    source.connect(ringGain);
+                    ringGain.connect(highShelf);
+                    highShelf.connect(lowShelf);
+
+                    const heliumBoost = this.audioContext.createGain();
+                    heliumBoost.gain.value = 1.8;
+                    lowShelf.connect(heliumBoost);
+                    outputNode = heliumBoost;
+                    console.log('Helium filter applied');
                     break;
-                    
-                case 'alien':
-                    // Ring modulator effect for robotic sound
-                    const oscillator = this.audioContext.createOscillator();
-                    const alienGain = this.audioContext.createGain();
-                    oscillator.frequency.value = 30; // Low frequency modulation
-                    oscillator.type = 'sine';
-                    alienGain.gain.value = 0.5;
-                    oscillator.connect(alienGain);
-                    oscillator.start();
-                    source.connect(alienGain);
-                    outputNode = alienGain;
-                    console.log('Alien filter applied - robotic modulation');
+                }
+
+                case 'alien': {
+                    const modGain = this.audioContext.createGain();
+                    modGain.gain.value = 0;
+
+                    const alienOsc = this.audioContext.createOscillator();
+                    alienOsc.frequency.value = 40;
+                    alienOsc.type = 'square';
+                    alienOsc.connect(modGain.gain);
+                    alienOsc.start();
+                    this._filterOscillators = this._filterOscillators || [];
+                    this._filterOscillators.push(alienOsc);
+
+                    source.connect(modGain);
+
+                    const alienHighpass = this.audioContext.createBiquadFilter();
+                    alienHighpass.type = 'highpass';
+                    alienHighpass.frequency.value = 500;
+                    alienHighpass.Q.value = 2;
+
+                    const alienDistortion = this.audioContext.createWaveShaper();
+                    alienDistortion.curve = this.makeDistortionCurve(30);
+                    alienDistortion.oversample = '4x';
+
+                    modGain.connect(alienHighpass);
+                    alienHighpass.connect(alienDistortion);
+
+                    const alienOut = this.audioContext.createGain();
+                    alienOut.gain.value = 1.5;
+                    alienDistortion.connect(alienOut);
+                    outputNode = alienOut;
+                    console.log('Alien filter applied');
                     break;
-                    
-                case 'deep':
-                    // Low-pass filter for deeper voice
+                }
+
+                case 'deep': {
                     const lowpass = this.audioContext.createBiquadFilter();
                     lowpass.type = 'lowpass';
-                    lowpass.frequency.value = 800;
-                    lowpass.Q.value = 1;
+                    lowpass.frequency.value = 600;
+                    lowpass.Q.value = 2;
+
+                    const lowBoost = this.audioContext.createBiquadFilter();
+                    lowBoost.type = 'lowshelf';
+                    lowBoost.frequency.value = 200;
+                    lowBoost.gain.value = 15;
+
                     const deepGain = this.audioContext.createGain();
-                    deepGain.gain.value = 1.5;
+                    deepGain.gain.value = 2.0;
+
                     source.connect(lowpass);
-                    lowpass.connect(deepGain);
+                    lowpass.connect(lowBoost);
+                    lowBoost.connect(deepGain);
                     outputNode = deepGain;
-                    console.log('Deep filter applied - lower frequencies emphasized');
+                    console.log('Deep filter applied');
                     break;
-                    
-                case 'echo':
-                    // Delay/reverb effect
-                    const delay = this.audioContext.createDelay();
-                    delay.delayTime.value = 0.3;
-                    const feedback = this.audioContext.createGain();
-                    feedback.gain.value = 0.4;
-                    const echoGain = this.audioContext.createGain();
-                    echoGain.gain.value = 0.8;
-                    source.connect(echoGain);
-                    source.connect(delay);
-                    delay.connect(feedback);
-                    feedback.connect(delay);
-                    delay.connect(echoGain);
-                    outputNode = echoGain;
-                    console.log('Echo filter applied - reverb effect');
+                }
+
+                case 'echo': {
+                    const merger = this.audioContext.createGain();
+                    merger.gain.value = 0.7;
+                    source.connect(merger);
+
+                    const delay1 = this.audioContext.createDelay(2.0);
+                    delay1.delayTime.value = 0.25;
+                    const fb1 = this.audioContext.createGain();
+                    fb1.gain.value = 0.45;
+
+                    const delay2 = this.audioContext.createDelay(2.0);
+                    delay2.delayTime.value = 0.5;
+                    const fb2 = this.audioContext.createGain();
+                    fb2.gain.value = 0.25;
+
+                    source.connect(delay1);
+                    delay1.connect(fb1);
+                    fb1.connect(delay1);
+                    delay1.connect(merger);
+
+                    source.connect(delay2);
+                    delay2.connect(fb2);
+                    fb2.connect(delay2);
+                    delay2.connect(merger);
+
+                    outputNode = merger;
+                    console.log('Echo filter applied');
                     break;
-                    
-                case 'radio':
-                    // Bandpass filter for old radio sound
+                }
+
+                case 'radio': {
                     const bandpass = this.audioContext.createBiquadFilter();
                     bandpass.type = 'bandpass';
                     bandpass.frequency.value = 2000;
-                    bandpass.Q.value = 0.5;
+                    bandpass.Q.value = 1.5;
+
                     const distortion = this.audioContext.createWaveShaper();
-                    distortion.curve = this.makeDistortionCurve(50);
+                    distortion.curve = this.makeDistortionCurve(80);
+                    distortion.oversample = '4x';
+
+                    const radioGain = this.audioContext.createGain();
+                    radioGain.gain.value = 1.3;
+
                     source.connect(bandpass);
                     bandpass.connect(distortion);
-                    outputNode = distortion;
-                    console.log('Radio filter applied - vintage broadcast effect');
+                    distortion.connect(radioGain);
+                    outputNode = radioGain;
+                    console.log('Radio filter applied');
                     break;
-                    
+                }
+
                 case 'normal':
                 default:
-                    // No filter - direct connection
                     console.log('Normal voice - no filter');
                     break;
             }
@@ -2095,24 +2175,31 @@ class AudioRoomsManager {
     }
     
     resetAudioFilter() {
-        // Reset to original unfiltered audio
+        if (this._filterOscillators) {
+            this._filterOscillators.forEach(osc => {
+                try { osc.stop(); } catch(e) {}
+            });
+            this._filterOscillators = [];
+        }
+
         if (this.originalAudioTrack && this.localStream) {
             const currentTrack = this.localStream.getAudioTracks()[0];
             if (currentTrack) {
                 this.localStream.removeTrack(currentTrack);
             }
             this.localStream.addTrack(this.originalAudioTrack);
-            
-            // Update peer connections
+
             this.peerConnections.forEach((pc) => {
                 const sender = pc.getSenders().find(s => s.track?.kind === 'audio');
                 if (sender) {
                     sender.replaceTrack(this.originalAudioTrack);
                 }
             });
-            
-            // Clear audio context
-            if (this.audioContext) {
+
+            if (this.audioFilterNodes.source) {
+                try { this.audioFilterNodes.source.disconnect(); } catch(e) {}
+            }
+            if (this.audioContext && !this.audioMixEnabled) {
                 this.audioContext.close();
                 this.audioContext = null;
             }
@@ -3995,17 +4082,16 @@ class AudioRoomsManager {
         tick();
     }
 
-    // YouTube Player Integration
     initYouTubePlayer() {
-        console.log('YouTube embed mode ready');
-        this.youtubeReady = true;
-    }
-    
-    onYouTubeApiReady() {
-        this.youtubeReady = true;
-    }
-    
-    createYouTubePlayer() {
+        if (window.YT && window.YT.Player) {
+            this.youtubeReady = true;
+            console.log('YouTube IFrame API ready');
+        } else {
+            window.onYouTubeIframeAPIReady = () => {
+                this.youtubeReady = true;
+                console.log('YouTube IFrame API loaded');
+            };
+        }
     }
     
     updateAudioStatus(state, message) {
@@ -4050,16 +4136,77 @@ class AudioRoomsManager {
     
     embedYouTubeVideo(videoId) {
         const wrapper = document.getElementById('yt-embed-wrapper');
-        const iframe = document.getElementById('yt-embed-iframe');
-        if (!wrapper || !iframe) return;
-        
-        iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0&modestbranding=1`;
+        const container = document.getElementById('yt-player-container');
+        if (!wrapper || !container) return;
+
+        if (this.ytPlayer) {
+            try { this.ytPlayer.destroy(); } catch(e) {}
+            this.ytPlayer = null;
+        }
+        container.innerHTML = '';
+
+        const playerDiv = document.createElement('div');
+        playerDiv.id = 'yt-api-player';
+        container.appendChild(playerDiv);
+
         wrapper.style.display = '';
         this.currentVideoId = videoId;
-        this.updateAudioStatus('playing', 'Playing');
-        
-        this.showShareAudioButton();
-        
+        this.updateAudioStatus('loading', 'Loading video...');
+
+        const createPlayer = () => {
+            this.ytPlayer = new YT.Player('yt-api-player', {
+                videoId: videoId,
+                width: '100%',
+                height: '100%',
+                playerVars: {
+                    autoplay: 1,
+                    playsinline: 1,
+                    rel: 0,
+                    modestbranding: 1,
+                    origin: window.location.origin,
+                    enablejsapi: 1,
+                    fs: 0
+                },
+                events: {
+                    onReady: () => {
+                        this.updateAudioStatus('playing', 'Playing');
+                        this.showShareAudioButton();
+                    },
+                    onError: (event) => {
+                        const errorMessages = {
+                            2: 'Invalid video ID',
+                            5: 'Video cannot be played in HTML5',
+                            100: 'Video not found or removed',
+                            101: 'Video owner does not allow embedded playback',
+                            150: 'Video owner does not allow embedded playback'
+                        };
+                        const msg = errorMessages[event.data] || `Playback error (code ${event.data})`;
+                        console.error('YouTube player error:', event.data, msg);
+                        this.updateAudioStatus('error', msg);
+                        this.addChatMessage('System', `YouTube error: ${msg}. Try a different video.`, true);
+                    },
+                    onStateChange: (event) => {
+                        if (event.data === YT.PlayerState.PLAYING) {
+                            this.updateAudioStatus('playing', 'Playing');
+                        } else if (event.data === YT.PlayerState.PAUSED) {
+                            this.updateAudioStatus('ready', 'Paused');
+                        } else if (event.data === YT.PlayerState.ENDED) {
+                            this.updateAudioStatus('ready', 'Video ended');
+                        }
+                    }
+                }
+            });
+        };
+
+        if (window.YT && window.YT.Player) {
+            createPlayer();
+        } else {
+            window.onYouTubeIframeAPIReady = () => {
+                this.youtubeReady = true;
+                createPlayer();
+            };
+        }
+
         if (this.socket && this.currentRoom) {
             this.notifyParticipants('youtube-embed', { videoId });
         }
@@ -4099,9 +4246,13 @@ class AudioRoomsManager {
     }
     
     closeYouTubeEmbed() {
+        if (this.ytPlayer) {
+            try { this.ytPlayer.destroy(); } catch(e) {}
+            this.ytPlayer = null;
+        }
         const wrapper = document.getElementById('yt-embed-wrapper');
-        const iframe = document.getElementById('yt-embed-iframe');
-        if (iframe) iframe.src = '';
+        const container = document.getElementById('yt-player-container');
+        if (container) container.innerHTML = '';
         if (wrapper) wrapper.style.display = 'none';
         const shareBtn = document.getElementById('yt-share-audio-btn');
         if (shareBtn) shareBtn.style.display = 'none';
@@ -4165,9 +4316,8 @@ class AudioRoomsManager {
                 this.youtubeAudioSource = null;
             }
             
-            const iframe = document.getElementById('yt-embed-iframe');
-            if (!iframe) {
-                console.warn('No YouTube iframe found for audio capture');
+            if (!this.ytPlayer) {
+                console.warn('No YouTube player instance for audio capture');
                 return;
             }
             
