@@ -3485,7 +3485,7 @@ class AudioRoomsManager {
         const isAR = filter && filter.startsWith('ar-');
 
         if (isAR) {
-            console.log('[AR] setVideoFilter calling _activateARFilter for:', filter);
+            this.addChatMessage('System', 'Activating AR filter: ' + filter, true);
             this._activateARFilter(filter).catch(err => {
                 console.error('[AR] _activateARFilter error:', err);
                 this.addChatMessage('System', 'AR filter error: ' + err.message, true);
@@ -3523,7 +3523,7 @@ class AudioRoomsManager {
     }
 
     async _activateARFilter(filter) {
-        console.log('[AR] _activateARFilter called, filter:', filter, 'karaokeVideoActive:', this.karaokeVideoActive);
+        this.addChatMessage('System', '[AR Debug] Camera active: ' + this.karaokeVideoActive, true);
         document.querySelectorAll('.video-filter-btn').forEach(btn => {
             btn.classList.toggle('active', false);
         });
@@ -3560,30 +3560,35 @@ class AudioRoomsManager {
             }
         }
 
+        const arEngineAvailable = typeof ARFilterEngine !== 'undefined';
+        this.addChatMessage('System', '[AR Debug] ARFilterEngine class available: ' + arEngineAvailable, true);
+        if (!arEngineAvailable) {
+            this.addChatMessage('System', 'AR filters not available — script failed to load.', true);
+            return;
+        }
+
         if (!this.arFilterEngine) {
-            console.log('[AR] Creating new ARFilterEngine');
             this.arFilterEngine = new ARFilterEngine();
         }
 
-        console.log('[AR] Engine state — ready:', this.arFilterEngine.ready, 'arFilterLoading:', this.arFilterLoading);
+        this.addChatMessage('System', '[AR Debug] Engine ready: ' + this.arFilterEngine.ready + ', loading: ' + !!this.arFilterLoading, true);
 
         if (!this.arFilterEngine.ready) {
             if (this.arFilterLoading) {
-                console.log('[AR] Already loading, skipping');
+                this.addChatMessage('System', '[AR Debug] Already loading, skipping', true);
                 return;
             }
             this.arFilterLoading = true;
             this.addChatMessage('System', 'Loading AR face filter... (first time may take a moment)', true);
-            console.log('[AR] Starting init...');
             const ok = await this.arFilterEngine.init();
             this.arFilterLoading = false;
-            console.log('[AR] Init result:', ok);
+            this.addChatMessage('System', '[AR Debug] Init result: ' + ok, true);
             if (!ok) {
                 this.addChatMessage('System', 'AR filter failed to load. Try again.', true);
                 return;
             }
             if (this.currentVideoFilter !== filter) {
-                console.log('[AR] Filter changed during init, aborting');
+                this.addChatMessage('System', '[AR Debug] Filter changed during load, aborting', true);
                 return;
             }
             this.addChatMessage('System', 'AR face filter ready!', true);
