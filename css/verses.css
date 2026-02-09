@@ -3286,6 +3286,7 @@
         transition: transform 0.3s ease;
         background: linear-gradient(135deg, #1a1a2e 0%, #0a0a0a 100%);
         box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+        padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
     }
     .chat-section.hidden {
         transform: translateY(100%);

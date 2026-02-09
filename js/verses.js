@@ -3571,17 +3571,15 @@ class AudioRoomsManager {
             this.arFilterEngine = new ARFilterEngine();
         }
 
-        this.addChatMessage('System', '[AR Debug] Engine ready: ' + this.arFilterEngine.ready + ', loading: ' + !!this.arFilterLoading, true);
+        this.addChatMessage('System', '[AR Debug] Engine ready: ' + this.arFilterEngine.ready + ', loading: ' + this.arFilterEngine.loading, true);
 
         if (!this.arFilterEngine.ready) {
-            if (this.arFilterLoading) {
-                this.addChatMessage('System', '[AR Debug] Already loading, skipping', true);
-                return;
+            if (!this.arFilterEngine.loading) {
+                this.addChatMessage('System', 'Loading AR face filter... (first time may take a moment)', true);
+            } else {
+                this.addChatMessage('System', 'AR filter still loading, please wait...', true);
             }
-            this.arFilterLoading = true;
-            this.addChatMessage('System', 'Loading AR face filter... (first time may take a moment)', true);
             const ok = await this.arFilterEngine.init();
-            this.arFilterLoading = false;
             this.addChatMessage('System', '[AR Debug] Init result: ' + ok, true);
             if (!ok) {
                 this.addChatMessage('System', 'AR filter failed to load. Try again.', true);

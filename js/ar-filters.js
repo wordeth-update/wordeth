@@ -6,10 +6,20 @@ class ARFilterEngine {
         this.activeFilter = null;
         this.lastVideoTime = -1;
         this.landmarks = null;
+        this._initPromise = null;
     }
 
     async init() {
-        if (this.ready || this.loading) return this.ready;
+        if (this.ready) return true;
+        if (this._initPromise) return this._initPromise;
+
+        this._initPromise = this._doInit();
+        const result = await this._initPromise;
+        this._initPromise = null;
+        return result;
+    }
+
+    async _doInit() {
         this.loading = true;
 
         try {
@@ -17,7 +27,7 @@ class ARFilterEngine {
             const { FaceLandmarker, FilesetResolver } = vision;
 
             const filesetResolver = await FilesetResolver.forVisionTasks(
-                'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+                'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
             );
 
             let faceLandmarker;
@@ -64,8 +74,17 @@ class ARFilterEngine {
             return window._mediapipeVision;
         }
 
+        const timeout = (ms) => new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms)
+        );
+
         try {
-            const vision = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.mjs');
+            console.log('[AR] Trying ESM dynamic import...');
+            const vision = await Promise.race([
+                import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs'),
+                timeout(15000)
+            ]);
+            console.log('[AR] ESM import succeeded, exports:', Object.keys(vision).filter(k => /Face|Fileset|Draw/.test(k)));
             window._mediapipeVision = {
                 FaceLandmarker: vision.FaceLandmarker,
                 FilesetResolver: vision.FilesetResolver,
@@ -73,26 +92,35 @@ class ARFilterEngine {
             };
             return window._mediapipeVision;
         } catch (esmErr) {
-            console.warn('ESM import failed, trying script tag fallback:', esmErr.message);
+            console.warn('[AR] ESM import failed:', esmErr.message);
         }
 
+        console.log('[AR] Trying UMD script tag fallback...');
         return new Promise((resolve, reject) => {
+            const timer = setTimeout(() => {
+                reject(new Error('MediaPipe script load timed out after 15s'));
+            }, 15000);
+
             const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js';
+            script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.js';
             script.crossOrigin = 'anonymous';
-            script.type = 'module';
             script.onload = () => {
                 let attempts = 0;
                 const check = () => {
                     attempts++;
-                    if (window.FilesetResolver && window.FaceLandmarker) {
+                    const fl = window.FaceLandmarker || (window.vision && window.vision.FaceLandmarker);
+                    const fr = window.FilesetResolver || (window.vision && window.vision.FilesetResolver);
+                    if (fl && fr) {
+                        clearTimeout(timer);
                         window._mediapipeVision = {
-                            FaceLandmarker: window.FaceLandmarker,
-                            FilesetResolver: window.FilesetResolver,
-                            DrawingUtils: window.DrawingUtils
+                            FaceLandmarker: fl,
+                            FilesetResolver: fr,
+                            DrawingUtils: window.DrawingUtils || (window.vision && window.vision.DrawingUtils)
                         };
+                        console.log('[AR] UMD script loaded successfully');
                         resolve(window._mediapipeVision);
                     } else if (attempts > 100) {
+                        clearTimeout(timer);
                         reject(new Error('MediaPipe globals not found after script load'));
                     } else {
                         setTimeout(check, 50);
@@ -100,7 +128,10 @@ class ARFilterEngine {
                 };
                 check();
             };
-            script.onerror = () => reject(new Error('Failed to load MediaPipe vision bundle'));
+            script.onerror = () => {
+                clearTimeout(timer);
+                reject(new Error('Failed to load MediaPipe vision bundle'));
+            };
             document.head.appendChild(script);
         });
     }
