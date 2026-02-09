@@ -59,17 +59,32 @@ class ARFilterEngine {
         }
     }
 
-    _loadVisionModule() {
+    async _loadVisionModule() {
+        if (window._mediapipeVision) {
+            return window._mediapipeVision;
+        }
+
+        try {
+            const vision = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.mjs');
+            window._mediapipeVision = {
+                FaceLandmarker: vision.FaceLandmarker,
+                FilesetResolver: vision.FilesetResolver,
+                DrawingUtils: vision.DrawingUtils
+            };
+            return window._mediapipeVision;
+        } catch (esmErr) {
+            console.warn('ESM import failed, trying script tag fallback:', esmErr.message);
+        }
+
         return new Promise((resolve, reject) => {
-            if (window._mediapipeVision) {
-                resolve(window._mediapipeVision);
-                return;
-            }
             const script = document.createElement('script');
             script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js';
             script.crossOrigin = 'anonymous';
+            script.type = 'module';
             script.onload = () => {
+                let attempts = 0;
                 const check = () => {
+                    attempts++;
                     if (window.FilesetResolver && window.FaceLandmarker) {
                         window._mediapipeVision = {
                             FaceLandmarker: window.FaceLandmarker,
@@ -77,6 +92,8 @@ class ARFilterEngine {
                             DrawingUtils: window.DrawingUtils
                         };
                         resolve(window._mediapipeVision);
+                    } else if (attempts > 100) {
+                        reject(new Error('MediaPipe globals not found after script load'));
                     } else {
                         setTimeout(check, 50);
                     }
