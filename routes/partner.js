@@ -150,7 +150,7 @@ router.get('/dashboard/artist/:artistSlug', partnerAuth, async (req, res) => {
             if (endDate) dateFilter.saleDate.$lte = new Date(endDate);
         }
 
-        const [stats, skuBreakdown, songBreakdown, albumBreakdown, geoBreakdown, monthlyTrend] = await Promise.all([
+        const [stats, skuBreakdown, songBreakdown, albumBreakdown, lyricsLeaderboard, geoBreakdown, monthlyTrend] = await Promise.all([
             MerchSale.aggregate([
                 { $match: dateFilter },
                 { $group: {
@@ -210,6 +210,25 @@ router.get('/dashboard/artist/:artistSlug', partnerAuth, async (req, res) => {
                 { $sort: { revenue: -1 } }
             ]),
             MerchSale.aggregate([
+                { $match: { ...dateFilter, lyricsSnippet: { $exists: true, $nin: ['', null] } } },
+                { $group: {
+                    _id: '$lyricsSnippet',
+                    songTitle: { $first: '$songTitle' },
+                    albumTitle: { $first: '$albumTitle' },
+                    totalMakes: { $sum: '$quantity' },
+                    revenue: { $sum: '$totalAmount' },
+                    orders: { $sum: 1 },
+                    productTypes: { $addToSet: '$productType' },
+                    skus: { $addToSet: '$sku' }
+                }},
+                { $addFields: {
+                    skuCount: { $size: '$skus' },
+                    coined: { $gte: ['$totalMakes', 400] }
+                }},
+                { $project: { skus: 0 } },
+                { $sort: { totalMakes: -1 } }
+            ]),
+            MerchSale.aggregate([
                 { $match: dateFilter },
                 { $group: {
                     _id: { country: '$geo.country', countryCode: '$geo.countryCode' },
@@ -240,6 +259,7 @@ router.get('/dashboard/artist/:artistSlug', partnerAuth, async (req, res) => {
                 skuBreakdown,
                 songBreakdown,
                 albumBreakdown,
+                lyricsLeaderboard,
                 geoBreakdown,
                 monthlyTrend
             }

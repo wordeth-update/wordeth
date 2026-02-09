@@ -305,6 +305,7 @@ class PartnerDashboard {
         this.renderArtistRevenueChart(d.monthlyTrend);
         this.renderSongTable(d.songBreakdown);
         this.renderAlbumTable(d.albumBreakdown);
+        this.renderLyricsLeaderboard(d.lyricsLeaderboard);
         this.renderSkuTable(d.skuBreakdown);
         this.renderArtistGeoTable(d.geoBreakdown);
         this.initTallyTabs();
@@ -413,6 +414,42 @@ class PartnerDashboard {
                 document.getElementById('albumTable').style.display = target === 'albums' ? '' : 'none';
             });
         });
+    }
+
+    renderLyricsLeaderboard(lyrics) {
+        const el = document.getElementById('lyricsLeaderboard');
+        if (!lyrics || !lyrics.length) {
+            el.innerHTML = '<p class="muted">No lyrics data available for this artist.</p>';
+            return;
+        }
+        const maxMakes = Math.max(...lyrics.map(l => l.totalMakes), 1);
+        const html = `<table class="data-table lyrics-leaderboard">
+            <thead><tr>
+                <th>#</th><th>Lyric</th><th>Song</th><th>Album</th><th>Apparel Types</th><th>Total Makes</th><th>Revenue</th><th></th>
+            </tr></thead>
+            <tbody>
+                ${lyrics.map((l, i) => {
+                    const barWidth = Math.round((l.totalMakes / maxMakes) * 100);
+                    return `<tr class="${l.coined ? 'coined-row' : ''}">
+                        <td class="rank">${i + 1}</td>
+                        <td class="lyric-text">
+                            <span class="lyric-quote">"${l._id}"</span>
+                            ${l.coined ? '<span class="coined-badge">Coined</span>' : ''}
+                        </td>
+                        <td class="muted">${l.songTitle || '-'}</td>
+                        <td class="muted">${l.albumTitle || '-'}</td>
+                        <td>${l.productTypes ? l.productTypes.map(t => `<span class="product-tag">${t}</span>`).join('') : '-'}</td>
+                        <td class="makes-cell">
+                            <span class="makes-count">${this.formatNumber(l.totalMakes)}</span>
+                            <div class="makes-bar"><div class="makes-bar-fill${l.coined ? ' coined' : ''}" style="width:${barWidth}%"></div></div>
+                        </td>
+                        <td class="revenue">${this.formatCurrency(l.revenue)}</td>
+                        <td>${l.coined ? '<i class="fas fa-fire coined-icon"></i>' : ''}</td>
+                    </tr>`;
+                }).join('')}
+            </tbody>
+        </table>`;
+        el.innerHTML = html;
     }
 
     renderSkuTable(skus) {
