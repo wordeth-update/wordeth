@@ -24,14 +24,6 @@
             margin-bottom: 1.5rem;
             color: white;
         }
-        .auth-container h2 {
-            margin-bottom: 0.5rem;
-        }
-        .auth-container .subtitle {
-            color: var(--purple-light);
-            font-size: 0.9rem;
-            margin-bottom: 2rem;
-        }
         .demo-credentials {
             background: rgba(150, 197, 176, 0.1);
             border: 1px solid rgba(150, 197, 176, 0.2);
@@ -70,25 +62,25 @@
         </div>
     </nav>
 
-    <div class="auth-page">
-        <div class="auth-container">
+    <div class="auth-container">
+        <div class="auth-box">
             <div class="partner-badge">
                 <i class="fas fa-chart-line"></i> Partner Portal
             </div>
-            <h2>Label Dashboard Login</h2>
-            <p class="subtitle">Access your real-time revenue and sales analytics</p>
+            <h1>Label Dashboard Login</h1>
+            <p class="auth-subtitle">Access your real-time revenue and sales analytics</p>
 
-            <form id="partnerLoginForm">
+            <form id="partnerLoginForm" class="auth-form">
                 <div class="form-group">
                     <label for="email">Email</label>
-                    <input type="email" id="email" required placeholder="partner@label.com">
+                    <input type="email" id="email" required placeholder="partner@label.com" autocomplete="email">
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" required placeholder="Enter your password">
+                    <input type="password" id="password" required placeholder="Enter your password" autocomplete="current-password">
                 </div>
                 <div id="loginError" class="error-message" style="display:none;"></div>
-                <button type="submit" class="auth-btn">
+                <button type="submit" class="submit-btn">
                     <i class="fas fa-sign-in-alt"></i> Sign In
                 </button>
             </form>
