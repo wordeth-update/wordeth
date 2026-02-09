@@ -42,6 +42,7 @@ const merchRoutes = require('./routes/merch');
 const articleRoutes = require('./routes/articles');
 const adsRoutes = require('./routes/ads'); // Advertising system
 const analyticsRoutes = require('./routes/analytics'); // Usage metrics
+const partnerRoutes = require('./routes/partner'); // Label partner dashboards
 const trackingMiddleware = require('./middleware/tracking'); // Event tracking
 
 const app = express();
@@ -155,6 +156,7 @@ app.use('/api/merch', merchRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/ads', adsRoutes); // Advertising system
 app.use('/api/analytics', analyticsRoutes); // Usage metrics & admin dashboard
+app.use('/api/partner', partnerRoutes); // Label partner dashboards
 app.get('/api/rooms/active', (req, res) => {
     res.json(getActiveRooms());
 });

@@ -29,6 +29,7 @@ Preferred communication style: Simple, everyday language.
   - `/api/articles` — article content
   - `/api/ads` — advertising system (advertiser registration, ad CRUD, admin approval)
   - `/api/analytics` — usage metrics
+  - `/api/partner` — label partner dashboards (auth, summary, artist drill-down, SKU views, geo heatmaps, shareable links)
   - `/api/rooms/active` — lists active audio rooms with participants
   - `/api/user/profile/:id` — public profile view (returns name, bio, avatar, stats)
 - **WebSocket Signaling** (`routes/signaling.js`):
@@ -40,6 +41,7 @@ Preferred communication style: Simple, everyday language.
   - **Global notifications** (`js/notifications.js`): Loaded on all main pages, connects to Socket.io and registers the logged-in user. Receives `room-invite` events and shows slide-in notification with Join/Dismiss buttons. Auto-dismisses after 15 seconds.
 - **Middleware**: 
   - `middleware/auth.js` — JWT authentication middleware
+  - `middleware/partnerAuth.js` — JWT auth for label partners + share token validation
   - `middleware/tracking.js` — automatic usage event tracking based on route patterns
 - **Security**: Helmet for CSP headers, express-rate-limit (100 req/15min), CORS, trust proxy enabled for Replit
 
@@ -51,6 +53,10 @@ Preferred communication style: Simple, everyday language.
   - `Advertiser.js` — advertiser accounts with bcrypt password, company info, account type, approval status
   - `AdApplication.js` — advertising registration applications
   - `UsageEvent.js` — analytics events with segment, event type, metadata, session tracking
+  - `Label.js` — music label profiles with embedded artists array, revenue share percentage, status
+  - `PartnerUser.js` — label partner login accounts with bcrypt password, role (owner/manager/viewer), linked to Label
+  - `MerchSale.js` — merchandise sales records with SKU, product type, artist, song/album/lyrics references, geographic data (country/region/city/lat/lng), revenue share calculations
+  - `DashboardShare.js` — shareable dashboard link tokens with scope (label/artist), expiry, permissions, access tracking
 - **Connection**: MongoDB connection string expected in `MONGODB_URI` environment variable
 
 ### Authentication
@@ -74,6 +80,16 @@ Preferred communication style: Simple, everyday language.
 - **Advertising**: Contextual keyword-based ads on lyrics pages, with self-serve portal, admin approval workflow, and impression/click tracking
 - **Usage Analytics**: Event tracking middleware automatically logs API usage to MongoDB, with admin dashboard for visualization
 - **Cookie Consent**: Client-side consent banner with localStorage persistence
+- **Label Partner Dashboard** (`partner-login.html`, `partner-dashboard.html`):
+  - Separate JWT auth for label partners (owner/manager/viewer roles)
+  - Label-level overview with total revenue, earnings, orders, units sold
+  - Monthly revenue trend charts (Chart.js line/bar graphs)
+  - Artist breakdown with clickable drill-down to artist-specific views
+  - Artist view: SKU performance, song/lyrics revenue (which lyrics are on which merch), geographic breakdown
+  - Interactive geographic sales heatmap (Leaflet.js with CartoDB dark tiles, circle markers sized by revenue)
+  - Shareable dashboard links with token-based auth, configurable scope (label/artist), expiry, and granular permissions
+  - Date range filtering across all views
+  - Seed script (`scripts/seedPartnerData.js`) for demo data with 3 labels, 12 artists, 1250+ sales records across 18 global cities
 
 ### Environment Variables Required
 - `MONGODB_URI` — MongoDB connection string

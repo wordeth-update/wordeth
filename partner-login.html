@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Partner Dashboard - Wordeth</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/auth.css">
+    <style>
+        .partner-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: linear-gradient(135deg, var(--purple-accent), var(--mint));
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1.5rem;
+            color: white;
+        }
+        .auth-container h2 {
+            margin-bottom: 0.5rem;
+        }
+        .auth-container .subtitle {
+            color: var(--purple-light);
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+        .demo-credentials {
+            background: rgba(150, 197, 176, 0.1);
+            border: 1px solid rgba(150, 197, 176, 0.2);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+        }
+        .demo-credentials h4 {
+            color: var(--mint);
+            margin-bottom: 0.5rem;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .demo-credentials p {
+            color: var(--purple-light);
+            margin: 0.25rem 0;
+        }
+        .demo-credentials code {
+            color: var(--white);
+            background: rgba(255,255,255,0.1);
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="main-nav">
+        <a href="/" class="nav-logo">
+            <img src="images/logo.png" alt="Wordeth" onerror="this.style.display='none'">
+        </a>
+        <div class="nav-links">
+            <a href="/">Home</a>
+        </div>
+    </nav>
+
+    <div class="auth-page">
+        <div class="auth-container">
+            <div class="partner-badge">
+                <i class="fas fa-chart-line"></i> Partner Portal
+            </div>
+            <h2>Label Dashboard Login</h2>
+            <p class="subtitle">Access your real-time revenue and sales analytics</p>
+
+            <form id="partnerLoginForm">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required placeholder="partner@label.com">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required placeholder="Enter your password">
+                </div>
+                <div id="loginError" class="error-message" style="display:none;"></div>
+                <button type="submit" class="auth-btn">
+                    <i class="fas fa-sign-in-alt"></i> Sign In
+                </button>
+            </form>
+
+            <div class="demo-credentials">
+                <h4>Demo Accounts</h4>
+                <p><code>partner@dreamville.com</code> / <code>partner123</code></p>
+                <p><code>partner@tde.com</code> / <code>partner123</code></p>
+                <p><code>partner@young-money.com</code> / <code>partner123</code></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        if (localStorage.getItem('partnerToken')) {
+            window.location.href = '/partner-dashboard.html';
+        }
+
+        document.getElementById('partnerLoginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorEl = document.getElementById('loginError');
+            errorEl.style.display = 'none';
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/partner/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    errorEl.textContent = data.message || 'Login failed';
+                    errorEl.style.display = 'block';
+                    return;
+                }
+
+                localStorage.setItem('partnerToken', data.token);
+                localStorage.setItem('partnerLabel', JSON.stringify(data.label));
+                localStorage.setItem('partnerUser', JSON.stringify(data.partner));
+                window.location.href = '/partner-dashboard.html';
+            } catch (err) {
+                errorEl.textContent = 'Connection error. Please try again.';
+                errorEl.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
