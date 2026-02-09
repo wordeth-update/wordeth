@@ -5274,23 +5274,18 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const rooms = await mgr.fetchActiveRooms();
                 const targetRoom = rooms.find(r => r.id === roomToJoin);
-                if (!targetRoom) {
-                    console.warn('Room not found or no longer active:', roomToJoin);
-                    mgr._joiningFromInvite = false;
-                    if (lobby) lobby.style.display = '';
-                    mgr.loadActiveRooms();
-                    mgr.showToast?.('This room is no longer active', 'fa-exclamation-circle');
-                    return;
-                }
-                const roomNameEl = document.getElementById('room-name');
-                if (roomNameEl && targetRoom.name) {
-                    roomNameEl.textContent = targetRoom.name;
+                if (targetRoom) {
+                    const roomNameEl = document.getElementById('room-name');
+                    if (roomNameEl && targetRoom.name) {
+                        roomNameEl.textContent = targetRoom.name;
+                    }
                 }
                 await mgr.joinRoom(roomToJoin);
             } catch(e) {
                 console.error('Error joining room from link:', e);
                 if (lobby) lobby.style.display = '';
                 mgr.loadActiveRooms();
+                mgr.showToast?.('Could not join the room. It may no longer be active.', 'fa-exclamation-circle');
             } finally {
                 if (mgr) mgr._joiningFromInvite = false;
             }
