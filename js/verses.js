@@ -3485,7 +3485,11 @@ class AudioRoomsManager {
         const isAR = filter && filter.startsWith('ar-');
 
         if (isAR) {
-            this._activateARFilter(filter);
+            console.log('[AR] setVideoFilter calling _activateARFilter for:', filter);
+            this._activateARFilter(filter).catch(err => {
+                console.error('[AR] _activateARFilter error:', err);
+                this.addChatMessage('System', 'AR filter error: ' + err.message, true);
+            });
             return;
         }
 
@@ -3519,6 +3523,7 @@ class AudioRoomsManager {
     }
 
     async _activateARFilter(filter) {
+        console.log('[AR] _activateARFilter called, filter:', filter, 'karaokeVideoActive:', this.karaokeVideoActive);
         document.querySelectorAll('.video-filter-btn').forEach(btn => {
             btn.classList.toggle('active', false);
         });
@@ -3556,20 +3561,29 @@ class AudioRoomsManager {
         }
 
         if (!this.arFilterEngine) {
+            console.log('[AR] Creating new ARFilterEngine');
             this.arFilterEngine = new ARFilterEngine();
         }
 
+        console.log('[AR] Engine state — ready:', this.arFilterEngine.ready, 'arFilterLoading:', this.arFilterLoading);
+
         if (!this.arFilterEngine.ready) {
-            if (this.arFilterLoading) return;
+            if (this.arFilterLoading) {
+                console.log('[AR] Already loading, skipping');
+                return;
+            }
             this.arFilterLoading = true;
             this.addChatMessage('System', 'Loading AR face filter... (first time may take a moment)', true);
+            console.log('[AR] Starting init...');
             const ok = await this.arFilterEngine.init();
             this.arFilterLoading = false;
+            console.log('[AR] Init result:', ok);
             if (!ok) {
                 this.addChatMessage('System', 'AR filter failed to load. Try again.', true);
                 return;
             }
             if (this.currentVideoFilter !== filter) {
+                console.log('[AR] Filter changed during init, aborting');
                 return;
             }
             this.addChatMessage('System', 'AR face filter ready!', true);
