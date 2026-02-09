@@ -227,7 +227,7 @@ class ARFilterEngine {
                 this._drawOverlayOnFace(ctx, lm, w, h, 'ar-jazz', { scaleW: 1.3, scaleH: 1.1, offsetY: -0.1 });
                 break;
             case 'ar-skimask':
-                this._drawOverlayOnFace(ctx, lm, w, h, 'ar-skimask', { scaleW: 1.6, scaleH: 1.5, offsetY: 0, blendMode: 'source-over' });
+                this._drawOverlayOnFace(ctx, lm, w, h, 'ar-skimask', { scaleW: 1.6, scaleH: 1.5, offsetY: 0, blendMode: 'multiply' });
                 break;
             default:
                 return false;
