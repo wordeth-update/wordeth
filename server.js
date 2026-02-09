@@ -138,6 +138,11 @@ app.use(express.static(path.join(__dirname), {
     }
 }));
 
+// Room invite redirect (handles shared links like /room/ROOMNAME)
+app.get('/room/:roomId', (req, res) => {
+    res.redirect(`/verses.html?room=${encodeURIComponent(req.params.roomId)}`);
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
