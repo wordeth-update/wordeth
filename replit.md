@@ -13,7 +13,7 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 
 ### Frontend
 - **Technology**: Static HTML pages with vanilla CSS and JavaScript (no frontend framework)
-- **Pages**: `index.html` (home), `verses.html` (audio rooms), `lyrics.html` (lyric search), `merch.html` (merchandise), `articles.html`, `signin.html`, `signup.html`, `profile.html`, plus admin pages for ads and analytics
+- **Pages**: `index.html` (home), `verses.html` (audio rooms), `lyrics.html` (lyric search), `merch.html` (merchandise), `articles.html`, `signin.html`, `signup.html`, `profile.html`, `partner-upload.html` (bulk CSV upload), plus admin pages for ads and analytics
 - **Styling**: Multiple CSS files split by feature (`styles.css`, `enhanced.css`, `verses.css`, `lyrics.css`, `auth.css`, `profile.css`, `ads.css`, `advertising.css`, `animations.css`, `cookie-consent.css`, `legal.css`, `usage-metrics.css`). Uses CSS custom properties for theming with a dark color scheme (black/purple/mint palette).
 - **JS Architecture**: Each page has its own JS file (e.g., `js/verses.js`, `js/lyrics.js`, `js/auth.js`, `js/profile.js`). No bundler — scripts are loaded directly. Classes are used for complex page managers (e.g., `AudioRoomsManager`, `ArticlesPageManager`, `AdPortal`).
 - **Design**: Mobile-responsive with hamburger menu. Fonts from Google Fonts (Inter, Poppins). Icons from Font Awesome.
@@ -30,7 +30,7 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
   - `/api/articles` — article content
   - `/api/ads` — advertising system (advertiser registration, ad CRUD, admin approval)
   - `/api/analytics` — usage metrics
-  - `/api/partner` — label partner dashboards (auth, summary, artist drill-down, SKU views, geo heatmaps, shareable links)
+  - `/api/partner` — label partner dashboards (auth, summary, artist drill-down, SKU views, geo heatmaps, shareable links, bulk CSV upload for labels/artists/sales)
   - `/api/rooms/active` — lists active audio rooms with participants
   - `/api/user/profile/:id` — public profile view (returns name, bio, avatar, stats)
 - **WebSocket Signaling** (`routes/signaling.js`):

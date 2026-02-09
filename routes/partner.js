@@ -1,12 +1,26 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const { parse } = require('csv-parse/sync');
 const { body, validationResult } = require('express-validator');
 const PartnerUser = require('../models/PartnerUser');
 const Label = require('../models/Label');
 const MerchSale = require('../models/MerchSale');
 const DashboardShare = require('../models/DashboardShare');
 const { partnerAuth, shareTokenAuth } = require('../middleware/partnerAuth');
+
+const csvUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only CSV files are allowed'), false);
+        }
+    }
+});
 
 router.post('/auth/login', [
     body('email').isEmail().normalizeEmail(),
@@ -56,6 +70,18 @@ router.get('/auth/verify', partnerAuth, async (req, res) => {
         partner: req.partner.getPublicProfile(),
         label: { _id: label._id, name: label.name, slug: label.slug, logoUrl: label.logoUrl }
     });
+});
+
+router.get('/dashboard/artists', partnerAuth, async (req, res) => {
+    try {
+        const artists = (req.label.artists || [])
+            .filter(a => a.active !== false)
+            .map(a => ({ name: a.name, slug: a.slug, genre: a.genre }));
+        res.json({ success: true, data: artists });
+    } catch (error) {
+        console.error('Artists list error:', error);
+        res.status(500).json({ success: false, message: 'Failed to load artists' });
+    }
 });
 
 router.get('/dashboard/summary', partnerAuth, async (req, res) => {
@@ -484,6 +510,201 @@ router.delete('/share/:shareId', partnerAuth, async (req, res) => {
     } catch (error) {
         console.error('Delete share error:', error);
         res.status(500).json({ success: false, message: 'Failed to delete share' });
+    }
+});
+
+router.post('/bulk/label', partnerAuth, csvUpload.single('csvFile'), async (req, res) => {
+    try {
+        if (req.partner.role === 'viewer') {
+            return res.status(403).json({ success: false, message: 'Viewers cannot upload data' });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No CSV file uploaded' });
+        }
+
+        const csvContent = req.file.buffer.toString('utf-8');
+        let records;
+        try {
+            records = parse(csvContent, {
+                columns: true,
+                skip_empty_lines: true,
+                trim: true,
+                relax_column_count: true
+            });
+        } catch (parseErr) {
+            return res.status(400).json({ success: false, message: `CSV parsing error: ${parseErr.message}` });
+        }
+
+        if (!records.length) {
+            return res.status(400).json({ success: false, message: 'CSV file is empty' });
+        }
+
+        const requiredCols = ['artist_name', 'artist_slug'];
+        const headers = Object.keys(records[0]);
+        const missingCols = requiredCols.filter(c => !headers.includes(c));
+        if (missingCols.length) {
+            return res.status(400).json({
+                success: false,
+                message: `Missing required columns: ${missingCols.join(', ')}`,
+                expected: ['artist_name', 'artist_slug', 'artist_genre', 'artist_image_url']
+            });
+        }
+
+        const label = req.label;
+        const newArtists = [];
+        const errors = [];
+
+        records.forEach((row, i) => {
+            const rowNum = i + 2;
+
+            if (!row.artist_name || !row.artist_slug) {
+                errors.push(`Row ${rowNum}: Missing artist_name or artist_slug`);
+                return;
+            }
+
+            const artistSlug = row.artist_slug.toLowerCase().trim();
+            const alreadyOnLabel = label.artists.find(a => a.slug === artistSlug);
+            const alreadyInBatch = newArtists.find(a => a.slug === artistSlug);
+
+            if (!alreadyOnLabel && !alreadyInBatch) {
+                newArtists.push({
+                    name: row.artist_name.trim(),
+                    slug: artistSlug,
+                    genre: (row.artist_genre || '').trim(),
+                    imageUrl: (row.artist_image_url || '').trim(),
+                    active: true
+                });
+            }
+        });
+
+        if (newArtists.length) {
+            label.artists.push(...newArtists);
+            await label.save();
+        }
+
+        res.json({
+            success: true,
+            message: `Processed ${records.length} rows for ${label.name}`,
+            data: {
+                artistsAdded: newArtists.length,
+                artistsSkipped: records.length - newArtists.length - errors.length,
+                errors: errors.length ? errors : undefined
+            }
+        });
+    } catch (error) {
+        console.error('Bulk label upload error:', error);
+        res.status(500).json({ success: false, message: 'Failed to process CSV upload' });
+    }
+});
+
+router.post('/bulk/sales', partnerAuth, csvUpload.single('csvFile'), async (req, res) => {
+    try {
+        if (req.partner.role === 'viewer') {
+            return res.status(403).json({ success: false, message: 'Viewers cannot upload data' });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No CSV file uploaded' });
+        }
+
+        const csvContent = req.file.buffer.toString('utf-8');
+        let records;
+        try {
+            records = parse(csvContent, {
+                columns: true,
+                skip_empty_lines: true,
+                trim: true,
+                relax_column_count: true
+            });
+        } catch (parseErr) {
+            return res.status(400).json({ success: false, message: `CSV parsing error: ${parseErr.message}` });
+        }
+
+        if (!records.length) {
+            return res.status(400).json({ success: false, message: 'CSV file is empty' });
+        }
+
+        const requiredCols = ['order_id', 'artist_name', 'artist_slug', 'product_name', 'sku', 'quantity', 'unit_price'];
+        const headers = Object.keys(records[0]);
+        const missingCols = requiredCols.filter(c => !headers.includes(c));
+        if (missingCols.length) {
+            return res.status(400).json({
+                success: false,
+                message: `Missing required columns: ${missingCols.join(', ')}`,
+                expected: requiredCols.concat(['product_type', 'song_title', 'album_title', 'lyrics_snippet', 'sale_date', 'country', 'country_code', 'region', 'city', 'lat', 'lng'])
+            });
+        }
+
+        const label = req.label;
+        const sales = [];
+        const errors = [];
+
+        records.forEach((row, i) => {
+            const rowNum = i + 2;
+            const quantity = parseInt(row.quantity);
+            const unitPrice = parseFloat(row.unit_price);
+
+            if (!row.order_id || !row.artist_name || !row.sku) {
+                errors.push(`Row ${rowNum}: Missing required fields`);
+                return;
+            }
+            if (isNaN(quantity) || quantity <= 0) {
+                errors.push(`Row ${rowNum}: Invalid quantity`);
+                return;
+            }
+            if (isNaN(unitPrice) || unitPrice <= 0) {
+                errors.push(`Row ${rowNum}: Invalid unit_price`);
+                return;
+            }
+
+            const totalAmount = quantity * unitPrice;
+            sales.push({
+                labelId: label._id,
+                labelName: label.name,
+                orderId: row.order_id.trim(),
+                artistName: row.artist_name.trim(),
+                artistSlug: row.artist_slug.toLowerCase().trim(),
+                productName: row.product_name.trim(),
+                productType: (row.product_type || 'apparel').trim(),
+                sku: row.sku.trim(),
+                songTitle: (row.song_title || '').trim(),
+                albumTitle: (row.album_title || '').trim(),
+                lyricsSnippet: (row.lyrics_snippet || '').trim(),
+                quantity,
+                unitPrice,
+                totalAmount,
+                revenueShare: totalAmount * (label.revenueShare || 0.15),
+                saleDate: row.sale_date ? new Date(row.sale_date) : new Date(),
+                geo: {
+                    country: (row.country || '').trim(),
+                    countryCode: (row.country_code || '').trim(),
+                    region: (row.region || '').trim(),
+                    city: (row.city || '').trim(),
+                    lat: parseFloat(row.lat) || null,
+                    lng: parseFloat(row.lng) || null
+                }
+            });
+        });
+
+        let inserted = 0;
+        if (sales.length) {
+            const result = await MerchSale.insertMany(sales, { ordered: false });
+            inserted = result.length;
+        }
+
+        res.json({
+            success: true,
+            message: `Processed ${records.length} rows`,
+            data: {
+                salesImported: inserted,
+                rowErrors: errors.length,
+                errors: errors.length ? errors.slice(0, 20) : undefined
+            }
+        });
+    } catch (error) {
+        console.error('Bulk sales upload error:', error);
+        res.status(500).json({ success: false, message: 'Failed to process sales CSV' });
     }
 });
 

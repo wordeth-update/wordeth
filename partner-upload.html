@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Upload - Partner Portal - Wordeth</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/partner-dashboard.css">
+    <link rel="stylesheet" href="css/partner-upload.css">
+</head>
+<body>
+    <nav class="main-nav">
+        <a href="/" class="nav-logo">
+            <img src="images/logo.png" alt="Wordeth" onerror="this.style.display='none'">
+        </a>
+        <div class="nav-links">
+            <a href="/partner-dashboard.html" class="nav-action-btn" title="Dashboard">
+                <i class="fas fa-chart-bar"></i>
+            </a>
+            <button id="logoutBtn" class="nav-action-btn" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="dashboard-wrapper">
+        <header class="dashboard-header">
+            <div class="header-left">
+                <h1><i class="fas fa-file-csv" style="color:var(--mint);margin-right:10px;"></i>Bulk CSV Upload</h1>
+                <p class="subtitle">Import your label, artist, and sales data in bulk</p>
+            </div>
+        </header>
+
+        <div class="upload-tabs">
+            <button class="upload-tab active" data-tab="labels">Labels & Artists</button>
+            <button class="upload-tab" data-tab="sales">Sales Data</button>
+            <button class="upload-tab" data-tab="docs">Documentation</button>
+            <button class="upload-tab" data-tab="prompt">AI Prompt Helper</button>
+        </div>
+
+        <section id="labelsTab" class="tab-panel active">
+            <div class="chart-card wide">
+                <h3><i class="fas fa-building"></i> Add Artists to Your Label</h3>
+                <p class="section-subtitle">Upload a CSV file to add new artists to your label's roster. Duplicate artists (same slug) are automatically skipped.</p>
+
+                <div class="upload-zone" id="labelDropZone">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Drag & drop your CSV file here, or click to browse</p>
+                    <span class="upload-hint">Max 10 MB &middot; .csv files only</span>
+                    <input type="file" id="labelFileInput" accept=".csv" hidden>
+                </div>
+
+                <div id="labelUploadStatus" class="upload-status" style="display:none;"></div>
+
+                <div class="csv-preview-section">
+                    <h4>Required Columns</h4>
+                    <div class="columns-grid">
+                        <div class="col-card required">
+                            <span class="col-name">artist_name</span>
+                            <span class="col-desc">Artist display name</span>
+                            <span class="col-badge">Required</span>
+                        </div>
+                        <div class="col-card required">
+                            <span class="col-name">artist_slug</span>
+                            <span class="col-desc">URL-safe identifier (lowercase, hyphens)</span>
+                            <span class="col-badge">Required</span>
+                        </div>
+                        <div class="col-card">
+                            <span class="col-name">artist_genre</span>
+                            <span class="col-desc">Genre (e.g., Hip Hop, R&B, Pop)</span>
+                        </div>
+                        <div class="col-card">
+                            <span class="col-name">artist_image_url</span>
+                            <span class="col-desc">URL to artist photo</span>
+                        </div>
+                    </div>
+
+                    <h4>Example CSV</h4>
+                    <div class="code-block">
+                        <button class="copy-code-btn" data-target="labelExample"><i class="fas fa-copy"></i></button>
+                        <pre id="labelExample">artist_name,artist_slug,artist_genre,artist_image_url
+J. Cole,j-cole,Hip Hop,
+JID,jid,Hip Hop,
+Bas,bas,Hip Hop,
+Ari Lennox,ari-lennox,R&B,
+EarthGang,earthgang,Hip Hop,</pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="salesTab" class="tab-panel">
+            <div class="chart-card wide">
+                <h3><i class="fas fa-shopping-cart"></i> Upload Sales Data</h3>
+                <p class="section-subtitle">Import merchandise sales records. Sales are linked to your label automatically based on your login.</p>
+
+                <div class="upload-zone" id="salesDropZone">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Drag & drop your CSV file here, or click to browse</p>
+                    <span class="upload-hint">Max 10 MB &middot; .csv files only</span>
+                    <input type="file" id="salesFileInput" accept=".csv" hidden>
+                </div>
+
+                <div id="salesUploadStatus" class="upload-status" style="display:none;"></div>
+
+                <div class="csv-preview-section">
+                    <h4>Required Columns</h4>
+                    <div class="columns-grid">
+                        <div class="col-card required">
+                            <span class="col-name">order_id</span>
+                            <span class="col-desc">Unique order identifier</span>
+                            <span class="col-badge">Required</span>
+                        </div>
+                        <div class="col-card required">
+                            <span class="col-name">artist_name</span>
+                            <span class="col-desc">Artist display name</span>
+                            <span class="col-badge">Required</span>
+                        </div>
+                        <div class="col-card required">
+                            <span class="col-name">artist_slug</span>
+                            <span class="col-desc">Artist URL-safe identifier</span>
+                            <span class="col-badge">Required</span>
+                        </div>
+                        <div class="col-card required">
+                            <span class="col-name">product_name</span>
+                            <span class="col-desc">Product display name</span>
+                            <span class="col-badge">Required</span>
+                        </div>
+                        <div class="col-card required">
+                            <span class="col-name">sku</span>
+                            <span class="col-desc">Product SKU code</span>
+                            <span class="col-badge">Required</span>
+                        </div>
+                        <div class="col-card required">
+                            <span class="col-name">quantity</span>
+                            <span class="col-desc">Number of units sold</span>
+                            <span class="col-badge">Required</span>
+                        </div>
+                        <div class="col-card required">
+                            <span class="col-name">unit_price</span>
+                            <span class="col-desc">Price per unit (numeric)</span>
+                            <span class="col-badge">Required</span>
+                        </div>
+                    </div>
+
+                    <h4>Optional Columns</h4>
+                    <div class="columns-grid">
+                        <div class="col-card">
+                            <span class="col-name">product_type</span>
+                            <span class="col-desc">Type: hoodie, t-shirt, hat, etc.</span>
+                        </div>
+                        <div class="col-card">
+                            <span class="col-name">song_title</span>
+                            <span class="col-desc">Associated song name</span>
+                        </div>
+                        <div class="col-card">
+                            <span class="col-name">album_title</span>
+                            <span class="col-desc">Associated album name</span>
+                        </div>
+                        <div class="col-card">
+                            <span class="col-name">lyrics_snippet</span>
+                            <span class="col-desc">Lyric text on the merchandise</span>
+                        </div>
+                        <div class="col-card">
+                            <span class="col-name">sale_date</span>
+                            <span class="col-desc">Date of sale (YYYY-MM-DD)</span>
+                        </div>
+                        <div class="col-card">
+                            <span class="col-name">country</span>
+                            <span class="col-desc">Buyer's country</span>
+                        </div>
+                        <div class="col-card">
+                            <span class="col-name">country_code</span>
+                            <span class="col-desc">ISO country code (US, GB, etc.)</span>
+                        </div>
+                        <div class="col-card">
+                            <span class="col-name">region</span>
+                            <span class="col-desc">State/province</span>
+                        </div>
+                        <div class="col-card">
+                            <span class="col-name">city</span>
+                            <span class="col-desc">Buyer's city</span>
+                        </div>
+                        <div class="col-card">
+                            <span class="col-name">lat</span>
+                            <span class="col-desc">Latitude for map</span>
+                        </div>
+                        <div class="col-card">
+                            <span class="col-name">lng</span>
+                            <span class="col-desc">Longitude for map</span>
+                        </div>
+                    </div>
+
+                    <h4>Example CSV</h4>
+                    <div class="code-block">
+                        <button class="copy-code-btn" data-target="salesExample"><i class="fas fa-copy"></i></button>
+                        <pre id="salesExample">order_id,artist_name,artist_slug,product_name,sku,quantity,unit_price,product_type,song_title,album_title,lyrics_snippet,sale_date,country,country_code,region,city,lat,lng
+ORD-2025-001,J. Cole,j-cole,Forest Hills Drive Hoodie,FHD-HOOD-BLK-L,2,65.00,hoodie,No Role Modelz,2014 Forest Hills Drive,First things first rest in peace Uncle Phil,2025-01-15,United States,US,North Carolina,Raleigh,35.78,-78.64
+ORD-2025-002,SZA,sza,CTRL Vintage Tee,CTRL-TEE-WHT-M,1,35.00,t-shirt,Love Galore,CTRL,,2025-01-16,United States,US,California,Los Angeles,34.05,-118.24</pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="docsTab" class="tab-panel">
+            <div class="chart-card wide">
+                <h3><i class="fas fa-book"></i> Documentation</h3>
+
+                <div class="docs-content">
+                    <div class="doc-section">
+                        <h4><i class="fas fa-info-circle"></i> How Bulk Upload Works</h4>
+                        <p>The bulk upload system lets you import your label catalog and sales data using standard CSV files. This is the fastest way to get your data into Wordeth's partner dashboard.</p>
+                        <ul>
+                            <li><strong>Artists:</strong> Upload a CSV of your artists to add them to your label's roster. If you upload again, existing artists (same slug) are skipped and only new ones are added.</li>
+                            <li><strong>Sales Data:</strong> Upload sales records in bulk. Each row becomes a sale entry linked to your label. Geographic data powers the interactive sales heatmap.</li>
+                        </ul>
+                    </div>
+
+                    <div class="doc-section">
+                        <h4><i class="fas fa-key"></i> Key Concepts</h4>
+                        <dl class="doc-definitions">
+                            <dt>Slug</dt>
+                            <dd>A URL-safe version of a name. Use lowercase letters, numbers, and hyphens only. For example: "Dreamville Records" becomes "dreamville", and "J. Cole" becomes "j-cole".</dd>
+
+                            <dt>Revenue Share</dt>
+                            <dd>A decimal between 0 and 1 representing your label's percentage. Use 0.15 for 15%, 0.20 for 20%, etc.</dd>
+
+                            <dt>SKU</dt>
+                            <dd>Stock Keeping Unit — a unique product identifier. Example: "FHD-HOOD-BLK-L" for a Forest Hills Drive Hoodie in Black, Large.</dd>
+
+                            <dt>Lyrics Snippet</dt>
+                            <dd>The exact lyric text printed on merchandise. This powers the Lyrics Leaderboard and "Coined" phrase detection (phrases with 400+ total makes are flagged as Coined).</dd>
+                        </dl>
+                    </div>
+
+                    <div class="doc-section">
+                        <h4><i class="fas fa-exclamation-triangle"></i> Common Mistakes</h4>
+                        <ul class="error-list">
+                            <li><strong>Inconsistent slugs:</strong> Make sure the same artist always has the same slug. "j-cole" and "jcole" would be treated as two different artists.</li>
+                            <li><strong>Missing required columns:</strong> The header row must contain all required column names exactly as specified.</li>
+                            <li><strong>Incorrect date format:</strong> Use YYYY-MM-DD format (e.g., 2025-01-15). Other formats may not parse correctly.</li>
+                            <li><strong>Revenue share as percentage:</strong> Enter 0.15, not 15. The system expects a decimal between 0 and 1.</li>
+                            <li><strong>Special characters in CSVs:</strong> If a field contains commas, wrap it in double quotes: "First things first, rest in peace"</li>
+                        </ul>
+                    </div>
+
+                    <div class="doc-section">
+                        <h4><i class="fas fa-route"></i> Recommended Workflow</h4>
+                        <ol class="workflow-steps">
+                            <li><strong>Step 1:</strong> Log in to the Partner Portal with your credentials.</li>
+                            <li><strong>Step 2:</strong> Upload your Artists CSV to add your roster to the label.</li>
+                            <li><strong>Step 3:</strong> Upload your Sales Data CSV to populate the dashboard with real numbers.</li>
+                            <li><strong>Step 4:</strong> Use the dashboard to explore revenue trends, artist breakdowns, and the geographic sales heatmap.</li>
+                            <li><strong>Step 5:</strong> Share specific views with team members using the Share Dashboard feature.</li>
+                        </ol>
+                    </div>
+
+                    <div class="doc-section">
+                        <h4><i class="fas fa-map-marker-alt"></i> Geographic Data Tips</h4>
+                        <p>To get the most out of the sales heatmap:</p>
+                        <ul>
+                            <li>Include <strong>country</strong>, <strong>city</strong>, and <strong>country_code</strong> at minimum.</li>
+                            <li>Add <strong>lat</strong> and <strong>lng</strong> coordinates for precise map markers. Without them, the city won't appear on the heatmap.</li>
+                            <li>Use the AI prompt helper tab to have ChatGPT generate coordinates for your cities automatically.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="promptTab" class="tab-panel">
+            <div class="chart-card wide">
+                <h3><i class="fas fa-robot"></i> AI Prompt Helper</h3>
+                <p class="section-subtitle">Copy the prompt below and paste it into ChatGPT, Copilot, or any AI assistant. It will help you format your raw data into the correct CSV structure for Wordeth.</p>
+
+                <div class="prompt-card">
+                    <div class="prompt-header">
+                        <span><i class="fas fa-building"></i> Labels & Artists CSV Prompt</span>
+                        <button class="copy-code-btn inline" data-target="labelPrompt"><i class="fas fa-copy"></i> Copy</button>
+                    </div>
+                    <div class="prompt-body">
+                        <pre id="labelPrompt">I need you to create a CSV file for adding artists to my label on the Wordeth music platform. The CSV must have these exact column headers:
+
+artist_name,artist_slug,artist_genre,artist_image_url
+
+Rules:
+- artist_slug must be lowercase, using only letters, numbers, and hyphens (no spaces or special characters). Example: "J. Cole" → "j-cole", "Kendrick Lamar" → "kendrick-lamar"
+- artist_image_url can be left blank if not available
+- artist_genre should be a standard genre name (Hip Hop, R&B, Pop, Rock, Jazz, EDM, Country, etc.)
+- Each artist gets their own row
+
+Here is my artist data to format:
+
+[PASTE YOUR RAW DATA HERE - e.g., a list of your artists, their genres, and any other info you have]
+
+Please output only the CSV content with no extra text, so I can copy it directly into a .csv file.</pre>
+                    </div>
+                </div>
+
+                <div class="prompt-card">
+                    <div class="prompt-header">
+                        <span><i class="fas fa-shopping-cart"></i> Sales Data CSV Prompt</span>
+                        <button class="copy-code-btn inline" data-target="salesPrompt"><i class="fas fa-copy"></i> Copy</button>
+                    </div>
+                    <div class="prompt-body">
+                        <pre id="salesPrompt">I need you to create a CSV file for uploading merchandise sales data to the Wordeth music platform. The CSV must have these exact column headers:
+
+order_id,artist_name,artist_slug,product_name,sku,quantity,unit_price,product_type,song_title,album_title,lyrics_snippet,sale_date,country,country_code,region,city,lat,lng
+
+Rules:
+- order_id: Unique identifier per order (e.g., "ORD-2025-001")
+- artist_slug: lowercase, hyphens only (e.g., "j-cole", "kendrick-lamar")
+- sku: Unique product code using format like TYPE-PRODUCT-COLOR-SIZE (e.g., "HOOD-FHD-BLK-L")
+- quantity: Positive integer
+- unit_price: Numeric price per unit, no currency symbols (e.g., 65.00)
+- product_type: hoodie, t-shirt, hat, poster, vinyl, accessories, or other apparel types
+- song_title and album_title: The song/album associated with the merch design (leave blank if not applicable)
+- lyrics_snippet: The exact lyric text printed on the merchandise (leave blank if none). If the text contains commas, wrap the entire field in double quotes.
+- sale_date: Format as YYYY-MM-DD (e.g., 2025-01-15)
+- country_code: ISO 2-letter code (US, GB, CA, JP, DE, etc.)
+- lat/lng: Geographic coordinates for the city. Look up approximate coordinates for each city. For example: New York → 40.71, -74.01 / London → 51.51, -0.13 / Tokyo → 35.68, 139.69
+
+Here is my sales data to format:
+
+[PASTE YOUR RAW DATA HERE - e.g., a spreadsheet export, order list, or text description of your recent sales with product names, quantities, prices, locations, etc.]
+
+Please output only the CSV content with no extra text, so I can copy it directly into a .csv file.</pre>
+                    </div>
+                </div>
+
+                <div class="prompt-card">
+                    <div class="prompt-header">
+                        <span><i class="fas fa-map-marker-alt"></i> Add Coordinates to Existing Data</span>
+                        <button class="copy-code-btn inline" data-target="geoPrompt"><i class="fas fa-copy"></i> Copy</button>
+                    </div>
+                    <div class="prompt-body">
+                        <pre id="geoPrompt">I have a CSV of sales data for the Wordeth music platform that is missing latitude and longitude coordinates. Please add approximate lat and lng values for each city/country combination.
+
+The CSV has columns: order_id,artist_name,artist_slug,product_name,sku,quantity,unit_price,product_type,song_title,album_title,lyrics_snippet,sale_date,country,country_code,region,city,lat,lng
+
+Look up the approximate geographic center coordinates for each unique city and fill in the lat and lng columns. Use well-known coordinate references (e.g., New York City → 40.7128, -74.0060).
+
+Here is my CSV data:
+
+[PASTE YOUR CSV DATA HERE]
+
+Please output only the updated CSV with coordinates filled in, no extra text.</pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="js/partner-upload.js"></script>
+</body>
+</html>

@@ -42,6 +42,11 @@ class PartnerDashboard {
         document.getElementById('generateShareLink').addEventListener('click', () => this.generateShareLink());
         document.getElementById('copyShareLink').addEventListener('click', () => this.copyShareLink());
 
+        document.getElementById('shareScope').addEventListener('change', (e) => {
+            const artistGroup = document.getElementById('artistSelectGroup');
+            artistGroup.style.display = e.target.value === 'artist' ? 'block' : 'none';
+        });
+
         document.getElementById('bcLabel').addEventListener('click', (e) => {
             e.preventDefault();
             this.showLabelView();
@@ -540,17 +545,24 @@ class PartnerDashboard {
         });
     }
 
-    showShareModal() {
+    async showShareModal() {
         document.getElementById('shareModal').style.display = 'flex';
         document.getElementById('shareLinkResult').style.display = 'none';
+        document.getElementById('artistSelectGroup').style.display = 'none';
 
         const scopeSelect = document.getElementById('shareScope');
         scopeSelect.innerHTML = '<option value="label">Full Label Dashboard</option>';
-        if (this.label) {
-            const labelData = JSON.parse(localStorage.getItem('partnerLabel'));
-            if (labelData && labelData.slug) {
-                scopeSelect.innerHTML += '<option value="artist">Specific Artist</option>';
-            }
+        scopeSelect.value = 'label';
+
+        const artistSelect = document.getElementById('shareArtistSelect');
+        artistSelect.innerHTML = '<option value="">-- Choose an artist --</option>';
+
+        const data = await this.apiCall('/dashboard/artists');
+        if (data && data.success && data.data.length) {
+            scopeSelect.innerHTML += '<option value="artist">Specific Artist</option>';
+            data.data.forEach(a => {
+                artistSelect.innerHTML += `<option value="${a.slug}">${a.name}</option>`;
+            });
         }
     }
 
@@ -568,8 +580,13 @@ class PartnerDashboard {
         };
 
         const body = { scope, expiresInDays, permissions };
-        if (scope === 'artist' && this.currentArtist) {
-            body.artistSlug = this.currentArtist;
+        if (scope === 'artist') {
+            const artistSlug = document.getElementById('shareArtistSelect').value;
+            if (!artistSlug) {
+                alert('Please select an artist to share.');
+                return;
+            }
+            body.artistSlug = artistSlug;
         }
 
         const data = await this.apiCall('/share', {

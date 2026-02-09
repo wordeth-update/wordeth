@@ -20,6 +20,9 @@
         </a>
         <div class="nav-links">
             <span id="labelName" class="label-name-nav"></span>
+            <a href="/partner-upload.html" class="nav-action-btn" title="Bulk Upload">
+                <i class="fas fa-file-csv"></i>
+            </a>
             <button id="shareBtn" class="nav-action-btn" title="Share Dashboard">
                 <i class="fas fa-share-alt"></i>
             </button>
@@ -159,6 +162,12 @@
                     <label>Scope</label>
                     <select id="shareScope">
                         <option value="label">Full Label Dashboard</option>
+                    </select>
+                </div>
+                <div class="form-group" id="artistSelectGroup" style="display:none;">
+                    <label>Select Artist</label>
+                    <select id="shareArtistSelect">
+                        <option value="">-- Choose an artist --</option>
                     </select>
                 </div>
                 <div class="form-group">
