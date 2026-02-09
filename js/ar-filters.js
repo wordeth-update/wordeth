@@ -212,22 +212,22 @@ class ARFilterEngine {
 
         switch (this.activeFilter) {
             case 'ar-hiphop':
-                this._drawOverlayOnEyes(ctx, lm, w, h, 'ar-hiphop', { scaleW: 2.8, scaleH: 1.4, offsetY: 0 });
+                this._drawOverlayOnEyes(ctx, lm, w, h, 'ar-hiphop', { scaleW: 2.4, scaleH: 1.0, offsetY: -0.05 });
                 break;
             case 'ar-rock':
-                this._drawOverlayOnFace(ctx, lm, w, h, 'ar-rock', { scaleW: 1.3, scaleH: 1.5, offsetY: -0.05 });
+                this._drawOverlayOnFace(ctx, lm, w, h, 'ar-rock', { scaleW: 1.4, scaleH: 1.3, offsetY: 0 });
                 break;
             case 'ar-pop':
-                this._drawOverlayOnEyes(ctx, lm, w, h, 'ar-pop', { scaleW: 3.0, scaleH: 1.8, offsetY: -0.1 });
+                this._drawOverlayOnEyes(ctx, lm, w, h, 'ar-pop', { scaleW: 2.6, scaleH: 1.2, offsetY: -0.15 });
                 break;
             case 'ar-edm':
-                this._drawOverlayOnEyes(ctx, lm, w, h, 'ar-edm', { scaleW: 3.2, scaleH: 1.2, offsetY: 0.05 });
+                this._drawOverlayOnEyes(ctx, lm, w, h, 'ar-edm', { scaleW: 2.8, scaleH: 1.0, offsetY: 0 });
                 break;
             case 'ar-jazz':
-                this._drawOverlayOnFace(ctx, lm, w, h, 'ar-jazz', { scaleW: 1.2, scaleH: 1.0, offsetY: -0.15 });
+                this._drawOverlayOnFace(ctx, lm, w, h, 'ar-jazz', { scaleW: 1.3, scaleH: 1.1, offsetY: -0.1 });
                 break;
             case 'ar-skimask':
-                this._drawOverlayOnFace(ctx, lm, w, h, 'ar-skimask', { scaleW: 1.5, scaleH: 1.6, offsetY: -0.05 });
+                this._drawOverlayOnFace(ctx, lm, w, h, 'ar-skimask', { scaleW: 1.6, scaleH: 1.5, offsetY: 0, blendMode: 'source-over' });
                 break;
             default:
                 return false;
@@ -268,11 +268,12 @@ class ARFilterEngine {
         const drawH = drawW * imgAspect * (opts.scaleH || 1.0);
 
         const offsetYPx = eyeSpan * (opts.offsetY || 0);
+        const blendMode = opts.blendMode || 'screen';
 
         ctx.save();
         ctx.translate(eyesMidpoint.x, eyesMidpoint.y + offsetYPx);
         ctx.rotate(angle);
-        ctx.globalCompositeOperation = 'screen';
+        ctx.globalCompositeOperation = blendMode;
         ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
         ctx.globalCompositeOperation = 'source-over';
         ctx.restore();
@@ -298,11 +299,12 @@ class ARFilterEngine {
         const drawW = faceWidth * (opts.scaleW || 1.2);
         const drawH = faceHeight * (opts.scaleH || 1.3);
         const offsetYPx = faceHeight * (opts.offsetY || 0);
+        const blendMode = opts.blendMode || 'screen';
 
         ctx.save();
         ctx.translate(faceCenter.x, faceCenter.y + offsetYPx);
         ctx.rotate(angle);
-        ctx.globalCompositeOperation = 'screen';
+        ctx.globalCompositeOperation = blendMode;
         ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
         ctx.globalCompositeOperation = 'source-over';
         ctx.restore();
