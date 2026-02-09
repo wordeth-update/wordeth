@@ -7,6 +7,7 @@ Wordeth is a social music experience platform that creates an interactive commun
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 
 ## System Architecture
 

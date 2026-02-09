@@ -115,9 +115,14 @@
                 </div>
             </div>
 
-            <div class="chart-card">
-                <h3><i class="fas fa-music"></i> Revenue by Song/Lyrics</h3>
-                <div id="songTable" class="data-table-wrap"></div>
+            <div class="chart-card wide">
+                <h3><i class="fas fa-music"></i> Lyrics Source Tally — Songs & Albums on Apparel</h3>
+                <div class="tally-tabs">
+                    <button class="tally-tab active" data-tab="songs">By Song</button>
+                    <button class="tally-tab" data-tab="albums">By Album</button>
+                </div>
+                <div id="songTable" class="data-table-wrap tally-panel active"></div>
+                <div id="albumTable" class="data-table-wrap tally-panel" style="display:none;"></div>
             </div>
 
             <div class="chart-card">

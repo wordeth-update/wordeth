@@ -150,7 +150,7 @@ router.get('/dashboard/artist/:artistSlug', partnerAuth, async (req, res) => {
             if (endDate) dateFilter.saleDate.$lte = new Date(endDate);
         }
 
-        const [stats, skuBreakdown, songBreakdown, geoBreakdown, monthlyTrend] = await Promise.all([
+        const [stats, skuBreakdown, songBreakdown, albumBreakdown, geoBreakdown, monthlyTrend] = await Promise.all([
             MerchSale.aggregate([
                 { $match: dateFilter },
                 { $group: {
@@ -181,11 +181,32 @@ router.get('/dashboard/artist/:artistSlug', partnerAuth, async (req, res) => {
                 { $group: {
                     _id: '$songTitle',
                     albumTitle: { $first: '$albumTitle' },
+                    lyricsSnippets: { $addToSet: '$lyricsSnippet' },
                     revenue: { $sum: '$totalAmount' },
                     units: { $sum: '$quantity' },
-                    skuCount: { $addToSet: '$sku' }
+                    skuCount: { $addToSet: '$sku' },
+                    productTypes: { $addToSet: '$productType' }
                 }},
-                { $addFields: { skuCount: { $size: '$skuCount' } } },
+                { $addFields: {
+                    skuCount: { $size: '$skuCount' },
+                    lyricsSnippets: { $filter: { input: '$lyricsSnippets', as: 'l', cond: { $and: [{ $ne: ['$$l', ''] }, { $ne: ['$$l', null] }] } } }
+                }},
+                { $sort: { revenue: -1 } }
+            ]),
+            MerchSale.aggregate([
+                { $match: { ...dateFilter, albumTitle: { $ne: '' } } },
+                { $group: {
+                    _id: '$albumTitle',
+                    songs: { $addToSet: '$songTitle' },
+                    revenue: { $sum: '$totalAmount' },
+                    units: { $sum: '$quantity' },
+                    skuCount: { $addToSet: '$sku' },
+                    productTypes: { $addToSet: '$productType' }
+                }},
+                { $addFields: {
+                    songCount: { $size: { $filter: { input: '$songs', as: 's', cond: { $and: [{ $ne: ['$$s', ''] }, { $ne: ['$$s', null] }] } } } },
+                    skuCount: { $size: '$skuCount' }
+                }},
                 { $sort: { revenue: -1 } }
             ]),
             MerchSale.aggregate([
@@ -218,6 +239,7 @@ router.get('/dashboard/artist/:artistSlug', partnerAuth, async (req, res) => {
                 stats: stats[0] || { totalRevenue: 0, totalRevenueShare: 0, totalOrders: 0, totalUnits: 0 },
                 skuBreakdown,
                 songBreakdown,
+                albumBreakdown,
                 geoBreakdown,
                 monthlyTrend
             }

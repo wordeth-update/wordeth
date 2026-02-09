@@ -304,8 +304,10 @@ class PartnerDashboard {
 
         this.renderArtistRevenueChart(d.monthlyTrend);
         this.renderSongTable(d.songBreakdown);
+        this.renderAlbumTable(d.albumBreakdown);
         this.renderSkuTable(d.skuBreakdown);
         this.renderArtistGeoTable(d.geoBreakdown);
+        this.initTallyTabs();
     }
 
     renderArtistRevenueChart(trend) {
@@ -351,14 +353,22 @@ class PartnerDashboard {
     }
 
     renderSongTable(songs) {
+        if (!songs || !songs.length) {
+            document.getElementById('songTable').innerHTML = '<p class="muted">No song/lyrics data for this artist.</p>';
+            return;
+        }
         const html = `<table class="data-table">
             <thead><tr>
-                <th>Song</th><th>Album</th><th>Revenue</th><th>Units</th><th>SKUs</th>
+                <th>Song</th><th>Album</th><th>Lyrics Used</th><th>Apparel Types</th><th>Revenue</th><th>Units</th><th>SKUs</th>
             </tr></thead>
             <tbody>
                 ${songs.map(s => `<tr>
-                    <td>${s._id}</td>
+                    <td><i class="fas fa-music" style="color:#96C5B0;margin-right:6px;"></i>${s._id}</td>
                     <td class="muted">${s.albumTitle || '-'}</td>
+                    <td class="lyrics-snippets">${s.lyricsSnippets && s.lyricsSnippets.length
+                        ? s.lyricsSnippets.map(l => `<span class="lyric-tag">"${l}"</span>`).join('')
+                        : '<span class="muted">—</span>'}</td>
+                    <td>${s.productTypes ? s.productTypes.map(t => `<span class="product-tag">${t}</span>`).join('') : '-'}</td>
                     <td class="revenue">${this.formatCurrency(s.revenue)}</td>
                     <td>${this.formatNumber(s.units)}</td>
                     <td>${s.skuCount}</td>
@@ -366,6 +376,43 @@ class PartnerDashboard {
             </tbody>
         </table>`;
         document.getElementById('songTable').innerHTML = html;
+    }
+
+    renderAlbumTable(albums) {
+        if (!albums || !albums.length) {
+            document.getElementById('albumTable').innerHTML = '<p class="muted">No album data for this artist.</p>';
+            return;
+        }
+        const html = `<table class="data-table">
+            <thead><tr>
+                <th>Album</th><th>Songs Used</th><th>Apparel Types</th><th>Revenue</th><th>Units</th><th>SKUs</th>
+            </tr></thead>
+            <tbody>
+                ${albums.map(a => `<tr>
+                    <td><i class="fas fa-compact-disc" style="color:#96C5B0;margin-right:6px;"></i>${a._id}</td>
+                    <td>${a.songs && a.songs.filter(s => s).length
+                        ? a.songs.filter(s => s).map(s => `<span class="song-tag">${s}</span>`).join('')
+                        : '<span class="muted">—</span>'}</td>
+                    <td>${a.productTypes ? a.productTypes.map(t => `<span class="product-tag">${t}</span>`).join('') : '-'}</td>
+                    <td class="revenue">${this.formatCurrency(a.revenue)}</td>
+                    <td>${this.formatNumber(a.units)}</td>
+                    <td>${a.skuCount}</td>
+                </tr>`).join('')}
+            </tbody>
+        </table>`;
+        document.getElementById('albumTable').innerHTML = html;
+    }
+
+    initTallyTabs() {
+        document.querySelectorAll('.tally-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tally-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const target = tab.dataset.tab;
+                document.getElementById('songTable').style.display = target === 'songs' ? '' : 'none';
+                document.getElementById('albumTable').style.display = target === 'albums' ? '' : 'none';
+            });
+        });
     }
 
     renderSkuTable(skus) {
