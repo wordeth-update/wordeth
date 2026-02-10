@@ -13,9 +13,9 @@ class PartnerUpload {
 
     init() {
         this.setupTabs();
-        this.setupDragDrop('labelDropZone', 'labelFileInput', (file) => this.uploadFile(file, 'label'));
-        this.setupDragDrop('salesDropZone', 'salesFileInput', (file) => this.uploadFile(file, 'sales'));
+        this.setupDragDrop('rosterDropZone', 'rosterFileInput', (file) => this.uploadRoster(file));
         this.setupCopyButtons();
+        this.setupArtworkTab();
 
         document.getElementById('logoutBtn').addEventListener('click', () => {
             localStorage.removeItem('partnerToken');
@@ -32,6 +32,10 @@ class PartnerUpload {
                 document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
                 tab.classList.add('active');
                 document.getElementById(`${tab.dataset.tab}Tab`).classList.add('active');
+
+                if (tab.dataset.tab === 'artwork') {
+                    this.loadArtists();
+                }
             });
         });
     }
@@ -39,6 +43,7 @@ class PartnerUpload {
     setupDragDrop(zoneId, inputId, onFile) {
         const zone = document.getElementById(zoneId);
         const input = document.getElementById(inputId);
+        if (!zone || !input) return;
 
         zone.addEventListener('click', () => input.click());
 
@@ -78,8 +83,52 @@ class PartnerUpload {
         });
     }
 
-    async uploadFile(file, type) {
-        const statusEl = document.getElementById(`${type === 'label' ? 'label' : 'sales'}UploadStatus`);
+    setupArtworkTab() {
+        const select = document.getElementById('artworkArtistSelect');
+        const uploadArea = document.getElementById('artworkUploadArea');
+
+        select.addEventListener('change', () => {
+            if (select.value) {
+                uploadArea.style.display = 'block';
+                this.loadArtistArtwork(select.value);
+            } else {
+                uploadArea.style.display = 'none';
+            }
+        });
+
+        this.setupDragDrop('artworkDropZone', 'artworkFileInput', (file) => this.uploadArtwork(file));
+    }
+
+    async loadArtists() {
+        const select = document.getElementById('artworkArtistSelect');
+        const currentVal = select.value;
+
+        try {
+            const res = await fetch(`${this.API_BASE}/api/partner/dashboard/artists`, {
+                headers: { 'Authorization': `Bearer ${this.token}` }
+            });
+            const data = await res.json();
+
+            if (data.success && data.data) {
+                select.innerHTML = '<option value="">-- Choose an artist --</option>';
+                data.data.forEach(artist => {
+                    const opt = document.createElement('option');
+                    opt.value = artist.slug;
+                    opt.textContent = `${artist.name}${artist.genre ? ' (' + artist.genre + ')' : ''}`;
+                    select.appendChild(opt);
+                });
+
+                if (currentVal) {
+                    select.value = currentVal;
+                }
+            }
+        } catch (err) {
+            console.error('Failed to load artists:', err);
+        }
+    }
+
+    async uploadRoster(file) {
+        const statusEl = document.getElementById('rosterUploadStatus');
         statusEl.style.display = 'block';
         statusEl.className = 'upload-status uploading';
         statusEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Uploading ${file.name}...`;
@@ -87,32 +136,32 @@ class PartnerUpload {
         const formData = new FormData();
         formData.append('csvFile', file);
 
-        const endpoint = type === 'label' ? '/api/partner/bulk/label' : '/api/partner/bulk/sales';
-
         try {
-            const res = await fetch(`${this.API_BASE}${endpoint}`, {
+            const res = await fetch(`${this.API_BASE}/api/partner/bulk/roster`, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.token}`
-                },
+                headers: { 'Authorization': `Bearer ${this.token}` },
                 body: formData
             });
 
             const data = await res.json();
 
             if (res.ok && data.success) {
-                let details = '';
-                if (type === 'label') {
-                    details = `${data.data.labelsCreated} labels created, ${data.data.labelsUpdated} updated, ${data.data.artistsAdded} artists added`;
-                } else {
-                    details = `${data.data.salesImported} sales imported`;
-                    if (data.data.rowErrors > 0) {
-                        details += `, ${data.data.rowErrors} rows had errors`;
-                    }
+                let details = `${data.data.artistsAdded} artists added`;
+                if (data.data.artistsSkipped > 0) {
+                    details += `, ${data.data.artistsSkipped} already existed`;
                 }
 
                 statusEl.className = 'upload-status success';
                 statusEl.innerHTML = `<i class="fas fa-check-circle"></i> ${data.message} &mdash; ${details}`;
+
+                if (data.data.artists && data.data.artists.length) {
+                    let artistList = '<div class="added-artists"><strong>New artists added:</strong><ul>';
+                    data.data.artists.forEach(a => {
+                        artistList += `<li><strong>${a.name}</strong> ${a.genre ? '(' + a.genre + ')' : ''} <span class="artist-id-display">ID: ${a.artistId}</span></li>`;
+                    });
+                    artistList += '</ul></div>';
+                    statusEl.innerHTML += artistList;
+                }
 
                 if (data.data.errors && data.data.errors.length) {
                     statusEl.innerHTML += `<div class="error-details"><strong>Warnings:</strong><ul>${data.data.errors.map(e => `<li>${e}</li>`).join('')}</ul></div>`;
@@ -127,6 +176,118 @@ class PartnerUpload {
         } catch (err) {
             statusEl.className = 'upload-status error';
             statusEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> Network error: ${err.message}`;
+        }
+    }
+
+    async uploadArtwork(file) {
+        const artistSlug = document.getElementById('artworkArtistSelect').value;
+        if (!artistSlug) {
+            alert('Please select an artist first.');
+            return;
+        }
+
+        const statusEl = document.getElementById('artworkUploadStatus');
+        statusEl.style.display = 'block';
+        statusEl.className = 'upload-status uploading';
+        statusEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Uploading ${file.name}...`;
+
+        const formData = new FormData();
+        formData.append('artworkFile', file);
+        formData.append('artistSlug', artistSlug);
+
+        try {
+            const res = await fetch(`${this.API_BASE}/api/partner/artwork/upload`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${this.token}` },
+                body: formData
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                statusEl.className = 'upload-status success';
+                statusEl.innerHTML = `<i class="fas fa-check-circle"></i> ${data.message}`;
+                this.loadArtistArtwork(artistSlug);
+            } else {
+                statusEl.className = 'upload-status error';
+                statusEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${data.message || 'Upload failed'}`;
+            }
+        } catch (err) {
+            statusEl.className = 'upload-status error';
+            statusEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> Network error: ${err.message}`;
+        }
+    }
+
+    async loadArtistArtwork(artistSlug) {
+        const gallery = document.getElementById('artworkGallery');
+        gallery.innerHTML = '<div class="loading-artwork"><i class="fas fa-spinner fa-spin"></i> Loading artwork...</div>';
+
+        try {
+            const res = await fetch(`${this.API_BASE}/api/partner/artwork/${artistSlug}`, {
+                headers: { 'Authorization': `Bearer ${this.token}` }
+            });
+            const data = await res.json();
+
+            if (data.success && data.data.artwork.length) {
+                gallery.innerHTML = `<h4>${data.data.artistName}'s Artwork (${data.data.artwork.length})</h4>`;
+                const grid = document.createElement('div');
+                grid.className = 'artwork-grid';
+
+                data.data.artwork.forEach(art => {
+                    const card = document.createElement('div');
+                    card.className = 'artwork-card';
+
+                    const isImage = ['png', 'svg'].includes(art.format);
+                    const sizeKB = Math.round(art.fileSize / 1024);
+                    const sizeStr = sizeKB > 1024 ? `${(sizeKB / 1024).toFixed(1)} MB` : `${sizeKB} KB`;
+
+                    card.innerHTML = `
+                        <div class="artwork-preview">
+                            ${isImage ? `<img src="${art.url}" alt="${art.filename}" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-file-image\\'></i>'">` : `<i class="fas fa-file-${art.format === 'pdf' ? 'pdf' : 'alt'}"></i>`}
+                        </div>
+                        <div class="artwork-info">
+                            <span class="artwork-filename" title="${art.filename}">${art.filename}</span>
+                            <span class="artwork-meta">${art.format.toUpperCase()} &middot; ${sizeStr}</span>
+                        </div>
+                        <button class="artwork-delete" data-artwork-id="${art._id}" data-artist-slug="${artistSlug}" title="Delete">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    `;
+
+                    card.querySelector('.artwork-delete').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.deleteArtwork(artistSlug, art._id);
+                    });
+
+                    grid.appendChild(card);
+                });
+
+                gallery.appendChild(grid);
+            } else {
+                gallery.innerHTML = '<div class="no-artwork"><i class="fas fa-image"></i><span>No artwork uploaded yet for this artist.</span></div>';
+            }
+        } catch (err) {
+            gallery.innerHTML = '<div class="no-artwork"><i class="fas fa-exclamation-triangle"></i><span>Failed to load artwork.</span></div>';
+        }
+    }
+
+    async deleteArtwork(artistSlug, artworkId) {
+        if (!confirm('Delete this artwork file? This cannot be undone.')) return;
+
+        try {
+            const res = await fetch(`${this.API_BASE}/api/partner/artwork/${artistSlug}/${artworkId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${this.token}` }
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                this.loadArtistArtwork(artistSlug);
+            } else {
+                alert(data.message || 'Failed to delete artwork');
+            }
+        } catch (err) {
+            alert('Network error: ' + err.message);
         }
     }
 }

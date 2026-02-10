@@ -19,10 +19,25 @@ const labelSchema = new mongoose.Schema({
         default: ''
     },
     artists: [{
+        artistId: {
+            type: String,
+            required: true,
+            unique: false
+        },
         name: { type: String, required: true, trim: true },
         slug: { type: String, required: true, lowercase: true, trim: true },
         imageUrl: { type: String, default: '' },
         genre: { type: String, default: '' },
+        templateArtwork: [{
+            url: { type: String, required: true },
+            objectPath: { type: String, required: true },
+            filename: { type: String, required: true },
+            format: { type: String, enum: ['png', 'svg', 'pdf', 'eps', 'ai', 'psd'], required: true },
+            fileSize: { type: Number, default: 0 },
+            width: { type: Number, default: 0 },
+            height: { type: Number, default: 0 },
+            uploadedAt: { type: Date, default: Date.now }
+        }],
         active: { type: Boolean, default: true }
     }],
     revenueShare: {

@@ -384,3 +384,258 @@
         grid-template-columns: 1fr;
     }
 }
+
+.auto-gen-note {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: rgba(150,197,176,0.08);
+    border: 1px solid rgba(150,197,176,0.2);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    margin: 1rem 0;
+    color: rgba(255,255,255,0.7);
+    font-size: 0.85rem;
+}
+
+.auto-gen-note i {
+    color: var(--mint, #96C5B0);
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.artist-id-display {
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.4);
+    margin-left: 0.5rem;
+}
+
+.added-artists {
+    width: 100%;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.added-artists ul {
+    margin: 0.25rem 0 0;
+    padding-left: 1.25rem;
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.7);
+}
+
+.added-artists li {
+    margin: 0.3rem 0;
+}
+
+.artwork-artist-select {
+    margin-bottom: 1.5rem;
+}
+
+.artwork-artist-select label {
+    display: block;
+    color: rgba(255,255,255,0.7);
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.artwork-artist-select select {
+    width: 100%;
+    max-width: 400px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #fff;
+    padding: 0.7rem 1rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.artwork-artist-select select:focus {
+    outline: none;
+    border-color: var(--mint, #96C5B0);
+}
+
+.artwork-artist-select select option {
+    background: #1a1a2e;
+    color: #fff;
+}
+
+.artwork-specs {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.artwork-specs h4 {
+    color: var(--white, #fff);
+    font-size: 1rem;
+    margin: 0 0 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.artwork-specs h4 i {
+    color: var(--mint, #96C5B0);
+}
+
+.specs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 0.75rem;
+}
+
+.spec-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 0.85rem;
+}
+
+.spec-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(150,197,176,0.12);
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.spec-icon i {
+    color: var(--mint, #96C5B0);
+    font-size: 0.9rem;
+}
+
+.spec-info strong {
+    display: block;
+    color: var(--white, #fff);
+    font-size: 0.85rem;
+    margin-bottom: 0.15rem;
+}
+
+.spec-info span {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.78rem;
+    line-height: 1.3;
+}
+
+.artwork-gallery {
+    margin-top: 1.5rem;
+}
+
+.artwork-gallery h4 {
+    color: var(--white, #fff);
+    font-size: 0.95rem;
+    margin: 0 0 0.75rem;
+}
+
+.artwork-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
+}
+
+.artwork-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+}
+
+.artwork-preview {
+    height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.3);
+    overflow: hidden;
+}
+
+.artwork-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.artwork-preview i {
+    font-size: 2.5rem;
+    color: rgba(255,255,255,0.2);
+}
+
+.artwork-info {
+    padding: 0.6rem 0.75rem;
+}
+
+.artwork-filename {
+    display: block;
+    color: var(--white, #fff);
+    font-size: 0.78rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.artwork-meta {
+    display: block;
+    color: rgba(255,255,255,0.4);
+    font-size: 0.7rem;
+    margin-top: 0.15rem;
+}
+
+.artwork-delete {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: rgba(239,68,68,0.8);
+    border: none;
+    color: #fff;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.artwork-card:hover .artwork-delete {
+    opacity: 1;
+}
+
+.no-artwork, .loading-artwork {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 2rem;
+    color: rgba(255,255,255,0.3);
+    font-size: 0.85rem;
+}
+
+.no-artwork i, .loading-artwork i {
+    font-size: 2rem;
+}
+
+@media (max-width: 768px) {
+    .specs-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .artwork-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    }
+}
