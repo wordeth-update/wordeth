@@ -39,19 +39,6 @@ class AudioRoomsManager {
         this.isRoomHost = false;
         this.pendingRequests = [];
         
-        // Screen share state
-        this.screenshareEnabled = false;
-        this.screenshareStream = null;
-        this.isScreenSharing = false;
-        
-        // Mobile camera share state
-        this.isCameraSharing = false;
-        this.cameraShareStream = null;
-        this.cameraFacingMode = 'environment';
-        
-        // Native screen capture state
-        this.nativeScreenCapture = null;
-        this.isNativeScreenSharing = false;
         
         // Karaoke video state
         this.karaokeVideoStream = null;
@@ -64,7 +51,6 @@ class AudioRoomsManager {
         this.isVideoActive = false;
         this.activeVideoFeeds = new Map();
         this.MAX_VIDEO_TILES = 6;
-        this._remoteScreensharers = new Set();
         
         // AR filter engine
         this.arFilterEngine = null;
@@ -246,24 +232,6 @@ class AudioRoomsManager {
         this.audioFiltersModal = document.getElementById('audio-filters-modal');
         this.karaokeModal = document.getElementById('karaoke-modal');
         
-        if (this.isMobileDevice()) {
-            const screenshareBtn = document.getElementById('screenshare-btn');
-            if (screenshareBtn) {
-                screenshareBtn.title = 'Share camera or photo';
-                screenshareBtn.querySelector('i')?.classList.replace('fa-desktop', 'fa-share-square');
-            }
-        } else if (!this.isScreenShareSupported()) {
-            const screenshareBtn = document.getElementById('screenshare-btn');
-            const screenshareToggleBtn = document.getElementById('screenshare-toggle-btn');
-            if (screenshareBtn) {
-                screenshareBtn.style.opacity = '0.4';
-                screenshareBtn.title = 'Screen sharing is not supported in this browser';
-            }
-            if (screenshareToggleBtn) {
-                screenshareToggleBtn.style.opacity = '0.4';
-                screenshareToggleBtn.title = 'Screen sharing is not supported in this browser';
-            }
-        }
     }
 
     setupEventListeners() {
@@ -330,10 +298,15 @@ class AudioRoomsManager {
             }
         });
 
-        // Screen share controls
-        document.getElementById('screenshare-toggle-btn')?.addEventListener('click', () => this.toggleScreensharePermission());
-        document.getElementById('screenshare-btn')?.addEventListener('click', () => this.startScreenShare());
-        document.getElementById('screenshare-stop')?.addEventListener('click', () => this.stopScreenShare());
+        // Photo share controls
+        document.getElementById('share-photo-btn')?.addEventListener('click', () => {
+            document.getElementById('photo-input')?.click();
+        });
+        document.getElementById('photo-input')?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) this.shareImage(file);
+            e.target.value = '';
+        });
         
         // Video grid controls
         document.getElementById('video-toggle-btn')?.addEventListener('click', () => this.cycleVideoMode());
@@ -1271,10 +1244,8 @@ class AudioRoomsManager {
             this.isRoomHost = isHost;
             this.isSpeaker = isHost;
             this.karaokeEnabled = isHost ? false : (roomData?.karaokeEnabled || false);
-            this.screenshareEnabled = isHost ? false : (roomData?.screenshareEnabled || false);
             this.videoMode = isHost ? 'off' : (roomData?.videoMode || 'off');
             this.updateKaraokeButtonState();
-            this.updateScreenshareButtonState();
             this.updateVideoButtonState();
             this.updateHostControls();
             
@@ -1566,11 +1537,9 @@ class AudioRoomsManager {
                 if (roomNameEl) roomNameEl.textContent = data.roomName;
             }
             this.karaokeEnabled = data.karaokeEnabled || false;
-            this.screenshareEnabled = data.screenshareEnabled || false;
             this.videoMode = data.videoMode || 'off';
             this.isRoomLocked = data.isLocked || false;
             this.updateKaraokeButtonState();
-            this.updateScreenshareButtonState();
             this.updateVideoButtonState();
             this.updateParticipantDisplay(data.participants);
 
@@ -1723,51 +1692,14 @@ class AudioRoomsManager {
             return;
         }
         
-        if (this.videoMode !== 'off' && !this._remoteScreensharers.has(remoteId)) {
+        if (this.videoMode !== 'off') {
             this.activeVideoFeeds.set(remoteId, { userName: remoteName, stream, muted: false });
             this.refreshVideoGrid();
             
             stream.getVideoTracks()[0].onended = () => {
                 this.removeVideoTile(remoteId);
             };
-            return;
         }
-        
-        if (this.isScreenSharing) return;
-        
-        const container = document.getElementById('screenshare-container');
-        const videoEl = document.getElementById('screenshare-video');
-        const stopBtn = document.getElementById('screenshare-stop');
-        const headerSpan = container?.querySelector('.screenshare-header span');
-        
-        if (videoEl && stream) {
-            videoEl.srcObject = stream;
-            container?.classList.remove('hidden');
-            if (stopBtn) stopBtn.style.display = 'none';
-            if (headerSpan) headerSpan.innerHTML = `<i class="fas fa-desktop"></i> ${remoteName} is sharing`;
-            this._remoteVideoActive = true;
-            this._remoteVideoSenderId = remoteId;
-            
-            stream.getVideoTracks()[0].onended = () => {
-                this.hideRemoteVideo();
-            };
-        }
-    }
-    
-    hideRemoteVideo() {
-        if (this.isScreenSharing) return;
-        
-        const container = document.getElementById('screenshare-container');
-        const videoEl = document.getElementById('screenshare-video');
-        const stopBtn = document.getElementById('screenshare-stop');
-        const headerSpan = container?.querySelector('.screenshare-header span');
-        
-        if (videoEl) videoEl.srcObject = null;
-        container?.classList.add('hidden');
-        if (stopBtn) stopBtn.style.display = '';
-        if (headerSpan) headerSpan.innerHTML = '<i class="fas fa-desktop"></i> Screen Share';
-        this._remoteVideoActive = false;
-        this._remoteVideoSenderId = null;
     }
     
     async renegotiatePeer(peerId, pc) {
@@ -1854,11 +1786,6 @@ class AudioRoomsManager {
                 this.updateKaraokeButtonState();
                 this.addChatMessage('System', `Karaoke ${data.enabled ? 'enabled' : 'disabled'} by host.`, true);
                 break;
-            case 'screenshare-permission':
-                this.screenshareEnabled = data.enabled;
-                this.updateScreenshareButtonState();
-                this.addChatMessage('System', `Screen share ${data.enabled ? 'enabled' : 'disabled'} by host.`, true);
-                break;
             case 'video-mode':
                 this.videoMode = data.mode || 'off';
                 this.updateVideoButtonState();
@@ -1940,34 +1867,6 @@ class AudioRoomsManager {
                 break;
             case 'karaoke-stop':
                 this.addChatMessage('System', `${data.userName} stopped karaoke.`, true);
-                if (this._remoteVideoSenderId && data.userId) {
-                    const senderSocketId = this.findSocketByUserId(data.userId);
-                    if (!senderSocketId || senderSocketId === this._remoteVideoSenderId) {
-                        this.hideRemoteVideo();
-                    }
-                }
-                break;
-            case 'screenshare-start':
-                if (data.socketId || data.userId) {
-                    const ssSocketId = data.socketId || this.findSocketByUserId(data.userId);
-                    if (ssSocketId) this._remoteScreensharers.add(ssSocketId);
-                }
-                this.addChatMessage('System', `${data.userName || 'A participant'} started sharing their screen.`, true);
-                break;
-            case 'screenshare-stop':
-                if (data.socketId || data.userId) {
-                    const ssSocketId = data.socketId || this.findSocketByUserId(data.userId);
-                    if (ssSocketId) this._remoteScreensharers.delete(ssSocketId);
-                }
-                this.addChatMessage('System', `${data.userName || 'A participant'} stopped sharing their screen.`, true);
-                if (this._remoteVideoSenderId && data.userId) {
-                    const senderSocketId = this.findSocketByUserId(data.userId);
-                    if (!senderSocketId || senderSocketId === this._remoteVideoSenderId) {
-                        this.hideRemoteVideo();
-                    }
-                } else {
-                    this.hideRemoteVideo();
-                }
                 break;
         }
     }
@@ -2388,71 +2287,20 @@ class AudioRoomsManager {
     }
     
     handlePermissionApproved(data) {
-        const featureLabel = data.feature === 'karaoke' ? 'Karaoke' : 'Screen Share';
+        const featureLabel = data.feature === 'karaoke' ? 'Karaoke' : data.feature;
         this.addChatMessage('System', `${data.userName}'s ${featureLabel} request was approved.`, true);
         
         if (this.pendingPermissionRequestId && this.pendingPermissionRequestId === data.requestId) {
             this.pendingPermissionRequestId = null;
             if (data.feature === 'karaoke') {
                 this.karaokeModal?.classList.add('active');
-            } else if (data.feature === 'screenshare') {
-                this.startScreenShareAfterApproval().catch(e => console.error('Screen share after approval error:', e));
             }
         }
     }
     
-    async startScreenShareAfterApproval() {
-        if (this.isMobileDevice()) {
-            if (this.pendingNativeScreenShare) {
-                this.pendingNativeScreenShare = false;
-                this.startNativeScreenShareAfterApproval().catch(e => console.error('Native screen share after approval error:', e));
-            } else {
-                this.startCameraShareAfterApproval().catch(e => console.error('Camera share after approval error:', e));
-            }
-            return;
-        }
-        if (!this.isScreenShareSupported()) {
-            this.addChatMessage('System', 'Screen sharing is not supported in this browser.', true);
-            return;
-        }
-        
-        try {
-            this.screenshareStream = await navigator.mediaDevices.getDisplayMedia({
-                video: { cursor: 'always' },
-                audio: false
-            });
-            
-            const screenshareVideo = document.getElementById('screenshare-video');
-            const screenshareContainer = document.getElementById('screenshare-container');
-            const screenshareBtn = document.getElementById('screenshare-btn');
-            
-            if (screenshareVideo && this.screenshareStream) {
-                screenshareVideo.srcObject = this.screenshareStream;
-                screenshareContainer?.classList.remove('hidden');
-                screenshareBtn?.classList.add('sharing');
-                this.isScreenSharing = true;
-                
-                this.addChatMessage('System', 'You started sharing your screen.', true);
-                this.notifyParticipants('screenshare-start', { userId: 'currentUser' });
-                
-                await this.addVideoTrackToPeers(this.screenshareStream);
-                
-                this.screenshareStream.getVideoTracks()[0].onended = () => {
-                    this.stopScreenShare();
-                };
-            }
-        } catch (error) {
-            console.error('Screen share error:', error);
-            if (error.name === 'NotAllowedError') {
-                this.addChatMessage('System', 'Screen sharing was cancelled.', true);
-            } else {
-                this.addChatMessage('System', 'Failed to start screen sharing. Try using a desktop browser.', true);
-            }
-        }
-    }
     
     handlePermissionDenied(data) {
-        const featureLabel = data.feature === 'karaoke' ? 'Karaoke' : 'Screen Share';
+        const featureLabel = data.feature === 'karaoke' ? 'Karaoke' : data.feature;
         this.addChatMessage('System', `${data.userName}'s ${featureLabel} request was denied.`, true);
     }
 
@@ -2487,31 +2335,18 @@ class AudioRoomsManager {
         this.stopMusicStream();
         this.stopAudioMix();
         
-        if (this.nativeScreenCapture) {
-            this.nativeScreenCapture.stop().catch(() => {});
-            this.nativeScreenCapture = null;
-            this.isNativeScreenSharing = false;
-        }
-        
         if (this.localVideoStream) {
             this.localVideoStream.getTracks().forEach(track => track.stop());
             this.localVideoStream = null;
         }
         this.isVideoActive = false;
         this.activeVideoFeeds.clear();
-        this._remoteScreensharers.clear();
         this.videoMode = 'off';
         const videoGridWrapper = document.getElementById('video-grid-wrapper');
         const videoGrid = document.getElementById('video-grid');
         if (videoGridWrapper) videoGridWrapper.classList.add('hidden');
         if (videoGrid) videoGrid.innerHTML = '';
         this.updateVideoButtonState();
-        
-        if (this.cameraShareStream) {
-            this.cameraShareStream.getTracks().forEach(track => track.stop());
-            this.cameraShareStream = null;
-            this.isCameraSharing = false;
-        }
         
         if (this.localStream) {
             this.localStream.getTracks().forEach(track => track.stop());
@@ -2575,9 +2410,14 @@ class AudioRoomsManager {
         this.audioFilterBtn?.addEventListener('click', () => this.showAudioFiltersModal());
         this.karaokeBtn?.addEventListener('click', () => this.showKaraokeModal());
         document.getElementById('karaoke-toggle-btn')?.addEventListener('click', () => this.toggleKaraokePermission());
-        document.getElementById('screenshare-toggle-btn')?.addEventListener('click', () => this.toggleScreensharePermission());
-        document.getElementById('screenshare-btn')?.addEventListener('click', () => this.startScreenShare());
-        document.getElementById('screenshare-stop')?.addEventListener('click', () => this.stopScreenShare());
+        document.getElementById('share-photo-btn')?.addEventListener('click', () => {
+            document.getElementById('photo-input')?.click();
+        });
+        document.getElementById('photo-input')?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) this.shareImage(file);
+            e.target.value = '';
+        });
         document.getElementById('video-toggle-btn')?.addEventListener('click', () => this.cycleVideoMode());
         document.getElementById('video-btn')?.addEventListener('click', () => this.toggleLocalVideo());
         document.getElementById('mute-all-btn')?.addEventListener('click', () => this.muteAllParticipants());
@@ -2630,7 +2470,6 @@ class AudioRoomsManager {
 
         this.updateHostControls();
         this.updateKaraokeButtonState();
-        this.updateScreenshareButtonState();
         this.initHostPanel();
         this.syncHostPanel();
 
@@ -3202,7 +3041,6 @@ class AudioRoomsManager {
     updateHostControls() {
         const hostOnlyControls = [
             document.getElementById('karaoke-toggle-btn'),
-            document.getElementById('screenshare-toggle-btn'),
             document.getElementById('video-toggle-btn'),
             document.getElementById('mute-all-btn'),
             document.getElementById('close-room-btn'),
@@ -3371,51 +3209,6 @@ class AudioRoomsManager {
         });
     }
     
-    // ==========================================
-    // SCREEN SHARE FEATURE
-    // ==========================================
-    
-    toggleScreensharePermission() {
-        if (!this.isRoomHost) {
-            this.addChatMessage('System', 'Only the room host can enable/disable screen sharing.', true);
-            return;
-        }
-        
-        this.screenshareEnabled = !this.screenshareEnabled;
-        
-        const btn = document.getElementById('screenshare-toggle-btn');
-        const text = btn?.querySelector('.screenshare-toggle-text');
-        
-        if (this.screenshareEnabled) {
-            btn?.classList.add('active');
-            if (text) text.textContent = 'Share: On';
-            this.addChatMessage('System', 'Screen sharing enabled! Participants can now share their screen.', true);
-        } else {
-            btn?.classList.remove('active');
-            if (text) text.textContent = 'Share: Off';
-            this.addChatMessage('System', 'Screen sharing disabled.', true);
-            // Stop any active screen share
-            if (this.isScreenSharing) {
-                this.stopScreenShare();
-            }
-        }
-        
-        this.notifyParticipants('screenshare-permission', { enabled: this.screenshareEnabled });
-        this.updateScreenshareButtonState();
-    }
-    
-    updateScreenshareButtonState() {
-        const screenshareBtn = document.getElementById('screenshare-btn');
-        if (screenshareBtn) {
-            if (this.screenshareEnabled) {
-                screenshareBtn.classList.remove('disabled');
-                screenshareBtn.title = 'Share your screen';
-            } else {
-                screenshareBtn.classList.add('disabled');
-                screenshareBtn.title = 'Screen sharing disabled by host';
-            }
-        }
-    }
     
     // ==========================================
     // VIDEO GRID FEATURE
@@ -3788,8 +3581,8 @@ class AudioRoomsManager {
         const container = document.getElementById('host-notifications');
         if (!container) return;
         
-        const featureLabels = { karaoke: 'Karaoke', screenshare: 'Screen Share', video: 'Camera' };
-        const featureIcons = { karaoke: 'fa-compact-disc', screenshare: 'fa-desktop', video: 'fa-video' };
+        const featureLabels = { karaoke: 'Karaoke', video: 'Camera' };
+        const featureIcons = { karaoke: 'fa-compact-disc', video: 'fa-video' };
         const featureLabel = featureLabels[feature] || feature;
         const featureIcon = featureIcons[feature] || 'fa-question';
         
@@ -3838,16 +3631,6 @@ class AudioRoomsManager {
                 if (text) text.textContent = 'Karaoke: On';
                 this.updateKaraokeButtonState();
             }
-        } else if (feature === 'screenshare') {
-            if (!this.screenshareEnabled) {
-                this.screenshareEnabled = true;
-                const btn = document.getElementById('screenshare-toggle-btn');
-                const text = btn?.querySelector('.screenshare-toggle-text');
-                btn?.classList.add('active');
-                if (text) text.textContent = 'Share: On';
-                this.updateScreenshareButtonState();
-            }
-        }
         
         this.dismissNotification(requestId);
     }
@@ -3876,134 +3659,12 @@ class AudioRoomsManager {
             || (window.innerWidth <= 768);
     }
     
-    isScreenShareSupported() {
-        return !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
-    }
-    
-    async startScreenShare() {
-        if (this.isMobileDevice()) {
-            this.showMobileShareModal();
-            return;
-        }
-
-        if (!this.isRoomHost) {
-            if (!this.isScreenShareSupported()) {
-                this.addChatMessage('System', 'Screen sharing is only available on desktop browsers.', true);
-                return;
-            }
-            this.requestPermission('screenshare', 'A participant');
-            return;
-        }
-        
-        if (!this.isScreenShareSupported()) {
-            this.addChatMessage('System', 'Screen sharing is not supported in this browser.', true);
-            return;
-        }
-        
-        if (!this.screenshareEnabled) {
-            this.screenshareEnabled = true;
-            this.updateScreenshareButtonState();
-            const btn = document.getElementById('screenshare-toggle-btn');
-            const text = btn?.querySelector('.screenshare-toggle-text');
-            btn?.classList.add('active');
-            if (text) text.textContent = 'Share: On';
-            this.addChatMessage('System', 'Screen sharing enabled!', true);
-        }
-        
-        if (this.isScreenSharing) {
-            this.stopScreenShare();
-            return;
-        }
-        
-        try {
-            this.screenshareStream = await navigator.mediaDevices.getDisplayMedia({
-                video: { cursor: 'always' },
-                audio: false
-            });
-            
-            const screenshareVideo = document.getElementById('screenshare-video');
-            const screenshareContainer = document.getElementById('screenshare-container');
-            const screenshareBtn = document.getElementById('screenshare-btn');
-            
-            if (screenshareVideo && this.screenshareStream) {
-                screenshareVideo.srcObject = this.screenshareStream;
-                screenshareContainer?.classList.remove('hidden');
-                screenshareBtn?.classList.add('sharing');
-                this.isScreenSharing = true;
-                
-                this.addChatMessage('System', 'You started sharing your screen.', true);
-                this.notifyParticipants('screenshare-start', { userId: 'currentUser' });
-                
-                await this.addVideoTrackToPeers(this.screenshareStream);
-                
-                this.screenshareStream.getVideoTracks()[0].onended = () => {
-                    this.stopScreenShare();
-                };
-            }
-        } catch (error) {
-            console.error('Screen share error:', error);
-            if (error.name === 'NotAllowedError') {
-                this.addChatMessage('System', 'Screen sharing was cancelled.', true);
-            } else if (error.name === 'NotSupportedError') {
-                this.addChatMessage('System', 'Screen sharing is not supported in this browser.', true);
-            } else {
-                this.addChatMessage('System', 'Failed to start screen sharing. Try using a desktop browser.', true);
-            }
-        }
-    }
-    
-    async stopScreenShare() {
-        await this.removeVideoTrackFromPeers();
-        
-        if (this.screenshareStream) {
-            this.screenshareStream.getTracks().forEach(track => track.stop());
-            this.screenshareStream = null;
-        }
-        
-        const screenshareVideo = document.getElementById('screenshare-video');
-        const screenshareContainer = document.getElementById('screenshare-container');
-        const screenshareBtn = document.getElementById('screenshare-btn');
-        
-        if (screenshareVideo) {
-            screenshareVideo.srcObject = null;
-        }
-        screenshareContainer?.classList.add('hidden');
-        screenshareBtn?.classList.remove('sharing');
-        this.isScreenSharing = false;
-        
-        this.addChatMessage('System', 'Screen sharing stopped.', true);
-        this.notifyParticipants('screenshare-stop', { userId: 'currentUser' });
-    }
-    
-    // ==========================================
-    // MOBILE SHARE FEATURE (Camera + Image)
-    // ==========================================
-    
     showMobileShareModal() {
-        if (this.isScreenSharing || this.isCameraSharing || this.isNativeScreenSharing) {
-            this.stopMobileShare();
-            return;
-        }
         const modal = document.getElementById('mobile-share-modal');
         modal?.classList.add('active');
     }
 
     setupMobileShareListeners() {
-        if (window.NativeScreenCapture && NativeScreenCapture.isAvailable()) {
-            const screenBtn = document.getElementById('mobile-screen-share-btn');
-            if (screenBtn) screenBtn.style.display = 'flex';
-        }
-
-        document.getElementById('mobile-screen-share-btn')?.addEventListener('click', () => {
-            document.getElementById('mobile-share-modal')?.classList.remove('active');
-            this.startNativeScreenShare();
-        });
-
-        document.getElementById('mobile-camera-share-btn')?.addEventListener('click', () => {
-            document.getElementById('mobile-share-modal')?.classList.remove('active');
-            this.startCameraShare();
-        });
-
         document.getElementById('mobile-image-share-btn')?.addEventListener('click', () => {
             document.getElementById('mobile-share-modal')?.classList.remove('active');
             document.getElementById('mobile-image-input')?.click();
@@ -4018,218 +3679,6 @@ class AudioRoomsManager {
         document.getElementById('shared-image-close')?.addEventListener('click', () => {
             document.getElementById('shared-image-overlay')?.classList.add('hidden');
         });
-    }
-
-    async startCameraShare() {
-        if (!this.isRoomHost && !this.screenshareEnabled) {
-            this.showToast('Sharing is disabled by the host', 'fa-lock');
-            return;
-        }
-        if (!this.isRoomHost && this.screenshareEnabled) {
-            this.requestPermission('screenshare', 'A participant');
-            return;
-        }
-        await this.startCameraShareAfterApproval();
-    }
-
-    async startCameraShareAfterApproval() {
-        try {
-            this.cameraFacingMode = 'environment';
-            this.cameraShareStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: this.cameraFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
-                audio: false
-            });
-
-            const screenshareVideo = document.getElementById('screenshare-video');
-            const screenshareContainer = document.getElementById('screenshare-container');
-            const screenshareBtn = document.getElementById('screenshare-btn');
-            const header = screenshareContainer?.querySelector('.screenshare-header');
-
-            if (header) {
-                header.querySelector('span').innerHTML = '<i class="fas fa-video"></i> Camera Share';
-                const stopBtn = header.querySelector('.screenshare-stop-btn');
-                if (stopBtn) stopBtn.id = 'camera-share-stop';
-
-                let flipBtn = header.querySelector('.camera-flip-btn');
-                if (!flipBtn) {
-                    flipBtn = document.createElement('button');
-                    flipBtn.className = 'camera-flip-btn';
-                    flipBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Flip';
-                    header.insertBefore(flipBtn, stopBtn);
-                }
-                flipBtn.onclick = () => this.flipCamera();
-            }
-
-            if (screenshareVideo && this.cameraShareStream) {
-                screenshareVideo.srcObject = this.cameraShareStream;
-                screenshareContainer?.classList.remove('hidden');
-                screenshareBtn?.classList.add('sharing');
-                this.isCameraSharing = true;
-                this.isScreenSharing = true;
-
-                this.addChatMessage('System', 'You started sharing your camera.', true);
-                this.notifyParticipants('screenshare-start', { userId: 'currentUser', type: 'camera' });
-
-                await this.addVideoTrackToPeers(this.cameraShareStream);
-
-                this.cameraShareStream.getVideoTracks()[0].onended = () => {
-                    this.stopMobileShare();
-                };
-
-                document.getElementById('camera-share-stop')?.addEventListener('click', () => {
-                    this.stopMobileShare();
-                });
-            }
-        } catch (error) {
-            console.error('Camera share error:', error);
-            if (error.name === 'NotAllowedError') {
-                this.showToast('Camera permission denied', 'fa-exclamation-circle');
-            } else {
-                this.showToast('Could not access camera', 'fa-exclamation-circle');
-            }
-        }
-    }
-
-    async flipCamera() {
-        if (!this.isCameraSharing) return;
-        this.cameraFacingMode = this.cameraFacingMode === 'environment' ? 'user' : 'environment';
-        
-        if (this.cameraShareStream) {
-            this.cameraShareStream.getTracks().forEach(t => t.stop());
-        }
-        
-        try {
-            this.cameraShareStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: this.cameraFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
-                audio: false
-            });
-            
-            const screenshareVideo = document.getElementById('screenshare-video');
-            if (screenshareVideo) {
-                screenshareVideo.srcObject = this.cameraShareStream;
-            }
-            
-            const videoTrack = this.cameraShareStream.getVideoTracks()[0];
-            for (const [, pc] of this.peerConnections) {
-                if (pc._videoSender) {
-                    pc._videoSender.replaceTrack(videoTrack);
-                }
-            }
-            
-            this.cameraShareStream.getVideoTracks()[0].onended = () => {
-                this.stopMobileShare();
-            };
-        } catch (error) {
-            console.error('Camera flip error:', error);
-            this.showToast('Could not flip camera', 'fa-exclamation-circle');
-        }
-    }
-
-    async stopMobileShare() {
-        const wasNativeShare = this.isNativeScreenSharing;
-        
-        await this.removeVideoTrackFromPeers();
-        
-        if (this.nativeScreenCapture) {
-            await this.nativeScreenCapture.stop();
-            this.nativeScreenCapture = null;
-        }
-        
-        if (this.cameraShareStream) {
-            this.cameraShareStream.getTracks().forEach(track => track.stop());
-            this.cameraShareStream = null;
-        }
-        
-        const screenshareVideo = document.getElementById('screenshare-video');
-        const screenshareContainer = document.getElementById('screenshare-container');
-        const screenshareBtn = document.getElementById('screenshare-btn');
-        const header = screenshareContainer?.querySelector('.screenshare-header');
-        
-        if (screenshareVideo) screenshareVideo.srcObject = null;
-        screenshareContainer?.classList.add('hidden');
-        screenshareBtn?.classList.remove('sharing');
-        this.isScreenSharing = false;
-        this.isCameraSharing = false;
-        this.isNativeScreenSharing = false;
-        
-        if (header) {
-            header.querySelector('span').innerHTML = '<i class="fas fa-desktop"></i> Screen Share';
-            const flipBtn = header.querySelector('.camera-flip-btn');
-            flipBtn?.remove();
-        }
-        
-        const shareType = wasNativeShare ? 'Screen' : 'Camera';
-        this.addChatMessage('System', `${shareType} sharing stopped.`, true);
-        this.notifyParticipants('screenshare-stop', { userId: 'currentUser' });
-    }
-
-    async startNativeScreenShare() {
-        if (!this.isRoomHost && !this.screenshareEnabled) {
-            this.showToast('Sharing is disabled by the host', 'fa-lock');
-            return;
-        }
-        if (!this.isRoomHost && this.screenshareEnabled) {
-            this.pendingNativeScreenShare = true;
-            this.requestPermission('screenshare', 'A participant');
-            return;
-        }
-        await this.startNativeScreenShareAfterApproval();
-    }
-
-    async startNativeScreenShareAfterApproval() {
-        if (!window.NativeScreenCapture || !NativeScreenCapture.isAvailable()) {
-            this.showToast('Screen sharing not available on this device', 'fa-exclamation-circle');
-            return;
-        }
-
-        try {
-            this.nativeScreenCapture = new NativeScreenCapture();
-            const stream = await this.nativeScreenCapture.start({
-                fps: 10,
-                quality: 40,
-                scale: 0.5
-            });
-
-            const screenshareVideo = document.getElementById('screenshare-video');
-            const screenshareContainer = document.getElementById('screenshare-container');
-            const screenshareBtn = document.getElementById('screenshare-btn');
-            const header = screenshareContainer?.querySelector('.screenshare-header');
-
-            if (header) {
-                header.querySelector('span').innerHTML = '<i class="fas fa-desktop"></i> Screen Share';
-                const flipBtn = header.querySelector('.camera-flip-btn');
-                flipBtn?.remove();
-            }
-
-            if (screenshareVideo && stream) {
-                screenshareVideo.srcObject = stream;
-                screenshareContainer?.classList.remove('hidden');
-                screenshareBtn?.classList.add('sharing');
-                this.isScreenSharing = true;
-                this.isNativeScreenSharing = true;
-
-                this.addChatMessage('System', 'You started sharing your screen.', true);
-                this.notifyParticipants('screenshare-start', { userId: 'currentUser', type: 'screen' });
-
-                await this.addVideoTrackToPeers(stream);
-
-                const stopBtn = document.getElementById('screenshare-stop') || header?.querySelector('.screenshare-stop-btn');
-                if (stopBtn) {
-                    stopBtn.onclick = () => this.stopMobileShare();
-                }
-            }
-        } catch (error) {
-            console.error('Native screen share error:', error);
-            if (this.nativeScreenCapture) {
-                this.nativeScreenCapture.cleanup();
-                this.nativeScreenCapture = null;
-            }
-            if (error.message?.includes('denied') || error.message?.includes('permission')) {
-                this.showToast('Screen capture permission denied', 'fa-exclamation-circle');
-            } else {
-                this.showToast('Could not start screen sharing', 'fa-exclamation-circle');
-            }
-        }
     }
 
     async shareImage(file) {

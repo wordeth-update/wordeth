@@ -2723,58 +2723,6 @@
 }
 
 
-/* ==========================================
-   SCREEN SHARE FEATURE
-   ========================================== */
-
-.screenshare-container {
-    background: rgba(0, 0, 0, 0.8);
-    border-radius: 16px;
-    margin-bottom: 1rem;
-    overflow: hidden;
-    border: 2px solid var(--purple-accent);
-}
-
-.screenshare-container.hidden {
-    display: none;
-}
-
-.screenshare-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.75rem 1rem;
-    background: linear-gradient(135deg, var(--purple-dark), var(--purple-accent));
-    color: var(--white);
-    font-weight: 600;
-}
-
-.screenshare-header i {
-    margin-right: 0.5rem;
-}
-
-.screenshare-stop-btn {
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    color: var(--white);
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 0.85rem;
-}
-
-.screenshare-stop-btn:hover {
-    background: #dc3545;
-}
-
-#screenshare-video {
-    width: 100%;
-    max-height: 400px;
-    object-fit: contain;
-    background: #000;
-}
-
 .control-btn.sharing {
     background: var(--purple-accent);
     animation: pulse 1.5s infinite;
@@ -3332,12 +3280,10 @@
     .room-header .room-actions .action-btn span,
     .room-header .room-actions .action-btn .lock-text,
     .room-header .room-actions .action-btn .karaoke-toggle-text,
-    .room-header .room-actions .action-btn .screenshare-toggle-text,
     .room-header .room-actions .action-btn .video-toggle-text {
         display: none;
     }
     .room-header .room-actions #karaoke-toggle-btn,
-    .room-header .room-actions #screenshare-toggle-btn,
     .room-header .room-actions #video-toggle-btn,
     .room-header .room-actions #mute-all-btn,
     .room-header .room-actions #close-room-btn,
@@ -3427,15 +3373,6 @@
         height: 4px;
         background: rgba(255,255,255,0.3);
         border-radius: 2px;
-    }
-
-    /* Screen Share */
-    .screenshare-container {
-        margin: 0;
-        border-radius: 0;
-    }
-    #screenshare-video {
-        max-height: 200px;
     }
 
     /* ===== BOTTOM CONTROL PANEL - CLUBHOUSE STYLE ===== */
@@ -3733,24 +3670,6 @@
 .share-option-info span {
     font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.6);
-}
-
-/* Camera share header bar */
-.screenshare-header .camera-flip-btn {
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    color: var(--white);
-    padding: 0.4rem 0.8rem;
-    border-radius: 16px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    margin-right: 8px;
-    transition: background 0.2s;
-}
-
-.screenshare-header .camera-flip-btn:hover,
-.screenshare-header .camera-flip-btn:active {
-    background: rgba(255, 255, 255, 0.35);
 }
 
 /* Shared Image Overlay */

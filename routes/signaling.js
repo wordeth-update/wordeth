@@ -101,7 +101,6 @@ function setupSignaling(io) {
                     creatorUserId: socket.userId,
                     participants: new Map(),
                     karaokeEnabled: false,
-                    screenshareEnabled: false,
                     videoMode: 'off',
                     activeVideos: new Set(),
                     isLocked: false,
@@ -145,7 +144,6 @@ function setupSignaling(io) {
                 participants: participantList,
                 isHost: shouldBeHost,
                 karaokeEnabled: room.karaokeEnabled,
-                screenshareEnabled: room.screenshareEnabled,
                 videoMode: room.videoMode || 'off',
                 activeVideos: Array.from(room.activeVideos || []),
                 isLocked: room.isLocked
@@ -212,7 +210,6 @@ function setupSignaling(io) {
                 roomName: room.name || null,
                 isLocked: room.isLocked,
                 karaokeEnabled: room.karaokeEnabled,
-                screenshareEnabled: room.screenshareEnabled,
                 videoMode: room.videoMode || 'off',
                 activeVideos: Array.from(room.activeVideos || [])
             });
@@ -275,8 +272,7 @@ function setupSignaling(io) {
                     participants: updatedList,
                     roomName: room.name || null,
                     isLocked: room.isLocked,
-                    karaokeEnabled: room.karaokeEnabled,
-                    screenshareEnabled: room.screenshareEnabled
+                    karaokeEnabled: room.karaokeEnabled
                 });
             }
         });
@@ -306,12 +302,6 @@ function setupSignaling(io) {
                     }
                     break;
 
-                case 'screenshare-permission':
-                    if (socket.id === room.hostId) {
-                        room.screenshareEnabled = data.enabled;
-                        socket.to(roomId).emit('room-event', { event, data });
-                    }
-                    break;
 
                 case 'video-mode':
                     if (socket.id === room.hostId) {
@@ -408,10 +398,6 @@ function setupSignaling(io) {
                     socket.to(roomId).emit('room-event', { event, data: { ...data, userId: socket.userId, userName: socket.userName } });
                     break;
 
-                case 'screenshare-start':
-                case 'screenshare-stop':
-                    socket.to(roomId).emit('room-event', { event, data: { ...data, socketId: socket.id, userId: socket.userId, userName: socket.userName } });
-                    break;
 
                 case 'hand-raise':
                     socket.to(roomId).emit('room-event', { event, data: { ...data, userId: socket.userId, userName: socket.userName } });
@@ -523,7 +509,6 @@ function getActiveRooms() {
             })),
             isLocked: room.isLocked,
             karaokeEnabled: room.karaokeEnabled,
-            screenshareEnabled: room.screenshareEnabled,
             videoMode: room.videoMode || 'off',
             createdAt: room.createdAt
         });
