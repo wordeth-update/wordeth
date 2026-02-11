@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join as Creator - Wordeth</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/creator-register.css">
+    <link rel="stylesheet" href="css/cookie-consent.css">
+</head>
+<body>
+    <nav class="main-nav">
+        <div class="nav-logo">
+            <a href="/"><img src="images/logo.png" alt="Wordeth Logo" class="logo"></a>
+        </div>
+        <div class="nav-links">
+            <a href="/">Home</a>
+        </div>
+        <button class="menu-toggle" id="menuToggle">
+            <span></span><span></span><span></span>
+        </button>
+    </nav>
+
+    <div class="auth-container creator-register-container">
+        <div class="creator-type-selector">
+            <h2>I am a...</h2>
+            <div class="type-cards">
+                <div class="type-card active" data-type="artist">
+                    <div class="type-icon"><i class="fas fa-microphone-alt"></i></div>
+                    <h3>Music Artist</h3>
+                    <p>Build your storefront, sell merch, and share lyric packs with fans</p>
+                    <ul class="type-features">
+                        <li><i class="fas fa-check"></i> Official artist storefront</li>
+                        <li><i class="fas fa-check"></i> Lyric pack monetization</li>
+                        <li><i class="fas fa-check"></i> Merch sales & analytics</li>
+                        <li><i class="fas fa-check"></i> Fan engagement tools</li>
+                    </ul>
+                    <div class="type-price">Starting at <strong>$49/mo</strong></div>
+                </div>
+                <div class="type-card" data-type="designer">
+                    <div class="type-icon"><i class="fas fa-palette"></i></div>
+                    <h3>Designer / Creator</h3>
+                    <p>Create templates, build collections, and earn from your designs</p>
+                    <ul class="type-features">
+                        <li><i class="fas fa-check"></i> Upload design templates</li>
+                        <li><i class="fas fa-check"></i> Earn revenue per use</li>
+                        <li><i class="fas fa-check"></i> Build your portfolio</li>
+                        <li><i class="fas fa-check"></i> Start free, upgrade as you grow</li>
+                    </ul>
+                    <div class="type-price">Start <strong>Free</strong> — upgrade at $15/mo</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="auth-form-wrapper">
+            <div class="creator-badge">
+                <i class="fas fa-rocket"></i> CREATOR REGISTRATION
+            </div>
+            <h1 id="formTitle">Register as Artist</h1>
+            <p class="auth-subtitle">Set up your creator profile and start building</p>
+
+            <form id="creatorRegisterForm" class="auth-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="displayName">Display Name / Artist Name</label>
+                        <input type="text" id="displayName" placeholder="Your artist or brand name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" placeholder="Choose a username" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" placeholder="your@email.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="At least 6 characters" required minlength="6">
+                </div>
+
+                <div class="form-group">
+                    <label>Genres <span class="label-hint">(select up to 3)</span></label>
+                    <div class="genre-chips" id="genreChips">
+                        <button type="button" class="genre-chip" data-genre="Hip Hop">Hip Hop</button>
+                        <button type="button" class="genre-chip" data-genre="R&B">R&B</button>
+                        <button type="button" class="genre-chip" data-genre="Pop">Pop</button>
+                        <button type="button" class="genre-chip" data-genre="Rock">Rock</button>
+                        <button type="button" class="genre-chip" data-genre="Electronic">Electronic</button>
+                        <button type="button" class="genre-chip" data-genre="Jazz">Jazz</button>
+                        <button type="button" class="genre-chip" data-genre="Country">Country</button>
+                        <button type="button" class="genre-chip" data-genre="Latin">Latin</button>
+                        <button type="button" class="genre-chip" data-genre="Afrobeats">Afrobeats</button>
+                        <button type="button" class="genre-chip" data-genre="Indie">Indie</button>
+                        <button type="button" class="genre-chip" data-genre="Gospel">Gospel</button>
+                        <button type="button" class="genre-chip" data-genre="Classical">Classical</button>
+                        <button type="button" class="genre-chip" data-genre="Reggae">Reggae</button>
+                        <button type="button" class="genre-chip" data-genre="Metal">Metal</button>
+                        <button type="button" class="genre-chip" data-genre="Folk">Folk</button>
+                        <button type="button" class="genre-chip" data-genre="Other">Other</button>
+                    </div>
+                </div>
+
+                <div class="form-group terms-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="agreeTerms" required>
+                        <span>I agree to the <a href="terms.html" target="_blank">Terms of Service</a> and <a href="privacy.html" target="_blank">Privacy Policy</a></span>
+                    </label>
+                </div>
+
+                <div id="errorMessage" class="error-message" style="display:none;"></div>
+
+                <button type="submit" class="auth-btn" id="submitBtn">
+                    <i class="fas fa-rocket"></i> Create My Account
+                </button>
+
+                <div class="auth-footer">
+                    <p>Already have an account? <a href="signin.html">Sign In</a></p>
+                    <p>Representing a label? <a href="partner-login.html">Label Partner Portal</a></p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/creator-register.js"></script>
+    <script src="js/cookie-consent.js"></script>
+</body>
+</html>

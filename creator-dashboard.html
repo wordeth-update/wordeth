@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creator Dashboard - Wordeth</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/creator-dashboard.css">
+    <link rel="stylesheet" href="css/cookie-consent.css">
+</head>
+<body>
+    <nav class="main-nav">
+        <div class="nav-logo">
+            <a href="/"><img src="images/logo.png" alt="Wordeth Logo" class="logo"></a>
+        </div>
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="verses.html">Verses</a>
+            <a href="lyrics.html">Lyrics</a>
+            <a href="merch.html">Merch</a>
+        </div>
+        <button class="menu-toggle" id="menuToggle">
+            <span></span><span></span><span></span>
+        </button>
+    </nav>
+
+    <div class="dashboard-container" id="dashboardContainer" style="display:none;">
+        <div class="dashboard-header">
+            <div class="header-left">
+                <div class="creator-avatar" id="creatorAvatar">W</div>
+                <div class="header-info">
+                    <h1 id="creatorName">Creator</h1>
+                    <div class="handle-line">
+                        <span class="handle" id="creatorHandle">@handle</span>
+                        <span class="account-badge" id="accountBadge">Artist</span>
+                    </div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <a href="profile.html" class="btn-secondary"><i class="fas fa-user-edit"></i> Edit Profile</a>
+                <button class="btn-secondary" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
+            </div>
+        </div>
+
+        <div class="plan-banner" id="planBanner">
+            <div class="plan-info">
+                <div class="plan-name-row">
+                    <span class="plan-label">Current Plan</span>
+                    <h2 id="planName">Free</h2>
+                </div>
+                <div class="plan-details">
+                    <span id="planPrice" class="plan-price"></span>
+                    <span id="planCycle" class="plan-cycle"></span>
+                </div>
+            </div>
+            <div class="plan-cta">
+                <button class="btn-upgrade" id="upgradePlanBtn"><i class="fas fa-arrow-up"></i> Upgrade Plan</button>
+            </div>
+        </div>
+
+        <div class="graduation-banner" id="graduationBanner" style="display:none;">
+            <div class="graduation-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="graduation-text">
+                <h3>Upgrade Required</h3>
+                <p>You've reached the free tier thresholds. Upgrade to continue uploading new templates and access your storefront.</p>
+            </div>
+            <div class="graduation-meters" id="graduationMeters"></div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
+                <div class="stat-value" id="statEarnings">$0.00</div>
+                <div class="stat-label">Total Earnings</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-shopping-cart"></i></div>
+                <div class="stat-value" id="statSales">0</div>
+                <div class="stat-label">Total Sales</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-layer-group"></i></div>
+                <div class="stat-value" id="statTemplates">0</div>
+                <div class="stat-label">Templates</div>
+                <div class="stat-limit" id="templateLimit"></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-hdd"></i></div>
+                <div class="stat-value" id="statStorage">0 MB</div>
+                <div class="stat-label">Storage Used</div>
+                <div class="stat-limit" id="storageLimit"></div>
+            </div>
+        </div>
+
+        <div class="dashboard-tabs">
+            <button class="tab-btn active" data-tab="overview">Overview</button>
+            <button class="tab-btn" data-tab="entitlements">My Plan Details</button>
+            <button class="tab-btn" data-tab="upgrade">Plans & Pricing</button>
+        </div>
+
+        <div class="tab-content active" id="tab-overview">
+            <div class="section-card">
+                <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+                <div class="quick-actions">
+                    <a href="merch.html" class="action-card">
+                        <i class="fas fa-tshirt"></i>
+                        <span>Manage Merch</span>
+                    </a>
+                    <a href="verses.html" class="action-card">
+                        <i class="fas fa-headphones"></i>
+                        <span>Go Live</span>
+                    </a>
+                    <a href="lyrics.html" class="action-card">
+                        <i class="fas fa-music"></i>
+                        <span>Lyrics</span>
+                    </a>
+                    <a href="profile.html" class="action-card">
+                        <i class="fas fa-user-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <h3><i class="fas fa-link"></i> Social Links</h3>
+                <div class="social-links-grid" id="socialLinksGrid">
+                    <p class="empty-state">No social links added yet. <a href="profile.html">Add them in your profile.</a></p>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <h3><i class="fas fa-tags"></i> Genres</h3>
+                <div class="genre-display" id="genreDisplay">
+                    <span class="empty-state">No genres selected</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-entitlements">
+            <div class="section-card">
+                <h3><i class="fas fa-key"></i> What's Included in Your Plan</h3>
+                <div class="entitlements-list" id="entitlementsList"></div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-upgrade">
+            <div class="plans-grid" id="plansGrid"></div>
+        </div>
+    </div>
+
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
+        <p>Loading your dashboard...</p>
+    </div>
+
+    <script src="js/creator-dashboard.js"></script>
+    <script src="js/cookie-consent.js"></script>
+</body>
+</html>

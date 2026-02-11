@@ -19,6 +19,51 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    role: {
+        type: String,
+        enum: ['USER_FAN', 'DESIGNER', 'ARTIST', 'LABEL_ADMIN', 'LABEL_MANAGER', 'ADMIN'],
+        default: 'USER_FAN',
+        index: true
+    },
+    accountType: {
+        type: String,
+        enum: ['fan', 'designer', 'artist', 'label'],
+        default: 'fan',
+        index: true
+    },
+    subscriptionId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Subscription',
+        default: null
+    },
+    creatorProfile: {
+        displayName: { type: String, default: '' },
+        handle: { type: String, default: '', lowercase: true, trim: true },
+        genres: [{ type: String }],
+        socialLinks: {
+            instagram: { type: String, default: '' },
+            twitter: { type: String, default: '' },
+            spotify: { type: String, default: '' },
+            youtube: { type: String, default: '' },
+            website: { type: String, default: '' }
+        },
+        storageUsedBytes: { type: Number, default: 0 },
+        templateCount: { type: Number, default: 0 },
+        totalEarnings: { type: Number, default: 0 },
+        totalSales: { type: Number, default: 0 },
+        monthsActive: { type: Number, default: 0 },
+        firstActiveAt: { type: Date, default: null }
+    },
+    labelId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Label',
+        default: null
+    },
+    entitlementOverrides: {
+        type: Map,
+        of: mongoose.Schema.Types.Mixed,
+        default: {}
+    },
     bio: {
         type: String,
         default: ''
