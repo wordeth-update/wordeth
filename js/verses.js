@@ -1309,9 +1309,18 @@ class AudioRoomsManager {
             const roomNameEl = document.getElementById('room-name');
             const currentRoomName = roomNameEl?.textContent || '';
             
+            let visitorId = user._id || user.id;
+            if (!visitorId) {
+                visitorId = localStorage.getItem('wordeth_visitor_id');
+                if (!visitorId) {
+                    visitorId = 'anon_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+                    localStorage.setItem('wordeth_visitor_id', visitorId);
+                }
+            }
+
             this.socket.emit('join-room', {
                 roomId,
-                userId: user._id || user.id || this.socket.id,
+                userId: visitorId,
                 userName,
                 isHost,
                 roomName: currentRoomName || null,
