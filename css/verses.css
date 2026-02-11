@@ -4523,3 +4523,128 @@
         font-size: 0.8rem;
     }
 }
+
+.welcome-guide-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.welcome-guide-overlay.active {
+    display: flex;
+}
+
+.welcome-guide-modal {
+    background: linear-gradient(160deg, #1a0a1a 0%, #0d0d0d 50%, #0a1a14 100%);
+    border: 1px solid rgba(150, 197, 176, 0.25);
+    border-radius: 20px;
+    max-width: 460px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(95, 14, 130, 0.15);
+}
+
+.welcome-guide-header {
+    text-align: center;
+    padding: 2rem 1.5rem 1rem;
+}
+
+.welcome-guide-header h2 {
+    font-size: 1.4rem;
+    color: var(--white);
+    margin-bottom: 0.4rem;
+}
+
+.welcome-guide-header h2 i {
+    color: var(--mint);
+    margin-right: 0.4rem;
+}
+
+.welcome-guide-header p {
+    color: var(--purple-light);
+    font-size: 0.9rem;
+}
+
+.welcome-guide-body {
+    padding: 0.5rem 1.5rem;
+}
+
+.welcome-feature {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.75);
+    line-height: 1.4;
+}
+
+.welcome-feature:last-child {
+    border-bottom: none;
+}
+
+.wf-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(150, 197, 176, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--mint);
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+
+.welcome-guide-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.2rem 1.5rem;
+    gap: 1rem;
+}
+
+.welcome-guide-link {
+    color: var(--mint);
+    text-decoration: none;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    opacity: 0.8;
+    transition: opacity 0.3s;
+}
+
+.welcome-guide-link:hover {
+    opacity: 1;
+}
+
+.welcome-guide-close {
+    background: linear-gradient(135deg, var(--mint) 0%, var(--purple-accent) 100%);
+    color: var(--black);
+    border: none;
+    padding: 0.7rem 1.5rem;
+    border-radius: 25px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.3s ease;
+}
+
+.welcome-guide-close:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(150, 197, 176, 0.3);
+}

@@ -1117,6 +1117,27 @@ class AudioRoomsManager {
         }, duration);
     }
 
+    showFirstVisitGuide() {
+        const key = 'wordeth_verses_guide_seen';
+        if (localStorage.getItem(key)) return;
+        const overlay = document.getElementById('welcome-guide-overlay');
+        if (!overlay) return;
+        overlay.classList.add('active');
+        const closeBtn = document.getElementById('welcome-guide-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                overlay.classList.remove('active');
+                localStorage.setItem(key, '1');
+            }, { once: true });
+        }
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                overlay.classList.remove('active');
+                localStorage.setItem(key, '1');
+            }
+        });
+    }
+
     // Hand Raise Management
     toggleHandRaise() {
         this.handRaised = !this.handRaised;
@@ -1416,6 +1437,8 @@ class AudioRoomsManager {
 
         this.socket.on('room-joined', async (data) => {
             console.log('Room joined via signaling:', data);
+
+            this.showFirstVisitGuide();
 
             if (data.isHost && !this.isRoomHost) {
                 this.isRoomHost = true;
