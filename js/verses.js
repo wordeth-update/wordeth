@@ -2476,13 +2476,17 @@ class AudioRoomsManager {
         
         speakerAvatar.audioStream = stream;
         
-        if (userId && typeof viewUserProfile === 'function') {
-            speakerAvatar.addEventListener('click', () => viewUserProfile(userId));
-        }
+        speakerAvatar.addEventListener('click', (e) => {
+            if (e.target.closest('.kick-context-menu')) return;
+            const pid = speakerAvatar.getAttribute('data-participant-id');
+            if (this.isRoomHost && pid) {
+                this._showParticipantActionMenu(pid, speakerAvatar);
+            } else if (userId && typeof viewUserProfile === 'function') {
+                viewUserProfile(userId);
+            }
+        });
         
         this.speakersStage?.appendChild(speakerAvatar);
-        
-        if (this.isRoomHost) this._updateKickButtons();
         return speakerAvatar;
     }
 
@@ -2498,13 +2502,17 @@ class AudioRoomsManager {
         `;
         listenerAvatar.title = name;
         
-        if (userId && typeof viewUserProfile === 'function') {
-            listenerAvatar.addEventListener('click', () => viewUserProfile(userId));
-        }
+        listenerAvatar.addEventListener('click', (e) => {
+            if (e.target.closest('.kick-context-menu')) return;
+            const pid = listenerAvatar.getAttribute('data-participant-id');
+            if (this.isRoomHost && pid) {
+                this._showParticipantActionMenu(pid, listenerAvatar);
+            } else if (userId && typeof viewUserProfile === 'function') {
+                viewUserProfile(userId);
+            }
+        });
         
         this.listenersGrid?.appendChild(listenerAvatar);
-        
-        if (this.isRoomHost) this._updateKickButtons();
         return listenerAvatar;
     }
 
@@ -2993,35 +3001,9 @@ class AudioRoomsManager {
                 }
             }
         });
-
-        this._updateKickButtons();
     }
 
-    _updateKickButtons() {
-        document.querySelectorAll('.kick-menu-trigger').forEach(el => el.remove());
-        document.querySelectorAll('.kick-context-menu').forEach(el => el.remove());
-
-        if (!this.isRoomHost) return;
-
-        const avatars = document.querySelectorAll('.speaker-avatar:not(.self-speaker), .listener-avatar');
-        avatars.forEach(avatar => {
-            const pid = avatar.getAttribute('data-participant-id');
-            if (!pid || pid === 'self') return;
-
-            const trigger = document.createElement('button');
-            trigger.className = 'kick-menu-trigger';
-            trigger.title = 'Manage participant';
-            trigger.innerHTML = '<i class="fas fa-ellipsis-v"></i>';
-            trigger.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this._showKickMenu(pid, avatar, trigger);
-            });
-            avatar.style.position = 'relative';
-            avatar.appendChild(trigger);
-        });
-    }
-
-    _showKickMenu(participantId, avatarEl, triggerEl) {
+    _showParticipantActionMenu(participantId, avatarEl) {
         document.querySelectorAll('.kick-context-menu').forEach(el => el.remove());
 
         const name = avatarEl.querySelector('.speaker-name')?.textContent || avatarEl.title || 'this user';
@@ -3030,6 +3012,7 @@ class AudioRoomsManager {
         const menu = document.createElement('div');
         menu.className = 'kick-context-menu';
         menu.innerHTML = `
+            <div class="kick-menu-header">${name}</div>
             ${isSpeaker ? `<button class="kick-menu-item move-to-crowd" data-action="move-to-crowd">
                 <i class="fas fa-arrow-down"></i> Move to Crowd
             </button>` : ''}
@@ -3049,10 +3032,11 @@ class AudioRoomsManager {
             menu.remove();
         });
 
+        avatarEl.style.position = 'relative';
         avatarEl.appendChild(menu);
 
         const closeMenu = (e) => {
-            if (!menu.contains(e.target) && e.target !== triggerEl) {
+            if (!menu.contains(e.target) && !avatarEl.contains(e.target)) {
                 menu.remove();
                 document.removeEventListener('click', closeMenu);
             }
