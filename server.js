@@ -165,6 +165,15 @@ app.get('/api/rooms/active', (req, res) => {
     res.json(getActiveRooms());
 });
 
+app.get('/api/rooms/:roomId', (req, res) => {
+    const activeRooms = getActiveRooms();
+    const room = activeRooms.find(r => r.id === req.params.roomId);
+    if (!room) {
+        return res.status(404).json({ error: 'Room not found or no longer active' });
+    }
+    res.json(room);
+});
+
 // Middleware to strip restrictive headers for OG crawler routes
 function ogCrawlerHeaders(req, res, next) {
     res.removeHeader('Content-Security-Policy');

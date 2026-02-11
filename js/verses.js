@@ -6163,26 +6163,52 @@ document.addEventListener('DOMContentLoaded', () => {
         const lobby = document.getElementById('room-selection') || document.querySelector('.room-selection');
         if (lobby) lobby.style.display = 'none';
 
-        const tryJoinRoom = async () => {
+        const tryJoinRoom = async (attempt = 0) => {
             const mgr = window.audioRoomsManager;
             if (!mgr) {
-                setTimeout(tryJoinRoom, 300);
+                if (attempt < 20) {
+                    setTimeout(() => tryJoinRoom(attempt + 1), 300);
+                }
                 return;
+            }
+
+            if (!mgr.lobbySocket || !mgr.lobbySocket.connected) {
+                if (attempt < 15) {
+                    setTimeout(() => tryJoinRoom(attempt + 1), 400);
+                    return;
+                }
             }
 
             mgr._joiningFromInvite = true;
 
             try {
-                let rooms = [];
-                try { rooms = await mgr.fetchActiveRooms() || []; } catch (_) {}
-                const targetRoom = rooms.find(r => r.id === roomToJoin);
-                if (rooms.length > 0 && !targetRoom) {
-                    if (lobby) lobby.style.display = '';
-                    mgr.loadActiveRooms();
-                    mgr.showToast?.('This room is no longer live. Check out other active rooms below.', 'fa-exclamation-circle');
-                    mgr._joiningFromInvite = false;
-                    return;
+                let targetRoom = null;
+
+                try {
+                    const directRes = await fetch(apiUrl(`/api/rooms/${encodeURIComponent(roomToJoin)}`));
+                    if (directRes.ok) {
+                        targetRoom = await directRes.json();
+                    }
+                } catch (_) {}
+
+                if (!targetRoom) {
+                    let rooms = [];
+                    const maxRetries = 3;
+                    for (let i = 0; i < maxRetries; i++) {
+                        try { rooms = await mgr.fetchActiveRooms() || []; } catch (_) {}
+                        targetRoom = rooms.find(r => r.id === roomToJoin);
+                        if (targetRoom) break;
+                        if (rooms.length > 0) {
+                            if (lobby) lobby.style.display = '';
+                            mgr.loadActiveRooms();
+                            mgr.showToast?.('This room is no longer live. Check out other active rooms below.', 'fa-exclamation-circle');
+                            mgr._joiningFromInvite = false;
+                            return;
+                        }
+                        if (i < maxRetries - 1) await new Promise(r => setTimeout(r, 800));
+                    }
                 }
+
                 if (targetRoom) {
                     const roomNameEl = document.getElementById('room-name');
                     if (roomNameEl && targetRoom.name) {
@@ -6199,6 +6225,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (mgr) mgr._joiningFromInvite = false;
             }
         };
-        setTimeout(tryJoinRoom, 500);
+        setTimeout(() => tryJoinRoom(0), 500);
     });
 })();
