@@ -85,7 +85,7 @@ class AudioRoomsManager {
         this.mixDestination = null;
         this.remoteAudioElements = new Map();
         this._wakeLock = null;
-        this._silentAudio = null;
+        this._silentAudioTimer = null;
         
         this.rtcConfig = {
             iceServers: [
@@ -146,27 +146,24 @@ class AudioRoomsManager {
     }
 
     _startSilentAudioKeepAlive() {
-        if (this._silentAudio) return;
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const bufferSize = ctx.sampleRate * 2;
-            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-            const source = ctx.createBufferSource();
-            source.buffer = buffer;
-            source.loop = true;
-            source.connect(ctx.destination);
-            source.start();
-            this._silentAudio = { ctx, source };
-        } catch (e) {}
+        if (this._silentAudioTimer) return;
+        this._silentAudioTimer = setInterval(() => {
+            if (!this.isInRoom()) return;
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                this.audioContext.resume().catch(() => {});
+            }
+            this.remoteAudioElements.forEach((audioEl) => {
+                if (audioEl.paused && audioEl.srcObject) {
+                    audioEl.play().catch(() => {});
+                }
+            });
+        }, 3000);
     }
 
     _stopSilentAudioKeepAlive() {
-        if (this._silentAudio) {
-            try {
-                this._silentAudio.source.stop();
-                this._silentAudio.ctx.close();
-            } catch (e) {}
-            this._silentAudio = null;
+        if (this._silentAudioTimer) {
+            clearInterval(this._silentAudioTimer);
+            this._silentAudioTimer = null;
         }
     }
 
