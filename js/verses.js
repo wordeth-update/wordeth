@@ -3623,6 +3623,7 @@ class AudioRoomsManager {
                 if (text) text.textContent = 'Karaoke: On';
                 this.updateKaraokeButtonState();
             }
+        }
         
         this.dismissNotification(requestId);
     }
