@@ -787,6 +787,12 @@ class AudioRoomsManager {
 
     // Modal Management
     showCreateRoomModal() {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            localStorage.setItem('wordeth_return_url', '/verses.html');
+            window.location.href = '/signin.html';
+            return;
+        }
         this.createRoomModal?.classList.add('active');
     }
 
