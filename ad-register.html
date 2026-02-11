@@ -74,7 +74,7 @@
         </div>
 
         <div class="type-selector" style="max-width:660px;">
-            <div class="type-card" data-type="partner" onclick="selectType('partner')">
+            <div class="type-card" data-type="partner">
                 <span class="type-badge" style="background: #7c6aef;">Recommended</span>
                 <div class="card-icon"><i class="fas fa-handshake"></i></div>
                 <h3>Partner (White Glove)</h3>
@@ -87,7 +87,7 @@
                 </ul>
             </div>
 
-            <div class="type-card" data-type="self-serve" onclick="selectType('self-serve')">
+            <div class="type-card" data-type="self-serve">
                 <div class="card-icon"><i class="fas fa-rocket"></i></div>
                 <h3>Self-Serve</h3>
                 <p>Create and manage your own ad campaigns through our portal.</p>
@@ -101,7 +101,7 @@
         </div>
 
         <div style="text-align:center; margin-top:1.5rem;">
-            <button id="continueBtn" class="btn-primary btn-large" style="min-width:280px; font-size:1rem; padding:0.9rem 2rem; opacity:0.4; cursor:not-allowed;" disabled onclick="proceedToForm()">
+            <button id="continueBtn" class="btn-primary btn-large" style="min-width:280px; font-size:1rem; padding:0.9rem 2rem; opacity:0.4; cursor:not-allowed;" disabled>
                 Select an account type to continue
             </button>
         </div>
@@ -306,17 +306,20 @@
 
         function selectType(type) {
             selectedType = type;
-            document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
-            document.querySelector(`.type-card[data-type="${type}"]`).classList.add('selected');
+            document.querySelectorAll('.type-card').forEach(function(c) { c.classList.remove('selected'); });
+            var card = document.querySelector('.type-card[data-type="' + type + '"]');
+            if (card) card.classList.add('selected');
 
-            const btn = document.getElementById('continueBtn');
-            btn.disabled = false;
-            btn.style.opacity = '1';
-            btn.style.cursor = 'pointer';
-            if (type === 'partner') {
-                btn.textContent = 'Continue as Partner (White Glove) →';
-            } else {
-                btn.textContent = 'Continue as Self-Serve →';
+            var btn = document.getElementById('continueBtn');
+            if (btn) {
+                btn.removeAttribute('disabled');
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+                if (type === 'partner') {
+                    btn.textContent = 'Continue as Partner (White Glove) \u2192';
+                } else {
+                    btn.textContent = 'Continue as Self-Serve \u2192';
+                }
             }
         }
 
@@ -344,14 +347,33 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        document.querySelector('select[name="businessType"]').addEventListener('change', function() {
-            document.getElementById('businessTypeOtherGroup').style.display = this.value === 'other' ? 'block' : 'none';
-        });
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.type-card').forEach(function(card) {
+                card.addEventListener('click', function(e) {
+                    var type = card.getAttribute('data-type');
+                    if (type) selectType(type);
+                });
+            });
 
-        document.querySelectorAll('input[name="campaignGoals"]').forEach(cb => {
-            cb.addEventListener('change', function() {
-                const otherChecked = document.querySelector('input[name="campaignGoals"][value="other"]').checked;
-                document.getElementById('campaignGoalsOtherGroup').style.display = otherChecked ? 'block' : 'none';
+            var continueBtn = document.getElementById('continueBtn');
+            if (continueBtn) {
+                continueBtn.addEventListener('click', function() {
+                    proceedToForm();
+                });
+            }
+
+            var businessTypeSelect = document.querySelector('select[name="businessType"]');
+            if (businessTypeSelect) {
+                businessTypeSelect.addEventListener('change', function() {
+                    document.getElementById('businessTypeOtherGroup').style.display = this.value === 'other' ? 'block' : 'none';
+                });
+            }
+
+            document.querySelectorAll('input[name="campaignGoals"]').forEach(function(cb) {
+                cb.addEventListener('change', function() {
+                    var otherChecked = document.querySelector('input[name="campaignGoals"][value="other"]').checked;
+                    document.getElementById('campaignGoalsOtherGroup').style.display = otherChecked ? 'block' : 'none';
+                });
             });
         });
 
