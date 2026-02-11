@@ -1264,6 +1264,14 @@ class AudioRoomsManager {
             try {
                 await this.initializeMedia();
                 if (!isHost) this.isSpeaker = true;
+                if (this.localStream) {
+                    this.localStream.getAudioTracks().forEach(t => { t.enabled = false; });
+                    setTimeout(() => {
+                        if (this.localStream) {
+                            this.localStream.getAudioTracks().forEach(t => { t.enabled = true; });
+                        }
+                    }, 600);
+                }
             } catch (e) {
                 console.warn('Mic access denied, joining as listener:', e.message);
                 this.isSpeaker = false;
@@ -1665,8 +1673,10 @@ class AudioRoomsManager {
             audioEl.autoplay = true;
             audioEl.playsInline = true;
             audioEl.id = `remote-audio-${remoteId}`;
+            audioEl.volume = 0;
             document.body.appendChild(audioEl);
             this.remoteAudioElements.set(remoteId, audioEl);
+            setTimeout(() => { audioEl.volume = 1; }, 500);
         }
         audioEl.srcObject = stream;
         
