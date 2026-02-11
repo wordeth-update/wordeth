@@ -3219,7 +3219,7 @@ class AudioRoomsManager {
         this.videoMode = modes[(idx + 1) % modes.length];
         
         this.notifyParticipants('video-mode', { mode: this.videoMode });
-        this.updateVideoModeHostUI();
+        this.updateVideoButtonState();
         
         const labels = { off: 'Video disabled.', ask: 'Video set to Ask mode — participants must request permission.', open: 'Video open — anyone can turn on their camera.' };
         this.addChatMessage('System', labels[this.videoMode], true);
