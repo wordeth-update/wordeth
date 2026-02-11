@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Verses Room Guide - Wordeth</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/verses-guide.css">
+    <link rel="stylesheet" href="css/enhanced.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/cookie-consent.css">
+    <link rel="stylesheet" href="css/notifications.css?v=1770526814">
+    <link rel="stylesheet" href="css/profile.css">
+    <link rel="stylesheet" href="css/mini-player.css">
+</head>
+<body>
+    <nav class="main-nav">
+        <div class="nav-logo">
+            <a href="/">
+                <img src="images/logo.png" alt="Wordeth Logo" class="logo">
+            </a>
+        </div>
+        <div class="nav-links">
+            <a href="verses.html">Verses</a>
+            <a href="lyrics.html">Lyrics</a>
+            <a href="merch.html">Merch</a>
+            <a href="pricing.html">Pricing</a>
+        </div>
+        <div class="search-container">
+            <input type="text" placeholder="Search a song..." class="search-input">
+            <button class="search-button">
+                <img src="assets/mic-icon.svg" alt="Search" class="mic-icon">
+            </button>
+        </div>
+        <div class="nav-auth">
+            <a href="/signin.html" class="nav-signin-btn">Sign In</a>
+        </div>
+        <button class="menu-toggle" id="menuToggle">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </nav>
+    
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-content">
+            <div class="mobile-menu-header">
+                <img src="images/logo.png" alt="Wordeth Logo" class="mobile-logo">
+                <button class="mobile-menu-close" id="mobileMenuClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mobile-menu-links">
+                <a href="verses.html" class="mobile-menu-link">
+                    <i class="fas fa-headphones"></i>
+                    <span>Verses</span>
+                </a>
+                <a href="lyrics.html" class="mobile-menu-link">
+                    <i class="fas fa-music"></i>
+                    <span>Lyrics</span>
+                </a>
+                <a href="merch.html" class="mobile-menu-link">
+                    <i class="fas fa-tshirt"></i>
+                    <span>Merch</span>
+                </a>
+                <a href="pricing.html" class="mobile-menu-link"><i class="fas fa-tags"></i><span>Pricing</span></a>
+            </div>
+            <div class="mobile-menu-search">
+                <input type="text" placeholder="Search..." class="mobile-search-input">
+                <button class="mobile-search-btn">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <div class="mobile-menu-auth">
+                <a href="/signin.html" class="mobile-signin-btn">
+                    <i class="fas fa-user"></i>
+                    <span>Sign In</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <main class="guide-container">
+        <div class="guide-hero">
+            <h1><i class="fas fa-headphones"></i> Verses Room Guide</h1>
+            <p class="guide-subtitle">Everything you need to know about hosting and joining live audio rooms</p>
+            <a href="verses.html" class="guide-back-btn"><i class="fas fa-arrow-left"></i> Back to Verses</a>
+        </div>
+
+        <div class="guide-toc">
+            <h3>Jump To</h3>
+            <div class="toc-links">
+                <a href="#getting-started"><i class="fas fa-play-circle"></i> Getting Started</a>
+                <a href="#action-bar"><i class="fas fa-sliders-h"></i> Action Bar</a>
+                <a href="#host-controls"><i class="fas fa-crown"></i> Host Controls</a>
+                <a href="#video"><i class="fas fa-video"></i> Video & Camera</a>
+                <a href="#karaoke"><i class="fas fa-microphone-alt"></i> Karaoke Mode</a>
+                <a href="#chat"><i class="fas fa-comments"></i> Chat & Photos</a>
+                <a href="#tips"><i class="fas fa-lightbulb"></i> Tips & Tricks</a>
+            </div>
+        </div>
+
+        <section class="guide-section" id="getting-started">
+            <div class="section-header">
+                <div class="section-icon"><i class="fas fa-play-circle"></i></div>
+                <h2>Getting Started</h2>
+            </div>
+            <div class="guide-cards">
+                <div class="guide-card">
+                    <div class="card-icon create"><i class="fas fa-plus-circle"></i></div>
+                    <h3>Create a Room</h3>
+                    <p>Tap the <strong>Create Room</strong> button on the Verses page. Give your room a name and optional description. You automatically become the host.</p>
+                </div>
+                <div class="guide-card">
+                    <div class="card-icon join"><i class="fas fa-door-open"></i></div>
+                    <h3>Join a Room</h3>
+                    <p>Browse active rooms and tap to join. You enter the <strong>crowd</strong> first and can listen in. Raise your hand to request to speak!</p>
+                </div>
+                <div class="guide-card">
+                    <div class="card-icon roles"><i class="fas fa-users"></i></div>
+                    <h3>Room Roles</h3>
+                    <p><strong>Host</strong> controls the room. <strong>Speakers</strong> are on stage with their mic. <strong>Crowd</strong> members listen and can chat or raise their hand.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="guide-section" id="action-bar">
+            <div class="section-header">
+                <div class="section-icon"><i class="fas fa-sliders-h"></i></div>
+                <h2>The Action Bar</h2>
+            </div>
+            <p class="section-intro">The bottom bar is your control center. Here's what each button does:</p>
+            <div class="action-bar-diagram">
+                <div class="action-item">
+                    <div class="action-icon mic"><i class="fas fa-microphone"></i></div>
+                    <h4>Mic</h4>
+                    <p>Toggle your microphone on/off. When muted, a red slash appears. You must be a speaker or host to use this.</p>
+                </div>
+                <div class="action-item">
+                    <div class="action-icon effects"><i class="fas fa-pen-fancy"></i></div>
+                    <h4>Effects</h4>
+                    <p>Apply voice filters to your microphone! Choose from effects like echo, deep voice, robot, and more to make your audio unique.</p>
+                </div>
+                <div class="action-item">
+                    <div class="action-icon karaoke"><i class="fas fa-record-vinyl"></i></div>
+                    <h4>Karaoke</h4>
+                    <p>Open the karaoke panel to search for songs and sing along with synced lyrics. The host must enable karaoke mode first.</p>
+                </div>
+                <div class="action-item">
+                    <div class="action-icon camera"><i class="fas fa-video"></i></div>
+                    <h4>Camera</h4>
+                    <p>Turn on your camera to appear in the video grid. The host controls whether camera is available (Off / Ask / Open).</p>
+                </div>
+                <div class="action-item">
+                    <div class="action-icon photo"><i class="fas fa-image"></i></div>
+                    <h4>Photo</h4>
+                    <p>Share images in the room chat. Pick a photo from your device and it appears in the conversation for everyone to see.</p>
+                </div>
+                <div class="action-item">
+                    <div class="action-icon hand"><i class="fas fa-hand-paper"></i></div>
+                    <h4>Hand</h4>
+                    <p>Raise your hand to request to speak. The host will see your request and can promote you from the crowd to the stage.</p>
+                </div>
+                <div class="action-item">
+                    <div class="action-icon chat"><i class="fas fa-comments"></i></div>
+                    <h4>Chat</h4>
+                    <p>Open the room chat to send text messages. Great for sharing thoughts, links, or reacting without interrupting the speaker.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="guide-section" id="host-controls">
+            <div class="section-header">
+                <div class="section-icon crown"><i class="fas fa-crown"></i></div>
+                <h2>Host Controls</h2>
+            </div>
+            <p class="section-intro">If you're the host, you have special powers to manage the room experience:</p>
+            <div class="host-controls-grid">
+                <div class="host-control-card">
+                    <div class="control-badge"><i class="fas fa-video"></i></div>
+                    <div class="control-info">
+                        <h4>Video Mode</h4>
+                        <div class="mode-options">
+                            <span class="mode-tag off"><i class="fas fa-video-slash"></i> Off</span>
+                            <span class="mode-tag ask"><i class="fas fa-question-circle"></i> Ask</span>
+                            <span class="mode-tag open"><i class="fas fa-video"></i> Open</span>
+                        </div>
+                        <p><strong>Off:</strong> No one can use camera. <strong>Ask:</strong> Participants request permission first. <strong>Open:</strong> Anyone can turn on camera freely.</p>
+                    </div>
+                </div>
+                <div class="host-control-card">
+                    <div class="control-badge"><i class="fas fa-record-vinyl"></i></div>
+                    <div class="control-info">
+                        <h4>Karaoke</h4>
+                        <p>Toggle karaoke mode on or off. When enabled, participants can search for songs and sing along with synchronized lyrics displayed on screen.</p>
+                    </div>
+                </div>
+                <div class="host-control-card">
+                    <div class="control-badge"><i class="fas fa-lock"></i></div>
+                    <div class="control-info">
+                        <h4>Lock / Unlock</h4>
+                        <p>Lock the room to prevent new people from joining. Useful when your room is full or you want a private conversation.</p>
+                    </div>
+                </div>
+                <div class="host-control-card">
+                    <div class="control-badge"><i class="fas fa-volume-mute"></i></div>
+                    <div class="control-info">
+                        <h4>Mute All</h4>
+                        <p>Instantly mute every participant. Helpful for getting everyone's attention or resetting the conversation.</p>
+                    </div>
+                </div>
+                <div class="host-control-card">
+                    <div class="control-badge"><i class="fas fa-door-closed"></i></div>
+                    <div class="control-info">
+                        <h4>Close Room</h4>
+                        <p>End the room session for everyone. All participants will be disconnected and the room will be removed.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="host-tip">
+                <i class="fas fa-user-cog"></i>
+                <div>
+                    <h4>Managing Participants</h4>
+                    <p>Tap the three-dot menu <i class="fas fa-ellipsis-v"></i> on any participant's avatar to move them between stage and crowd, or remove them from the room entirely.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="guide-section" id="video">
+            <div class="section-header">
+                <div class="section-icon"><i class="fas fa-video"></i></div>
+                <h2>Video & Camera</h2>
+            </div>
+            <div class="guide-cards">
+                <div class="guide-card">
+                    <div class="card-icon camera"><i class="fas fa-th-large"></i></div>
+                    <h3>Video Grid</h3>
+                    <p>Up to <strong>6 people</strong> can be on camera at once. The grid adapts automatically: 1 person fills the screen, 2 go side-by-side, 3-4 form a 2x2 grid, and 5-6 fill a 2x3 grid.</p>
+                </div>
+                <div class="guide-card">
+                    <div class="card-icon effects"><i class="fas fa-theater-masks"></i></div>
+                    <h3>AR Face Filters</h3>
+                    <p>When your camera is on, you can apply fun <strong>genre-themed face filters</strong> that overlay effects on your face in real time. Express yourself with style!</p>
+                </div>
+                <div class="guide-card">
+                    <div class="card-icon join"><i class="fas fa-user-check"></i></div>
+                    <h3>Speaker Priority</h3>
+                    <p>When more than 6 people want to use video, <strong>unmuted speakers get priority</strong>. Active speakers are always visible in the grid.</p>
+                </div>
+            </div>
+
+            <div class="video-modes-visual">
+                <h3>How Video Modes Work</h3>
+                <div class="flow-diagram">
+                    <div class="flow-step">
+                        <div class="flow-icon off"><i class="fas fa-video-slash"></i></div>
+                        <span>Video: Off</span>
+                        <p>Camera button greyed out for everyone</p>
+                    </div>
+                    <div class="flow-arrow"><i class="fas fa-arrow-right"></i></div>
+                    <div class="flow-step">
+                        <div class="flow-icon ask"><i class="fas fa-hand-paper"></i></div>
+                        <span>Video: Ask</span>
+                        <p>Tap Camera to send a request to the host</p>
+                    </div>
+                    <div class="flow-arrow"><i class="fas fa-arrow-right"></i></div>
+                    <div class="flow-step">
+                        <div class="flow-icon open"><i class="fas fa-video"></i></div>
+                        <span>Video: Open</span>
+                        <p>Anyone can turn on camera freely</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="guide-section" id="karaoke">
+            <div class="section-header">
+                <div class="section-icon"><i class="fas fa-microphone-alt"></i></div>
+                <h2>Karaoke Mode</h2>
+            </div>
+            <div class="karaoke-steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>Host Enables Karaoke</h4>
+                        <p>The host taps "Karaoke: Off" in host controls to turn it on. The karaoke button in everyone's action bar becomes active.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>Search for a Song</h4>
+                        <p>Tap the Karaoke button to open the search panel. Type the song name and pick from the results.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>Sing Along</h4>
+                        <p>Lyrics scroll on screen in sync with the music. Your microphone audio and the song mix together so everyone in the room hears both!</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h4>Voice Effects</h4>
+                        <p>Add voice effects while singing for even more fun. Try echo, reverb, or pitch shift to get creative with your performance!</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="guide-section" id="chat">
+            <div class="section-header">
+                <div class="section-icon"><i class="fas fa-comments"></i></div>
+                <h2>Chat & Photo Sharing</h2>
+            </div>
+            <div class="guide-cards two-col">
+                <div class="guide-card">
+                    <div class="card-icon chat"><i class="fas fa-keyboard"></i></div>
+                    <h3>Live Chat</h3>
+                    <p>The chat panel runs alongside the audio room. Send messages, react to what's happening, and keep the conversation going without needing to unmute. System messages also appear here when things happen in the room.</p>
+                </div>
+                <div class="guide-card">
+                    <div class="card-icon photo"><i class="fas fa-camera-retro"></i></div>
+                    <h3>Photo Sharing</h3>
+                    <p>Tap the Photo button to share an image from your device. Photos appear directly in the chat for everyone to see. Great for sharing album art, concert photos, memes, or anything visual!</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="guide-section" id="tips">
+            <div class="section-header">
+                <div class="section-icon"><i class="fas fa-lightbulb"></i></div>
+                <h2>Tips & Tricks</h2>
+            </div>
+            <div class="tips-grid">
+                <div class="tip-card">
+                    <i class="fas fa-wifi"></i>
+                    <h4>Stay Connected</h4>
+                    <p>If you navigate to another page while in a room, a mini-player appears at the bottom so you stay connected and can return anytime.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-share-alt"></i>
+                    <h4>Invite Friends</h4>
+                    <p>Use the share button on your room to invite friends. They'll get a notification and can join with one tap.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-headphones-alt"></i>
+                    <h4>Use Headphones</h4>
+                    <p>For the best experience (especially during karaoke), use headphones to avoid echo and feedback.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-fire"></i>
+                    <h4>Trending Topics</h4>
+                    <p>Check the "Trending This Week" bar on the Verses page for conversation starters. Hot, new, and viral topics to spark great discussions!</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-user-friends"></i>
+                    <h4>Host Transfer</h4>
+                    <p>Hosts can transfer hosting duties to another participant if they need to step away. The room keeps going!</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-music"></i>
+                    <h4>Mix Audio</h4>
+                    <p>You can play local audio files and have them stream into the room. Perfect for DJs or sharing tracks with everyone live.</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="guide-cta">
+            <h2>Ready to Express Yourself?</h2>
+            <p>Join or create a Verse room and start connecting with the music community.</p>
+            <a href="verses.html" class="cta-button"><i class="fas fa-headphones"></i> Go to Verses</a>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-logo">
+                        <a href="/"><img src="images/logo.png" alt="Wordeth Logo"></a>
+                    </div>
+                    <p>Your social music experience. Discover lyrics, join live audio rooms, and connect with the music community.</p>
+                    <div class="footer-social">
+                        <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                        <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                        <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" aria-label="Spotify"><i class="fab fa-spotify"></i></a>
+                    </div>
+                </div>
+                <div class="footer-col">
+                    <h4>Explore</h4>
+                    <ul>
+                        <li><a href="/verses.html">Verses</a></li>
+                        <li><a href="/lyrics.html">Lyrics</a></li>
+                        <li><a href="/merch.html">Merch</a></li>
+                        <li><a href="/pricing.html">Pricing</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Account</h4>
+                    <ul>
+                        <li><a href="/signin.html">Sign In</a></li>
+                        <li><a href="/signup.html">Sign Up</a></li>
+                        <li><a href="/profile.html">Profile</a></li>
+                        <li><a href="/subscription.html">My Plan</a></li>
+                        <li><a href="/creator-register.html">Creator Hub</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Company</h4>
+                    <ul>
+                        <li><a href="/terms.html">Terms of Service</a></li>
+                        <li><a href="/privacy.html">Privacy Policy</a></li>
+                        <li><a href="/ad-portal.html">Advertise</a></li>
+                        <li><a href="mailto:partnerships@wordeth.com">Partnerships</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom-bar">
+                <p class="copyright">&copy; 2025 Wordeth. All rights reserved.</p>
+                <div class="footer-bottom-links">
+                    <a href="/terms.html">Terms</a>
+                    <a href="/privacy.html">Privacy</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <script src="js/nav-auth.js"></script>
+    <script src="js/verse-mini-player.js"></script>
+    <script src="js/spa-router.js"></script>
+</body>
+</html>

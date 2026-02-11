@@ -120,6 +120,32 @@
     box-shadow: 0 12px 35px rgba(150, 197, 176, 0.5);
 }
 
+.hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.guide-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--mint);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.7rem 1.4rem;
+    border-radius: 50px;
+    border: 1px solid rgba(150, 197, 176, 0.3);
+    transition: all 0.3s ease;
+}
+
+.guide-link-btn:hover {
+    background: rgba(150, 197, 176, 0.1);
+    border-color: var(--mint);
+}
+
 .hero-visual {
     flex: 1;
     position: relative;
@@ -535,6 +561,11 @@
 .room-actions {
     display: flex;
     gap: 0.75rem;
+}
+
+.room-guide-link {
+    text-decoration: none;
+    color: var(--mint);
 }
 
 .join-room-btn {
