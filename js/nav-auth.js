@@ -50,18 +50,25 @@ document.addEventListener('DOMContentLoaded', function() {
         if (mobileMenu) {
             const existing = mobileMenu.querySelector('.mobile-profile-link');
             if (!existing) {
+                const menuLinks = mobileMenu.querySelector('.mobile-menu-links');
                 const profileLink = document.createElement('a');
                 profileLink.href = '/profile.html';
                 profileLink.textContent = 'My Profile';
-                profileLink.className = 'mobile-profile-link';
-                mobileMenu.insertBefore(profileLink, mobileMenu.firstChild);
-
+                profileLink.className = 'mobile-profile-link mobile-menu-link';
                 const subLink = document.createElement('a');
                 subLink.href = '/subscription.html';
                 subLink.textContent = 'My Plan';
-                subLink.className = 'mobile-sub-link';
+                subLink.className = 'mobile-sub-link mobile-menu-link';
                 subLink.style.color = 'rgba(255,255,255,0.7)';
-                profileLink.after(subLink);
+                if (menuLinks) {
+                    menuLinks.appendChild(profileLink);
+                    menuLinks.appendChild(subLink);
+                } else {
+                    const header = mobileMenu.querySelector('.mobile-menu-header');
+                    const insertAfter = header ? header.nextSibling : null;
+                    mobileMenu.insertBefore(profileLink, insertAfter);
+                    profileLink.after(subLink);
+                }
 
                 const signoutLink = document.createElement('a');
                 signoutLink.href = '#';
