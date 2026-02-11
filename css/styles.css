@@ -401,7 +401,25 @@ footer {
     }
 }
 
-/* Responsive Design */
+/* Responsive — Nav tablet */
+@media (max-width: 1024px) {
+    .main-nav {
+        padding: 0.75rem 1.25rem;
+    }
+    .nav-links {
+        gap: 1.25rem;
+    }
+    .search-container {
+        flex: 0 1 200px;
+        margin: 0 1rem;
+    }
+    .nav-signin-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* Responsive — Nav mobile */
 @media (max-width: 768px) {
     body {
         overflow-x: hidden;
@@ -776,28 +794,121 @@ footer {
     transform: translateX(4px);
 }
 
-/* Responsive */
+/* Responsive — Tablet landscape */
+@media (max-width: 1024px) {
+    .hero-minimal-content h1 {
+        font-size: 3.5rem;
+    }
+    .hero-minimal-content p {
+        font-size: 1.1rem;
+    }
+    .features-strip-inner {
+        gap: 1.25rem;
+    }
+    .strip-item {
+        font-size: 0.85rem;
+    }
+    .explore-cards-inner {
+        max-width: 600px;
+    }
+    .explore-card {
+        padding: 1.75rem;
+    }
+}
+
+/* Responsive — Tablet portrait */
 @media (max-width: 768px) {
     .hero-minimal {
-        min-height: 60vh;
+        min-height: 55vh;
+    }
+    .hero-minimal-content {
+        padding: 1.5rem;
     }
     .hero-minimal-content h1 {
         font-size: 2.8rem;
     }
     .hero-minimal-content p {
-        font-size: 1.05rem;
+        font-size: 1rem;
+    }
+    .hero-cta {
+        padding: 0.8rem 2rem;
+        font-size: 1rem;
+    }
+    .features-strip {
+        padding: 1.25rem 1rem;
     }
     .features-strip-inner {
-        gap: 1rem;
+        gap: 0.6rem 1rem;
+        justify-content: center;
     }
     .strip-divider {
         display: none;
     }
     .strip-item {
         font-size: 0.8rem;
+        gap: 0.4rem;
+    }
+    .explore-cards {
+        padding: 2.5rem 1.25rem;
+    }
+    .explore-cards-inner {
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+    .explore-card {
+        padding: 1.5rem;
+    }
+    .explore-card h3 {
+        font-size: 1.15rem;
+    }
+}
+
+/* Responsive — Phone */
+@media (max-width: 480px) {
+    .hero-minimal {
+        min-height: 50vh;
+    }
+    .hero-minimal-content h1 {
+        font-size: 2.1rem;
+    }
+    .hero-minimal-content p {
+        font-size: 0.95rem;
+        margin-bottom: 2rem;
+    }
+    .hero-eyebrow {
+        font-size: 0.75rem;
+        padding: 0.35rem 0.8rem;
+        margin-bottom: 1.25rem;
+    }
+    .hero-cta {
+        padding: 0.75rem 1.75rem;
+        font-size: 0.95rem;
+    }
+    .features-strip {
+        padding: 1rem 0.75rem;
+    }
+    .strip-item {
+        font-size: 0.75rem;
+    }
+    .strip-item i {
+        font-size: 0.85rem;
+    }
+    .explore-cards {
+        padding: 2rem 1rem;
     }
     .explore-cards-inner {
         grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    .explore-card {
+        padding: 1.25rem;
+    }
+    .explore-card h3 {
+        font-size: 1.1rem;
+    }
+    .explore-card p {
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
     }
 }
 
