@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Subscription - Wordeth</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/subscription.css">
+    <link rel="stylesheet" href="css/cookie-consent.css">
+</head>
+<body>
+    <nav class="main-nav">
+        <div class="nav-logo">
+            <a href="/"><img src="images/logo.png" alt="Wordeth Logo" class="logo"></a>
+        </div>
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="verses.html">Verses</a>
+            <a href="lyrics.html">Lyrics</a>
+            <a href="merch.html">Merch</a>
+            <a href="pricing.html">Pricing</a>
+        </div>
+        <div class="nav-auth">
+            <a href="/signin.html" class="nav-signin-btn">Sign In</a>
+        </div>
+        <button class="menu-toggle" id="menuToggle">
+            <span></span><span></span><span></span>
+        </button>
+    </nav>
+
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-content">
+            <div class="mobile-menu-header">
+                <img src="images/logo.png" alt="Wordeth Logo" class="mobile-logo">
+                <button class="mobile-menu-close" id="mobileMenuClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mobile-menu-links">
+                <a href="/" class="mobile-menu-link"><i class="fas fa-home"></i><span>Home</span></a>
+                <a href="verses.html" class="mobile-menu-link"><i class="fas fa-headphones"></i><span>Verses</span></a>
+                <a href="lyrics.html" class="mobile-menu-link"><i class="fas fa-music"></i><span>Lyrics</span></a>
+                <a href="merch.html" class="mobile-menu-link"><i class="fas fa-tshirt"></i><span>Merch</span></a>
+                <a href="pricing.html" class="mobile-menu-link"><i class="fas fa-tags"></i><span>Pricing</span></a>
+            </div>
+            <div class="mobile-menu-auth">
+                <a href="/signin.html" class="mobile-signin-btn"><i class="fas fa-user"></i><span>Sign In</span></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="sub-page" id="subPage" style="display:none;">
+        <div class="sub-header">
+            <h1><i class="fas fa-crown"></i> My Subscription</h1>
+            <p class="sub-header-desc">Manage your plan, billing, and entitlements</p>
+        </div>
+
+        <div class="current-plan-card" id="currentPlanCard">
+            <div class="plan-top">
+                <div class="plan-details">
+                    <div class="plan-badge" id="planBadge">Free</div>
+                    <h2 id="planName">Loading...</h2>
+                    <p class="plan-category" id="planCategory">Fan</p>
+                </div>
+                <div class="plan-pricing">
+                    <div class="plan-price" id="planPrice">$0</div>
+                    <div class="plan-cycle" id="planCycle">per month</div>
+                </div>
+            </div>
+            <div class="plan-status-bar" id="planStatusBar" style="display:none;">
+                <div class="status-item">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span id="periodInfo">-</span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-sync-alt"></i>
+                    <span id="renewalInfo">-</span>
+                </div>
+                <div class="status-item status-badge" id="statusBadge">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Active</span>
+                </div>
+            </div>
+            <div class="cancel-notice" id="cancelNotice" style="display:none;">
+                <i class="fas fa-info-circle"></i>
+                <span id="cancelNoticeText"></span>
+            </div>
+            <div class="plan-actions">
+                <a href="/pricing.html" class="action-btn btn-upgrade" id="upgradeBtn"><i class="fas fa-arrow-up"></i> Upgrade Plan</a>
+                <button class="action-btn btn-cancel" id="cancelBtn" style="display:none;"><i class="fas fa-times"></i> Cancel Subscription</button>
+            </div>
+        </div>
+
+        <div class="sub-section">
+            <h3><i class="fas fa-shield-alt"></i> Your Entitlements</h3>
+            <div class="entitlements-grid" id="entitlementsGrid"></div>
+        </div>
+
+        <div class="sub-section" id="graduationSection" style="display:none;">
+            <h3><i class="fas fa-chart-line"></i> Free Tier Usage</h3>
+            <p class="section-desc">Your progress toward the free tier graduation thresholds.</p>
+            <div class="graduation-bars" id="graduationBars"></div>
+        </div>
+
+        <div class="sub-section">
+            <h3><i class="fas fa-exchange-alt"></i> Available Plans</h3>
+            <p class="section-desc">Compare and switch to a different plan.</p>
+            <div class="available-plans" id="availablePlans"></div>
+        </div>
+    </div>
+
+    <div class="loading-state" id="loadingState">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>Loading your subscription...</p>
+    </div>
+
+    <div class="cancel-modal" id="cancelModal" style="display:none;">
+        <div class="modal-backdrop" id="modalBackdrop"></div>
+        <div class="modal-content">
+            <h3><i class="fas fa-exclamation-triangle"></i> Cancel Subscription</h3>
+            <p>Are you sure you want to cancel? Your plan will remain active until the end of your current billing period.</p>
+            <div class="modal-actions">
+                <button class="modal-btn btn-keep" id="keepBtn">Keep Subscription</button>
+                <button class="modal-btn btn-confirm-cancel" id="confirmCancelBtn">Yes, Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/nav-auth.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/cookie-consent.js"></script>
+    <script src="js/subscription.js"></script>
+</body>
+</html>

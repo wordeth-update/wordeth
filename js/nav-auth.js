@@ -23,6 +23,13 @@ document.addEventListener('DOMContentLoaded', function() {
             desktopBtn.href = '/profile.html';
 
             if (!desktopBtn.parentNode.querySelector('.nav-signout-btn')) {
+                const subLink = document.createElement('a');
+                subLink.textContent = 'My Plan';
+                subLink.href = '/subscription.html';
+                subLink.className = 'nav-sub-btn';
+                subLink.style.cssText = 'color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.85rem; margin-left: 0.75rem;';
+                desktopBtn.parentNode.appendChild(subLink);
+
                 const signoutLink = document.createElement('a');
                 signoutLink.textContent = 'Sign Out';
                 signoutLink.href = '#';
@@ -48,6 +55,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 profileLink.textContent = 'My Profile';
                 profileLink.className = 'mobile-profile-link';
                 mobileMenu.insertBefore(profileLink, mobileMenu.firstChild);
+
+                const subLink = document.createElement('a');
+                subLink.href = '/subscription.html';
+                subLink.textContent = 'My Plan';
+                subLink.className = 'mobile-sub-link';
+                subLink.style.color = 'rgba(255,255,255,0.7)';
+                profileLink.after(subLink);
 
                 const signoutLink = document.createElement('a');
                 signoutLink.href = '#';

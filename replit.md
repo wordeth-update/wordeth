@@ -42,6 +42,12 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **User Model Extensions**: Incorporates roles, account types, subscription details, and creator profiles.
 - **Payment Processing**: Natively built billing engine for subscriptions, invoices, and payment tracking, with an integrated payment gateway. Applies a platform fee (8-12%) on Gross Merchandise Volume (GMV).
 
+### Plans & Pricing / Subscription Management
+- **Pricing page** (`pricing.html`): Public-facing page with category tabs (Fans, Designers, Artists, Labels), monthly/yearly billing toggle, plan cards with feature lists, and subscribe buttons.
+- **Subscription management page** (`subscription.html`): Authenticated page showing current plan details, billing status, entitlements display, graduation progress for free-tier designers, available plan comparison, upgrade/downgrade/cancel flows with confirmation modal.
+- **Navigation**: "Pricing" link added to all user-facing page navs (desktop + mobile). Logged-in users see "My Plan" link in auth area.
+- **Creator dashboard integration**: Upgrade buttons on creator dashboard redirect to pricing page.
+
 ### Key Features Architecture
 - **Verses (Audio Rooms)**: Utilizes WebRTC peer-to-peer audio via a Socket.io signaling server. Features Web Audio API for voice filters and audio mixing (microphone + YouTube), and YouTube embed integration for karaoke. Supports WebRTC broadcasting of video with filters and AR genre face filters using MediaPipe Face Landmarker. Allows streaming of local audio files into the room mix.
 - **Native Screen Capture Plugin**: Custom Capacitor plugin for Android (MediaProjection API) and iOS (ReplayKit) to capture and stream screen content to WebRTC peers via a JavaScript bridge.

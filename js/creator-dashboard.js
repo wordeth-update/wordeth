@@ -217,7 +217,7 @@ function renderPlans(plans, currentPlan) {
 
     grid.querySelectorAll('.upgrade-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            alert('Payment processing coming soon! Plan: ' + btn.dataset.plan);
+            window.location.href = '/pricing.html';
         });
     });
 }
