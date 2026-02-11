@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isCurrent = currentUserPlan === plan.slug;
         const price = billingCycle === 'yearly' ? plan.priceYearly : plan.priceMonthly;
         const isFree = plan.priceMonthly === 0 && plan.priceYearly === 0;
-        const isEnterprise = plan.slug.includes('enterprise') || plan.slug.includes('major');
+        const isContactSales = plan.isCustomPricing || (plan.category === 'label' && plan.maxArtists > 5);
 
         const card = document.createElement('div');
         card.className = 'price-card' + (isFeatured ? ' featured' : '') + (isCurrent ? ' current-plan' : '');
@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let priceHTML;
         if (isFree) {
             priceHTML = `<span class="price-amount">Free</span>`;
-        } else if (isEnterprise && plan.priceMonthly >= 3000) {
+        } else if (isContactSales) {
             priceHTML = `<span class="price-amount">Custom</span>`;
         } else {
             const displayPrice = billingCycle === 'yearly' ? Math.round(price / 12) : price;
@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let btnHTML;
         if (isCurrent) {
             btnHTML = `<div class="card-btn btn-current">Current Plan</div>`;
-        } else if (isEnterprise && plan.priceMonthly >= 3000) {
+        } else if (isContactSales) {
             btnHTML = `<a href="mailto:partnerships@wordeth.com" class="card-btn btn-contact">Contact Sales</a>`;
         } else if (isFree) {
             btnHTML = `<a href="/signup.html" class="card-btn btn-secondary">Get Started Free</a>`;
