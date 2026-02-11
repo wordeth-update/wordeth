@@ -1327,6 +1327,13 @@ class AudioRoomsManager {
         
         this.socket.on('room-joined', async (data) => {
             console.log('Room joined via signaling:', data);
+
+            if (data.isHost && !this.isRoomHost) {
+                this.isRoomHost = true;
+                this.updateHostControls();
+                console.log('Host privileges restored by server');
+            }
+
             this.updateParticipantDisplay(data.participants);
             
             if (data.roomName) {

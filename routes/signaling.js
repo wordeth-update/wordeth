@@ -92,6 +92,7 @@ function setupSignaling(io) {
                     id: roomId,
                     name: roomName || null,
                     hostId: isHost ? socket.id : null,
+                    creatorUserId: isHost ? socket.userId : null,
                     participants: new Map(),
                     karaokeEnabled: false,
                     screenshareEnabled: false,
@@ -105,20 +106,28 @@ function setupSignaling(io) {
                 room.name = roomName;
             }
 
+            const isOriginalCreator = room.creatorUserId && socket.userId && room.creatorUserId === socket.userId;
+            const shouldBeHost = isHost || isOriginalCreator;
+
+            if (shouldBeHost) {
+                const currentHostId = room.hostId;
+                if (currentHostId && currentHostId !== socket.id && room.participants.has(currentHostId)) {
+                    const prevHost = room.participants.get(currentHostId);
+                    prevHost.isHost = false;
+                }
+                room.hostId = socket.id;
+            }
+
             room.participants.set(socket.id, {
                 socketId: socket.id,
                 userId: socket.userId,
                 userName: socket.userName,
                 avatar: socket.avatar || null,
-                isHost: isHost || false,
+                isHost: shouldBeHost,
                 isSpeaker: true,
                 isMuted: false,
                 joinedAt: Date.now()
             });
-
-            if (isHost) {
-                room.hostId = socket.id;
-            }
 
             const participantList = Array.from(room.participants.values());
 
@@ -126,7 +135,7 @@ function setupSignaling(io) {
                 roomId,
                 roomName: room.name || null,
                 participants: participantList,
-                isHost: isHost || false,
+                isHost: shouldBeHost,
                 karaokeEnabled: room.karaokeEnabled,
                 screenshareEnabled: room.screenshareEnabled,
                 isLocked: room.isLocked
@@ -137,9 +146,16 @@ function setupSignaling(io) {
                 userId: socket.userId,
                 userName: socket.userName,
                 avatar: socket.avatar || null,
-                isHost: isHost || false,
+                isHost: shouldBeHost,
                 participants: participantList
             });
+
+            if (isOriginalCreator && !isHost) {
+                io.to(roomId).emit('room-event', {
+                    event: 'host-changed',
+                    data: { newHostId: socket.id, newHostName: socket.userName }
+                });
+            }
 
             console.log(`${socket.userName} joined room ${roomId} (${room.participants.size} participants)`);
 
