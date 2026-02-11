@@ -94,9 +94,15 @@ function setupSignaling(io) {
                     socket.roomId = null;
                     return;
                 }
+                if (!roomName) {
+                    socket.emit('room-error', { message: 'This room has expired. Please create a new one.' });
+                    socket.leave(roomId);
+                    socket.roomId = null;
+                    return;
+                }
                 rooms.set(roomId, {
                     id: roomId,
-                    name: roomName || null,
+                    name: roomName,
                     hostId: socket.id,
                     creatorUserId: socket.userId,
                     participants: new Map(),
