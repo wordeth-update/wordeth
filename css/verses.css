@@ -3334,7 +3334,8 @@
     .room-header .room-actions .action-btn span,
     .room-header .room-actions .action-btn .lock-text,
     .room-header .room-actions .action-btn .karaoke-toggle-text,
-    .room-header .room-actions .action-btn .screenshare-toggle-text {
+    .room-header .room-actions .action-btn .screenshare-toggle-text,
+    .room-header .room-actions .action-btn .video-toggle-text {
         display: none;
     }
 
