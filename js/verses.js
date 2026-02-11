@@ -221,7 +221,6 @@ class AudioRoomsManager {
         this.toggleChatBtn?.addEventListener('click', () => this.toggleChat());
         this.shareMusicBtn?.addEventListener('click', () => this.shareMusic());
         this.leaveRoomBtn?.addEventListener('click', () => this.leaveRoom());
-        document.getElementById('leave-room')?.addEventListener('click', () => this.leaveRoom());
 
         // Action buttons
         this.addUsersBtn?.addEventListener('click', () => this.showAddUsersModal());
@@ -2352,7 +2351,6 @@ class AudioRoomsManager {
         this.toggleChatBtn?.addEventListener('click', () => this.toggleChat());
         this.shareMusicBtn?.addEventListener('click', () => this.shareMusic());
         this.leaveRoomBtn?.addEventListener('click', () => this.leaveRoom());
-        document.getElementById('leave-room')?.addEventListener('click', () => this.leaveRoom());
         this.addUsersBtn?.addEventListener('click', () => this.showAddUsersModal());
         this.replayBtn?.addEventListener('click', () => this.showReplayModal());
         document.getElementById('share-room-btn')?.addEventListener('click', () => this.shareRoom());
