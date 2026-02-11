@@ -1,0 +1,126 @@
+You are Replit AI acting as a senior full-stack architect. Build the backend + dashboard logic needed to support Wordeth’s pricing ladder and role-based dashboards.
+
+PRODUCT CONTEXT (Wordeth)
+Wordeth is a web app with:
+1) Lyric discovery pages (ad-supported for free users).
+2) Audio-based rooms (Spaces/Clubhouse style).
+3) Apparel design tools (templates + storage).
+4) Marketplace for independent designers (visual template creators).
+5) Artist/label “lyric packs” (licensed content access).
+6) Commerce integration (merch orders handled by a separate Commerce OpCo). Wordeth Tech OpCo collects subscriptions + platform fees; commerce collects product revenue. Rights Mgmt handles royalties (outside scope except reporting hooks).
+
+GOAL
+Implement a robust subscription/entitlement system + role dashboards:
+- Fan/User dashboards (Free / Fan+ / Creator)
+- Independent Designer dashboards (Free Explore / Starter / Pro / Studio)
+- Independent Music Artist dashboards (Starter / Growth / Pro)
+- Record Label dashboards (Boutique / Mid / Enterprise)
+- Admin dashboard (pricing, plans, overrides, reporting)
+
+PRICING LADDER (must be implemented as Plans + Entitlements)
+A) Fans/Users:
+- Free: lyric search (ads), limited audio, browse packs, watermarked try-on, buy merch
+- Fan+: $3.99/mo or $39/yr: reduced ads, save designs, basic customization, access free designer templates, design history
+- Creator: $7.99/mo or $79/yr: full design tools, increased storage, access paid designer packs, access official artist lyric packs, priority audio rooms
+
+B) Independent Designers:
+- Free Explore: $0, up to 5 templates, discoverable, earn revenue, attribution; no storefront, limited visibility, standard rev share
+- Graduation rule: designer must upgrade after ANY of: $100 lifetime earnings OR 10 sales using their templates OR 3 active months
+- Starter: $15/mo, up to 20 templates, profile, marketplace visibility, basic analytics
+- Pro: $35/mo, unlimited templates, own storefront, collections/drops, improved rev share, promo tools
+- Studio: $75/mo, team access, advanced analytics, featured eligibility, priority support, custom licensing options
+
+C) Independent Music Artists:
+- Starter: $49/mo (storefront, official lyric packs, merch monetization, basic analytics)
+- Growth: $99/mo (more SKUs, advanced analytics, promo tools, featured eligibility)
+- Pro: $199/mo (priority placement, advanced reporting, campaign tools, early features)
+
+D) Record Labels:
+- Boutique: $499/mo (<=5 artists)
+- Mid: $1,250/mo (<=15 artists)
+- Enterprise: $3,000+/mo (custom artists, API access, advanced reporting, dedicated support)
+
+E) Ads:
+- Free users see ads on lyric pages; Fan+ reduced ads; Creator no ads (or minimal). Support ad slots + reporting.
+
+F) Commerce platform fee:
+- Wordeth takes 8–12% of GMV as platform fee (tracked in reporting). Implement a hook to record GMV/order events even if fulfillment is external.
+
+TECH REQUIREMENTS
+- Implement a non-stripe payment processor; native if possible.
+  - Products/Prices for each plan (monthly + annual where applicable).
+  - Support upgrades/downgrades, proration, cancellations, grace periods.
+  - Store Stripe customer/subscription IDs.
+  - Webhook handling: invoice.paid, customer.subscription.updated/deleted, checkout.session.completed.
+- Implement role-based access control (RBAC) + attribute-based rules (ABAC):
+  Roles: USER_FAN, DESIGNER, ARTIST, LABEL_ADMIN, LABEL_MANAGER, ADMIN
+- Implement Entitlements (capabilities) as first-class:
+  Examples: CAN_SAVE_DESIGNS, DESIGN_STORAGE_GB, CAN_ACCESS_PAID_DESIGNER_PACKS, CAN_ACCESS_LYRIC_PACKS,
+            ADS_LEVEL (FULL/REDUCED/NONE),
+            AUDIO_ROOM_LIMIT, CAN_CREATE_TEMPLATES, TEMPLATE_LIMIT, HAS_STOREFRONT,
+            LABEL_ARTIST_LIMIT, HAS_API_ACCESS, ANALYTICS_LEVEL (BASIC/ADVANCED/ENTERPRISE), FEATURED_ELIGIBLE
+- Support add-ons:
+  - Extra storage purchases (e.g., +10GB)
+  - Extra artists for labels (per-artist add-on)
+- Support packs:
+  - Designer packs: subscription or one-time unlock (design packs created by designers)
+  - Artist lyric packs: subscription or one-time unlock (licensed access)
+  - Users can hold multiple active pack subscriptions.
+- Implement a ledger/events system:
+  - Track: subscriptions, pack purchases, GMV/order events, template usage events, ad impressions (optional), payouts owed (optional)
+  - Must support reporting dashboards.
+
+DASHBOARDS (MVP SCREENS + DATA)
+1) Fan/User Dashboard:
+- Current plan, renew date, storage used/limit, saved designs count
+- Active designer packs + artist packs
+- Upgrade CTAs
+2) Designer Dashboard:
+- Plan + graduation meter (earnings, sales, months active)
+- Template library (limits enforced), template usage stats
+- Storefront toggle (Pro+), collections/drops
+- Earnings summary (subscriptions from their packs + per-sale bonuses), payout status (placeholder)
+3) Artist Dashboard:
+- Storefront metrics, pack subscribers, merch GMV attributable, payout summary (placeholder)
+4) Label Dashboard:
+- Artists roster count vs limit, aggregated metrics, API access status
+- Invoices/contract placeholders
+5) Admin Dashboard:
+- Manage plans/prices/entitlements mapping
+- User overrides, comped plans, abuse flags
+- Reporting: MRR, churn, GMV, pack revenue, top designers/artists
+
+ENFORCEMENT RULES (must implement)
+- Free fan users get ads FULL and limited audio; Fan+ reduced ads; Creator none/minimal.
+- Designer template limits by plan (5/20/unlimited).
+- Designer storefront only for Pro+.
+- Designer graduation rule: if threshold met, restrict new uploads and storefront until upgrade.
+- Label artist limits enforced (5/15/custom).
+- Access to lyric packs only for Creator (fans) OR for artists/labels as per plan.
+- Access to paid designer packs only for Creator (or allow Fan+ optional add-on if you decide; default: Creator).
+
+DELIVERABLES
+- Database schema (tables/collections) for: users, orgs (labels), memberships, plans, entitlements, subscriptions, pack_products, pack_subscriptions, templates, storefronts, events_ledger, usage_metrics.
+- Stripe setup notes + webhook endpoints.
+- API endpoints (REST) for:
+  auth/login
+  get current entitlements
+  list plans/prices
+  create checkout session
+  customer portal link
+  packs: browse, subscribe/unlock, cancel
+  templates: CRUD with entitlement enforcement
+  label roster: CRUD with limits
+  record order/GMV event (from Commerce)
+  analytics endpoints (aggregated)
+- Middleware/guards for RBAC + entitlements.
+- Seed data for all plans + entitlements mapping.
+- Minimal frontend stubs/components for dashboards (or clear JSON responses if frontend is separate).
+
+IMPORTANT
+- Keep plan/entitlement mappings configuration-driven (not hardcoded).
+- Make it easy to add a new plan or change limits without code changes.
+- Provide step-by-step setup instructions to run locally (env vars, Stripe keys, DB migration).
+- Provide clean, readable code with comments and basic tests around entitlement enforcement.
+
+Start by scaffolding the project, defining the schema, then implementing Stripe + entitlements, then the dashboard APIs.
