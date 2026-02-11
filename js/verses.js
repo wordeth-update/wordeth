@@ -58,6 +58,13 @@ class AudioRoomsManager {
         this.karaokeVideoActive = false;
         this._videoRenegotiating = false;
         
+        // Video grid state
+        this.videoMode = 'off';
+        this.localVideoStream = null;
+        this.isVideoActive = false;
+        this.activeVideoFeeds = new Map();
+        this.MAX_VIDEO_TILES = 6;
+        
         // AR filter engine
         this.arFilterEngine = null;
         this.arFilterLoading = false;
@@ -326,6 +333,12 @@ class AudioRoomsManager {
         document.getElementById('screenshare-toggle-btn')?.addEventListener('click', () => this.toggleScreensharePermission());
         document.getElementById('screenshare-btn')?.addEventListener('click', () => this.startScreenShare());
         document.getElementById('screenshare-stop')?.addEventListener('click', () => this.stopScreenShare());
+        
+        // Video grid controls
+        document.getElementById('video-toggle-btn')?.addEventListener('click', () => this.cycleVideoMode());
+        document.getElementById('video-btn')?.addEventListener('click', () => this.toggleLocalVideo());
+        document.getElementById('mute-all-btn')?.addEventListener('click', () => this.muteAllParticipants());
+        document.getElementById('close-room-btn')?.addEventListener('click', () => this.closeRoom());
 
         this.setupMobileShareListeners();
         this.initMusicSharing();
@@ -1257,8 +1270,10 @@ class AudioRoomsManager {
             this.isSpeaker = isHost;
             this.karaokeEnabled = isHost ? false : (roomData?.karaokeEnabled || false);
             this.screenshareEnabled = isHost ? false : (roomData?.screenshareEnabled || false);
+            this.videoMode = isHost ? 'off' : (roomData?.videoMode || 'off');
             this.updateKaraokeButtonState();
             this.updateScreenshareButtonState();
+            this.updateVideoButtonState();
             this.updateHostControls();
             
             try {
@@ -1425,6 +1440,11 @@ class AudioRoomsManager {
                 this.updateHostControls();
                 console.log('Host privileges restored by server');
             }
+            
+            if (data.videoMode) {
+                this.videoMode = data.videoMode;
+                this.updateVideoButtonState();
+            }
 
             this.updateParticipantDisplay(data.participants);
             
@@ -1454,6 +1474,7 @@ class AudioRoomsManager {
         this.socket.on('participant-left', (data) => {
             console.log('Participant left:', data.userName);
             this.addChatMessage('System', `${data.userName} left the room.`, true);
+            this.removeVideoTile(data.socketId);
             this.closePeerConnection(data.socketId);
             this.removeRemoteParticipant(data.socketId);
             this.updateParticipantDisplay(data.participants);
@@ -1544,9 +1565,11 @@ class AudioRoomsManager {
             }
             this.karaokeEnabled = data.karaokeEnabled || false;
             this.screenshareEnabled = data.screenshareEnabled || false;
+            this.videoMode = data.videoMode || 'off';
             this.isRoomLocked = data.isLocked || false;
             this.updateKaraokeButtonState();
             this.updateScreenshareButtonState();
+            this.updateVideoButtonState();
             this.updateParticipantDisplay(data.participants);
 
             data.participants.forEach(p => {
@@ -1685,6 +1708,19 @@ class AudioRoomsManager {
     
     handleRemoteVideoTrack(remoteId, remoteName, stream) {
         console.log('Received remote video from:', remoteName);
+        
+        if (this.activeVideoFeeds.has(remoteId)) {
+            const existing = this.activeVideoFeeds.get(remoteId);
+            existing.stream = stream;
+            this.activeVideoFeeds.set(remoteId, existing);
+            this.refreshVideoGrid();
+            
+            stream.getVideoTracks()[0].onended = () => {
+                this.removeVideoTile(remoteId);
+            };
+            return;
+        }
+        
         if (this.isScreenSharing) return;
         
         const container = document.getElementById('screenshare-container');
@@ -1811,6 +1847,35 @@ class AudioRoomsManager {
                 this.updateScreenshareButtonState();
                 this.addChatMessage('System', `Screen share ${data.enabled ? 'enabled' : 'disabled'} by host.`, true);
                 break;
+            case 'video-mode':
+                this.videoMode = data.mode || 'off';
+                this.updateVideoButtonState();
+                if (data.mode === 'off' && this.isVideoActive) {
+                    this.stopLocalVideo();
+                }
+                this.addChatMessage('System', `Video mode set to "${data.mode}" by host.`, true);
+                break;
+            case 'video-start':
+                this.handleRemoteVideoStart(data);
+                break;
+            case 'video-stop':
+                this.handleRemoteVideoStop(data);
+                break;
+            case 'video-request':
+                this.handleVideoRequest(data);
+                break;
+            case 'video-approved':
+                this.handleVideoApproved(data);
+                break;
+            case 'video-denied':
+                this.showToast('Your camera request was denied by the host.', 'fa-video-slash');
+                break;
+            case 'mute-all':
+                this.handleMuteAll(data);
+                break;
+            case 'close-room':
+                this.handleCloseRoom(data);
+                break;
             case 'permission-request':
                 this.handlePermissionRequest(data);
                 break;
@@ -1827,6 +1892,14 @@ class AudioRoomsManager {
                 }
                 break;
             case 'mute-status':
+                if (data.userId) {
+                    const socketId = this.findSocketByUserId(data.userId);
+                    if (socketId && this.activeVideoFeeds.has(socketId)) {
+                        const feed = this.activeVideoFeeds.get(socketId);
+                        feed.muted = !!data.muted;
+                        this.refreshVideoGrid();
+                    }
+                }
                 break;
             case 'host-changed':
                 this.addChatMessage('System', `${data.newHostName} is now the host.`, true);
@@ -2400,6 +2473,19 @@ class AudioRoomsManager {
             this.isNativeScreenSharing = false;
         }
         
+        if (this.localVideoStream) {
+            this.localVideoStream.getTracks().forEach(track => track.stop());
+            this.localVideoStream = null;
+        }
+        this.isVideoActive = false;
+        this.activeVideoFeeds.clear();
+        this.videoMode = 'off';
+        const videoGridWrapper = document.getElementById('video-grid-wrapper');
+        const videoGrid = document.getElementById('video-grid');
+        if (videoGridWrapper) videoGridWrapper.classList.add('hidden');
+        if (videoGrid) videoGrid.innerHTML = '';
+        this.updateVideoButtonState();
+        
         if (this.cameraShareStream) {
             this.cameraShareStream.getTracks().forEach(track => track.stop());
             this.cameraShareStream = null;
@@ -2471,6 +2557,10 @@ class AudioRoomsManager {
         document.getElementById('screenshare-toggle-btn')?.addEventListener('click', () => this.toggleScreensharePermission());
         document.getElementById('screenshare-btn')?.addEventListener('click', () => this.startScreenShare());
         document.getElementById('screenshare-stop')?.addEventListener('click', () => this.stopScreenShare());
+        document.getElementById('video-toggle-btn')?.addEventListener('click', () => this.cycleVideoMode());
+        document.getElementById('video-btn')?.addEventListener('click', () => this.toggleLocalVideo());
+        document.getElementById('mute-all-btn')?.addEventListener('click', () => this.muteAllParticipants());
+        document.getElementById('close-room-btn')?.addEventListener('click', () => this.closeRoom());
 
         this.sendMessageBtn?.addEventListener('click', () => {
             const msg = this.chatInput?.value?.trim();
@@ -3090,6 +3180,9 @@ class AudioRoomsManager {
         const hostOnlyControls = [
             document.getElementById('karaoke-toggle-btn'),
             document.getElementById('screenshare-toggle-btn'),
+            document.getElementById('video-toggle-btn'),
+            document.getElementById('mute-all-btn'),
+            document.getElementById('close-room-btn'),
             document.getElementById('lock-room-btn'),
             document.getElementById('edit-topic')
         ];
@@ -3202,6 +3295,353 @@ class AudioRoomsManager {
         }
     }
     
+    // ==========================================
+    // VIDEO GRID FEATURE
+    // ==========================================
+    
+    cycleVideoMode() {
+        if (!this.isRoomHost) return;
+        const modes = ['off', 'ask', 'open'];
+        const idx = modes.indexOf(this.videoMode);
+        this.videoMode = modes[(idx + 1) % modes.length];
+        
+        this.notifyParticipants('video-mode', { mode: this.videoMode });
+        this.updateVideoModeHostUI();
+        
+        const labels = { off: 'Video disabled.', ask: 'Video set to Ask mode — participants must request permission.', open: 'Video open — anyone can turn on their camera.' };
+        this.addChatMessage('System', labels[this.videoMode], true);
+        
+        if (this.videoMode === 'off' && this.isVideoActive) {
+            this.stopLocalVideo();
+        }
+    }
+    
+    updateVideoModeHostUI() {
+        const btn = document.getElementById('video-toggle-btn');
+        const text = btn?.querySelector('.video-toggle-text');
+        const icon = btn?.querySelector('i');
+        btn?.classList.remove('video-ask', 'video-open', 'active');
+        if (this.videoMode === 'ask') {
+            btn?.classList.add('video-ask');
+            if (text) text.textContent = 'Video: Ask';
+            if (icon) { icon.className = 'fas fa-video'; }
+        } else if (this.videoMode === 'open') {
+            btn?.classList.add('video-open', 'active');
+            if (text) text.textContent = 'Video: Open';
+            if (icon) { icon.className = 'fas fa-video'; }
+        } else {
+            if (text) text.textContent = 'Video: Off';
+            if (icon) { icon.className = 'fas fa-video-slash'; }
+        }
+    }
+    
+    updateVideoButtonState() {
+        const videoBtn = document.getElementById('video-btn');
+        if (!videoBtn) return;
+        if (this.videoMode === 'off') {
+            videoBtn.classList.add('disabled');
+            videoBtn.classList.remove('active');
+            videoBtn.title = 'Camera disabled by host';
+            videoBtn.querySelector('i').className = 'fas fa-video-slash';
+        } else {
+            videoBtn.classList.remove('disabled');
+            if (this.isVideoActive) {
+                videoBtn.classList.add('active');
+                videoBtn.title = 'Turn off camera';
+                videoBtn.querySelector('i').className = 'fas fa-video';
+            } else {
+                videoBtn.classList.remove('active');
+                videoBtn.title = 'Turn on camera';
+                videoBtn.querySelector('i').className = 'fas fa-video-slash';
+            }
+        }
+        if (this.isRoomHost) {
+            this.updateVideoModeHostUI();
+        }
+    }
+    
+    async toggleLocalVideo() {
+        if (this.videoMode === 'off') {
+            this.showToast('Video is disabled by the host.', 'fa-video-slash');
+            return;
+        }
+        
+        if (this.isVideoActive) {
+            this.stopLocalVideo();
+            return;
+        }
+        
+        if (this.videoMode === 'ask' && !this.isRoomHost) {
+            this.addChatMessage('System', 'Camera request sent to host...', true);
+            this.notifyParticipants('video-request', { userName: this.socket?.userName || 'A participant' });
+            return;
+        }
+        
+        await this.startLocalVideo();
+    }
+    
+    async startLocalVideo() {
+        if (this.activeVideoFeeds.size >= this.MAX_VIDEO_TILES && !this.activeVideoFeeds.has('self')) {
+            this.showToast('Video grid is full (max 6 feeds).', 'fa-video-slash');
+            return;
+        }
+        
+        try {
+            this.localVideoStream = await navigator.mediaDevices.getUserMedia({
+                video: { width: { ideal: 320 }, height: { ideal: 240 }, frameRate: { ideal: 15 } },
+                audio: false
+            });
+            this.isVideoActive = true;
+            this.updateVideoButtonState();
+            
+            this.addVideoTile('self', this.socket?.userName || 'You', this.localVideoStream, true);
+            
+            this.notifyParticipants('video-start', {});
+            
+            for (const [peerId, pc] of this.peerConnections) {
+                try {
+                    const videoTrack = this.localVideoStream.getVideoTracks()[0];
+                    const existingVideoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                    if (existingVideoSender) {
+                        await existingVideoSender.replaceTrack(videoTrack);
+                    } else {
+                        pc.addTrack(videoTrack, this.localVideoStream);
+                    }
+                    await this.renegotiatePeer(peerId, pc);
+                } catch (e) {
+                    console.error('Error adding video track to peer:', peerId, e);
+                }
+            }
+        } catch (e) {
+            console.error('Error starting video:', e);
+            this.showToast('Could not access camera.', 'fa-exclamation-circle');
+        }
+    }
+    
+    stopLocalVideo() {
+        if (this.localVideoStream) {
+            this.localVideoStream.getTracks().forEach(t => t.stop());
+            this.localVideoStream = null;
+        }
+        this.isVideoActive = false;
+        this.removeVideoTile('self');
+        this.updateVideoButtonState();
+        
+        this.notifyParticipants('video-stop', {});
+        
+        for (const [peerId, pc] of this.peerConnections) {
+            const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+            if (videoSender) {
+                try {
+                    pc.removeTrack(videoSender);
+                    this.renegotiatePeer(peerId, pc).catch(() => {});
+                } catch (e) {
+                    console.error('Error removing video track from peer:', peerId, e);
+                }
+            }
+        }
+    }
+    
+    handleRemoteVideoStart(data) {
+        const { socketId, userName } = data;
+        if (!socketId || socketId === this.socket?.id) return;
+        
+        const pc = this.peerConnections.get(socketId);
+        if (pc) {
+            const existingStream = this.activeVideoFeeds.get(socketId)?.stream;
+            if (existingStream) return;
+        }
+        this.activeVideoFeeds.set(socketId, { userName, stream: null, muted: false });
+        this.refreshVideoGrid();
+    }
+    
+    handleRemoteVideoStop(data) {
+        const { socketId } = data;
+        if (!socketId) return;
+        this.removeVideoTile(socketId);
+    }
+    
+    handleVideoRequest(data) {
+        if (!this.isRoomHost) return;
+        const container = document.getElementById('host-notifications');
+        if (!container) return;
+        
+        const reqId = Date.now().toString();
+        const notification = document.createElement('div');
+        notification.className = 'host-notification';
+        notification.dataset.requestId = reqId;
+        notification.innerHTML = `
+            <div class="host-notif-icon"><i class="fas fa-video"></i></div>
+            <div class="host-notif-content">
+                <strong>${data.userName}</strong> wants to enable their <strong>camera</strong>
+            </div>
+            <div class="host-notif-actions">
+                <button class="notif-approve-btn" onclick="window.audioRoomsManager?.approveVideoRequest('${reqId}', '${data.requesterId}', '${data.userName}')">
+                    <i class="fas fa-check"></i> Allow
+                </button>
+                <button class="notif-deny-btn" onclick="window.audioRoomsManager?.denyVideoRequest('${reqId}', '${data.requesterId}', '${data.userName}')">
+                    <i class="fas fa-times"></i> Deny
+                </button>
+            </div>
+        `;
+        container.appendChild(notification);
+        setTimeout(() => notification.classList.add('visible'), 10);
+        setTimeout(() => this.dismissNotification(reqId), 30000);
+    }
+    
+    approveVideoRequest(requestId, targetSocketId, userName) {
+        this.notifyParticipants('video-approved', { targetSocketId, userName });
+        this.dismissNotification(requestId);
+        this.addChatMessage('System', `Allowed ${userName} to use camera.`, true);
+    }
+    
+    denyVideoRequest(requestId, targetSocketId, userName) {
+        this.notifyParticipants('video-denied', { targetSocketId, userName });
+        this.dismissNotification(requestId);
+    }
+    
+    handleVideoApproved(data) {
+        this.showToast('Host approved your camera request!', 'fa-video');
+        this.startLocalVideo();
+    }
+    
+    addVideoTile(id, userName, stream, isSelf = false) {
+        this.activeVideoFeeds.set(id, { userName, stream, muted: false });
+        this.refreshVideoGrid();
+    }
+    
+    removeVideoTile(id) {
+        const feed = this.activeVideoFeeds.get(id);
+        if (feed && feed.stream && id !== 'self') {
+        }
+        this.activeVideoFeeds.delete(id);
+        this.refreshVideoGrid();
+    }
+    
+    refreshVideoGrid() {
+        const wrapper = document.getElementById('video-grid-wrapper');
+        const grid = document.getElementById('video-grid');
+        if (!wrapper || !grid) return;
+        
+        if (this.activeVideoFeeds.size === 0) {
+            wrapper.classList.add('hidden');
+            grid.innerHTML = '';
+            return;
+        }
+        
+        wrapper.classList.remove('hidden');
+        
+        const sorted = this.getSpeakerPrioritizedFeeds();
+        const displayed = sorted.slice(0, this.MAX_VIDEO_TILES);
+        
+        grid.dataset.count = String(Math.min(displayed.length, 6));
+        
+        const existingTiles = new Map();
+        grid.querySelectorAll('.video-tile').forEach(tile => {
+            existingTiles.set(tile.dataset.feedId, tile);
+        });
+        
+        const newIds = new Set(displayed.map(d => d.id));
+        existingTiles.forEach((tile, id) => {
+            if (!newIds.has(id)) tile.remove();
+        });
+        
+        displayed.forEach(feed => {
+            let tile = existingTiles.get(feed.id);
+            if (!tile) {
+                tile = document.createElement('div');
+                tile.className = 'video-tile' + (feed.id === 'self' ? ' self' : '');
+                tile.dataset.feedId = feed.id;
+                
+                const video = document.createElement('video');
+                video.autoplay = true;
+                video.playsInline = true;
+                video.muted = feed.id === 'self';
+                
+                const nameLabel = document.createElement('span');
+                nameLabel.className = 'video-tile-name';
+                nameLabel.textContent = feed.id === 'self' ? 'You' : feed.userName;
+                
+                tile.appendChild(video);
+                tile.appendChild(nameLabel);
+                grid.appendChild(tile);
+            }
+            
+            const videoEl = tile.querySelector('video');
+            if (videoEl && feed.stream && videoEl.srcObject !== feed.stream) {
+                videoEl.srcObject = feed.stream;
+            }
+            
+            const existingMuteTag = tile.querySelector('.video-tile-muted');
+            if (feed.muted && !existingMuteTag) {
+                const muteTag = document.createElement('span');
+                muteTag.className = 'video-tile-muted';
+                muteTag.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+                tile.appendChild(muteTag);
+            } else if (!feed.muted && existingMuteTag) {
+                existingMuteTag.remove();
+            }
+        });
+    }
+    
+    getSpeakerPrioritizedFeeds() {
+        const feeds = Array.from(this.activeVideoFeeds.entries()).map(([id, data]) => ({
+            id,
+            userName: data.userName,
+            stream: data.stream,
+            muted: data.muted
+        }));
+        
+        feeds.sort((a, b) => {
+            if (a.id === 'self') return -1;
+            if (b.id === 'self') return 1;
+            if (a.muted !== b.muted) return a.muted ? 1 : -1;
+            return 0;
+        });
+        
+        return feeds;
+    }
+    
+    // ==========================================
+    // MUTE ALL & CLOSE ROOM
+    // ==========================================
+    
+    muteAllParticipants() {
+        if (!this.isRoomHost) return;
+        if (!confirm('Mute all participants in this room?')) return;
+        this.notifyParticipants('mute-all', {});
+        this.addChatMessage('System', 'You muted all participants.', true);
+    }
+    
+    handleMuteAll(data) {
+        if (this.localStream) {
+            this.localStream.getAudioTracks().forEach(t => { t.enabled = false; });
+        }
+        this.isAudioMuted = true;
+        const toggleBtn = document.getElementById('toggle-audio');
+        if (toggleBtn) {
+            toggleBtn.querySelector('i').className = 'fas fa-microphone-slash';
+            toggleBtn.classList.add('muted');
+        }
+        this.notifyParticipants('mute-status', { muted: true });
+        this.showToast(`${data.hostName || 'Host'} muted everyone.`, 'fa-volume-mute');
+        this.addChatMessage('System', `${data.hostName || 'Host'} muted all participants.`, true);
+    }
+    
+    closeRoom() {
+        if (!this.isRoomHost) return;
+        if (!confirm('Close this room? Everyone will be removed.')) return;
+        this.notifyParticipants('close-room', {});
+        this.addChatMessage('System', 'Room closed.', true);
+        setTimeout(() => this.leaveRoom(), 300);
+    }
+    
+    handleCloseRoom(data) {
+        this.showToast(`${data.hostName || 'Host'} closed the room.`, 'fa-door-closed', 5000);
+        this.addChatMessage('System', `${data.hostName || 'Host'} closed the room.`, true);
+        setTimeout(() => this.leaveRoom(), 500);
+    }
+
     requestPermission(feature, userName) {
         const requestId = Date.now().toString();
         this.pendingPermissionRequestId = requestId;
@@ -3226,8 +3666,10 @@ class AudioRoomsManager {
         const container = document.getElementById('host-notifications');
         if (!container) return;
         
-        const featureLabel = feature === 'karaoke' ? 'Karaoke' : 'Screen Share';
-        const featureIcon = feature === 'karaoke' ? 'fa-compact-disc' : 'fa-desktop';
+        const featureLabels = { karaoke: 'Karaoke', screenshare: 'Screen Share', video: 'Camera' };
+        const featureIcons = { karaoke: 'fa-compact-disc', screenshare: 'fa-desktop', video: 'fa-video' };
+        const featureLabel = featureLabels[feature] || feature;
+        const featureIcon = featureIcons[feature] || 'fa-question';
         
         const notification = document.createElement('div');
         notification.className = 'host-notification';

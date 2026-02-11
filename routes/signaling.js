@@ -102,6 +102,8 @@ function setupSignaling(io) {
                     participants: new Map(),
                     karaokeEnabled: false,
                     screenshareEnabled: false,
+                    videoMode: 'off',
+                    activeVideos: new Set(),
                     isLocked: false,
                     createdAt: Date.now()
                 });
@@ -144,6 +146,8 @@ function setupSignaling(io) {
                 isHost: shouldBeHost,
                 karaokeEnabled: room.karaokeEnabled,
                 screenshareEnabled: room.screenshareEnabled,
+                videoMode: room.videoMode || 'off',
+                activeVideos: Array.from(room.activeVideos || []),
                 isLocked: room.isLocked
             });
 
@@ -208,7 +212,9 @@ function setupSignaling(io) {
                 roomName: room.name || null,
                 isLocked: room.isLocked,
                 karaokeEnabled: room.karaokeEnabled,
-                screenshareEnabled: room.screenshareEnabled
+                screenshareEnabled: room.screenshareEnabled,
+                videoMode: room.videoMode || 'off',
+                activeVideos: Array.from(room.activeVideos || [])
             });
         });
 
@@ -307,6 +313,77 @@ function setupSignaling(io) {
                     }
                     break;
 
+                case 'video-mode':
+                    if (socket.id === room.hostId) {
+                        room.videoMode = data.mode || 'off';
+                        if (data.mode === 'off') {
+                            room.activeVideos.clear();
+                        }
+                        socket.to(roomId).emit('room-event', { event, data });
+                    }
+                    break;
+
+                case 'video-start':
+                    if (room.videoMode !== 'off' && room.activeVideos.size < 6) {
+                        room.activeVideos.add(socket.id);
+                        socket.to(roomId).emit('room-event', { event, data: { ...data, socketId: socket.id, userName: socket.userName, userId: socket.userId } });
+                    }
+                    break;
+
+                case 'video-stop':
+                    room.activeVideos.delete(socket.id);
+                    socket.to(roomId).emit('room-event', { event, data: { ...data, socketId: socket.id, userName: socket.userName, userId: socket.userId } });
+                    break;
+
+                case 'video-request':
+                    if (room.hostId) {
+                        io.to(room.hostId).emit('room-event', {
+                            event,
+                            data: { ...data, requesterId: socket.id, userName: socket.userName }
+                        });
+                    }
+                    break;
+
+                case 'video-approved':
+                    if (socket.id === room.hostId && data.targetSocketId) {
+                        io.to(data.targetSocketId).emit('room-event', { event, data });
+                    }
+                    break;
+
+                case 'video-denied':
+                    if (socket.id === room.hostId && data.targetSocketId) {
+                        io.to(data.targetSocketId).emit('room-event', { event, data });
+                    }
+                    break;
+
+                case 'mute-all':
+                    if (socket.id === room.hostId) {
+                        room.participants.forEach((p) => {
+                            if (p.socketId !== socket.id) {
+                                p.isMuted = true;
+                            }
+                        });
+                        socket.to(roomId).emit('room-event', { event, data: { hostName: socket.userName } });
+                    }
+                    break;
+
+                case 'close-room':
+                    if (socket.id === room.hostId) {
+                        io.to(roomId).emit('room-event', { event, data: { hostName: socket.userName } });
+                        room.participants.forEach((p, sid) => {
+                            const s = io.sockets.sockets.get(sid);
+                            if (s) {
+                                s.leave(roomId);
+                                s.roomId = null;
+                            }
+                        });
+                        room.participants.clear();
+                        rooms.delete(roomId);
+                        io.emit('rooms-updated', getActiveRooms());
+                        console.log(`Room ${roomId} closed by host ${socket.userName}`);
+                    }
+                    break;
+
                 case 'permission-request':
                     if (room.hostId) {
                         io.to(room.hostId).emit('room-event', {
@@ -395,6 +472,7 @@ function setupSignaling(io) {
 
             if (socket.roomId && rooms.has(socket.roomId)) {
                 const room = rooms.get(socket.roomId);
+                if (room.activeVideos) room.activeVideos.delete(socket.id);
                 room.participants.delete(socket.id);
 
                 const participantList = Array.from(room.participants.values());
