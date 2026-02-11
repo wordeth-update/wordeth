@@ -3251,22 +3251,26 @@ class AudioRoomsManager {
     updateVideoButtonState() {
         const videoBtn = document.getElementById('video-btn');
         if (!videoBtn) return;
+        const icon = videoBtn.querySelector('i');
+        const label = videoBtn.querySelector('.ctrl-label');
         if (this.videoMode === 'off') {
             videoBtn.classList.add('disabled');
             videoBtn.classList.remove('active');
             videoBtn.title = 'Camera disabled by host';
-            videoBtn.querySelector('i').className = 'fas fa-video-slash';
+            icon.className = 'fas fa-video-slash';
+            if (label) label.textContent = 'Camera';
+        } else if (this.isVideoActive) {
+            videoBtn.classList.remove('disabled');
+            videoBtn.classList.add('active');
+            videoBtn.title = 'Turn off camera';
+            icon.className = 'fas fa-video';
+            if (label) label.textContent = 'Camera';
         } else {
             videoBtn.classList.remove('disabled');
-            if (this.isVideoActive) {
-                videoBtn.classList.add('active');
-                videoBtn.title = 'Turn off camera';
-                videoBtn.querySelector('i').className = 'fas fa-video';
-            } else {
-                videoBtn.classList.remove('active');
-                videoBtn.title = 'Turn on camera';
-                videoBtn.querySelector('i').className = 'fas fa-video-slash';
-            }
+            videoBtn.classList.remove('active');
+            videoBtn.title = 'Turn on camera';
+            icon.className = 'fas fa-video';
+            if (label) label.textContent = 'Camera';
         }
         if (this.isRoomHost) {
             this.updateVideoModeHostUI();
