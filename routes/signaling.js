@@ -523,6 +523,8 @@ function getActiveRooms() {
             })),
             isLocked: room.isLocked,
             karaokeEnabled: room.karaokeEnabled,
+            screenshareEnabled: room.screenshareEnabled,
+            videoMode: room.videoMode || 'off',
             createdAt: room.createdAt
         });
     });
