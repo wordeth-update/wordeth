@@ -254,7 +254,8 @@ function setupSignaling(io) {
                     data: {
                         socketId: targetSocketId,
                         userId: targetParticipant.userId,
-                        userName: targetParticipant.userName
+                        userName: targetParticipant.userName,
+                        avatar: targetParticipant.avatar || null
                     }
                 });
                 io.to(roomId).emit('participants-list', {

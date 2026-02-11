@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (els.settingsEmail) els.settingsEmail.textContent = user.email || '-';
 
-        localStorage.setItem('user', JSON.stringify({ name: user.name, email: user.email, avatar: user.avatar }));
+        localStorage.setItem('user', JSON.stringify({ _id: user._id, name: user.name, email: user.email, avatar: user.avatar }));
     }
 
     els.editBtn.addEventListener('click', () => {
@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (res.ok) {
                     els.picture.src = data.avatarUrl;
                     currentUser.avatar = data.avatarUrl;
-                    localStorage.setItem('user', JSON.stringify({ name: currentUser.name, email: currentUser.email, avatar: data.avatarUrl }));
+                    localStorage.setItem('user', JSON.stringify({ _id: currentUser._id, name: currentUser.name, email: currentUser.email, avatar: data.avatarUrl }));
                     showToast('Photo updated!');
                 } else {
                     showToast(data.message || 'Upload failed', true);

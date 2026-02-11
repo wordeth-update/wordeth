@@ -1465,7 +1465,7 @@ class AudioRoomsManager {
                 if (p.isSpeaker !== false) {
                     this.addRemoteSpeaker(p.socketId, p.userName, null, false, p.userId, p.avatar);
                 } else {
-                    this.addRemoteListener(p.socketId, p.userName, false, p.userId);
+                    this.addRemoteListener(p.socketId, p.userName, false, p.userId, p.avatar);
                 }
             });
         });
@@ -1486,7 +1486,7 @@ class AudioRoomsManager {
                     selfEl.remove();
                     const user = JSON.parse(localStorage.getItem('user') || '{}');
                     const userName = user.name || user.username || 'Anonymous';
-                    this.addRemoteListener('self', userName + ' (You)', false, user._id);
+                    this.addRemoteListener('self', userName + ' (You)', false, user._id, user.avatar);
                 }
                 const muteIcon = this.toggleAudioBtn?.querySelector('i');
                 if (muteIcon) muteIcon.className = 'fas fa-microphone-slash';
@@ -1750,7 +1750,7 @@ class AudioRoomsManager {
                     const el = document.querySelector(`[data-participant-id="${data.socketId}"]`);
                     if (el && this.speakersStage?.contains(el)) {
                         el.remove();
-                        this.addRemoteListener(data.socketId, data.userName, false, data.userId);
+                        this.addRemoteListener(data.socketId, data.userName, false, data.userId, data.avatar);
                     }
                     this.addChatMessage('System', `${data.userName} was moved to the crowd by the host.`, true);
                 }
@@ -2430,8 +2430,8 @@ class AudioRoomsManager {
                 selfAvatar.setAttribute('data-participant-id', 'self');
                 const avatarUrl = user.avatar || null;
                 const avatarContent = avatarUrl
-                    ? `<img src="${avatarUrl}" alt="${userName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
-                    : `<div class="avatar-initial" style="width:100%;height:100%;border-radius:50%;background:var(--purple,#8a2be2);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:white;">${selfInitial}</div>`;
+                    ? `<img src="${avatarUrl}" alt="${userName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.outerHTML='<div class=\\'avatar-initial\\' style=\\'width:100%;height:100%;border-radius:50%;background:var(--mint,#98ff98);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:#1a1a2e;\\'>${selfInitial}</div>'">`
+                    : `<div class="avatar-initial" style="width:100%;height:100%;border-radius:50%;background:var(--mint,#98ff98);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:#1a1a2e;">${selfInitial}</div>`;
                 selfAvatar.innerHTML = `
                     <div class="avatar-ring">
                         ${avatarContent}
@@ -2490,16 +2490,17 @@ class AudioRoomsManager {
         return speakerAvatar;
     }
 
-    addRemoteListener(participantId, name, handRaised = false, userId = null) {
+    addRemoteListener(participantId, name, handRaised = false, userId = null, avatarUrl = null) {
         const initial = (name || '?').charAt(0).toUpperCase();
         const listenerAvatar = document.createElement('div');
         listenerAvatar.className = `listener-avatar ${handRaised ? 'hand-raised' : ''}`;
         listenerAvatar.setAttribute('data-participant-id', participantId);
         if (userId) listenerAvatar.setAttribute('data-user-id', userId);
         listenerAvatar.style.cursor = userId ? 'pointer' : 'default';
-        listenerAvatar.innerHTML = `
-            <div class="avatar-initial" style="width:40px;height:40px;border-radius:50%;background:var(--purple,#8a2be2);display:flex;align-items:center;justify-content:center;font-weight:bold;color:white;">${initial}</div>
-        `;
+        const avatarContent = avatarUrl
+            ? `<img src="${avatarUrl}" alt="${name}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" onerror="this.outerHTML='<div class=\\'avatar-initial\\' style=\\'width:40px;height:40px;border-radius:50%;background:var(--purple,#8a2be2);display:flex;align-items:center;justify-content:center;font-weight:bold;color:white;\\'>${initial}</div>'">`
+            : `<div class="avatar-initial" style="width:40px;height:40px;border-radius:50%;background:var(--purple,#8a2be2);display:flex;align-items:center;justify-content:center;font-weight:bold;color:white;">${initial}</div>`;
+        listenerAvatar.innerHTML = avatarContent;
         listenerAvatar.title = name;
         
         listenerAvatar.addEventListener('click', (e) => {

@@ -82,7 +82,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (res.ok) {
                 const data = await res.json();
                 if (data.user) {
+                    const existing = JSON.parse(localStorage.getItem('user') || '{}');
                     localStorage.setItem('user', JSON.stringify({
+                        ...existing,
+                        _id: data.user._id || existing._id,
                         name: data.user.name,
                         email: data.user.email,
                         avatar: data.user.avatar
