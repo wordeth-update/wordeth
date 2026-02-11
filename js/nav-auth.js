@@ -46,38 +46,17 @@ document.addEventListener('DOMContentLoaded', function() {
             mobileBtn.title = 'Profile';
         }
 
-        const mobileMenu = document.querySelector('.mobile-menu-content');
-        if (mobileMenu) {
-            const existing = mobileMenu.querySelector('.mobile-profile-link');
-            if (!existing) {
-                const menuLinks = mobileMenu.querySelector('.mobile-menu-links');
-                const profileLink = document.createElement('a');
-                profileLink.href = '/profile.html';
-                profileLink.textContent = 'My Profile';
-                profileLink.className = 'mobile-profile-link mobile-menu-link';
-                const subLink = document.createElement('a');
-                subLink.href = '/subscription.html';
-                subLink.textContent = 'My Plan';
-                subLink.className = 'mobile-sub-link mobile-menu-link';
-                subLink.style.color = 'rgba(255,255,255,0.7)';
-                if (menuLinks) {
-                    menuLinks.appendChild(profileLink);
-                    menuLinks.appendChild(subLink);
-                } else {
-                    const header = mobileMenu.querySelector('.mobile-menu-header');
-                    const insertAfter = header ? header.nextSibling : null;
-                    mobileMenu.insertBefore(profileLink, insertAfter);
-                    profileLink.after(subLink);
-                }
-
-                const signoutLink = document.createElement('a');
-                signoutLink.href = '#';
-                signoutLink.textContent = 'Sign Out';
-                signoutLink.className = 'mobile-signout-link';
-                signoutLink.style.color = 'rgba(255,255,255,0.5)';
-                signoutLink.addEventListener('click', handleSignOut);
-                mobileMenu.appendChild(signoutLink);
-            }
+        const mobileAuthSection = document.querySelector('.mobile-menu-auth');
+        if (mobileAuthSection) {
+            mobileAuthSection.innerHTML = `
+                <a href="/profile.html" class="mobile-signin-btn mobile-profile-link">
+                    <i class="fas fa-user"></i>
+                    <span>My Profile</span>
+                </a>
+                <a href="/subscription.html" class="mobile-sub-link" style="display:block;text-align:center;padding:0.5rem;color:rgba(255,255,255,0.6);text-decoration:none;font-size:0.9rem;">My Plan</a>
+                <a href="#" class="mobile-signout-link" style="display:block;text-align:center;padding:0.5rem;color:rgba(255,255,255,0.4);text-decoration:none;font-size:0.85rem;">Sign Out</a>
+            `;
+            mobileAuthSection.querySelector('.mobile-signout-link').addEventListener('click', handleSignOut);
         }
     }
 
