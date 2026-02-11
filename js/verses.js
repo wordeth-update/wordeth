@@ -1751,6 +1751,10 @@ class AudioRoomsManager {
                         '<i class="fas fa-microphone-slash"></i>' : 
                         '<i class="fas fa-microphone"></i>';
                 }
+
+                if (window._verseMiniPlayer && window._verseMiniPlayer.isActive()) {
+                    window._verseMiniPlayer._updateMuteIcon();
+                }
             }
         }
     }
@@ -2190,6 +2194,12 @@ class AudioRoomsManager {
     }
 
     leaveRoom() {
+        if (window._verseMiniPlayer) {
+            window._verseMiniPlayer.deactivate();
+        }
+        this._detached = false;
+        this._savedRoomName = null;
+
         const duration = this.roomJoinTime ? Math.round((Date.now() - this.roomJoinTime) / 1000) : 0;
         if (this.currentRoom) {
             fetch(apiUrl('/api/analytics/track'), {
@@ -2255,6 +2265,71 @@ class AudioRoomsManager {
         if (currentSongEl) currentSongEl.textContent = '';
         
         this.loadActiveRooms();
+    }
+
+    isInRoom() {
+        return !!this.currentRoom && !!this.socket && this.socket.connected;
+    }
+
+    getRoomName() {
+        const el = document.getElementById('room-name');
+        return el ? el.textContent : this._savedRoomName || 'Audio Room';
+    }
+
+    detachFromDOM() {
+        if (!this.isInRoom()) return;
+        this._savedRoomName = this.getRoomName();
+        this._detached = true;
+    }
+
+    reattachToDOM() {
+        if (!this._detached || !this.isInRoom()) return;
+        this._detached = false;
+
+        this.initializeElements();
+
+        if (this.roomSelection) this.roomSelection.style.display = 'none';
+        this.audioRoom?.classList.remove('hidden');
+
+        const roomNameEl = document.getElementById('room-name');
+        if (roomNameEl && this._savedRoomName) roomNameEl.textContent = this._savedRoomName;
+
+        if (this.socket) {
+            this.socket.emit('request-participants', { roomId: this.currentRoom });
+        }
+
+        this.updateHostControls();
+        this.updateKaraokeButtonState();
+        this.updateScreenshareButtonState();
+
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const userName = user.name || user.username || 'Anonymous';
+        const selfInitial = userName.charAt(0).toUpperCase();
+        if (this.speakersStage) {
+            const existing = this.speakersStage.querySelector('[data-participant-id="self"]');
+            if (!existing) {
+                const selfAvatar = document.createElement('div');
+                selfAvatar.className = 'speaker-avatar self-speaker';
+                selfAvatar.setAttribute('data-participant-id', 'self');
+                const avatarUrl = user.avatar || null;
+                const avatarContent = avatarUrl
+                    ? `<img src="${avatarUrl}" alt="${userName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+                    : `<div class="avatar-initial" style="width:100%;height:100%;border-radius:50%;background:var(--purple,#8a2be2);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:white;">${selfInitial}</div>`;
+                selfAvatar.innerHTML = `
+                    <div class="avatar-ring">
+                        ${avatarContent}
+                    </div>
+                    <div class="speaker-info">
+                        <span class="speaker-name">${userName} (You)</span>
+                        <span class="speaker-role">${this.isRoomHost ? 'Host' : 'Speaker'}</span>
+                    </div>
+                    <div class="speaker-status">
+                        <i class="fas fa-microphone${this.isAudioMuted ? '-slash' : ''}"></i>
+                    </div>
+                `;
+                this.speakersStage.appendChild(selfAvatar);
+            }
+        }
     }
 
     addRemoteSpeaker(participantId, name, stream, isSpeaking = false, userId = null, avatarUrl = null) {
@@ -5223,6 +5298,11 @@ class AudioRoomsManager {
 
 // Initialize audio rooms manager when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+    if (window.audioRoomsManager && window.audioRoomsManager._detached) {
+        window.audioRoomsManager.reattachToDOM();
+        return;
+    }
+    if (window.audioRoomsManager) return;
     const audioRoomsManager = new AudioRoomsManager();
     window.audioRoomsManager = audioRoomsManager;
 });

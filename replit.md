@@ -48,6 +48,12 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Navigation**: "Pricing" link added to all user-facing page navs (desktop + mobile). Logged-in users see "My Plan" link in auth area.
 - **Creator dashboard integration**: Upgrade buttons on creator dashboard redirect to pricing page.
 
+### Persistent Mini-Player & SPA Router
+- **Mini-Player** (`js/verse-mini-player.js`, `css/mini-player.css`): Floating bar at the bottom of every page that appears when a user is in a Verses audio room. Shows room name, live indicator, mute toggle, return-to-room button, and leave button. Keeps audio connection alive across page navigations.
+- **SPA Router** (`js/spa-router.js`): Lightweight router that intercepts internal link clicks ONLY when a user is in an active audio room. Fetches page content via `fetch()`, swaps the `<main>` element content without full page reload, manages page-specific stylesheets/scripts, and updates browser history. Partner/admin pages are excluded from SPA routing.
+- **Verses Detach/Reattach**: `AudioRoomsManager` in `js/verses.js` has `detachFromDOM()` and `reattachToDOM()` methods that separate WebRTC/Socket.io connection state from DOM elements, allowing the audio connection to survive page swaps.
+- **Normal Navigation**: When NOT in a room, all links work as standard page loads (no SPA behavior).
+
 ### Key Features Architecture
 - **Verses (Audio Rooms)**: Utilizes WebRTC peer-to-peer audio via a Socket.io signaling server. Features Web Audio API for voice filters and audio mixing (microphone + YouTube), and YouTube embed integration for karaoke. Supports WebRTC broadcasting of video with filters and AR genre face filters using MediaPipe Face Landmarker. Allows streaming of local audio files into the room mix.
 - **Native Screen Capture Plugin**: Custom Capacitor plugin for Android (MediaProjection API) and iOS (ReplayKit) to capture and stream screen content to WebRTC peers via a JavaScript bridge.
