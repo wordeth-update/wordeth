@@ -51,5 +51,9 @@
         <string>Wordeth needs microphone access for live audio rooms (Verses)</string>
         <key>NSPhotoLibraryUsageDescription</key>
         <string>Wordeth needs photo library access to select profile images</string>
+        <key>UIBackgroundModes</key>
+        <array>
+                <string>audio</string>
+        </array>
 </dict>
 </plist>

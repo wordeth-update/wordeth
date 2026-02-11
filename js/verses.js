@@ -84,6 +84,8 @@ class AudioRoomsManager {
         this.micAudioSource = null;
         this.mixDestination = null;
         this.remoteAudioElements = new Map();
+        this._wakeLock = null;
+        this._silentAudio = null;
         
         this.rtcConfig = {
             iceServers: [
@@ -113,13 +115,85 @@ class AudioRoomsManager {
     
     setupVisibilityHandler() {
         document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) {
-                this.handleAppVisible();
+            if (document.hidden) {
+                this._handleAppHidden();
+            } else {
+                this._handleAppVisible();
             }
         });
     }
-    
-    handleAppVisible() {
+
+    async _requestWakeLock() {
+        if (this._wakeLock) return;
+        try {
+            if ('wakeLock' in navigator) {
+                this._wakeLock = await navigator.wakeLock.request('screen');
+                this._wakeLock.addEventListener('release', () => {
+                    this._wakeLock = null;
+                    if (this.isInRoom() && !document.hidden) {
+                        this._requestWakeLock();
+                    }
+                });
+            }
+        } catch (e) {}
+    }
+
+    _releaseWakeLock() {
+        if (this._wakeLock) {
+            this._wakeLock.release().catch(() => {});
+            this._wakeLock = null;
+        }
+    }
+
+    _startSilentAudioKeepAlive() {
+        if (this._silentAudio) return;
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = ctx.createOscillator();
+            const gain = ctx.createGain();
+            gain.gain.value = 0.001;
+            oscillator.connect(gain);
+            gain.connect(ctx.destination);
+            oscillator.start();
+            this._silentAudio = { ctx, oscillator, gain };
+        } catch (e) {}
+    }
+
+    _stopSilentAudioKeepAlive() {
+        if (this._silentAudio) {
+            try {
+                this._silentAudio.oscillator.stop();
+                this._silentAudio.ctx.close();
+            } catch (e) {}
+            this._silentAudio = null;
+        }
+    }
+
+    _handleAppHidden() {
+        if (!this.isInRoom()) return;
+        if (this.audioContext && this.audioContext.state === 'running') {
+            this._audioContextWasRunning = true;
+        }
+    }
+
+    _handleAppVisible() {
+        if (!this.isInRoom()) return;
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+            this.audioContext.resume().catch(() => {});
+        }
+        if (this.musicAudioElement && this.musicAudioElement.paused && this._audioContextWasRunning) {
+            this.musicAudioElement.play().catch(() => {});
+        }
+        this._audioContextWasRunning = false;
+        this.remoteAudioElements.forEach((audioEl) => {
+            if (audioEl.paused && audioEl.srcObject) {
+                audioEl.play().catch(() => {});
+            }
+        });
+        if (this.socket && !this.socket.connected) {
+            this.socket.connect();
+        }
+        this._requestWakeLock();
     }
 
     initializeElements() {
@@ -1248,6 +1322,9 @@ class AudioRoomsManager {
             
             this.addChatMessage('System', 'Welcome to the room!', true);
 
+            this._requestWakeLock();
+            this._startSilentAudioKeepAlive();
+
             fetch(apiUrl('/api/analytics/track'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2275,6 +2352,8 @@ class AudioRoomsManager {
         }
         this._detached = false;
         this._savedRoomName = null;
+        this._releaseWakeLock();
+        this._stopSilentAudioKeepAlive();
 
         const duration = this.roomJoinTime ? Math.round((Date.now() - this.roomJoinTime) / 1000) : 0;
         if (this.currentRoom) {
