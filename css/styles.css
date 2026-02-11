@@ -1826,6 +1826,105 @@ footer {
 }
 
 
+/* Why Wordeth Section */
+.why-wordeth-section {
+    padding: 5rem 2rem;
+    background: linear-gradient(180deg, var(--black) 0%, rgba(149, 20, 130, 0.08) 50%, var(--black) 100%);
+    position: relative;
+}
+
+.why-wordeth-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.why-wordeth-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.why-wordeth-header h2 {
+    font-family: 'Poppins', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+}
+
+.why-wordeth-header p {
+    color: var(--text-muted);
+    font-size: 1.15rem;
+}
+
+.why-wordeth-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+}
+
+.why-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(150, 197, 176, 0.12);
+    border-radius: 16px;
+    padding: 2rem;
+    transition: all 0.3s ease;
+}
+
+.why-card:hover {
+    background: rgba(150, 197, 176, 0.06);
+    border-color: rgba(150, 197, 176, 0.25);
+    transform: translateY(-4px);
+}
+
+.why-card-icon {
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, var(--purple) 0%, var(--mint) 100%);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+}
+
+.why-card-icon i {
+    font-size: 1.4rem;
+    color: white;
+}
+
+.why-card h3 {
+    font-family: 'Poppins', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+    color: var(--white);
+}
+
+.why-card p {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+    .why-wordeth-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .why-wordeth-section {
+        padding: 3rem 1rem;
+    }
+
+    .why-wordeth-header h2 {
+        font-size: 1.8rem;
+    }
+
+    .why-wordeth-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Enhanced Lyrics Preview Section */
 .lyrics-preview {
     padding: 4rem 2rem;

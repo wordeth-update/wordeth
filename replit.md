@@ -2,7 +2,7 @@
 
 ## Overview
 
-Wordeth is a social music experience platform designed to build an interactive community around music. It offers features such as lyric exploration (with karaoke mode), live audio discussion rooms ("Verses"), custom music-related merchandise ordering, curated music articles, and social networking for music enthusiasts. The platform also incorporates a self-serve advertising system, usage analytics, and tools for privacy and compliance. The business vision is to create a vibrant ecosystem for music interaction, fostering connections and engagement among users while providing artists and labels with new avenues for promotion and revenue.
+Wordeth is a social music experience platform designed to build an interactive community around music. It offers features such as lyric exploration (with karaoke mode), live audio discussion rooms ("Verses"), custom music-related merchandise ordering, and social networking for music enthusiasts. The platform also incorporates a self-serve advertising system, usage analytics, and tools for privacy and compliance. The business vision is to create a vibrant ecosystem for music interaction, fostering connections and engagement among users while providing artists and labels with new avenues for promotion and revenue.
 
 ## User Preferences
 
@@ -20,7 +20,7 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 ### Backend
 - **Technology**: Node.js with Express.js for the HTTP server and Socket.io for real-time WebSockets.
 - **Server Architecture**: HTTP server integrates with Express, and Socket.io manages real-time connections.
-- **API Routes**: Modularized routes for authentication, user management, lyrics, merchandise, articles, advertising, analytics, label partner dashboards, and audio room information.
+- **API Routes**: Modularized routes for authentication, user management, lyrics, merchandise, advertising, analytics, label partner dashboards, and audio room information.
 - **WebSocket Signaling**: Handles room management (join/leave, host transfer), WebRTC signaling (offer/answer/ICE candidate relay), room events (chat, karaoke, screen share), and a real-time invite system with global notifications.
 - **Middleware**: Includes JWT authentication, partner authentication, and automatic usage event tracking.
 - **Security**: Implements Helmet for CSP, express-rate-limit, CORS, and trusts proxies for deployment environments.
@@ -52,7 +52,8 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Verses (Audio Rooms)**: Utilizes WebRTC peer-to-peer audio via a Socket.io signaling server. Features Web Audio API for voice filters and audio mixing (microphone + YouTube), and YouTube embed integration for karaoke. Supports WebRTC broadcasting of video with filters and AR genre face filters using MediaPipe Face Landmarker. Allows streaming of local audio files into the room mix.
 - **Native Screen Capture Plugin**: Custom Capacitor plugin for Android (MediaProjection API) and iOS (ReplayKit) to capture and stream screen content to WebRTC peers via a JavaScript bridge.
 - **Lyrics**: Server-side search integrating with the Genius API and several fallback sources.
-- **Advertising**: Contextual keyword-based ads with a self-serve portal, admin approval, and tracking.
+- **Advertising**: Contextual keyword-based ads with a self-serve portal (`ad-portal.html`), ad documentation (`ad-docs.html`), advertiser registration (`ad-register.html`), admin approval, and tracking.
+- **Trending Topics**: "Trending This Week" horizontal bar on the Verses page showing conversation starters (Hot/New/Viral topics) to spark discussion in rooms.
 - **Usage Analytics**: Event tracking middleware logs API usage, visualized in an admin dashboard.
 - **Cookie Consent**: Client-side banner with localStorage persistence.
 - **Label Partner Dashboard**: Features separate JWT authentication for partners, providing overviews of revenue, earnings, artist breakdowns, SKU performance, geographic sales heatmaps (Leaflet.js), and shareable dashboard links with granular permissions.
