@@ -55,7 +55,7 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Normal Navigation**: When NOT in a room, all links work as standard page loads (no SPA behavior).
 
 ### Key Features Architecture
-- **Verses (Audio Rooms)**: Utilizes WebRTC peer-to-peer audio via a Socket.io signaling server. Features Web Audio API for voice filters and audio mixing (microphone + YouTube), and YouTube embed integration for karaoke. Supports WebRTC broadcasting of video with filters and AR genre face filters using MediaPipe Face Landmarker. Allows streaming of local audio files into the room mix.
+- **Verses (Audio Rooms)**: Utilizes WebRTC peer-to-peer audio via a Socket.io signaling server. Features Web Audio API for voice filters and audio mixing (microphone + YouTube), and YouTube embed integration for karaoke. Supports WebRTC broadcasting of video with filters and AR genre face filters using MediaPipe Face Landmarker. Allows streaming of local audio files into the room mix. Hosts can kick participants (move to crowd or remove entirely) via a three-dot menu on participant avatars.
 - **Native Screen Capture Plugin**: Custom Capacitor plugin for Android (MediaProjection API) and iOS (ReplayKit) to capture and stream screen content to WebRTC peers via a JavaScript bridge.
 - **Lyrics**: Server-side search integrating with the Genius API and several fallback sources.
 - **Advertising**: Contextual keyword-based ads with a self-serve portal (`ad-portal.html`), ad documentation (`ad-docs.html`), advertiser registration (`ad-register.html`), admin approval, and tracking.

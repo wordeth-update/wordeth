@@ -111,6 +111,7 @@ function setupSignaling(io) {
                 userName: socket.userName,
                 avatar: socket.avatar || null,
                 isHost: isHost || false,
+                isSpeaker: true,
                 isMuted: false,
                 joinedAt: Date.now()
             });
@@ -173,6 +174,82 @@ function setupSignaling(io) {
                 message,
                 timestamp: Date.now()
             });
+        });
+
+        socket.on('request-participants', ({ roomId }) => {
+            const room = rooms.get(roomId);
+            if (!room) return;
+            const participantList = Array.from(room.participants.values());
+            socket.emit('participants-list', {
+                roomId,
+                participants: participantList,
+                roomName: room.name || null,
+                isLocked: room.isLocked,
+                karaokeEnabled: room.karaokeEnabled,
+                screenshareEnabled: room.screenshareEnabled
+            });
+        });
+
+        socket.on('kick-participant', ({ roomId, targetSocketId, action }) => {
+            const room = rooms.get(roomId);
+            if (!room) return;
+            if (socket.id !== room.hostId) return;
+
+            const targetParticipant = room.participants.get(targetSocketId);
+            if (!targetParticipant) return;
+
+            if (action === 'remove') {
+                io.to(targetSocketId).emit('kicked-from-room', {
+                    action: 'remove',
+                    reason: 'The host has removed you from the room.'
+                });
+
+                const targetSocket = io.sockets.sockets.get(targetSocketId);
+                if (targetSocket) {
+                    targetSocket.leave(roomId);
+                    targetSocket.roomId = null;
+                }
+
+                room.participants.delete(targetSocketId);
+                const participantList = Array.from(room.participants.values());
+                io.to(roomId).emit('participant-left', {
+                    socketId: targetSocketId,
+                    userId: targetParticipant.userId,
+                    userName: targetParticipant.userName,
+                    participants: participantList
+                });
+                io.to(roomId).emit('room-event', {
+                    event: 'participant-kicked',
+                    data: { userName: targetParticipant.userName, action: 'remove' }
+                });
+                io.emit('rooms-updated', getActiveRooms());
+            } else if (action === 'move-to-crowd') {
+                targetParticipant.isSpeaker = false;
+                targetParticipant.isMuted = true;
+
+                io.to(targetSocketId).emit('kicked-from-room', {
+                    action: 'move-to-crowd',
+                    reason: 'The host has moved you to the crowd.'
+                });
+
+                const updatedList = Array.from(room.participants.values());
+                io.to(roomId).emit('room-event', {
+                    event: 'participant-moved-to-crowd',
+                    data: {
+                        socketId: targetSocketId,
+                        userId: targetParticipant.userId,
+                        userName: targetParticipant.userName
+                    }
+                });
+                io.to(roomId).emit('participants-list', {
+                    roomId,
+                    participants: updatedList,
+                    roomName: room.name || null,
+                    isLocked: room.isLocked,
+                    karaokeEnabled: room.karaokeEnabled,
+                    screenshareEnabled: room.screenshareEnabled
+                });
+            }
         });
 
         socket.on('room-event', ({ roomId, event, data }) => {

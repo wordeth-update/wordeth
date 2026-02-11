@@ -88,6 +88,24 @@ class VerseMiniPlayer {
   }
 
   _returnToRoom() {
+    const currentPath = window.location.pathname;
+    const onVerses = currentPath === '/verses.html' || currentPath === '/verses';
+
+    if (onVerses) {
+      const mgr = window.audioRoomsManager;
+      if (mgr && mgr._detached) {
+        mgr.reattachToDOM();
+      } else if (mgr && mgr.isInRoom()) {
+        const roomSelection = document.getElementById('room-selection');
+        const audioRoom = document.getElementById('audio-room');
+        if (roomSelection) roomSelection.style.display = 'none';
+        if (audioRoom) audioRoom.classList.remove('hidden');
+        mgr.updateHostControls();
+      }
+      this.deactivate();
+      return;
+    }
+
     if (window._spaRouter) {
       window._spaRouter.navigate('/verses.html');
     } else {

@@ -158,6 +158,10 @@ class SpaRouter {
       if (goingToVerses && mgr && mgr._detached) {
         setTimeout(() => {
           mgr.reattachToDOM();
+          const mp = window._verseMiniPlayer;
+          if (mp && mp.isActive()) {
+            mp.deactivate();
+          }
         }, 100);
       }
 
@@ -204,7 +208,8 @@ class SpaRouter {
 
   _loadPageScripts(doc) {
     const skipScripts = ['config.js', 'main.js', 'nav-auth.js', 'cookie-consent.js',
-      'socket.io.js', 'notifications.js', 'spa-router.js', 'verse-mini-player.js'];
+      'socket.io.js', 'notifications.js', 'spa-router.js', 'verse-mini-player.js',
+      'verses.js', 'ar-filters.js', 'native-screen-capture.js'];
 
     const scripts = doc.querySelectorAll('script[src]');
     scripts.forEach(s => {

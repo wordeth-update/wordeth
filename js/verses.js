@@ -221,6 +221,7 @@ class AudioRoomsManager {
         this.toggleChatBtn?.addEventListener('click', () => this.toggleChat());
         this.shareMusicBtn?.addEventListener('click', () => this.shareMusic());
         this.leaveRoomBtn?.addEventListener('click', () => this.leaveRoom());
+        document.getElementById('leave-room')?.addEventListener('click', () => this.leaveRoom());
 
         // Action buttons
         this.addUsersBtn?.addEventListener('click', () => this.showAddUsersModal());
@@ -1437,6 +1438,57 @@ class AudioRoomsManager {
             }
         });
 
+        this.socket.on('participants-list', (data) => {
+            if (data.roomId !== this.currentRoom) return;
+            if (data.roomName) {
+                const roomNameEl = document.getElementById('room-name');
+                if (roomNameEl) roomNameEl.textContent = data.roomName;
+            }
+            this.karaokeEnabled = data.karaokeEnabled || false;
+            this.screenshareEnabled = data.screenshareEnabled || false;
+            this.isRoomLocked = data.isLocked || false;
+            this.updateKaraokeButtonState();
+            this.updateScreenshareButtonState();
+            this.updateParticipantDisplay(data.participants);
+
+            data.participants.forEach(p => {
+                if (p.socketId === this.socket.id) return;
+                const existing = document.querySelector(`[data-participant-id="${p.socketId}"]`);
+                if (existing) existing.remove();
+
+                if (p.isSpeaker !== false) {
+                    this.addRemoteSpeaker(p.socketId, p.userName, null, false, p.userId, p.avatar);
+                } else {
+                    this.addRemoteListener(p.socketId, p.userName, false, p.userId);
+                }
+            });
+        });
+
+        this.socket.on('kicked-from-room', ({ action, reason }) => {
+            if (action === 'remove') {
+                this.addChatMessage('System', reason || 'You have been removed from the room by the host.', true);
+                this.showToast(reason || 'You were removed by the host.', 'fa-ban', 5000);
+                setTimeout(() => this.leaveRoom(), 500);
+            } else if (action === 'move-to-crowd') {
+                this.isSpeaker = false;
+                if (this.localStream) {
+                    this.localStream.getAudioTracks().forEach(t => { t.enabled = false; });
+                }
+                this.isAudioMuted = true;
+                const selfEl = document.querySelector('[data-participant-id="self"]');
+                if (selfEl && this.speakersStage && this.listenersGrid) {
+                    selfEl.remove();
+                    const user = JSON.parse(localStorage.getItem('user') || '{}');
+                    const userName = user.name || user.username || 'Anonymous';
+                    this.addRemoteListener('self', userName + ' (You)', false, user._id);
+                }
+                const muteIcon = this.toggleAudioBtn?.querySelector('i');
+                if (muteIcon) muteIcon.className = 'fas fa-microphone-slash';
+                this.addChatMessage('System', reason || 'The host has moved you to the crowd.', true);
+                this.showToast('You were moved to the crowd by the host.', 'fa-users', 5000);
+            }
+        });
+
         return new Promise((resolve) => {
             if (this.socket.connected) {
                 resolve();
@@ -1678,6 +1730,24 @@ class AudioRoomsManager {
                 break;
             case 'host-changed':
                 this.addChatMessage('System', `${data.newHostName} is now the host.`, true);
+                if (data.newHostId === this.socket?.id) {
+                    this.isRoomHost = true;
+                    this.updateHostControls();
+                    this.showToast('You are now the host!', 'fa-crown', 5000);
+                }
+                break;
+            case 'participant-kicked':
+                this.addChatMessage('System', `${data.userName} was removed from the room by the host.`, true);
+                break;
+            case 'participant-moved-to-crowd':
+                if (data.socketId !== this.socket?.id) {
+                    const el = document.querySelector(`[data-participant-id="${data.socketId}"]`);
+                    if (el && this.speakersStage?.contains(el)) {
+                        el.remove();
+                        this.addRemoteListener(data.socketId, data.userName, false, data.userId);
+                    }
+                    this.addChatMessage('System', `${data.userName} was moved to the crowd by the host.`, true);
+                }
                 break;
             case 'youtube-embed':
                 break;
@@ -2276,6 +2346,47 @@ class AudioRoomsManager {
         return el ? el.textContent : this._savedRoomName || 'Audio Room';
     }
 
+    _rebindDOMListeners() {
+        this.toggleAudioBtn?.addEventListener('click', () => this.toggleAudio());
+        this.raiseHandBtn?.addEventListener('click', () => this.toggleHandRaise());
+        this.toggleChatBtn?.addEventListener('click', () => this.toggleChat());
+        this.shareMusicBtn?.addEventListener('click', () => this.shareMusic());
+        this.leaveRoomBtn?.addEventListener('click', () => this.leaveRoom());
+        document.getElementById('leave-room')?.addEventListener('click', () => this.leaveRoom());
+        this.addUsersBtn?.addEventListener('click', () => this.showAddUsersModal());
+        this.replayBtn?.addEventListener('click', () => this.showReplayModal());
+        document.getElementById('share-room-btn')?.addEventListener('click', () => this.shareRoom());
+        document.getElementById('share-room-mobile-btn')?.addEventListener('click', () => this.shareRoom());
+        this.lockRoomBtn?.addEventListener('click', () => this.toggleRoomLock());
+        this.audioFilterBtn?.addEventListener('click', () => this.showAudioFiltersModal());
+        this.karaokeBtn?.addEventListener('click', () => this.showKaraokeModal());
+        document.getElementById('karaoke-toggle-btn')?.addEventListener('click', () => this.toggleKaraokePermission());
+        document.getElementById('screenshare-toggle-btn')?.addEventListener('click', () => this.toggleScreensharePermission());
+        document.getElementById('screenshare-btn')?.addEventListener('click', () => this.startScreenShare());
+        document.getElementById('screenshare-stop')?.addEventListener('click', () => this.stopScreenShare());
+
+        this.sendMessageBtn?.addEventListener('click', () => {
+            const msg = this.chatInput?.value?.trim();
+            if (msg) {
+                this.sendChatMessage(msg);
+                this.chatInput.value = '';
+            }
+        });
+        this.chatInput?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const msg = this.chatInput.value.trim();
+                if (msg) {
+                    this.sendChatMessage(msg);
+                    this.chatInput.value = '';
+                }
+            }
+        });
+
+        document.querySelectorAll('.close-modal, .cancel-btn').forEach(btn => {
+            btn.addEventListener('click', () => this.hideAllModals());
+        });
+    }
+
     detachFromDOM() {
         if (!this.isInRoom()) return;
         this._savedRoomName = this.getRoomName();
@@ -2287,6 +2398,7 @@ class AudioRoomsManager {
         this._detached = false;
 
         this.initializeElements();
+        this._rebindDOMListeners();
 
         if (this.roomSelection) this.roomSelection.style.display = 'none';
         this.audioRoom?.classList.remove('hidden');
@@ -2365,6 +2477,7 @@ class AudioRoomsManager {
         
         this.speakersStage?.appendChild(speakerAvatar);
         
+        if (this.isRoomHost) this._updateKickButtons();
         return speakerAvatar;
     }
 
@@ -2386,6 +2499,7 @@ class AudioRoomsManager {
         
         this.listenersGrid?.appendChild(listenerAvatar);
         
+        if (this.isRoomHost) this._updateKickButtons();
         return listenerAvatar;
     }
 
@@ -2857,7 +2971,6 @@ class AudioRoomsManager {
     }
     
     updateHostControls() {
-        // Show/hide host-only controls based on isRoomHost status
         const hostOnlyControls = [
             document.getElementById('karaoke-toggle-btn'),
             document.getElementById('screenshare-toggle-btn'),
@@ -2874,6 +2987,80 @@ class AudioRoomsManager {
                     control.style.display = 'none';
                 }
             }
+        });
+
+        this._updateKickButtons();
+    }
+
+    _updateKickButtons() {
+        document.querySelectorAll('.kick-menu-trigger').forEach(el => el.remove());
+        document.querySelectorAll('.kick-context-menu').forEach(el => el.remove());
+
+        if (!this.isRoomHost) return;
+
+        const avatars = document.querySelectorAll('.speaker-avatar:not(.self-speaker), .listener-avatar');
+        avatars.forEach(avatar => {
+            const pid = avatar.getAttribute('data-participant-id');
+            if (!pid || pid === 'self') return;
+
+            const trigger = document.createElement('button');
+            trigger.className = 'kick-menu-trigger';
+            trigger.title = 'Manage participant';
+            trigger.innerHTML = '<i class="fas fa-ellipsis-v"></i>';
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._showKickMenu(pid, avatar, trigger);
+            });
+            avatar.style.position = 'relative';
+            avatar.appendChild(trigger);
+        });
+    }
+
+    _showKickMenu(participantId, avatarEl, triggerEl) {
+        document.querySelectorAll('.kick-context-menu').forEach(el => el.remove());
+
+        const name = avatarEl.querySelector('.speaker-name')?.textContent || avatarEl.title || 'this user';
+        const isSpeaker = this.speakersStage?.contains(avatarEl);
+
+        const menu = document.createElement('div');
+        menu.className = 'kick-context-menu';
+        menu.innerHTML = `
+            ${isSpeaker ? `<button class="kick-menu-item move-to-crowd" data-action="move-to-crowd">
+                <i class="fas fa-arrow-down"></i> Move to Crowd
+            </button>` : ''}
+            <button class="kick-menu-item remove-from-room" data-action="remove">
+                <i class="fas fa-ban"></i> Remove from Room
+            </button>
+        `;
+
+        menu.querySelector('.move-to-crowd')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.kickParticipant(participantId, 'move-to-crowd');
+            menu.remove();
+        });
+        menu.querySelector('.remove-from-room')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.kickParticipant(participantId, 'remove');
+            menu.remove();
+        });
+
+        avatarEl.appendChild(menu);
+
+        const closeMenu = (e) => {
+            if (!menu.contains(e.target) && e.target !== triggerEl) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closeMenu), 10);
+    }
+
+    kickParticipant(targetSocketId, action) {
+        if (!this.isRoomHost || !this.socket || !this.currentRoom) return;
+        this.socket.emit('kick-participant', {
+            roomId: this.currentRoom,
+            targetSocketId,
+            action
         });
     }
     
