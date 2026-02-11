@@ -3310,10 +3310,8 @@
 
     /* Header action buttons - minimal on mobile */
     .room-header .room-actions {
-        gap: 1rem;
+        gap: 0.6rem;
         flex-wrap: nowrap;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
         justify-content: center;
         padding: 0.25rem 0.5rem;
     }
@@ -3337,6 +3335,14 @@
     .room-header .room-actions .action-btn .screenshare-toggle-text,
     .room-header .room-actions .action-btn .video-toggle-text {
         display: none;
+    }
+    .room-header .room-actions #karaoke-toggle-btn,
+    .room-header .room-actions #screenshare-toggle-btn,
+    .room-header .room-actions #video-toggle-btn,
+    .room-header .room-actions #mute-all-btn,
+    .room-header .room-actions #close-room-btn,
+    .room-header .room-actions #lock-room-btn {
+        display: none !important;
     }
 
     /* Room Main - Full height minus header and controls */
@@ -4450,7 +4456,7 @@
         align-items: center;
         justify-content: center;
         gap: 6px;
-        width: 100%;
+        width: calc(100% - 24px);
         padding: 10px 16px;
         background: linear-gradient(135deg, rgba(150, 197, 176, 0.15), rgba(108, 92, 231, 0.15));
         border: 1px solid rgba(150, 197, 176, 0.25);
@@ -4461,6 +4467,7 @@
         cursor: pointer;
         margin: 4px 12px 0;
         transition: all 0.2s ease;
+        box-sizing: border-box;
     }
 
     .host-panel-toggle:active {
@@ -4476,12 +4483,14 @@
     .host-controls-panel {
         display: none;
         margin: 0 12px 8px;
-        padding: 12px;
+        padding: 10px;
         background: rgba(26, 26, 46, 0.95);
         border: 1px solid rgba(150, 197, 176, 0.2);
         border-top: none;
         border-radius: 0 0 10px 10px;
         animation: hostPanelSlide 0.2s ease;
+        box-sizing: border-box;
+        max-width: calc(100% - 24px);
     }
 
     .host-controls-panel.visible {
@@ -4500,22 +4509,23 @@
     .host-panel-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 8px;
+        gap: 6px;
     }
 
     .host-panel-btn {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 12px 14px;
+        gap: 6px;
+        padding: 10px 10px;
         background: rgba(255, 255, 255, 0.06);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 8px;
         color: rgba(255, 255, 255, 0.85);
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         cursor: pointer;
         transition: all 0.15s ease;
-        white-space: nowrap;
+        min-width: 0;
+        overflow: hidden;
     }
 
     .host-panel-btn:active {
@@ -4524,8 +4534,8 @@
     }
 
     .host-panel-btn i {
-        font-size: 14px;
-        width: 18px;
+        font-size: 13px;
+        width: 16px;
         text-align: center;
         flex-shrink: 0;
     }
@@ -4533,6 +4543,8 @@
     .host-panel-btn span {
         overflow: hidden;
         text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
     }
 
     .host-panel-btn--danger {
@@ -4548,5 +4560,16 @@
         background: rgba(150, 197, 176, 0.15);
         border-color: rgba(150, 197, 176, 0.35);
         color: var(--mint);
+    }
+}
+
+@media (max-width: 360px) {
+    .host-panel-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .host-panel-btn {
+        padding: 10px 12px;
+        font-size: 0.8rem;
     }
 }
