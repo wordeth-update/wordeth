@@ -4435,3 +4435,118 @@
         padding: 1px 6px;
     }
 }
+
+.host-panel-toggle {
+    display: none;
+}
+
+.host-controls-panel {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .host-panel-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: 100%;
+        padding: 10px 16px;
+        background: linear-gradient(135deg, rgba(150, 197, 176, 0.15), rgba(108, 92, 231, 0.15));
+        border: 1px solid rgba(150, 197, 176, 0.25);
+        border-radius: 10px;
+        color: var(--mint);
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        margin: 4px 12px 0;
+        transition: all 0.2s ease;
+    }
+
+    .host-panel-toggle:active {
+        transform: scale(0.97);
+    }
+
+    .host-panel-toggle.open {
+        border-radius: 10px 10px 0 0;
+        margin-bottom: 0;
+        border-bottom: none;
+    }
+
+    .host-controls-panel {
+        display: none;
+        margin: 0 12px 8px;
+        padding: 12px;
+        background: rgba(26, 26, 46, 0.95);
+        border: 1px solid rgba(150, 197, 176, 0.2);
+        border-top: none;
+        border-radius: 0 0 10px 10px;
+        animation: hostPanelSlide 0.2s ease;
+    }
+
+    .host-controls-panel.visible {
+        display: block;
+    }
+
+    .host-controls-panel.hidden {
+        display: none;
+    }
+
+    @keyframes hostPanelSlide {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .host-panel-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .host-panel-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 14px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        white-space: nowrap;
+    }
+
+    .host-panel-btn:active {
+        transform: scale(0.95);
+        background: rgba(150, 197, 176, 0.2);
+    }
+
+    .host-panel-btn i {
+        font-size: 14px;
+        width: 18px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    .host-panel-btn span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .host-panel-btn--danger {
+        color: #ff6b6b;
+        border-color: rgba(255, 107, 107, 0.2);
+    }
+
+    .host-panel-btn--danger:active {
+        background: rgba(255, 107, 107, 0.2);
+    }
+
+    .host-panel-btn.active-feature {
+        background: rgba(150, 197, 176, 0.15);
+        border-color: rgba(150, 197, 176, 0.35);
+        color: var(--mint);
+    }
+}

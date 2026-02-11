@@ -341,6 +341,7 @@ class AudioRoomsManager {
         document.getElementById('close-room-btn')?.addEventListener('click', () => this.closeRoom());
 
         this.setupMobileShareListeners();
+        this.initHostPanel();
         this.initMusicSharing();
         
         // Karaoke scroll speed controls
@@ -2610,6 +2611,8 @@ class AudioRoomsManager {
         this.updateHostControls();
         this.updateKaraokeButtonState();
         this.updateScreenshareButtonState();
+        this.initHostPanel();
+        this.syncHostPanel();
 
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         const userName = user.name || user.username || 'Anonymous';
@@ -3196,6 +3199,75 @@ class AudioRoomsManager {
                     control.style.display = 'none';
                 }
             }
+        });
+
+        const toggleBtn = document.getElementById('host-panel-toggle');
+        const panel = document.getElementById('host-controls-panel');
+        if (toggleBtn) {
+            toggleBtn.style.display = this.isRoomHost ? '' : 'none';
+        }
+        if (panel && !this.isRoomHost) {
+            panel.classList.add('hidden');
+            panel.classList.remove('visible');
+            toggleBtn?.classList.remove('open');
+        }
+    }
+
+    initHostPanel() {
+        const toggleBtn = document.getElementById('host-panel-toggle');
+        const panel = document.getElementById('host-controls-panel');
+        if (!toggleBtn || !panel) return;
+
+        toggleBtn.addEventListener('click', () => {
+            const isOpen = panel.classList.contains('visible');
+            if (isOpen) {
+                panel.classList.remove('visible');
+                panel.classList.add('hidden');
+                toggleBtn.classList.remove('open');
+            } else {
+                panel.classList.remove('hidden');
+                panel.classList.add('visible');
+                toggleBtn.classList.add('open');
+                this.syncHostPanel();
+            }
+        });
+
+        panel.querySelectorAll('.host-panel-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mirrorId = btn.dataset.mirrors;
+                const original = document.getElementById(mirrorId);
+                if (original) original.click();
+                setTimeout(() => this.syncHostPanel(), 50);
+            });
+        });
+    }
+
+    syncHostPanel() {
+        const panel = document.getElementById('host-controls-panel');
+        if (!panel) return;
+
+        panel.querySelectorAll('.host-panel-btn').forEach(btn => {
+            const mirrorId = btn.dataset.mirrors;
+            const original = document.getElementById(mirrorId);
+            if (!original) return;
+
+            const origIcon = original.querySelector('i');
+            const panelIcon = btn.querySelector('i');
+            if (origIcon && panelIcon) {
+                panelIcon.className = origIcon.className;
+            }
+
+            const origText = original.querySelector('span')?.textContent
+                || original.textContent.replace(origIcon?.textContent || '', '').trim();
+            const panelSpan = btn.querySelector('span');
+            if (panelSpan && origText) {
+                panelSpan.textContent = origText;
+            }
+
+            const isActive = original.classList.contains('active') ||
+                original.classList.contains('locked') ||
+                (origText && !origText.toLowerCase().includes('off') && !origText.toLowerCase().includes('unlock'));
+            btn.classList.toggle('active-feature', isActive);
         });
     }
 
