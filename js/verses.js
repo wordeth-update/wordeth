@@ -298,9 +298,12 @@ class AudioRoomsManager {
             }
         });
 
-        // Photo share controls
         document.getElementById('share-photo-btn')?.addEventListener('click', () => {
-            document.getElementById('photo-input')?.click();
+            if (window.Capacitor) {
+                this.showMobileShareModal();
+            } else {
+                document.getElementById('photo-input')?.click();
+            }
         });
         document.getElementById('photo-input')?.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -1939,8 +1942,6 @@ class AudioRoomsManager {
         const pickArea = document.getElementById('music-pick-area');
         const fileInput = document.getElementById('music-file-input');
         const submitBtn = document.getElementById('music-share-submit');
-        const mobileAudioInput = document.getElementById('mobile-audio-input');
-
         if (pickArea && fileInput) {
             pickArea.addEventListener('click', () => fileInput.click());
 
@@ -1969,24 +1970,6 @@ class AudioRoomsManager {
         }
 
         submitBtn?.addEventListener('click', () => this.playAndStreamMusic());
-
-        document.getElementById('mobile-music-share-btn')?.addEventListener('click', () => {
-            document.getElementById('mobile-share-modal')?.classList.remove('active');
-            if (mobileAudioInput) {
-                mobileAudioInput.click();
-            } else {
-                this.shareMusic();
-            }
-        });
-
-        mobileAudioInput?.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                this.handleMusicFileSelected(file);
-                document.getElementById('music-share-modal')?.classList.add('active');
-            }
-            e.target.value = '';
-        });
 
         this.initMusicPlayerControls();
     }
@@ -2335,6 +2318,11 @@ class AudioRoomsManager {
         this.stopMusicStream();
         this.stopAudioMix();
         
+        if (this.nativeScreenCapture) {
+            this.nativeScreenCapture.stop().catch(() => {});
+            this.nativeScreenCapture = null;
+        }
+        
         if (this.localVideoStream) {
             this.localVideoStream.getTracks().forEach(track => track.stop());
             this.localVideoStream = null;
@@ -2411,7 +2399,11 @@ class AudioRoomsManager {
         this.karaokeBtn?.addEventListener('click', () => this.showKaraokeModal());
         document.getElementById('karaoke-toggle-btn')?.addEventListener('click', () => this.toggleKaraokePermission());
         document.getElementById('share-photo-btn')?.addEventListener('click', () => {
-            document.getElementById('photo-input')?.click();
+            if (window.Capacitor) {
+                this.showMobileShareModal();
+            } else {
+                document.getElementById('photo-input')?.click();
+            }
         });
         document.getElementById('photo-input')?.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -3665,6 +3657,16 @@ class AudioRoomsManager {
     }
 
     setupMobileShareListeners() {
+        if (window.Capacitor && window.NativeScreenCapture && NativeScreenCapture.isAvailable()) {
+            const screenBtn = document.getElementById('mobile-screen-share-btn');
+            if (screenBtn) screenBtn.style.display = 'flex';
+        }
+
+        document.getElementById('mobile-screen-share-btn')?.addEventListener('click', () => {
+            document.getElementById('mobile-share-modal')?.classList.remove('active');
+            this.startNativeScreenShare();
+        });
+
         document.getElementById('mobile-image-share-btn')?.addEventListener('click', () => {
             document.getElementById('mobile-share-modal')?.classList.remove('active');
             document.getElementById('mobile-image-input')?.click();
@@ -3679,6 +3681,55 @@ class AudioRoomsManager {
         document.getElementById('shared-image-close')?.addEventListener('click', () => {
             document.getElementById('shared-image-overlay')?.classList.add('hidden');
         });
+    }
+
+    async startNativeScreenShare() {
+        if (!window.NativeScreenCapture || !NativeScreenCapture.isAvailable()) {
+            this.showToast('Screen sharing not available on this device', 'fa-exclamation-circle');
+            return;
+        }
+
+        try {
+            this.nativeScreenCapture = new NativeScreenCapture();
+            const stream = await this.nativeScreenCapture.start({
+                fps: 10,
+                quality: 40,
+                scale: 0.5
+            });
+
+            if (stream) {
+                this.addChatMessage('System', 'You started sharing your screen.', true);
+                this.notifyParticipants('screenshare-start', { userId: 'currentUser', type: 'screen' });
+                await this.addVideoTrackToPeers(stream);
+
+                stream.getVideoTracks()[0].onended = () => {
+                    this.stopNativeScreenShare();
+                };
+            }
+        } catch (error) {
+            console.error('Native screen share error:', error);
+            if (this.nativeScreenCapture) {
+                this.nativeScreenCapture.cleanup();
+                this.nativeScreenCapture = null;
+            }
+            if (error.message?.includes('denied') || error.message?.includes('permission')) {
+                this.showToast('Screen capture permission denied', 'fa-exclamation-circle');
+            } else {
+                this.showToast('Could not start screen sharing', 'fa-exclamation-circle');
+            }
+        }
+    }
+
+    async stopNativeScreenShare() {
+        await this.removeVideoTrackFromPeers();
+
+        if (this.nativeScreenCapture) {
+            await this.nativeScreenCapture.stop();
+            this.nativeScreenCapture = null;
+        }
+
+        this.addChatMessage('System', 'Screen sharing stopped.', true);
+        this.notifyParticipants('screenshare-stop', { userId: 'currentUser' });
     }
 
     async shareImage(file) {

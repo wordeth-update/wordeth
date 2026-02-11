@@ -346,7 +346,7 @@
             <div class="host-notifications" id="host-notifications"></div>
         </div>
 
-        <!-- Mobile Share Modal -->
+        <!-- Native App Share Modal (Capacitor only) -->
         <div class="modal" id="mobile-share-modal">
             <div class="modal-content mobile-share-modal-content">
                 <div class="modal-header">
@@ -361,16 +361,15 @@
                             <span>Take or choose a photo to share</span>
                         </div>
                     </button>
-                    <button class="mobile-share-option" id="mobile-music-share-btn">
-                        <div class="share-option-icon"><i class="fas fa-music"></i></div>
+                    <button class="mobile-share-option" id="mobile-screen-share-btn" style="display:none;">
+                        <div class="share-option-icon"><i class="fas fa-desktop"></i></div>
                         <div class="share-option-info">
-                            <strong>Share Music</strong>
-                            <span>Share an MP3 or audio file</span>
+                            <strong>Share Screen</strong>
+                            <span>Share your phone screen live</span>
                         </div>
                     </button>
                 </div>
                 <input type="file" id="mobile-image-input" accept="image/*" style="display:none;">
-                <input type="file" id="mobile-audio-input" accept=".mp3,.wav,.m4a,.aac,.ogg,.flac,.wma,.opus" style="display:none;">
             </div>
         </div>
 
