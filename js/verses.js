@@ -2364,6 +2364,12 @@ class AudioRoomsManager {
         this._savedRoomName = null;
         this._releaseWakeLock();
         this._stopSilentAudioKeepAlive();
+        this.resetAudioFilter();
+
+        if (this.audioContext && this.audioContext.state !== 'closed') {
+            try { this.audioContext.close(); } catch(e) {}
+            this.audioContext = null;
+        }
 
         const duration = this.roomJoinTime ? Math.round((Date.now() - this.roomJoinTime) / 1000) : 0;
         if (this.currentRoom) {
