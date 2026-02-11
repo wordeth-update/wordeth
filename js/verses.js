@@ -3201,12 +3201,14 @@ class AudioRoomsManager {
 
     _showParticipantActionMenu(participantId, avatarEl) {
         document.querySelectorAll('.kick-context-menu').forEach(el => el.remove());
+        document.querySelectorAll('.kick-overlay').forEach(el => el.remove());
 
         const name = avatarEl.querySelector('.speaker-name')?.textContent || avatarEl.title || 'this user';
         const isSpeaker = this.speakersStage?.contains(avatarEl);
+        const isMobile = window.innerWidth <= 768;
 
         const menu = document.createElement('div');
-        menu.className = 'kick-context-menu';
+        menu.className = 'kick-context-menu' + (isMobile ? ' kick-context-menu--mobile' : '');
         menu.innerHTML = `
             <div class="kick-menu-header">${name}</div>
             ${isSpeaker ? `<button class="kick-menu-item move-to-crowd" data-action="move-to-crowd">
@@ -3215,26 +3217,54 @@ class AudioRoomsManager {
             <button class="kick-menu-item remove-from-room" data-action="remove">
                 <i class="fas fa-ban"></i> Remove from Room
             </button>
+            ${isMobile ? `<button class="kick-menu-item kick-menu-cancel">
+                <i class="fas fa-times"></i> Cancel
+            </button>` : ''}
         `;
+
+        const removeMenu = () => {
+            menu.remove();
+            overlay?.remove();
+            document.removeEventListener('click', closeMenu);
+        };
 
         menu.querySelector('.move-to-crowd')?.addEventListener('click', (e) => {
             e.stopPropagation();
             this.kickParticipant(participantId, 'move-to-crowd');
-            menu.remove();
+            removeMenu();
         });
         menu.querySelector('.remove-from-room')?.addEventListener('click', (e) => {
             e.stopPropagation();
             this.kickParticipant(participantId, 'remove');
-            menu.remove();
+            removeMenu();
+        });
+        menu.querySelector('.kick-menu-cancel')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeMenu();
         });
 
-        avatarEl.style.position = 'relative';
-        avatarEl.appendChild(menu);
+        let overlay = null;
+        if (isMobile) {
+            overlay = document.createElement('div');
+            overlay.className = 'kick-overlay';
+            overlay.addEventListener('click', (e) => {
+                e.stopPropagation();
+                removeMenu();
+            });
+            document.body.appendChild(overlay);
+            document.body.appendChild(menu);
+            requestAnimationFrame(() => {
+                overlay.classList.add('active');
+                menu.classList.add('active');
+            });
+        } else {
+            avatarEl.style.position = 'relative';
+            avatarEl.appendChild(menu);
+        }
 
         const closeMenu = (e) => {
             if (!menu.contains(e.target) && !avatarEl.contains(e.target)) {
-                menu.remove();
-                document.removeEventListener('click', closeMenu);
+                removeMenu();
             }
         };
         setTimeout(() => document.addEventListener('click', closeMenu), 10);
