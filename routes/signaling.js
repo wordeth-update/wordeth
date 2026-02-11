@@ -410,7 +410,7 @@ function setupSignaling(io) {
 
                 case 'screenshare-start':
                 case 'screenshare-stop':
-                    socket.to(roomId).emit('room-event', { event, data: { ...data, userId: socket.userId, userName: socket.userName } });
+                    socket.to(roomId).emit('room-event', { event, data: { ...data, socketId: socket.id, userId: socket.userId, userName: socket.userName } });
                     break;
 
                 case 'hand-raise':

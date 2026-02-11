@@ -64,6 +64,7 @@ class AudioRoomsManager {
         this.isVideoActive = false;
         this.activeVideoFeeds = new Map();
         this.MAX_VIDEO_TILES = 6;
+        this._remoteScreensharers = new Set();
         
         // AR filter engine
         this.arFilterEngine = null;
@@ -1722,6 +1723,16 @@ class AudioRoomsManager {
             return;
         }
         
+        if (this.videoMode !== 'off' && !this._remoteScreensharers.has(remoteId)) {
+            this.activeVideoFeeds.set(remoteId, { userName: remoteName, stream, muted: false });
+            this.refreshVideoGrid();
+            
+            stream.getVideoTracks()[0].onended = () => {
+                this.removeVideoTile(remoteId);
+            };
+            return;
+        }
+        
         if (this.isScreenSharing) return;
         
         const container = document.getElementById('screenshare-container');
@@ -1937,9 +1948,17 @@ class AudioRoomsManager {
                 }
                 break;
             case 'screenshare-start':
+                if (data.socketId || data.userId) {
+                    const ssSocketId = data.socketId || this.findSocketByUserId(data.userId);
+                    if (ssSocketId) this._remoteScreensharers.add(ssSocketId);
+                }
                 this.addChatMessage('System', `${data.userName || 'A participant'} started sharing their screen.`, true);
                 break;
             case 'screenshare-stop':
+                if (data.socketId || data.userId) {
+                    const ssSocketId = data.socketId || this.findSocketByUserId(data.userId);
+                    if (ssSocketId) this._remoteScreensharers.delete(ssSocketId);
+                }
                 this.addChatMessage('System', `${data.userName || 'A participant'} stopped sharing their screen.`, true);
                 if (this._remoteVideoSenderId && data.userId) {
                     const senderSocketId = this.findSocketByUserId(data.userId);
@@ -2480,6 +2499,7 @@ class AudioRoomsManager {
         }
         this.isVideoActive = false;
         this.activeVideoFeeds.clear();
+        this._remoteScreensharers.clear();
         this.videoMode = 'off';
         const videoGridWrapper = document.getElementById('video-grid-wrapper');
         const videoGrid = document.getElementById('video-grid');
@@ -3548,13 +3568,13 @@ class AudioRoomsManager {
         const { socketId, userName } = data;
         if (!socketId || socketId === this.socket?.id) return;
         
-        const pc = this.peerConnections.get(socketId);
-        if (pc) {
-            const existingStream = this.activeVideoFeeds.get(socketId)?.stream;
-            if (existingStream) return;
+        const existing = this.activeVideoFeeds.get(socketId);
+        if (existing && existing.stream) return;
+        
+        if (!existing) {
+            this.activeVideoFeeds.set(socketId, { userName, stream: null, muted: false });
+            this.refreshVideoGrid();
         }
-        this.activeVideoFeeds.set(socketId, { userName, stream: null, muted: false });
-        this.refreshVideoGrid();
     }
     
     handleRemoteVideoStop(data) {
