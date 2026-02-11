@@ -149,20 +149,21 @@ class AudioRoomsManager {
         if (this._silentAudio) return;
         try {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = ctx.createOscillator();
-            const gain = ctx.createGain();
-            gain.gain.value = 0.001;
-            oscillator.connect(gain);
-            gain.connect(ctx.destination);
-            oscillator.start();
-            this._silentAudio = { ctx, oscillator, gain };
+            const bufferSize = ctx.sampleRate * 2;
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const source = ctx.createBufferSource();
+            source.buffer = buffer;
+            source.loop = true;
+            source.connect(ctx.destination);
+            source.start();
+            this._silentAudio = { ctx, source };
         } catch (e) {}
     }
 
     _stopSilentAudioKeepAlive() {
         if (this._silentAudio) {
             try {
-                this._silentAudio.oscillator.stop();
+                this._silentAudio.source.stop();
                 this._silentAudio.ctx.close();
             } catch (e) {}
             this._silentAudio = null;
@@ -1402,6 +1403,15 @@ class AudioRoomsManager {
             }
         });
         
+        this.socket.on('room-error', (data) => {
+            console.warn('Room error:', data.message);
+            this.showToast?.(data.message || 'Could not join the room.', 'fa-exclamation-circle');
+            if (this.roomSelection) this.roomSelection.style.display = '';
+            this.audioRoom?.classList.add('hidden');
+            this.currentRoom = null;
+            this.loadActiveRooms();
+        });
+
         this.socket.on('room-joined', async (data) => {
             console.log('Room joined via signaling:', data);
 
@@ -5606,8 +5616,16 @@ document.addEventListener('DOMContentLoaded', () => {
             mgr._joiningFromInvite = true;
 
             try {
-                const rooms = await mgr.fetchActiveRooms();
+                let rooms = [];
+                try { rooms = await mgr.fetchActiveRooms() || []; } catch (_) {}
                 const targetRoom = rooms.find(r => r.id === roomToJoin);
+                if (rooms.length > 0 && !targetRoom) {
+                    if (lobby) lobby.style.display = '';
+                    mgr.loadActiveRooms();
+                    mgr.showToast?.('This room is no longer live. Check out other active rooms below.', 'fa-exclamation-circle');
+                    mgr._joiningFromInvite = false;
+                    return;
+                }
                 if (targetRoom) {
                     const roomNameEl = document.getElementById('room-name');
                     if (roomNameEl && targetRoom.name) {

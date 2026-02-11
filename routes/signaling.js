@@ -88,11 +88,17 @@ function setupSignaling(io) {
             socket.avatar = avatar || null;
 
             if (!rooms.has(roomId)) {
+                if (!isHost) {
+                    socket.emit('room-error', { message: 'This room is no longer live.' });
+                    socket.leave(roomId);
+                    socket.roomId = null;
+                    return;
+                }
                 rooms.set(roomId, {
                     id: roomId,
                     name: roomName || null,
-                    hostId: isHost ? socket.id : null,
-                    creatorUserId: isHost ? socket.userId : null,
+                    hostId: socket.id,
+                    creatorUserId: socket.userId,
                     participants: new Map(),
                     karaokeEnabled: false,
                     screenshareEnabled: false,
