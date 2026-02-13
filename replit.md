@@ -42,6 +42,16 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **User Model Extensions**: Incorporates roles, account types, subscription details, and creator profiles.
 - **Payment Processing**: Natively built billing engine for subscriptions, invoices, and payment tracking, with an integrated payment gateway. Applies a platform fee (8-12%) on Gross Merchandise Volume (GMV).
 
+### Payout & Revenue Share System
+- **Centralized PayoutService** (`services/payoutService.js`): Computes payout amounts and platform fees for all seller types, logs every transaction to the Events Ledger.
+- **Seller Types**: Labels (payout rate on `Label.revenueShare`, default 15%), Designers (payout rate on `User.creatorProfile.revenueShare`, default 85%), Independent Artists (same as designers).
+- **MerchSale Model**: Extended with `sellerType`, `sellerId`, `payoutRate`, `payoutAmount`, `platformFeeRate`, `platformFeeAmount`, `source` fields — full snapshot of rates at time of sale for audit.
+- **Deduplication**: Unique index on `orderId + sku` prevents double-recording.
+- **Sales Import**: CSV upload for labels via `POST /api/partner/bulk/sales` (partner-upload.html Sales Import tab). Required columns: order_id, artist_name, sku, product_name, quantity, total_amount.
+- **Creator Sales API**: `POST /api/creator/record-sale` for designers/artists to record sales via API.
+- **Audit Trail**: Every sale generates two Events Ledger entries: `gmv_order` (full sale details + rate snapshot) and `platform_fee_recorded` (fee breakdown). Accessible via `/api/partner/dashboard/ledger` and `/api/creator/ledger`.
+- **Dashboard Display**: Payout rate, platform fee percentage, and totals shown on both partner dashboard and creator dashboard.
+
 ### Plans & Pricing / Subscription Management
 - **Pricing page** (`pricing.html`): Public-facing page with category tabs (Fans, Designers, Artists, Labels), monthly/yearly billing toggle, plan cards with feature lists, and subscribe buttons.
 - **Subscription management page** (`subscription.html`): Authenticated page showing current plan details, billing status, entitlements display, graduation progress for free-tier designers, available plan comparison, upgrade/downgrade/cancel flows with confirmation modal.

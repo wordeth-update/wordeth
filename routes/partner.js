@@ -513,6 +513,167 @@ router.delete('/share/:shareId', partnerAuth, async (req, res) => {
     }
 });
 
+const { recordBulkSales, getSellerPayoutRate, getPayoutSummary } = require('../services/payoutService');
+
+router.get('/dashboard/payout-info', partnerAuth, async (req, res) => {
+    try {
+        const label = req.label;
+        const { payoutRate } = await getSellerPayoutRate('label', label._id);
+        const summary = await getPayoutSummary('label', label._id);
+
+        res.json({
+            success: true,
+            data: {
+                payoutRate,
+                payoutPercentage: (payoutRate * 100).toFixed(1),
+                platformFeePercentage: ((1 - payoutRate) * 100).toFixed(1),
+                ...summary
+            }
+        });
+    } catch (error) {
+        console.error('Payout info error:', error);
+        res.status(500).json({ success: false, message: 'Failed to load payout info' });
+    }
+});
+
+router.post('/bulk/sales', partnerAuth, csvUpload.single('csvFile'), async (req, res) => {
+    try {
+        if (req.partner.role === 'viewer') {
+            return res.status(403).json({ success: false, message: 'Viewers cannot upload sales data' });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No CSV file uploaded' });
+        }
+
+        const csvContent = req.file.buffer.toString('utf-8');
+        let records;
+        try {
+            records = parse(csvContent, {
+                columns: true,
+                skip_empty_lines: true,
+                trim: true,
+                relax_column_count: true
+            });
+        } catch (parseErr) {
+            return res.status(400).json({ success: false, message: `CSV parsing error: ${parseErr.message}` });
+        }
+
+        if (!records.length) {
+            return res.status(400).json({ success: false, message: 'CSV file is empty' });
+        }
+
+        const requiredCols = ['order_id', 'artist_name', 'sku', 'product_name', 'quantity', 'total_amount'];
+        const headers = Object.keys(records[0]);
+        const missingCols = requiredCols.filter(c => !headers.includes(c));
+        if (missingCols.length) {
+            return res.status(400).json({
+                success: false,
+                message: `Missing required columns: ${missingCols.join(', ')}`,
+                expected: ['order_id', 'artist_name', 'sku', 'product_name', 'quantity', 'total_amount', 'unit_price', 'product_type', 'song_title', 'album_title', 'lyrics_snippet', 'country', 'country_code', 'region', 'city', 'sale_date', 'status']
+            });
+        }
+
+        const label = req.label;
+        const salesData = [];
+        const parseErrors = [];
+
+        records.forEach((row, i) => {
+            const rowNum = i + 2;
+
+            if (!row.order_id || !row.artist_name || !row.sku || !row.product_name) {
+                parseErrors.push(`Row ${rowNum}: Missing required fields`);
+                return;
+            }
+
+            const qty = parseInt(row.quantity);
+            const total = parseFloat(row.total_amount);
+
+            if (isNaN(qty) || qty < 1) {
+                parseErrors.push(`Row ${rowNum}: Invalid quantity "${row.quantity}"`);
+                return;
+            }
+            if (isNaN(total) || total < 0) {
+                parseErrors.push(`Row ${rowNum}: Invalid total_amount "${row.total_amount}"`);
+                return;
+            }
+
+            const artistSlug = row.artist_name.toLowerCase().trim()
+                .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+
+            salesData.push({
+                orderId: row.order_id.trim(),
+                sellerType: 'label',
+                sellerId: label._id,
+                labelId: label._id,
+                artistName: row.artist_name.trim(),
+                artistSlug,
+                sku: row.sku.trim(),
+                productName: row.product_name.trim(),
+                productType: row.product_type || 'other',
+                songTitle: row.song_title || '',
+                albumTitle: row.album_title || '',
+                lyricsSnippet: row.lyrics_snippet || '',
+                quantity: qty,
+                unitPrice: parseFloat(row.unit_price) || Math.round((total / qty) * 100) / 100,
+                totalAmount: total,
+                currency: row.currency || 'USD',
+                geo: {
+                    country: row.country || '',
+                    countryCode: row.country_code || '',
+                    region: row.region || '',
+                    city: row.city || ''
+                },
+                status: row.status || 'confirmed',
+                saleDate: row.sale_date || new Date().toISOString()
+            });
+        });
+
+        const results = await recordBulkSales(salesData, 'csv');
+
+        res.json({
+            success: true,
+            message: `Processed ${records.length} rows for ${label.name}`,
+            data: {
+                recorded: results.recorded,
+                duplicates: results.duplicates,
+                parseErrors: parseErrors.length ? parseErrors : undefined,
+                processingErrors: results.errors.length ? results.errors : undefined
+            }
+        });
+    } catch (error) {
+        console.error('Bulk sales upload error:', error);
+        res.status(500).json({ success: false, message: 'Failed to process sales CSV' });
+    }
+});
+
+router.get('/dashboard/ledger', partnerAuth, async (req, res) => {
+    try {
+        const { startDate, endDate, limit } = req.query;
+        const EventsLedger = require('../models/EventsLedger');
+
+        const match = {
+            eventType: { $in: ['gmv_order', 'platform_fee_recorded'] },
+            'metadata.sellerType': 'label'
+        };
+
+        if (startDate || endDate) {
+            match.createdAt = {};
+            if (startDate) match.createdAt.$gte = new Date(startDate);
+            if (endDate) match.createdAt.$lte = new Date(endDate);
+        }
+
+        const entries = await EventsLedger.find(match)
+            .sort({ createdAt: -1 })
+            .limit(parseInt(limit) || 100);
+
+        res.json({ success: true, data: entries });
+    } catch (error) {
+        console.error('Ledger error:', error);
+        res.status(500).json({ success: false, message: 'Failed to load ledger' });
+    }
+});
+
 function generateSlug(name) {
     return name
         .toLowerCase()

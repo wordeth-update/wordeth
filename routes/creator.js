@@ -282,4 +282,131 @@ router.post('/upgrade-account', auth, async (req, res) => {
     }
 });
 
+const { recordSale, getSellerPayoutRate, getPayoutSummary } = require('../services/payoutService');
+const MerchSale = require('../models/MerchSale');
+
+router.get('/payout-info', auth, requireAccountType('artist', 'designer'), async (req, res) => {
+    try {
+        const user = req.user;
+        const sellerType = user.accountType;
+        const { payoutRate } = await getSellerPayoutRate(sellerType, user._id);
+        const summary = await getPayoutSummary(sellerType, user._id);
+
+        res.json({
+            success: true,
+            data: {
+                payoutRate,
+                payoutPercentage: (payoutRate * 100).toFixed(1),
+                platformFeePercentage: ((1 - payoutRate) * 100).toFixed(1),
+                ...summary
+            }
+        });
+    } catch (error) {
+        console.error('Creator payout info error:', error);
+        res.status(500).json({ success: false, message: 'Failed to load payout info' });
+    }
+});
+
+router.post('/record-sale', auth, requireAccountType('artist', 'designer'), [
+    body('orderId').trim().notEmpty().withMessage('Order ID is required'),
+    body('sku').trim().notEmpty().withMessage('SKU is required'),
+    body('productName').trim().notEmpty().withMessage('Product name is required'),
+    body('quantity').isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
+    body('totalAmount').isFloat({ min: 0 }).withMessage('Total amount must be >= 0')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const user = req.user;
+        const displayName = user.creatorProfile?.displayName || user.name;
+        const handle = user.creatorProfile?.handle || user.name.toLowerCase().replace(/\s+/g, '-');
+
+        const result = await recordSale({
+            orderId: req.body.orderId,
+            sellerType: user.accountType,
+            sellerId: user._id,
+            artistName: displayName,
+            artistSlug: handle,
+            sku: req.body.sku,
+            productName: req.body.productName,
+            productType: req.body.productType || 'other',
+            songTitle: req.body.songTitle || '',
+            albumTitle: req.body.albumTitle || '',
+            lyricsSnippet: req.body.lyricsSnippet || '',
+            quantity: parseInt(req.body.quantity),
+            unitPrice: parseFloat(req.body.unitPrice) || 0,
+            totalAmount: parseFloat(req.body.totalAmount),
+            currency: req.body.currency || 'USD',
+            geo: req.body.geo || {},
+            saleDate: req.body.saleDate
+        }, 'api');
+
+        if (result.duplicate) {
+            return res.status(409).json({
+                success: false,
+                message: 'This sale has already been recorded (duplicate order ID + SKU)'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Sale recorded successfully',
+            data: {
+                saleId: result.sale._id,
+                totalAmount: result.sale.totalAmount,
+                payoutAmount: result.sale.payoutAmount,
+                platformFeeAmount: result.sale.platformFeeAmount,
+                payoutRate: result.sale.payoutRate
+            }
+        });
+    } catch (error) {
+        console.error('Record sale error:', error);
+        res.status(500).json({ success: false, message: 'Failed to record sale' });
+    }
+});
+
+router.get('/sales', auth, requireAccountType('artist', 'designer'), async (req, res) => {
+    try {
+        const { startDate, endDate, limit } = req.query;
+        const match = { sellerType: req.user.accountType, sellerId: req.user._id };
+
+        if (startDate || endDate) {
+            match.saleDate = {};
+            if (startDate) match.saleDate.$gte = new Date(startDate);
+            if (endDate) match.saleDate.$lte = new Date(endDate);
+        }
+
+        const sales = await MerchSale.find(match)
+            .sort({ saleDate: -1 })
+            .limit(parseInt(limit) || 50)
+            .select('orderId sku productName productType quantity totalAmount payoutAmount platformFeeAmount payoutRate saleDate status source');
+
+        res.json({ success: true, data: sales });
+    } catch (error) {
+        console.error('Sales list error:', error);
+        res.status(500).json({ success: false, message: 'Failed to load sales' });
+    }
+});
+
+router.get('/ledger', auth, requireAccountType('artist', 'designer'), async (req, res) => {
+    try {
+        const { limit } = req.query;
+
+        const entries = await EventsLedger.find({
+            actorId: req.user._id,
+            eventType: { $in: ['gmv_order', 'platform_fee_recorded'] }
+        })
+            .sort({ createdAt: -1 })
+            .limit(parseInt(limit) || 50);
+
+        res.json({ success: true, data: entries });
+    } catch (error) {
+        console.error('Creator ledger error:', error);
+        res.status(500).json({ success: false, message: 'Failed to load ledger' });
+    }
+});
+
 module.exports = router;

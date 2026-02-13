@@ -47,6 +47,7 @@ const userSchema = new mongoose.Schema({
             youtube: { type: String, default: '' },
             website: { type: String, default: '' }
         },
+        revenueShare: { type: Number, default: 0.85, min: 0, max: 1 },
         storageUsedBytes: { type: Number, default: 0 },
         templateCount: { type: Number, default: 0 },
         totalEarnings: { type: Number, default: 0 },

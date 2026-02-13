@@ -53,12 +53,31 @@
             <a href="#" id="bcLabel" class="bc-link active">Label Overview</a>
         </nav>
 
+        <section class="payout-info-bar" id="payoutInfoBar">
+            <div class="payout-rate-display">
+                <span class="payout-label">Your Payout Rate</span>
+                <span class="payout-value" id="payoutPercentage">--</span>
+            </div>
+            <div class="payout-rate-display">
+                <span class="payout-label">Platform Fee</span>
+                <span class="payout-value secondary" id="platformFeePercentage">--</span>
+            </div>
+            <div class="payout-rate-display">
+                <span class="payout-label">Total Payout</span>
+                <span class="payout-value highlight" id="totalPayoutAmount">$0</span>
+            </div>
+            <div class="payout-rate-display">
+                <span class="payout-label">Platform Fees Paid</span>
+                <span class="payout-value secondary" id="totalPlatformFees">$0</span>
+            </div>
+        </section>
+
         <section id="statsCards" class="stats-cards">
             <div class="stat-card">
                 <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
                 <div class="stat-info">
                     <span class="stat-value" id="totalRevenue">$0</span>
-                    <span class="stat-label">Total Revenue</span>
+                    <span class="stat-label">Gross Revenue</span>
                 </div>
             </div>
             <div class="stat-card highlight">

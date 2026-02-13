@@ -14,6 +14,7 @@ class PartnerUpload {
     init() {
         this.setupTabs();
         this.setupDragDrop('rosterDropZone', 'rosterFileInput', (file) => this.uploadRoster(file));
+        this.setupDragDrop('salesDropZone', 'salesFileInput', (file) => this.uploadSales(file));
         this.setupCopyButtons();
         this.setupArtworkTab();
 
@@ -124,6 +125,52 @@ class PartnerUpload {
             }
         } catch (err) {
             console.error('Failed to load artists:', err);
+        }
+    }
+
+    async uploadSales(file) {
+        const statusEl = document.getElementById('salesUploadStatus');
+        statusEl.style.display = 'block';
+        statusEl.className = 'upload-status uploading';
+        statusEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Processing ${file.name}...`;
+
+        const formData = new FormData();
+        formData.append('csvFile', file);
+
+        try {
+            const res = await fetch(`${this.API_BASE}/api/partner/bulk/sales`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${this.token}` },
+                body: formData
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                let details = `${data.data.recorded} sales recorded`;
+                if (data.data.duplicates > 0) {
+                    details += `, ${data.data.duplicates} duplicates skipped`;
+                }
+
+                statusEl.className = 'upload-status success';
+                statusEl.innerHTML = `<i class="fas fa-check-circle"></i> ${data.message} &mdash; ${details}`;
+
+                if (data.data.parseErrors && data.data.parseErrors.length) {
+                    statusEl.innerHTML += `<div class="error-details"><strong>Parse warnings:</strong><ul>${data.data.parseErrors.map(e => `<li>${e}</li>`).join('')}</ul></div>`;
+                }
+                if (data.data.processingErrors && data.data.processingErrors.length) {
+                    statusEl.innerHTML += `<div class="error-details"><strong>Processing errors:</strong><ul>${data.data.processingErrors.map(e => `<li>Row ${e.row}: ${e.message}</li>`).join('')}</ul></div>`;
+                }
+            } else {
+                statusEl.className = 'upload-status error';
+                statusEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${data.message || 'Upload failed'}`;
+                if (data.expected) {
+                    statusEl.innerHTML += `<div class="error-details"><strong>Expected columns:</strong> ${data.expected.join(', ')}</div>`;
+                }
+            }
+        } catch (err) {
+            statusEl.className = 'upload-status error';
+            statusEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> Network error: ${err.message}`;
         }
     }
 

@@ -31,6 +31,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderDashboard(data);
         loading.style.display = 'none';
         container.style.display = 'block';
+
+        loadPayoutInfo(token);
     } catch (err) {
         console.error('Dashboard load error:', err);
         loading.innerHTML = `<p style="color:#fca5a5;">Failed to load dashboard. <a href="/" style="color:var(--mint);">Go Home</a></p>`;
@@ -39,6 +41,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupTabs();
     setupLogout();
 });
+
+async function loadPayoutInfo(token) {
+    try {
+        const res = await fetch('/api/creator/payout-info', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) return;
+        const { data } = await res.json();
+        if (!data) return;
+
+        const fmt = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+        document.getElementById('creatorPayoutRate').textContent = `${data.payoutPercentage}%`;
+        document.getElementById('creatorPlatformFee').textContent = `${data.platformFeePercentage}%`;
+        document.getElementById('creatorTotalPayout').textContent = fmt(data.totalPayout || 0);
+    } catch (e) {
+        console.error('Payout info error:', e);
+    }
+}
 
 function renderDashboard(data) {
     const { profile, currentPlan, subscription, entitlements, graduation, accountType, availablePlans } = data;

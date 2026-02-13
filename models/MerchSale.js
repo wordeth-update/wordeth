@@ -6,10 +6,21 @@ const merchSaleSchema = new mongoose.Schema({
         required: true,
         index: true
     },
+    sellerType: {
+        type: String,
+        enum: ['label', 'designer', 'artist'],
+        required: true,
+        index: true
+    },
+    sellerId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        index: true
+    },
     labelId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Label',
-        required: true,
+        default: null,
         index: true
     },
     artistName: {
@@ -70,6 +81,28 @@ const merchSaleSchema = new mongoose.Schema({
         required: true,
         min: 0
     },
+    payoutRate: {
+        type: Number,
+        required: true,
+        min: 0,
+        max: 1
+    },
+    payoutAmount: {
+        type: Number,
+        required: true,
+        min: 0
+    },
+    platformFeeRate: {
+        type: Number,
+        required: true,
+        min: 0,
+        max: 1
+    },
+    platformFeeAmount: {
+        type: Number,
+        required: true,
+        min: 0
+    },
     revenueShare: {
         type: Number,
         required: true,
@@ -78,6 +111,11 @@ const merchSaleSchema = new mongoose.Schema({
     currency: {
         type: String,
         default: 'USD'
+    },
+    source: {
+        type: String,
+        enum: ['csv', 'webhook', 'manual', 'api'],
+        default: 'manual'
     },
     geo: {
         country: { type: String, default: '' },
@@ -101,6 +139,8 @@ const merchSaleSchema = new mongoose.Schema({
     timestamps: true
 });
 
+merchSaleSchema.index({ orderId: 1, sku: 1 }, { unique: true });
+merchSaleSchema.index({ sellerType: 1, sellerId: 1, saleDate: -1 });
 merchSaleSchema.index({ labelId: 1, saleDate: -1 });
 merchSaleSchema.index({ labelId: 1, artistSlug: 1, saleDate: -1 });
 merchSaleSchema.index({ labelId: 1, sku: 1 });

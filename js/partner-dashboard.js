@@ -21,9 +21,22 @@ class PartnerDashboard {
         this.setupEventListeners();
         document.getElementById('labelName').textContent = this.label?.name || '';
         document.getElementById('dashboardTitle').textContent = `${this.label?.name || 'Partner'} Dashboard`;
-        await this.loadLabelDashboard();
+        await Promise.all([
+            this.loadLabelDashboard(),
+            this.loadPayoutInfo()
+        ]);
         this.initMap();
         this.loadGeoData();
+    }
+
+    async loadPayoutInfo() {
+        const data = await this.apiCall('/dashboard/payout-info');
+        if (!data || !data.success) return;
+        const d = data.data;
+        document.getElementById('payoutPercentage').textContent = `${d.payoutPercentage}%`;
+        document.getElementById('platformFeePercentage').textContent = `${d.platformFeePercentage}%`;
+        document.getElementById('totalPayoutAmount').textContent = this.formatCurrency(d.totalPayout || 0);
+        document.getElementById('totalPlatformFees').textContent = this.formatCurrency(d.totalPlatformFee || 0);
     }
 
     setupEventListeners() {
