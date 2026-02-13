@@ -11,7 +11,10 @@ const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
 const activePollers = new Map();
 
 function getEncryptionKey() {
-    const secret = process.env.JWT_SECRET || 'default-inksoft-key';
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+        throw new Error('JWT_SECRET environment variable is required for credential encryption');
+    }
     return crypto.createHash('sha256').update(secret).digest();
 }
 
@@ -94,8 +97,12 @@ async function validateApiKey(syncConfig) {
         const msg = res.data?.Messages?.[0]?.Content || 'API key validation failed';
         throw new Error(msg);
     } catch (err) {
-        if (err.response?.status === 400) {
-            const msg = err.response?.data?.Messages?.[0]?.Content || 'Invalid API key';
+        if (err.response?.status === 400 || err.response?.status === 401 || err.response?.status === 403) {
+            const msg = err.response?.data?.Messages?.[0]?.Content || 'Invalid or unauthorized API key';
+            syncConfig.lastError = `API key validation failed: ${msg}`;
+            syncConfig.lastErrorAt = new Date();
+            syncConfig.status = 'error';
+            await syncConfig.save();
             throw new Error(`InkSoft API key validation failed: ${msg}`);
         }
         throw err;
@@ -103,14 +110,23 @@ async function validateApiKey(syncConfig) {
 }
 
 function getAuthParams(syncConfig) {
-    if (syncConfig.authMode === 'api_key' && syncConfig.integrationKeyEncrypted) {
+    if (syncConfig.authMode === 'api_key') {
+        if (!syncConfig.integrationKeyEncrypted) {
+            throw new Error('API key is configured but no integration key found. Please re-run setup.');
+        }
         return { IntegrationKey: decrypt(syncConfig.integrationKeyEncrypted) };
+    }
+    if (!syncConfig.sessionToken) {
+        throw new Error('No active session token. Re-authentication required.');
     }
     return { SessionToken: syncConfig.sessionToken };
 }
 
 async function ensureAuth(syncConfig) {
-    if (syncConfig.authMode === 'api_key' && syncConfig.integrationKeyEncrypted) {
+    if (syncConfig.authMode === 'api_key') {
+        if (!syncConfig.integrationKeyEncrypted) {
+            throw new Error('API key is configured but no integration key found. Please re-run setup.');
+        }
         return;
     }
 
