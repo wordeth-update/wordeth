@@ -47,7 +47,8 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Seller Types**: Labels (payout rate on `Label.revenueShare`, default 15%), Designers (payout rate on `User.creatorProfile.revenueShare`, default 85%), Independent Artists (same as designers).
 - **MerchSale Model**: Extended with `sellerType`, `sellerId`, `payoutRate`, `payoutAmount`, `platformFeeRate`, `platformFeeAmount`, `source` fields — full snapshot of rates at time of sale for audit.
 - **Deduplication**: Unique index on `orderId + sku` prevents double-recording.
-- **Sales Import**: CSV upload for labels via `POST /api/partner/bulk/sales` (partner-upload.html Sales Import tab). Required columns: order_id, artist_name, sku, product_name, quantity, total_amount.
+- **InkSoft Integration**: Automated order polling via InkSoft API 2. `InkSoftSync` model stores per-label credentials and polling state. `services/inkSoftService.js` handles authentication, order fetching, mapping, and processing through PayoutService. Pollers auto-start on server boot for all active labels.
+- **InkSoft Partner Endpoints**: `POST /api/partner/inksoft/setup` (configure credentials), `GET /api/partner/inksoft/status` (sync status), `POST /api/partner/inksoft/poll` (manual sync trigger), `POST /api/partner/inksoft/toggle` (enable/disable).
 - **Creator Sales API**: `POST /api/creator/record-sale` for designers/artists to record sales via API.
 - **Audit Trail**: Every sale generates two Events Ledger entries: `gmv_order` (full sale details + rate snapshot) and `platform_fee_recorded` (fee breakdown). Accessible via `/api/partner/dashboard/ledger` and `/api/creator/ledger`.
 - **Dashboard Display**: Payout rate, platform fee percentage, and totals shown on both partner dashboard and creator dashboard.

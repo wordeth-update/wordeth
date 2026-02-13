@@ -513,7 +513,7 @@ router.delete('/share/:shareId', partnerAuth, async (req, res) => {
     }
 });
 
-const { recordBulkSales, getSellerPayoutRate, getPayoutSummary } = require('../services/payoutService');
+const { getSellerPayoutRate, getPayoutSummary } = require('../services/payoutService');
 
 router.get('/dashboard/payout-info', partnerAuth, async (req, res) => {
     try {
@@ -533,117 +533,6 @@ router.get('/dashboard/payout-info', partnerAuth, async (req, res) => {
     } catch (error) {
         console.error('Payout info error:', error);
         res.status(500).json({ success: false, message: 'Failed to load payout info' });
-    }
-});
-
-router.post('/bulk/sales', partnerAuth, csvUpload.single('csvFile'), async (req, res) => {
-    try {
-        if (req.partner.role === 'viewer') {
-            return res.status(403).json({ success: false, message: 'Viewers cannot upload sales data' });
-        }
-
-        if (!req.file) {
-            return res.status(400).json({ success: false, message: 'No CSV file uploaded' });
-        }
-
-        const csvContent = req.file.buffer.toString('utf-8');
-        let records;
-        try {
-            records = parse(csvContent, {
-                columns: true,
-                skip_empty_lines: true,
-                trim: true,
-                relax_column_count: true
-            });
-        } catch (parseErr) {
-            return res.status(400).json({ success: false, message: `CSV parsing error: ${parseErr.message}` });
-        }
-
-        if (!records.length) {
-            return res.status(400).json({ success: false, message: 'CSV file is empty' });
-        }
-
-        const requiredCols = ['order_id', 'artist_name', 'sku', 'product_name', 'quantity', 'total_amount'];
-        const headers = Object.keys(records[0]);
-        const missingCols = requiredCols.filter(c => !headers.includes(c));
-        if (missingCols.length) {
-            return res.status(400).json({
-                success: false,
-                message: `Missing required columns: ${missingCols.join(', ')}`,
-                expected: ['order_id', 'artist_name', 'sku', 'product_name', 'quantity', 'total_amount', 'unit_price', 'product_type', 'song_title', 'album_title', 'lyrics_snippet', 'country', 'country_code', 'region', 'city', 'sale_date', 'status']
-            });
-        }
-
-        const label = req.label;
-        const salesData = [];
-        const parseErrors = [];
-
-        records.forEach((row, i) => {
-            const rowNum = i + 2;
-
-            if (!row.order_id || !row.artist_name || !row.sku || !row.product_name) {
-                parseErrors.push(`Row ${rowNum}: Missing required fields`);
-                return;
-            }
-
-            const qty = parseInt(row.quantity);
-            const total = parseFloat(row.total_amount);
-
-            if (isNaN(qty) || qty < 1) {
-                parseErrors.push(`Row ${rowNum}: Invalid quantity "${row.quantity}"`);
-                return;
-            }
-            if (isNaN(total) || total < 0) {
-                parseErrors.push(`Row ${rowNum}: Invalid total_amount "${row.total_amount}"`);
-                return;
-            }
-
-            const artistSlug = row.artist_name.toLowerCase().trim()
-                .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-
-            salesData.push({
-                orderId: row.order_id.trim(),
-                sellerType: 'label',
-                sellerId: label._id,
-                labelId: label._id,
-                artistName: row.artist_name.trim(),
-                artistSlug,
-                sku: row.sku.trim(),
-                productName: row.product_name.trim(),
-                productType: row.product_type || 'other',
-                songTitle: row.song_title || '',
-                albumTitle: row.album_title || '',
-                lyricsSnippet: row.lyrics_snippet || '',
-                quantity: qty,
-                unitPrice: parseFloat(row.unit_price) || Math.round((total / qty) * 100) / 100,
-                totalAmount: total,
-                currency: row.currency || 'USD',
-                geo: {
-                    country: row.country || '',
-                    countryCode: row.country_code || '',
-                    region: row.region || '',
-                    city: row.city || ''
-                },
-                status: row.status || 'confirmed',
-                saleDate: row.sale_date || new Date().toISOString()
-            });
-        });
-
-        const results = await recordBulkSales(salesData, 'csv');
-
-        res.json({
-            success: true,
-            message: `Processed ${records.length} rows for ${label.name}`,
-            data: {
-                recorded: results.recorded,
-                duplicates: results.duplicates,
-                parseErrors: parseErrors.length ? parseErrors : undefined,
-                processingErrors: results.errors.length ? results.errors : undefined
-            }
-        });
-    } catch (error) {
-        console.error('Bulk sales upload error:', error);
-        res.status(500).json({ success: false, message: 'Failed to process sales CSV' });
     }
 });
 
@@ -948,6 +837,144 @@ router.delete('/artwork/:artistSlug/:artworkId', partnerAuth, async (req, res) =
     } catch (error) {
         console.error('Delete artwork error:', error);
         res.status(500).json({ success: false, message: 'Failed to delete artwork' });
+    }
+});
+
+const InkSoftSync = require('../models/InkSoftSync');
+const inkSoftService = require('../services/inkSoftService');
+
+router.get('/inksoft/status', partnerAuth, async (req, res) => {
+    try {
+        const status = await inkSoftService.getSyncStatus(req.label._id);
+        res.json({ success: true, data: status });
+    } catch (error) {
+        console.error('InkSoft status error:', error);
+        res.status(500).json({ success: false, message: 'Failed to get sync status' });
+    }
+});
+
+router.post('/inksoft/setup', partnerAuth, async (req, res) => {
+    try {
+        if (req.partner.role === 'viewer') {
+            return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+        }
+
+        const { storeUrl, apiEmail, apiPassword, pollIntervalMinutes } = req.body;
+
+        if (!storeUrl || !apiEmail || !apiPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'storeUrl, apiEmail, and apiPassword are required'
+            });
+        }
+
+        let syncConfig = await InkSoftSync.findOne({ labelId: req.label._id });
+
+        const encryptedPassword = inkSoftService.encryptPassword(apiPassword);
+
+        if (syncConfig) {
+            syncConfig.storeUrl = storeUrl;
+            syncConfig.apiEmail = apiEmail;
+            syncConfig.apiPasswordEncrypted = encryptedPassword;
+            if (pollIntervalMinutes) syncConfig.pollIntervalMinutes = pollIntervalMinutes;
+            syncConfig.status = 'setup';
+            syncConfig.enabled = true;
+        } else {
+            syncConfig = new InkSoftSync({
+                labelId: req.label._id,
+                storeUrl,
+                apiEmail,
+                apiPasswordEncrypted: encryptedPassword,
+                pollIntervalMinutes: pollIntervalMinutes || 15,
+                status: 'setup',
+                enabled: true
+            });
+        }
+
+        await syncConfig.save();
+
+        try {
+            await inkSoftService.authenticate(syncConfig);
+            syncConfig.status = 'active';
+            await syncConfig.save();
+
+            inkSoftService.startPoller(req.label._id, syncConfig.pollIntervalMinutes * 60 * 1000);
+
+            res.json({
+                success: true,
+                message: 'InkSoft integration configured and authenticated successfully',
+                data: { status: 'active', pollIntervalMinutes: syncConfig.pollIntervalMinutes }
+            });
+        } catch (authErr) {
+            res.status(400).json({
+                success: false,
+                message: `InkSoft authentication failed: ${authErr.message}. Please check your credentials.`,
+                data: { status: 'error' }
+            });
+        }
+    } catch (error) {
+        console.error('InkSoft setup error:', error);
+        res.status(500).json({ success: false, message: 'Failed to configure InkSoft integration' });
+    }
+});
+
+router.post('/inksoft/poll', partnerAuth, async (req, res) => {
+    try {
+        if (req.partner.role === 'viewer') {
+            return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+        }
+
+        const result = await inkSoftService.pollOrders(req.label._id);
+
+        if (!result) {
+            return res.status(404).json({ success: false, message: 'No InkSoft integration configured' });
+        }
+
+        if (result.error) {
+            return res.status(500).json({ success: false, message: result.error });
+        }
+
+        res.json({
+            success: true,
+            message: `Sync complete: ${result.recorded} new sales recorded`,
+            data: result
+        });
+    } catch (error) {
+        console.error('InkSoft manual poll error:', error);
+        res.status(500).json({ success: false, message: 'Failed to sync with InkSoft' });
+    }
+});
+
+router.post('/inksoft/toggle', partnerAuth, async (req, res) => {
+    try {
+        if (req.partner.role === 'viewer') {
+            return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+        }
+
+        const syncConfig = await InkSoftSync.findOne({ labelId: req.label._id });
+        if (!syncConfig) {
+            return res.status(404).json({ success: false, message: 'No InkSoft integration configured' });
+        }
+
+        syncConfig.enabled = !syncConfig.enabled;
+        if (syncConfig.enabled) {
+            syncConfig.status = 'active';
+            await syncConfig.save();
+            inkSoftService.startPoller(req.label._id, syncConfig.pollIntervalMinutes * 60 * 1000);
+        } else {
+            syncConfig.status = 'paused';
+            await syncConfig.save();
+            inkSoftService.stopPoller(req.label._id);
+        }
+
+        res.json({
+            success: true,
+            message: syncConfig.enabled ? 'InkSoft sync enabled' : 'InkSoft sync paused',
+            data: { enabled: syncConfig.enabled, status: syncConfig.status }
+        });
+    } catch (error) {
+        console.error('InkSoft toggle error:', error);
+        res.status(500).json({ success: false, message: 'Failed to toggle sync' });
     }
 });
 

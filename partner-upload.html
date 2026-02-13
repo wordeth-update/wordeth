@@ -36,7 +36,7 @@
 
         <div class="upload-tabs">
             <button class="upload-tab active" data-tab="roster">Artist Roster</button>
-            <button class="upload-tab" data-tab="sales">Sales Import</button>
+
             <button class="upload-tab" data-tab="artwork">Template Artwork</button>
             <button class="upload-tab" data-tab="docs">Documentation</button>
             <button class="upload-tab" data-tab="prompt">AI Prompt Helper</button>
@@ -86,101 +86,6 @@ Ari Lennox,R&B
 EarthGang,Hip Hop
 Cozz,Hip Hop</pre>
                     </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="salesTab" class="tab-panel">
-            <div class="chart-card wide">
-                <h3><i class="fas fa-file-invoice-dollar"></i> Import Sales Data</h3>
-                <p class="section-subtitle">Upload a CSV export from InkSoft or your sales system. Payout amounts are calculated automatically based on your label's payout rate. Duplicate orders (same order_id + sku) are skipped.</p>
-
-                <div class="upload-zone" id="salesDropZone">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p>Drag & drop your sales CSV file here, or click to browse</p>
-                    <span class="upload-hint">Max 10 MB &middot; .csv files only</span>
-                    <input type="file" id="salesFileInput" accept=".csv" hidden>
-                </div>
-
-                <div id="salesUploadStatus" class="upload-status" style="display:none;"></div>
-
-                <div class="csv-preview-section">
-                    <h4>Required CSV Columns</h4>
-                    <div class="columns-grid">
-                        <div class="col-card required">
-                            <span class="col-name">order_id</span>
-                            <span class="col-desc">Unique order identifier</span>
-                            <span class="col-badge">Required</span>
-                        </div>
-                        <div class="col-card required">
-                            <span class="col-name">artist_name</span>
-                            <span class="col-desc">Artist on this sale</span>
-                            <span class="col-badge">Required</span>
-                        </div>
-                        <div class="col-card required">
-                            <span class="col-name">sku</span>
-                            <span class="col-desc">Product SKU</span>
-                            <span class="col-badge">Required</span>
-                        </div>
-                        <div class="col-card required">
-                            <span class="col-name">product_name</span>
-                            <span class="col-desc">Product display name</span>
-                            <span class="col-badge">Required</span>
-                        </div>
-                        <div class="col-card required">
-                            <span class="col-name">quantity</span>
-                            <span class="col-desc">Units sold</span>
-                            <span class="col-badge">Required</span>
-                        </div>
-                        <div class="col-card required">
-                            <span class="col-name">total_amount</span>
-                            <span class="col-desc">Sale total in USD</span>
-                            <span class="col-badge">Required</span>
-                        </div>
-                    </div>
-                    <h4 style="margin-top:1rem;">Optional Columns</h4>
-                    <div class="columns-grid">
-                        <div class="col-card">
-                            <span class="col-name">unit_price</span>
-                            <span class="col-desc">Per-unit price</span>
-                        </div>
-                        <div class="col-card">
-                            <span class="col-name">product_type</span>
-                            <span class="col-desc">t-shirt, hoodie, hat, etc.</span>
-                        </div>
-                        <div class="col-card">
-                            <span class="col-name">song_title</span>
-                            <span class="col-desc">Related song</span>
-                        </div>
-                        <div class="col-card">
-                            <span class="col-name">album_title</span>
-                            <span class="col-desc">Related album</span>
-                        </div>
-                        <div class="col-card">
-                            <span class="col-name">lyrics_snippet</span>
-                            <span class="col-desc">Lyric phrase on product</span>
-                        </div>
-                        <div class="col-card">
-                            <span class="col-name">country</span>
-                            <span class="col-desc">Buyer country</span>
-                        </div>
-                        <div class="col-card">
-                            <span class="col-name">sale_date</span>
-                            <span class="col-desc">Date of sale (ISO format)</span>
-                        </div>
-                        <div class="col-card">
-                            <span class="col-name">status</span>
-                            <span class="col-desc">confirmed, shipped, etc.</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="example-section">
-                    <h4><i class="fas fa-file-alt"></i> Example CSV</h4>
-                    <pre class="csv-example">order_id,artist_name,sku,product_name,quantity,total_amount,product_type,song_title
-ORD-001,Dreamville,DV-TEE-001,Revenge of the Dreamers Tee,2,59.98,t-shirt,Under the Sun
-ORD-002,J. Cole,JC-HOOD-002,Forest Hills Drive Hoodie,1,64.99,hoodie,No Role Modelz
-ORD-003,JID,JID-HAT-001,The Forever Story Cap,3,89.97,hat,Surround Sound</pre>
                 </div>
             </div>
         </section>
@@ -271,7 +176,7 @@ ORD-003,JID,JID-HAT-001,The Forever Story Cap,3,89.97,hat,Surround Sound</pre>
                         <ul>
                             <li><strong>Artist Roster:</strong> Upload a CSV with your artist names and genres. The system automatically generates unique IDs and identifiers for each artist. Existing artists (same name) are skipped to prevent duplicates.</li>
                             <li><strong>Template Artwork:</strong> Upload artwork files per artist for use on merchandise. Files should be high-resolution (300 DPI) with transparent backgrounds, or vector format.</li>
-                            <li><strong>Sales Tracking:</strong> Once your artists are set up and merch is live, all sales data is tracked automatically through our platform. No manual data entry required.</li>
+                            <li><strong>Sales Tracking:</strong> Once your artists are set up and merch is live, all sales data is tracked automatically through our InkSoft integration. No manual data entry required.</li>
                         </ul>
                     </div>
 
