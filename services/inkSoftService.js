@@ -1,156 +1,24 @@
 const axios = require('axios');
-const crypto = require('crypto');
 const InkSoftSync = require('../models/InkSoftSync');
 const Label = require('../models/Label');
 const { recordSale } = require('./payoutService');
 
+const STORE_URL = 'https://stores.inksoft.com/knewcleus_marketing_media';
 const POLL_INTERVAL_MS_DEFAULT = 15 * 60 * 1000;
-const SESSION_REFRESH_BUFFER_MS = 30 * 60 * 1000;
-const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
 
-const activePollers = new Map();
+let globalPollerTimer = null;
 
-function getEncryptionKey() {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-        throw new Error('JWT_SECRET environment variable is required for credential encryption');
+function getApiKey() {
+    const key = process.env.INKSOFT_API_KEY;
+    if (!key) {
+        throw new Error('INKSOFT_API_KEY environment variable is required');
     }
-    return crypto.createHash('sha256').update(secret).digest();
+    return key;
 }
 
-function encrypt(plaintext) {
-    const key = getEncryptionKey();
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, key, iv);
-    let encrypted = cipher.update(plaintext, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    const authTag = cipher.getAuthTag().toString('hex');
-    return `${iv.toString('hex')}:${authTag}:${encrypted}`;
-}
-
-function decrypt(encrypted) {
-    const key = getEncryptionKey();
-    const [ivHex, authTagHex, encryptedData] = encrypted.split(':');
-    if (!ivHex || !authTagHex || !encryptedData) {
-        return encrypted;
-    }
-    const iv = Buffer.from(ivHex, 'hex');
-    const authTag = Buffer.from(authTagHex, 'hex');
-    const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, key, iv);
-    decipher.setAuthTag(authTag);
-    let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    return decrypted;
-}
-
-async function authenticateWithCredentials(syncConfig) {
-    const { storeUrl, apiEmail, apiPasswordEncrypted } = syncConfig;
-    const baseUrl = storeUrl.replace(/\/$/, '');
-    const password = decrypt(apiPasswordEncrypted);
-
-    try {
-        const res = await axios.post(`${baseUrl}/Api2/SignIn`, null, {
-            params: {
-                Email: apiEmail,
-                Password: password,
-                Format: 'JSON'
-            },
-            timeout: 15000
-        });
-
-        if (res.data && res.data.OK && res.data.Data && res.data.Data.Token) {
-            syncConfig.sessionToken = res.data.Data.Token;
-            syncConfig.sessionExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-            await syncConfig.save();
-            return res.data.Data.Token;
-        }
-
-        throw new Error(res.data?.Messages?.[0]?.Content || 'Authentication failed');
-    } catch (err) {
-        const msg = err.response?.data?.Messages?.[0]?.Content || err.message;
-        syncConfig.lastError = `Auth failed: ${msg}`;
-        syncConfig.lastErrorAt = new Date();
-        syncConfig.status = 'error';
-        await syncConfig.save();
-        throw new Error(`InkSoft auth failed: ${msg}`);
-    }
-}
-
-async function validateApiKey(syncConfig) {
-    const baseUrl = syncConfig.storeUrl.replace(/\/$/, '');
-    const integrationKey = decrypt(syncConfig.integrationKeyEncrypted);
-
-    try {
-        const res = await axios.get(`${baseUrl}/Api2/GetOrders`, {
-            params: {
-                IntegrationKey: integrationKey,
-                MaxResults: 1,
-                Format: 'JSON'
-            },
-            timeout: 15000
-        });
-
-        if (res.data && res.data.OK) {
-            return true;
-        }
-
-        const msg = res.data?.Messages?.[0]?.Content || 'API key validation failed';
-        throw new Error(msg);
-    } catch (err) {
-        if (err.response?.status === 400 || err.response?.status === 401 || err.response?.status === 403) {
-            const msg = err.response?.data?.Messages?.[0]?.Content || 'Invalid or unauthorized API key';
-            syncConfig.lastError = `API key validation failed: ${msg}`;
-            syncConfig.lastErrorAt = new Date();
-            syncConfig.status = 'error';
-            await syncConfig.save();
-            throw new Error(`InkSoft API key validation failed: ${msg}`);
-        }
-        throw err;
-    }
-}
-
-function getAuthParams(syncConfig) {
-    if (syncConfig.authMode === 'api_key') {
-        if (!syncConfig.integrationKeyEncrypted) {
-            throw new Error('API key is configured but no integration key found. Please re-run setup.');
-        }
-        return { IntegrationKey: decrypt(syncConfig.integrationKeyEncrypted) };
-    }
-    if (!syncConfig.sessionToken) {
-        throw new Error('No active session token. Re-authentication required.');
-    }
-    return { SessionToken: syncConfig.sessionToken };
-}
-
-async function ensureAuth(syncConfig) {
-    if (syncConfig.authMode === 'api_key') {
-        if (!syncConfig.integrationKeyEncrypted) {
-            throw new Error('API key is configured but no integration key found. Please re-run setup.');
-        }
-        return;
-    }
-
-    if (syncConfig.sessionToken && syncConfig.sessionExpiresAt &&
-        new Date(syncConfig.sessionExpiresAt) > new Date(Date.now() + SESSION_REFRESH_BUFFER_MS)) {
-        try {
-            const baseUrl = syncConfig.storeUrl.replace(/\/$/, '');
-            const res = await axios.get(`${baseUrl}/Api2/GetSession`, {
-                params: { SessionToken: syncConfig.sessionToken, Format: 'JSON' },
-                timeout: 10000
-            });
-            if (res.data && res.data.OK) {
-                return;
-            }
-        } catch (e) {
-        }
-    }
-
-    await authenticateWithCredentials(syncConfig);
-}
-
-async function fetchOrdersPage(baseUrl, authParams, params) {
+async function fetchOrdersPage(baseUrl, apiKey, params) {
     const res = await axios.get(`${baseUrl}/Api2/GetOrders`, {
-        params: { ...params, ...authParams, Format: 'JSON' },
+        params: { ...params, IntegrationKey: apiKey, Format: 'JSON' },
         timeout: 30000
     });
 
@@ -166,16 +34,15 @@ async function fetchOrdersPage(baseUrl, authParams, params) {
     return [];
 }
 
-async function fetchOrders(syncConfig) {
-    await ensureAuth(syncConfig);
-    const baseUrl = syncConfig.storeUrl.replace(/\/$/, '');
-    const authParams = getAuthParams(syncConfig);
+async function fetchOrders(syncState) {
+    const apiKey = getApiKey();
+    const baseUrl = syncState.storeUrl.replace(/\/$/, '');
     const pageSize = 100;
     const maxPages = 10;
 
     const params = { MaxResults: pageSize };
-    if (syncConfig.lastPollAt) {
-        params.StartDate = syncConfig.lastPollAt.toISOString();
+    if (syncState.lastPollAt) {
+        params.StartDate = syncState.lastPollAt.toISOString();
     }
 
     let allOrders = [];
@@ -183,30 +50,81 @@ async function fetchOrders(syncConfig) {
 
     while (page < maxPages) {
         params.Skip = page * pageSize;
-
-        let orders;
-        try {
-            orders = await fetchOrdersPage(baseUrl, authParams, params);
-        } catch (err) {
-            if (page === 0 && syncConfig.authMode === 'credentials' &&
-                (err.response?.status === 400 || err.response?.status === 401)) {
-                syncConfig.sessionToken = null;
-                await syncConfig.save();
-                await authenticateWithCredentials(syncConfig);
-                const newAuthParams = getAuthParams(syncConfig);
-                orders = await fetchOrdersPage(baseUrl, newAuthParams, params);
-            } else {
-                throw err;
-            }
-        }
-
+        const orders = await fetchOrdersPage(baseUrl, apiKey, params);
         allOrders = allOrders.concat(orders);
-
         if (orders.length < pageSize) break;
         page++;
     }
 
     return allOrders;
+}
+
+async function matchOrderToLabel(order) {
+    const items = order.Items || order.OrderItems || [];
+    const storeName = order.StoreName || order.Store || '';
+    const brandName = order.BrandName || '';
+
+    const searchTerms = new Set();
+    if (storeName) searchTerms.add(storeName.toLowerCase().trim());
+    if (brandName) searchTerms.add(brandName.toLowerCase().trim());
+
+    for (const item of items) {
+        const designer = item.Designer || item.BrandName || item.ArtistName || '';
+        if (designer) searchTerms.add(designer.toLowerCase().trim());
+    }
+
+    if (searchTerms.size === 0) return null;
+
+    const labels = await Label.find({ status: 'active' });
+
+    for (const label of labels) {
+        const labelName = label.name.toLowerCase().trim();
+        const labelSlug = label.slug.toLowerCase().trim();
+
+        for (const term of searchTerms) {
+            if (term === labelName || term === labelSlug ||
+                term.includes(labelName) || labelName.includes(term) ||
+                term.includes(labelSlug) || labelSlug.includes(term)) {
+                return label;
+            }
+        }
+
+        for (const artist of label.artists) {
+            if (!artist.active) continue;
+            const artistName = artist.name.toLowerCase().trim();
+            const artistSlug = artist.slug.toLowerCase().trim();
+
+            for (const term of searchTerms) {
+                if (term === artistName || term === artistSlug ||
+                    term.includes(artistName) || artistName.includes(term)) {
+                    return label;
+                }
+            }
+        }
+    }
+
+    return null;
+}
+
+function matchArtistOnLabel(order, label) {
+    const items = order.Items || order.OrderItems || [];
+
+    for (const item of items) {
+        const designer = (item.Designer || item.BrandName || item.ArtistName || '').toLowerCase().trim();
+        if (!designer) continue;
+
+        for (const artist of label.artists) {
+            if (!artist.active) continue;
+            const artistName = artist.name.toLowerCase().trim();
+            const artistSlug = artist.slug.toLowerCase().trim();
+            if (designer === artistName || designer === artistSlug ||
+                designer.includes(artistName) || artistName.includes(designer)) {
+                return { name: artist.name, slug: artist.slug };
+            }
+        }
+    }
+
+    return { name: label.name, slug: label.slug };
 }
 
 function mapInkSoftOrder(order, label) {
@@ -219,6 +137,7 @@ function mapInkSoftOrder(order, label) {
     const orderDate = order.OrderDate || order.DateCreated || order.CreatedDate || new Date().toISOString();
     const orderStatus = (order.Status || order.OrderStatus || 'confirmed').toLowerCase();
     const customer = order.Customer || order.ShipTo || {};
+    const artist = matchArtistOnLabel(order, label);
 
     for (const item of items) {
         const sku = String(item.Sku || item.SKU || item.ProductSku || item.ItemId || '');
@@ -228,10 +147,6 @@ function mapInkSoftOrder(order, label) {
         const quantity = parseInt(item.Quantity || item.Qty || 1);
         const unitPrice = parseFloat(item.UnitPrice || item.Price || 0);
         const totalAmount = parseFloat(item.TotalPrice || item.Total || item.LineTotal || (unitPrice * quantity));
-        const artistName = item.ArtistName || item.Designer || item.BrandName || label.name;
-        const artistSlug = artistName.toLowerCase().trim()
-            .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-
         const productType = detectProductType(productName, item.Category || item.ProductType || '');
 
         mapped.push({
@@ -239,8 +154,8 @@ function mapInkSoftOrder(order, label) {
             sellerType: 'label',
             sellerId: label._id,
             labelId: label._id,
-            artistName,
-            artistSlug,
+            artistName: artist.name,
+            artistSlug: artist.slug,
             sku,
             productName,
             productType,
@@ -289,28 +204,48 @@ function mapOrderStatus(status) {
     return 'confirmed';
 }
 
-async function pollOrders(labelId) {
-    const syncConfig = await InkSoftSync.findOne({ labelId, enabled: true });
-    if (!syncConfig) {
-        console.log(`[InkSoft] No active sync config for label ${labelId}`);
+async function getOrCreateSyncState() {
+    let syncState = await InkSoftSync.findOne({});
+    if (!syncState) {
+        syncState = new InkSoftSync({
+            storeUrl: STORE_URL,
+            status: 'active',
+            enabled: true
+        });
+        await syncState.save();
+    }
+    return syncState;
+}
+
+async function pollOrders() {
+    const syncState = await getOrCreateSyncState();
+    if (!syncState.enabled) {
+        console.log('[InkSoft] Polling is disabled');
         return null;
     }
 
     const startTime = Date.now();
-    console.log(`[InkSoft] Polling orders for label ${labelId} (auth: ${syncConfig.authMode})...`);
+    console.log('[InkSoft] Polling orders...');
 
     try {
-        const label = await Label.findById(labelId);
-        if (!label) throw new Error(`Label not found: ${labelId}`);
-
-        const orders = await fetchOrders(syncConfig);
+        const orders = await fetchOrders(syncState);
         console.log(`[InkSoft] Fetched ${orders.length} orders from InkSoft`);
 
         let recorded = 0;
         let duplicates = 0;
         let errors = 0;
+        let unmatched = 0;
 
         for (const order of orders) {
+            const label = await matchOrderToLabel(order);
+
+            if (!label) {
+                unmatched++;
+                const orderId = order.OrderId || order.Id || order.OrderNumber || 'unknown';
+                console.log(`[InkSoft] No matching label for order ${orderId} — skipping`);
+                continue;
+            }
+
             const saleItems = mapInkSoftOrder(order, label);
 
             for (const saleData of saleItems) {
@@ -328,107 +263,93 @@ async function pollOrders(labelId) {
             }
         }
 
-        syncConfig.lastPollAt = new Date();
-        syncConfig.lastError = null;
-        syncConfig.status = 'active';
-        syncConfig.stats.totalOrdersSynced += orders.length;
-        syncConfig.stats.totalItemsSynced += recorded;
-        syncConfig.stats.duplicatesSkipped += duplicates;
-        syncConfig.stats.lastSyncDuration = Date.now() - startTime;
-        await syncConfig.save();
+        syncState.lastPollAt = new Date();
+        syncState.lastError = null;
+        syncState.status = 'active';
+        syncState.stats.totalOrdersSynced += orders.length;
+        syncState.stats.totalItemsSynced += recorded;
+        syncState.stats.totalUnmatched += unmatched;
+        syncState.stats.duplicatesSkipped += duplicates;
+        syncState.stats.lastSyncDuration = Date.now() - startTime;
+        await syncState.save();
 
-        console.log(`[InkSoft] Poll complete: ${recorded} recorded, ${duplicates} duplicates, ${errors} errors (${Date.now() - startTime}ms)`);
+        console.log(`[InkSoft] Poll complete: ${recorded} recorded, ${duplicates} duplicates, ${unmatched} unmatched, ${errors} errors (${Date.now() - startTime}ms)`);
 
-        return { recorded, duplicates, errors, ordersChecked: orders.length };
+        return { recorded, duplicates, unmatched, errors, ordersChecked: orders.length };
     } catch (err) {
-        console.error(`[InkSoft] Poll error for label ${labelId}:`, err.message);
+        console.error('[InkSoft] Poll error:', err.message);
 
-        syncConfig.lastError = err.message;
-        syncConfig.lastErrorAt = new Date();
-        syncConfig.status = 'error';
-        await syncConfig.save();
+        syncState.lastError = err.message;
+        syncState.lastErrorAt = new Date();
+        syncState.status = 'error';
+        await syncState.save();
 
         return { error: err.message };
     }
 }
 
-function startPoller(labelId, intervalMs) {
-    stopPoller(labelId);
+function startGlobalPoller(intervalMs) {
+    stopGlobalPoller();
 
-    const labelStr = labelId.toString();
     const interval = intervalMs || POLL_INTERVAL_MS_DEFAULT;
 
-    console.log(`[InkSoft] Starting poller for label ${labelStr} (every ${interval / 60000} min)`);
+    if (!process.env.INKSOFT_API_KEY) {
+        console.log('[InkSoft] INKSOFT_API_KEY not set — poller not started');
+        return;
+    }
 
-    pollOrders(labelId).catch(err => {
-        console.error(`[InkSoft] Initial poll error for ${labelStr}:`, err.message);
+    console.log(`[InkSoft] Starting global poller (every ${interval / 60000} min)`);
+
+    pollOrders().catch(err => {
+        console.error('[InkSoft] Initial poll error:', err.message);
     });
 
-    const timerId = setInterval(() => {
-        pollOrders(labelId).catch(err => {
-            console.error(`[InkSoft] Poll error for ${labelStr}:`, err.message);
+    globalPollerTimer = setInterval(() => {
+        pollOrders().catch(err => {
+            console.error('[InkSoft] Poll error:', err.message);
         });
     }, interval);
-
-    activePollers.set(labelStr, timerId);
 }
 
-function stopPoller(labelId) {
-    const labelStr = labelId.toString();
-    if (activePollers.has(labelStr)) {
-        clearInterval(activePollers.get(labelStr));
-        activePollers.delete(labelStr);
-        console.log(`[InkSoft] Stopped poller for label ${labelStr}`);
+function stopGlobalPoller() {
+    if (globalPollerTimer) {
+        clearInterval(globalPollerTimer);
+        globalPollerTimer = null;
+        console.log('[InkSoft] Global poller stopped');
     }
 }
 
-async function initAllPollers() {
-    try {
-        const configs = await InkSoftSync.find({ enabled: true, status: { $in: ['active', 'setup'] } });
-        console.log(`[InkSoft] Initializing ${configs.length} poller(s)`);
-
-        for (const config of configs) {
-            startPoller(config.labelId, config.pollIntervalMinutes * 60 * 1000);
-        }
-    } catch (err) {
-        console.error('[InkSoft] Failed to initialize pollers:', err.message);
+async function getSyncStatus() {
+    const syncState = await InkSoftSync.findOne({});
+    if (!syncState) {
+        return {
+            configured: false,
+            hasApiKey: !!process.env.INKSOFT_API_KEY
+        };
     }
-}
-
-function stopAllPollers() {
-    for (const [labelId] of activePollers) {
-        stopPoller(labelId);
-    }
-}
-
-async function getSyncStatus(labelId) {
-    const config = await InkSoftSync.findOne({ labelId });
-    if (!config) return null;
 
     return {
-        enabled: config.enabled,
-        status: config.status,
-        authMode: config.authMode,
-        lastPollAt: config.lastPollAt,
-        lastError: config.lastError,
-        lastErrorAt: config.lastErrorAt,
-        pollIntervalMinutes: config.pollIntervalMinutes,
-        stats: config.stats,
-        isPolling: activePollers.has(labelId.toString())
+        configured: true,
+        hasApiKey: !!process.env.INKSOFT_API_KEY,
+        enabled: syncState.enabled,
+        status: syncState.status,
+        storeUrl: syncState.storeUrl,
+        lastPollAt: syncState.lastPollAt,
+        lastError: syncState.lastError,
+        lastErrorAt: syncState.lastErrorAt,
+        pollIntervalMinutes: syncState.pollIntervalMinutes,
+        stats: syncState.stats,
+        isPolling: !!globalPollerTimer
     };
 }
 
 module.exports = {
-    authenticateWithCredentials,
-    validateApiKey,
     pollOrders,
-    startPoller,
-    stopPoller,
-    initAllPollers,
-    stopAllPollers,
+    startGlobalPoller,
+    stopGlobalPoller,
     getSyncStatus,
+    matchOrderToLabel,
     mapInkSoftOrder,
     fetchOrders,
-    encrypt,
-    decrypt
+    getOrCreateSyncState
 };

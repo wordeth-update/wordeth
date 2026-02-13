@@ -110,8 +110,8 @@ if (mongoUri && mongoUri !== 'mongodb://localhost:27017/wordeth') {
     .then(() => {
         if (process.env.NODE_ENV !== 'test') {
             console.log('✅ Connected to MongoDB Atlas');
-            const { initAllPollers } = require('./services/inkSoftService');
-            initAllPollers().catch(err => console.error('InkSoft poller init error:', err.message));
+            const { startGlobalPoller } = require('./services/inkSoftService');
+            startGlobalPoller();
         }
     })
     .catch(err => {

@@ -840,95 +840,15 @@ router.delete('/artwork/:artistSlug/:artworkId', partnerAuth, async (req, res) =
     }
 });
 
-const InkSoftSync = require('../models/InkSoftSync');
 const inkSoftService = require('../services/inkSoftService');
 
 router.get('/inksoft/status', partnerAuth, async (req, res) => {
     try {
-        const status = await inkSoftService.getSyncStatus(req.label._id);
+        const status = await inkSoftService.getSyncStatus();
         res.json({ success: true, data: status });
     } catch (error) {
         console.error('InkSoft status error:', error);
         res.status(500).json({ success: false, message: 'Failed to get sync status' });
-    }
-});
-
-router.post('/inksoft/setup', partnerAuth, async (req, res) => {
-    try {
-        if (req.partner.role === 'viewer') {
-            return res.status(403).json({ success: false, message: 'Insufficient permissions' });
-        }
-
-        const { storeUrl, integrationKey, apiEmail, apiPassword, pollIntervalMinutes } = req.body;
-
-        if (!storeUrl) {
-            return res.status(400).json({ success: false, message: 'storeUrl is required' });
-        }
-
-        if (!integrationKey && (!apiEmail || !apiPassword)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Either integrationKey or apiEmail + apiPassword are required'
-            });
-        }
-
-        let syncConfig = await InkSoftSync.findOne({ labelId: req.label._id });
-
-        const configData = {
-            storeUrl,
-            pollIntervalMinutes: pollIntervalMinutes || 15,
-            status: 'setup',
-            enabled: true
-        };
-
-        if (integrationKey) {
-            configData.authMode = 'api_key';
-            configData.integrationKeyEncrypted = inkSoftService.encrypt(integrationKey);
-            configData.apiEmail = null;
-            configData.apiPasswordEncrypted = null;
-            configData.sessionToken = null;
-        } else {
-            configData.authMode = 'credentials';
-            configData.apiEmail = apiEmail;
-            configData.apiPasswordEncrypted = inkSoftService.encrypt(apiPassword);
-            configData.integrationKeyEncrypted = null;
-        }
-
-        if (syncConfig) {
-            Object.assign(syncConfig, configData);
-        } else {
-            syncConfig = new InkSoftSync({ labelId: req.label._id, ...configData });
-        }
-
-        await syncConfig.save();
-
-        try {
-            if (syncConfig.authMode === 'api_key') {
-                await inkSoftService.validateApiKey(syncConfig);
-            } else {
-                await inkSoftService.authenticateWithCredentials(syncConfig);
-            }
-
-            syncConfig.status = 'active';
-            await syncConfig.save();
-
-            inkSoftService.startPoller(req.label._id, syncConfig.pollIntervalMinutes * 60 * 1000);
-
-            res.json({
-                success: true,
-                message: 'InkSoft integration configured and verified successfully',
-                data: { status: 'active', authMode: syncConfig.authMode, pollIntervalMinutes: syncConfig.pollIntervalMinutes }
-            });
-        } catch (authErr) {
-            res.status(400).json({
-                success: false,
-                message: `InkSoft verification failed: ${authErr.message}. Please check your ${syncConfig.authMode === 'api_key' ? 'API key' : 'credentials'}.`,
-                data: { status: 'error' }
-            });
-        }
-    } catch (error) {
-        console.error('InkSoft setup error:', error);
-        res.status(500).json({ success: false, message: 'Failed to configure InkSoft integration' });
     }
 });
 
@@ -938,10 +858,10 @@ router.post('/inksoft/poll', partnerAuth, async (req, res) => {
             return res.status(403).json({ success: false, message: 'Insufficient permissions' });
         }
 
-        const result = await inkSoftService.pollOrders(req.label._id);
+        const result = await inkSoftService.pollOrders();
 
         if (!result) {
-            return res.status(404).json({ success: false, message: 'No InkSoft integration configured' });
+            return res.status(404).json({ success: false, message: 'InkSoft sync is not active' });
         }
 
         if (result.error) {
@@ -950,45 +870,12 @@ router.post('/inksoft/poll', partnerAuth, async (req, res) => {
 
         res.json({
             success: true,
-            message: `Sync complete: ${result.recorded} new sales recorded`,
+            message: `Sync complete: ${result.recorded} new sales recorded, ${result.unmatched} unmatched`,
             data: result
         });
     } catch (error) {
         console.error('InkSoft manual poll error:', error);
         res.status(500).json({ success: false, message: 'Failed to sync with InkSoft' });
-    }
-});
-
-router.post('/inksoft/toggle', partnerAuth, async (req, res) => {
-    try {
-        if (req.partner.role === 'viewer') {
-            return res.status(403).json({ success: false, message: 'Insufficient permissions' });
-        }
-
-        const syncConfig = await InkSoftSync.findOne({ labelId: req.label._id });
-        if (!syncConfig) {
-            return res.status(404).json({ success: false, message: 'No InkSoft integration configured' });
-        }
-
-        syncConfig.enabled = !syncConfig.enabled;
-        if (syncConfig.enabled) {
-            syncConfig.status = 'active';
-            await syncConfig.save();
-            inkSoftService.startPoller(req.label._id, syncConfig.pollIntervalMinutes * 60 * 1000);
-        } else {
-            syncConfig.status = 'paused';
-            await syncConfig.save();
-            inkSoftService.stopPoller(req.label._id);
-        }
-
-        res.json({
-            success: true,
-            message: syncConfig.enabled ? 'InkSoft sync enabled' : 'InkSoft sync paused',
-            data: { enabled: syncConfig.enabled, status: syncConfig.status }
-        });
-    } catch (error) {
-        console.error('InkSoft toggle error:', error);
-        res.status(500).json({ success: false, message: 'Failed to toggle sync' });
     }
 });
 
