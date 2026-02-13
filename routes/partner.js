@@ -859,42 +859,56 @@ router.post('/inksoft/setup', partnerAuth, async (req, res) => {
             return res.status(403).json({ success: false, message: 'Insufficient permissions' });
         }
 
-        const { storeUrl, apiEmail, apiPassword, pollIntervalMinutes } = req.body;
+        const { storeUrl, integrationKey, apiEmail, apiPassword, pollIntervalMinutes } = req.body;
 
-        if (!storeUrl || !apiEmail || !apiPassword) {
+        if (!storeUrl) {
+            return res.status(400).json({ success: false, message: 'storeUrl is required' });
+        }
+
+        if (!integrationKey && (!apiEmail || !apiPassword)) {
             return res.status(400).json({
                 success: false,
-                message: 'storeUrl, apiEmail, and apiPassword are required'
+                message: 'Either integrationKey or apiEmail + apiPassword are required'
             });
         }
 
         let syncConfig = await InkSoftSync.findOne({ labelId: req.label._id });
 
-        const encryptedPassword = inkSoftService.encryptPassword(apiPassword);
+        const configData = {
+            storeUrl,
+            pollIntervalMinutes: pollIntervalMinutes || 15,
+            status: 'setup',
+            enabled: true
+        };
+
+        if (integrationKey) {
+            configData.authMode = 'api_key';
+            configData.integrationKeyEncrypted = inkSoftService.encrypt(integrationKey);
+            configData.apiEmail = null;
+            configData.apiPasswordEncrypted = null;
+            configData.sessionToken = null;
+        } else {
+            configData.authMode = 'credentials';
+            configData.apiEmail = apiEmail;
+            configData.apiPasswordEncrypted = inkSoftService.encrypt(apiPassword);
+            configData.integrationKeyEncrypted = null;
+        }
 
         if (syncConfig) {
-            syncConfig.storeUrl = storeUrl;
-            syncConfig.apiEmail = apiEmail;
-            syncConfig.apiPasswordEncrypted = encryptedPassword;
-            if (pollIntervalMinutes) syncConfig.pollIntervalMinutes = pollIntervalMinutes;
-            syncConfig.status = 'setup';
-            syncConfig.enabled = true;
+            Object.assign(syncConfig, configData);
         } else {
-            syncConfig = new InkSoftSync({
-                labelId: req.label._id,
-                storeUrl,
-                apiEmail,
-                apiPasswordEncrypted: encryptedPassword,
-                pollIntervalMinutes: pollIntervalMinutes || 15,
-                status: 'setup',
-                enabled: true
-            });
+            syncConfig = new InkSoftSync({ labelId: req.label._id, ...configData });
         }
 
         await syncConfig.save();
 
         try {
-            await inkSoftService.authenticate(syncConfig);
+            if (syncConfig.authMode === 'api_key') {
+                await inkSoftService.validateApiKey(syncConfig);
+            } else {
+                await inkSoftService.authenticateWithCredentials(syncConfig);
+            }
+
             syncConfig.status = 'active';
             await syncConfig.save();
 
@@ -902,13 +916,13 @@ router.post('/inksoft/setup', partnerAuth, async (req, res) => {
 
             res.json({
                 success: true,
-                message: 'InkSoft integration configured and authenticated successfully',
-                data: { status: 'active', pollIntervalMinutes: syncConfig.pollIntervalMinutes }
+                message: 'InkSoft integration configured and verified successfully',
+                data: { status: 'active', authMode: syncConfig.authMode, pollIntervalMinutes: syncConfig.pollIntervalMinutes }
             });
         } catch (authErr) {
             res.status(400).json({
                 success: false,
-                message: `InkSoft authentication failed: ${authErr.message}. Please check your credentials.`,
+                message: `InkSoft verification failed: ${authErr.message}. Please check your ${syncConfig.authMode === 'api_key' ? 'API key' : 'credentials'}.`,
                 data: { status: 'error' }
             });
         }

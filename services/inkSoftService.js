@@ -15,7 +15,7 @@ function getEncryptionKey() {
     return crypto.createHash('sha256').update(secret).digest();
 }
 
-function encryptPassword(plaintext) {
+function encrypt(plaintext) {
     const key = getEncryptionKey();
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, key, iv);
@@ -25,7 +25,7 @@ function encryptPassword(plaintext) {
     return `${iv.toString('hex')}:${authTag}:${encrypted}`;
 }
 
-function decryptPassword(encrypted) {
+function decrypt(encrypted) {
     const key = getEncryptionKey();
     const [ivHex, authTagHex, encryptedData] = encrypted.split(':');
     if (!ivHex || !authTagHex || !encryptedData) {
@@ -40,10 +40,10 @@ function decryptPassword(encrypted) {
     return decrypted;
 }
 
-async function authenticate(syncConfig) {
+async function authenticateWithCredentials(syncConfig) {
     const { storeUrl, apiEmail, apiPasswordEncrypted } = syncConfig;
     const baseUrl = storeUrl.replace(/\/$/, '');
-    const password = decryptPassword(apiPasswordEncrypted);
+    const password = decrypt(apiPasswordEncrypted);
 
     try {
         const res = await axios.post(`${baseUrl}/Api2/SignIn`, null, {
@@ -73,7 +73,47 @@ async function authenticate(syncConfig) {
     }
 }
 
-async function ensureSession(syncConfig) {
+async function validateApiKey(syncConfig) {
+    const baseUrl = syncConfig.storeUrl.replace(/\/$/, '');
+    const integrationKey = decrypt(syncConfig.integrationKeyEncrypted);
+
+    try {
+        const res = await axios.get(`${baseUrl}/Api2/GetOrders`, {
+            params: {
+                IntegrationKey: integrationKey,
+                MaxResults: 1,
+                Format: 'JSON'
+            },
+            timeout: 15000
+        });
+
+        if (res.data && res.data.OK) {
+            return true;
+        }
+
+        const msg = res.data?.Messages?.[0]?.Content || 'API key validation failed';
+        throw new Error(msg);
+    } catch (err) {
+        if (err.response?.status === 400) {
+            const msg = err.response?.data?.Messages?.[0]?.Content || 'Invalid API key';
+            throw new Error(`InkSoft API key validation failed: ${msg}`);
+        }
+        throw err;
+    }
+}
+
+function getAuthParams(syncConfig) {
+    if (syncConfig.authMode === 'api_key' && syncConfig.integrationKeyEncrypted) {
+        return { IntegrationKey: decrypt(syncConfig.integrationKeyEncrypted) };
+    }
+    return { SessionToken: syncConfig.sessionToken };
+}
+
+async function ensureAuth(syncConfig) {
+    if (syncConfig.authMode === 'api_key' && syncConfig.integrationKeyEncrypted) {
+        return;
+    }
+
     if (syncConfig.sessionToken && syncConfig.sessionExpiresAt &&
         new Date(syncConfig.sessionExpiresAt) > new Date(Date.now() + SESSION_REFRESH_BUFFER_MS)) {
         try {
@@ -83,18 +123,18 @@ async function ensureSession(syncConfig) {
                 timeout: 10000
             });
             if (res.data && res.data.OK) {
-                return syncConfig.sessionToken;
+                return;
             }
         } catch (e) {
         }
     }
 
-    return authenticate(syncConfig);
+    await authenticateWithCredentials(syncConfig);
 }
 
-async function fetchOrdersPage(baseUrl, token, params) {
+async function fetchOrdersPage(baseUrl, authParams, params) {
     const res = await axios.get(`${baseUrl}/Api2/GetOrders`, {
-        params: { ...params, SessionToken: token, Format: 'JSON' },
+        params: { ...params, ...authParams, Format: 'JSON' },
         timeout: 30000
     });
 
@@ -111,8 +151,9 @@ async function fetchOrdersPage(baseUrl, token, params) {
 }
 
 async function fetchOrders(syncConfig) {
-    let token = await ensureSession(syncConfig);
+    await ensureAuth(syncConfig);
     const baseUrl = syncConfig.storeUrl.replace(/\/$/, '');
+    const authParams = getAuthParams(syncConfig);
     const pageSize = 100;
     const maxPages = 10;
 
@@ -124,34 +165,32 @@ async function fetchOrders(syncConfig) {
     let allOrders = [];
     let page = 0;
 
-    try {
-        while (page < maxPages) {
-            params.Skip = page * pageSize;
+    while (page < maxPages) {
+        params.Skip = page * pageSize;
 
-            let orders;
-            try {
-                orders = await fetchOrdersPage(baseUrl, token, params);
-            } catch (err) {
-                if (page === 0 && (err.response?.status === 400 || err.response?.status === 401)) {
-                    syncConfig.sessionToken = null;
-                    await syncConfig.save();
-                    token = await authenticate(syncConfig);
-                    orders = await fetchOrdersPage(baseUrl, token, params);
-                } else {
-                    throw err;
-                }
+        let orders;
+        try {
+            orders = await fetchOrdersPage(baseUrl, authParams, params);
+        } catch (err) {
+            if (page === 0 && syncConfig.authMode === 'credentials' &&
+                (err.response?.status === 400 || err.response?.status === 401)) {
+                syncConfig.sessionToken = null;
+                await syncConfig.save();
+                await authenticateWithCredentials(syncConfig);
+                const newAuthParams = getAuthParams(syncConfig);
+                orders = await fetchOrdersPage(baseUrl, newAuthParams, params);
+            } else {
+                throw err;
             }
-
-            allOrders = allOrders.concat(orders);
-
-            if (orders.length < pageSize) break;
-            page++;
         }
 
-        return allOrders;
-    } catch (err) {
-        throw err;
+        allOrders = allOrders.concat(orders);
+
+        if (orders.length < pageSize) break;
+        page++;
     }
+
+    return allOrders;
 }
 
 function mapInkSoftOrder(order, label) {
@@ -242,7 +281,7 @@ async function pollOrders(labelId) {
     }
 
     const startTime = Date.now();
-    console.log(`[InkSoft] Polling orders for label ${labelId}...`);
+    console.log(`[InkSoft] Polling orders for label ${labelId} (auth: ${syncConfig.authMode})...`);
 
     try {
         const label = await Label.findById(labelId);
@@ -353,6 +392,7 @@ async function getSyncStatus(labelId) {
     return {
         enabled: config.enabled,
         status: config.status,
+        authMode: config.authMode,
         lastPollAt: config.lastPollAt,
         lastError: config.lastError,
         lastErrorAt: config.lastErrorAt,
@@ -363,7 +403,8 @@ async function getSyncStatus(labelId) {
 }
 
 module.exports = {
-    authenticate,
+    authenticateWithCredentials,
+    validateApiKey,
     pollOrders,
     startPoller,
     stopPoller,
@@ -372,6 +413,6 @@ module.exports = {
     getSyncStatus,
     mapInkSoftOrder,
     fetchOrders,
-    encryptPassword,
-    decryptPassword
+    encrypt,
+    decrypt
 };

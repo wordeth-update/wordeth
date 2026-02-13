@@ -3,8 +3,10 @@ const mongoose = require('mongoose');
 const inkSoftSyncSchema = new mongoose.Schema({
     labelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Label', required: true, unique: true },
     storeUrl: { type: String, required: true },
-    apiEmail: { type: String, required: true },
-    apiPasswordEncrypted: { type: String, required: true },
+    authMode: { type: String, enum: ['api_key', 'credentials'], default: 'api_key' },
+    integrationKeyEncrypted: { type: String, default: null },
+    apiEmail: { type: String, default: null },
+    apiPasswordEncrypted: { type: String, default: null },
     sessionToken: { type: String, default: null },
     sessionExpiresAt: { type: Date, default: null },
     lastPollAt: { type: Date, default: null },
