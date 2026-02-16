@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Verses Tournaments - Wordeth</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/tournaments.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/cookie-consent.css">
+    <link rel="stylesheet" href="css/notifications.css">
+    <link rel="stylesheet" href="css/mini-player.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="main-nav">
+        <div class="nav-logo">
+            <a href="/"><img src="images/logo.png" alt="Wordeth Logo" class="logo"></a>
+        </div>
+        <div class="nav-links">
+            <a href="verses.html">Verses</a>
+            <a href="verses-tournaments.html" class="active nav-link-tournament tournament-nav-item" style="display:none;"><i class="fas fa-trophy trophy-icon"></i> Tournaments</a>
+            <a href="lyrics.html">Lyrics</a>
+            <a href="merch.html">Merch</a>
+            <a href="pricing.html">Pricing</a>
+        </div>
+        <div class="search-container">
+            <input type="text" placeholder="Search a song..." class="search-input">
+            <button class="search-button"><img src="assets/mic-icon.svg" alt="Search" class="mic-icon"></button>
+        </div>
+        <div class="nav-auth">
+            <a href="/signin.html" class="nav-signin-btn">Sign In</a>
+        </div>
+        <button class="menu-toggle" id="menuToggle">
+            <span></span><span></span><span></span>
+        </button>
+    </nav>
+
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-content">
+            <div class="mobile-menu-header">
+                <img src="images/logo.png" alt="Wordeth Logo" class="mobile-logo">
+                <button class="mobile-menu-close" id="mobileMenuClose"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="mobile-menu-links">
+                <a href="verses.html" class="mobile-menu-link"><i class="fas fa-headphones"></i><span>Verses</span></a>
+                <a href="verses-tournaments.html" class="mobile-menu-link active tournament-nav-item" style="display:none;"><i class="fas fa-trophy"></i><span>Tournaments</span></a>
+                <a href="lyrics.html" class="mobile-menu-link"><i class="fas fa-music"></i><span>Lyrics</span></a>
+                <a href="merch.html" class="mobile-menu-link"><i class="fas fa-tshirt"></i><span>Merch</span></a>
+                <a href="pricing.html" class="mobile-menu-link"><i class="fas fa-tags"></i><span>Pricing</span></a>
+            </div>
+            <div class="mobile-menu-auth">
+                <a href="/signin.html" class="mobile-signin-btn"><i class="fas fa-user"></i><span>Sign In</span></a>
+            </div>
+        </div>
+    </div>
+
+    <main class="tournament-page">
+        <div class="tournament-container">
+            <div class="tournament-hero" id="seasonHero">
+                <div class="tournament-hero-content">
+                    <div class="season-badge"><i class="fas fa-trophy"></i> <span id="seasonBadge">Loading...</span></div>
+                    <h1 id="seasonName">Verses Tournaments</h1>
+                    <p id="seasonDesc">Artists submit original verses or cover songs. Fans vote head-to-head. Who will be crowned champion?</p>
+                    <div class="hero-meta" id="seasonMeta"></div>
+                </div>
+            </div>
+
+            <div class="tournament-sponsor-bar" id="sponsorBar" style="display:none;">
+                <span class="sponsor-label">Presented by</span>
+                <span id="sponsorName"></span>
+            </div>
+
+            <div id="roundsSection">
+                <h2 class="section-title"><i class="fas fa-layer-group"></i> Rounds</h2>
+                <div class="rounds-grid" id="roundsGrid">
+                    <div class="empty-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading rounds...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="leaderboardPreview" style="display:none;">
+                <h2 class="section-title"><i class="fas fa-medal"></i> Top Artists</h2>
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Artist</th>
+                            <th>Points</th>
+                            <th>W-L</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboardBody"></tbody>
+                </table>
+                <div style="text-align:center; margin-top:1rem;">
+                    <a href="#" id="fullLeaderboardLink" style="color:var(--mint); text-decoration:none; font-size:0.9rem;">View Full Leaderboard <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+
+            <div class="past-seasons" id="pastSeasons" style="display:none;">
+                <h2 class="section-title"><i class="fas fa-history"></i> Past Seasons</h2>
+                <div class="past-seasons-list" id="pastSeasonsList"></div>
+            </div>
+        </div>
+    </main>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="js/tournament-nav.js"></script>
+    <script src="js/tournaments-hub.js"></script>
+</body>
+</html>

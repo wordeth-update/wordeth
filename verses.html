@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="css/notifications.css?v=1770526814">
     <link rel="stylesheet" href="css/profile.css">
     <link rel="stylesheet" href="css/mini-player.css">
+    <link rel="stylesheet" href="css/tournaments.css">
 </head>
 <body>
     <nav class="main-nav">
@@ -23,6 +24,7 @@
         </div>
         <div class="nav-links">
             <a href="verses.html" class="active">Verses</a>
+            <a href="verses-tournaments.html" class="nav-link-tournament tournament-nav-item" style="display:none;"><i class="fas fa-trophy trophy-icon"></i> Tournaments</a>
             <a href="lyrics.html">Lyrics</a>
             <a href="merch.html">Merch</a>
             <a href="pricing.html">Pricing</a>
@@ -57,6 +59,7 @@
                     <i class="fas fa-headphones"></i>
                     <span>Verses</span>
                 </a>
+                <a href="verses-tournaments.html" class="mobile-menu-link tournament-nav-item" style="display:none;"><i class="fas fa-trophy"></i><span>Tournaments</span></a>
                 <a href="lyrics.html" class="mobile-menu-link">
                     <i class="fas fa-music"></i>
                     <span>Lyrics</span>
@@ -758,6 +761,7 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/util.min.js"></script>
+    <script src="js/tournament-nav.js"></script>
     <script src="js/config.js"></script>
     <script src="js/main.js"></script>
     <script src="js/native-screen-capture.js"></script>

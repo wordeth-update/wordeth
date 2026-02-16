@@ -45,6 +45,7 @@ const analyticsRoutes = require('./routes/analytics'); // Usage metrics
 const partnerRoutes = require('./routes/partner'); // Label partner dashboards
 const subscriptionRoutes = require('./routes/subscriptions'); // Subscription & plans
 const creatorRoutes = require('./routes/creator'); // Independent artist/designer
+const tournamentRoutes = require('./routes/tournaments'); // Verses Tournaments
 const trackingMiddleware = require('./middleware/tracking'); // Event tracking
 
 const app = express();
@@ -163,6 +164,7 @@ app.use('/api/analytics', analyticsRoutes); // Usage metrics & admin dashboard
 app.use('/api/partner', partnerRoutes); // Label partner dashboards
 app.use('/api/subscriptions', subscriptionRoutes); // Subscription & plans
 app.use('/api/creator', creatorRoutes); // Independent artist/designer
+app.use('/api/tournaments', tournamentRoutes); // Verses Tournaments
 app.get('/api/rooms/active', (req, res) => {
     res.json(getActiveRooms());
 });

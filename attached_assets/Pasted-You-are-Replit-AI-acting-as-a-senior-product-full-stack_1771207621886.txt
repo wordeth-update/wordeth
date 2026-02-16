@@ -1,0 +1,245 @@
+You are Replit AI acting as a senior product + full-stack engineer. Build the “Wordeth Verses” Tournament + Championships framework inside the existing MEVN-style stack (Node v22 + Express + MongoDB/Mongoose + JWT/Passport + vanilla JS/HTML/CSS + WebRTC). This must be an MVP that is production-minded, modular, and integrates cleanly with existing dashboards and the standalone ads system.
+
+CONTEXT / PRODUCT INTENT
+Wordeth Verses is a HYBRID EXPRESSION ENGINE centered on independent artists performing THEIR OWN original lyrics (not covers). Fans participate by voting and interpreting, and designers can create merch designs tied to winning verses (merch fulfillment handled externally by Commerce OpCo). Verses Tournaments/Championships create long-term demand through ritual cycles: theme announcement, submission window, live showcases, voting windows, winners, and merch drops.
+
+PRIMARY GOALS
+1) Implement a recurring tournament system (“Seasons” and “Rounds”) with configurable cadence.
+2) Support three participation roles:
+   - Independent Artists (submit/perform original verses)
+   - Fans/Users (watch, vote, react, follow)
+   - Designers (optional in MVP: submit designs tied to verses; at minimum provide hooks/events for future)
+3) Provide sponsorship inventory and placement (naming rights, sound logos, leaderboard sponsorships, round sponsorships).
+4) Build dashboards and admin tooling to create/manage tournaments, approve content, moderate, and report.
+5) Integrate with existing WebRTC live rooms for showcases, and integrate with “wordeth-ads-standalone” for ad delivery on lyric pages AND sponsorship placements within Verses.
+
+NON-GOALS (for MVP)
+- Do NOT implement full payout disbursement; only track “payout owed” placeholders and ledger events.
+- Do NOT implement fully automated music rights licensing; assume independent artists own their lyrics and accept ToS.
+- Do NOT build a complex recommendation engine; simple sorting and featured picks are fine.
+
+TOURNAMENT CONCEPT (WHAT IT IS)
+- A “Season” consists of multiple “Rounds” (e.g., Round of 32, Round of 16, Quarterfinals, Finals).
+- Each Round has:
+  - A theme (e.g., “Redemption”, “Betrayal”, “Victory”)
+  - Submission window (artists submit original verse + lyrics)
+  - Showcase event (WebRTC stage rooms)
+  - Voting window (fans vote + reactions)
+  - Winner selection rules (configurable)
+- Output: winners get featured placement, “Hall of Verse” entries, and optional merch drops hooks.
+
+HOW IT WORKS (RITUAL CADENCE)
+Implement a default weekly cadence (configurable):
+- Monday: Theme announced
+- Wednesday: Submissions close
+- Thursday: Showcase events (live WebRTC rooms)
+- Saturday: Voting closes
+- Sunday: Winners announced + merch hook event fired
+Support also monthly “Championships” made of weekly rounds.
+
+VOTING SYSTEM (IMPORTANT)
+- Voting should be designed to reduce pure popularity gaming:
+  - Rate-limited voting: 1 vote per account per matchup per round (or weighted by reputation later)
+  - Anti-abuse: device fingerprint optional, IP throttling, suspicious voting flagging
+  - Optional multi-factor scoring (configurable):
+    - Performance/Delivery (0–5)
+    - Originality (0–5)
+    - Theme Fit (0–5)
+    - Crowd Reaction (likes/cheers)
+  - MVP can start with simple “vote for A or B” + “reaction” counts, but structure the schema to support weighted scoring later.
+
+ARTIST SUBMISSION REQUIREMENTS (MVP)
+- Artist must:
+  - Be authenticated as role ARTIST
+  - Accept a terms checkbox: “I own or control the lyrics/recording I submit.”
+  - Submit:
+    - Verse title
+    - Lyrics text (for discovery + merch design hooks)
+    - Audio file upload OR live performance slot reservation (MVP: audio file upload + optional live)
+    - Theme tag auto-linked to current round
+- Admin moderation queue: approve/reject submissions before public voting.
+
+SHOWCASE / WEBRTC INTEGRATION
+- Build “Showcase Rooms” that are associated with a round:
+  - Room types: STAGE (artist speaks), AUDIENCE (listen/chat), BACKSTAGE (mods)
+  - Scheduling: time slots per artist
+- Minimal UI changes:
+  - Round page shows schedule + join links
+  - Live indicators
+- Store room metadata in MongoDB and reuse existing WebRTC infrastructure.
+
+SPONSORSHIP INVENTORY (ADDED DETAILS)
+We need a Sponsorship module that supports:
+A) Naming Rights
+- Season naming: “Wordeth Verses Season 1 presented by {Sponsor}”
+- Championship naming: “Verse Championships presented by {Sponsor}”
+- Round naming: “Round of 16 powered by {Sponsor}”
+
+B) Sound Logo / Audio Sting
+- On entering showcase room, play a short sponsor sting (2–3 seconds) for non-paying users (or all, configurable)
+- On winner announcement reveal, play sponsor sting
+Implementation:
+- Store sponsor audio assets (mp3/wav) with CDN/static hosting path
+- Frontend triggers audio play based on sponsorship config
+- Must respect user mute settings + accessibility (no auto-play without user interaction unless browser allows; use “click to unmute” pattern)
+
+C) Leaderboard Sponsorship
+- “Leaderboard sponsored by {Sponsor}”
+- Sponsor logo/badge displayed on leaderboard pages and within top bar
+
+D) Slot Sponsorship / Featured Placement
+- “Featured Verse of the Week” sponsored tile
+- “Top Rising Artists” sponsored tile
+- “Design Challenge of the Week” sponsored tile (hook only)
+
+E) Sponsored Theme Weeks
+- Sponsor chooses theme (subject to admin approval)
+- Theme page shows sponsor branding and CTA
+
+F) Sponsored Merch Drops (hook)
+- When winners announced, create a “drop event” that Commerce system can listen to.
+- Store drop metadata + sponsor tag (e.g., “Limited drop sponsored by {Sponsor}”).
+
+SPONSORSHIP MEASUREMENT / REPORTING
+Track:
+- impressions (page views) for sponsored surfaces
+- clicks on sponsor CTAs
+- room joins where sting played (count)
+- winner announcement views
+- leaderboard views
+Implement a basic event tracking endpoint to log these metrics (server-side where possible) and store in a SponsorshipMetrics collection.
+
+ADMIN DASHBOARD REQUIREMENTS
+Create an Admin area to:
+1) Create Season
+- name, description, start/end dates
+- default cadence template
+- sponsorship assignment (naming rights, leaderboards, etc.)
+2) Create Rounds per Season
+- theme, schedule windows
+- submission cap, bracket size
+- showcase room schedule
+3) Manage Submissions
+- approve/reject, flag, request edits
+4) Manage Brackets
+- seed artists, create matchups, advance winners
+5) Manage Sponsorships
+- sponsors CRUD (name, logo, CTA url, audio sting file)
+- assign sponsor to surfaces (season/round/leaderboard/tiles)
+6) Moderation Tools
+- report queue, take down content, ban users, lock voting
+7) Reporting
+- Season engagement summary:
+  - submissions count, votes cast, unique voters
+  - showcase attendance
+  - sponsor metrics
+  - top artists
+  - export CSV
+
+USER-FACING PAGES (VANILLA FRONTEND)
+Create these pages/components:
+- /verses (hub): current season banner, next live showcase, featured verses, leaderboard teaser
+- /verses/season/:id: overview, rounds, bracket, sponsor naming
+- /verses/round/:id: theme, submissions list, schedule, join live room, vote UI
+- /verses/match/:id: head-to-head view with audio playback, lyrics, vote buttons, reactions
+- /verses/leaderboard: rankings (artist points, wins, crowd reactions), sponsor badge
+- /verses/winners: Hall of Verse entries and past winners
+- Artist dashboard section: “My Verses” submissions, status, schedule, performance metrics
+- Fan dashboard section: voting history, followed artists, saved verses
+- Sponsor landing page (optional): /sponsor/:id or CTA redirect tracking
+
+DATA MODEL (MONGOOSE SCHEMAS)
+Implement these Mongoose models (with indexes):
+- VerseSeason { name, slug, description, startAt, endAt, status, sponsorAssignments, cadenceConfig }
+- VerseRound { seasonId, name, theme, roundType, startAt, submissionOpenAt, submissionCloseAt, showcaseStartAt, showcaseEndAt, votingOpenAt, votingCloseAt, status, sponsorAssignments, bracketConfig }
+- VerseSubmission { roundId, seasonId, artistUserId, title, lyricsText, audioUrl, durationSec, status (PENDING/APPROVED/REJECTED), moderationNotes, createdAt }
+- VerseMatch { roundId, seasonId, aSubmissionId, bSubmissionId, status, winnerSubmissionId, scoreA, scoreB, createdAt }
+- VerseVote { matchId, roundId, seasonId, voterUserId, voteForSubmissionId, ratings (optional), createdAt, ipHash, userAgentHash }
+- VerseReaction { targetType (SUBMISSION/MATCH), targetId, userId, type (CHEER/FIRE/CLAP/etc), createdAt }
+- VerseLeaderboardEntry { seasonId, userId, points, wins, losses, reactionCount, updatedAt }
+- VerseShowcaseRoom { roundId, roomId, roomType, scheduledAt, hostUserId, status, sponsorStingRule }
+- Sponsor { name, logoUrl, ctaUrl, category, audioStingUrl, isActive }
+- SponsorAssignment { scopeType (SEASON/ROUND/LEADERBOARD/TILE/ROOM/WINNER), scopeId, sponsorId, placementKey, startAt, endAt, rules }
+- SponsorMetricEvent { sponsorId, assignmentId, eventType, refId, userId (nullable), createdAt, meta }
+
+Also:
+- Extend existing User model with roles: FAN, ARTIST, DESIGNER, LABEL_ADMIN, ADMIN and profile fields relevant to Verses.
+- Ensure entitlements/rate limits can be checked via existing billing logic (e.g., Creator plan gets ad-reduced, etc.). For MVP, just include a middleware hook `requireEntitlement()`.
+
+API ENDPOINTS (EXPRESS ROUTES)
+Implement REST endpoints with JWT auth and role guards:
+PUBLIC:
+- GET /api/verses/seasons/current
+- GET /api/verses/seasons/:id
+- GET /api/verses/rounds/:id
+- GET /api/verses/matches/:id
+- GET /api/verses/leaderboard?seasonId=
+- POST /api/verses/metrics (log sponsor/view events; throttle)
+
+AUTH REQUIRED:
+ARTIST:
+- POST /api/verses/rounds/:id/submissions (upload audio, lyrics, title)
+- GET /api/verses/me/submissions
+- GET /api/verses/me/schedule
+
+FAN:
+- POST /api/verses/matches/:id/vote
+- POST /api/verses/submissions/:id/react
+- POST /api/verses/matches/:id/react
+- GET /api/verses/me/votes
+
+ADMIN:
+- POST /api/admin/verses/seasons
+- POST /api/admin/verses/rounds
+- POST /api/admin/verses/rounds/:id/seed (create matches)
+- PATCH /api/admin/verses/submissions/:id (approve/reject)
+- PATCH /api/admin/verses/matches/:id (set winner/advance)
+- CRUD /api/admin/sponsors
+- POST /api/admin/sponsors/assignments
+- GET /api/admin/verses/reports/season/:id (metrics export)
+
+SECURITY / ABUSE CONTROLS
+- Use Helmet, rate limiting on vote endpoints.
+- Enforce 1 vote per user per match; store unique index on (matchId, voterUserId).
+- Hash IP/user agent before storing (privacy).
+- Flag suspicious patterns: bursts of votes, repeated IPs, rapid account creation (basic).
+- Moderation: ability to lock a match or round.
+
+INTEGRATION WITH ADS SUBPROJECT
+- For lyric pages: continue using wordeth-ads-standalone.
+- For Verses sponsorship: implement a “sponsor placements” module that can render sponsor tiles similarly (a lightweight client widget or server-rendered block).
+- Provide a config endpoint for the frontend to fetch active sponsor assignments for a page (season/round/leaderboard).
+
+UI REQUIREMENTS
+- Keep vanilla: server-rendered templates OR static HTML + fetch API.
+- Provide simple pages with:
+  - Season banner (with changeable 	sponsor naming + logo)
+  - Round theme page with schedule and submission list
+  - Match view with audio player + lyrics + vote buttons + reactions + sponsor CTA
+  - Leaderboard page with sponsor badge
+  - Winner announcement page with sponsor sting trigger (respect browser autoplay limits)
+
+DELIVERABLES
+1) Implement all models + indexes + migrations/seed script to create a sample Season + Rounds + Sponsors.
+2) Implement routes + controllers + middleware (role guard + entitlement hook).
+3) Implement minimal UI pages for Verses flows.
+4) Integrate WebRTC room creation/join metadata for showcases.
+5) Basic metrics logging + admin reporting endpoint.
+6) Add README: how to run locally, env vars, file uploads storage strategy (local/dev; S3-like prod), and how to test a season end-to-end.
+
+BUILD ORDER
+- Step 1: Models + seed script (sample season, 2 rounds, 1 sponsor, 1 assignment)
+- Step 2: Public endpoints + read views
+- Step 3: Submission flow + moderation
+- Step 4: Match seeding + voting + leaderboard updates
+- Step 5: Showcase room scheduling + join pages
+- Step 6: Sponsorship placements + sound sting triggers + metrics
+- Step 7: Admin UI + reports
+
+Make the implementation modular so we can later add:
+- designer design challenges tied to verses
+- merch drop automation
+- weighted voting / reputation
+- multi-genre leagues
+
+Start now by creating the schemas and seed data, then scaffold the routes/controllers, and build minimal pages for Season → Round → Match → Vote.

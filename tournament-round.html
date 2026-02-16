@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Round - Verses Tournament - Wordeth</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/tournaments.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/cookie-consent.css">
+    <link rel="stylesheet" href="css/notifications.css">
+    <link rel="stylesheet" href="css/mini-player.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="main-nav">
+        <div class="nav-logo">
+            <a href="/"><img src="images/logo.png" alt="Wordeth Logo" class="logo"></a>
+        </div>
+        <div class="nav-links">
+            <a href="verses.html">Verses</a>
+            <a href="verses-tournaments.html" class="active nav-link-tournament tournament-nav-item" style="display:none;"><i class="fas fa-trophy trophy-icon"></i> Tournaments</a>
+            <a href="lyrics.html">Lyrics</a>
+            <a href="merch.html">Merch</a>
+            <a href="pricing.html">Pricing</a>
+        </div>
+        <div class="nav-auth">
+            <a href="/signin.html" class="nav-signin-btn">Sign In</a>
+        </div>
+        <button class="menu-toggle" id="menuToggle">
+            <span></span><span></span><span></span>
+        </button>
+    </nav>
+
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-content">
+            <div class="mobile-menu-header">
+                <img src="images/logo.png" alt="Wordeth Logo" class="mobile-logo">
+                <button class="mobile-menu-close" id="mobileMenuClose"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="mobile-menu-links">
+                <a href="verses.html" class="mobile-menu-link"><i class="fas fa-headphones"></i><span>Verses</span></a>
+                <a href="verses-tournaments.html" class="mobile-menu-link active tournament-nav-item" style="display:none;"><i class="fas fa-trophy"></i><span>Tournaments</span></a>
+                <a href="lyrics.html" class="mobile-menu-link"><i class="fas fa-music"></i><span>Lyrics</span></a>
+                <a href="merch.html" class="mobile-menu-link"><i class="fas fa-tshirt"></i><span>Merch</span></a>
+                <a href="pricing.html" class="mobile-menu-link"><i class="fas fa-tags"></i><span>Pricing</span></a>
+            </div>
+            <div class="mobile-menu-auth">
+                <a href="/signin.html" class="mobile-signin-btn"><i class="fas fa-user"></i><span>Sign In</span></a>
+            </div>
+        </div>
+    </div>
+
+    <main class="tournament-page">
+        <div class="tournament-container">
+            <div class="breadcrumb">
+                <a href="verses-tournaments.html">Tournaments</a>
+                <span class="sep">/</span>
+                <span id="breadcrumbSeason">Season</span>
+                <span class="sep">/</span>
+                <span id="breadcrumbRound">Round</span>
+            </div>
+
+            <div class="round-detail-header" id="roundHeader">
+                <h1 id="roundName">Loading...</h1>
+                <div class="round-theme-text" id="roundTheme"></div>
+                <div class="round-dates" id="roundDates"></div>
+            </div>
+
+            <div class="tab-bar">
+                <button class="tab-btn active" data-tab="matches">Matches</button>
+                <button class="tab-btn" data-tab="submissions">Submissions</button>
+                <button class="tab-btn" data-tab="submit" id="submitTab" style="display:none;">Submit</button>
+            </div>
+
+            <div class="tab-content active" id="tab-matches">
+                <div class="matches-list" id="matchesList">
+                    <div class="empty-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading matches...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-submissions">
+                <div class="matches-list" id="submissionsList">
+                    <div class="empty-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading submissions...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-submit">
+                <div class="submission-form" id="submissionForm">
+                    <h3><i class="fas fa-microphone-alt"></i> Submit Your Verse</h3>
+                    <div class="form-group">
+                        <label>Submission Type</label>
+                        <select id="submissionType">
+                            <option value="original">Original Verse</option>
+                            <option value="cover">Song Cover</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Title</label>
+                        <input type="text" id="submissionTitle" placeholder="Give your verse a title">
+                    </div>
+                    <div class="cover-fields" id="coverFields">
+                        <div class="form-group">
+                            <label>Original Song Title</label>
+                            <input type="text" id="originalSongTitle" placeholder="Song you're covering">
+                        </div>
+                        <div class="form-group">
+                            <label>Original Artist</label>
+                            <input type="text" id="originalArtist" placeholder="Original performer">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Lyrics</label>
+                        <textarea id="submissionLyrics" placeholder="Paste or type your lyrics here..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Audio URL (optional)</label>
+                        <input type="text" id="submissionAudio" placeholder="Link to your audio recording">
+                    </div>
+                    <div class="form-checkbox">
+                        <input type="checkbox" id="ownershipConfirm">
+                        <label for="ownershipConfirm">I confirm this is my original work or I have rights to perform this cover</label>
+                    </div>
+                    <button class="submit-btn" id="submitVerseBtn">Submit Verse</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="js/tournament-nav.js"></script>
+    <script src="js/tournament-round.js"></script>
+</body>
+</html>
