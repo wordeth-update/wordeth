@@ -1,6 +1,6 @@
 class TournamentAdmin {
     constructor() {
-        this.token = localStorage.getItem('token');
+        this.token = localStorage.getItem('authToken');
         this.seasons = [];
         this.editingSeasonId = null;
         if (!this.token) {
