@@ -89,7 +89,7 @@ async function handleLogin(e) {
             return;
         }
 
-        if (data.role !== 'admin') {
+        if (data.advertiser?.role !== 'admin') {
             errorEl.textContent = 'Admin access required';
             errorEl.style.display = 'block';
             return;
