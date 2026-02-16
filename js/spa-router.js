@@ -3,12 +3,12 @@ const SPA_PAGES = [
   '/pricing.html', '/subscription.html', '/profile.html',
   '/signin.html', '/signup.html', '/terms.html', '/privacy.html',
   '/creator-register.html', '/creator-dashboard.html',
-  '/ad-portal.html', '/ad-docs.html', '/ad-register.html'
+  '/ad-admin.html', '/ad-docs.html', '/ad-register.html'
 ];
 
 const EXCLUDED_PAGES = [
   '/partner-dashboard.html', '/partner-login.html', '/partner-upload.html',
-  '/admin-ads.html', '/admin-usage.html', '/ad-admin.html', '/privacy-admin.html'
+  '/admin-ads.html', '/admin-usage.html', '/w-admin.html', '/privacy-admin.html'
 ];
 
 const SHARED_STYLES = [

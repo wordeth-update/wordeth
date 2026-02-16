@@ -7,8 +7,8 @@ const WWW = path.join(ROOT, 'www');
 const FRONTEND_FILES = [
     'index.html', 'verses.html', 'lyrics.html', 'merch.html',
     'articles.html', 'signin.html', 'signup.html', 'profile.html',
-    'ad-admin.html', 'admin-ads.html', 'admin-usage.html',
-    'ad-portal.html', 'ad-register.html', 'privacy.html',
+    'w-admin.html', 'admin-ads.html', 'admin-usage.html',
+    'ad-admin.html', 'ad-register.html', 'privacy.html',
     'privacy-admin.html', 'terms.html', '404.html'
 ];
 

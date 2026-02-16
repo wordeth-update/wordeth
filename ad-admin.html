@@ -3,277 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wordeth Admin Dashboard</title>
+    <title>Wordeth Ad Portal - Self-Serve Advertising</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/ads.css">
     <link rel="stylesheet" href="css/cookie-consent.css">
-    <style>
-        .admin-badge { background: linear-gradient(135deg, #7c6aef, #3EB489) !important; }
-        .overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
-        .overview-card { background: var(--dark-surface); border: 1px solid var(--dark-border); border-radius: 12px; padding: 1.5rem; }
-        .overview-card .card-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.5rem; }
-        .overview-card .card-value { font-size: 1.75rem; font-weight: 700; color: var(--text-primary); font-family: 'Poppins', sans-serif; }
-        .overview-card .card-sub { font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem; }
-        .overview-card.highlight { border-color: var(--mint); background: rgba(62, 180, 137, 0.06); }
-        .overview-card.warning { border-color: #D29922; background: rgba(210, 153, 34, 0.06); }
-        .section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-        .section-panel { background: var(--dark-surface); border: 1px solid var(--dark-border); border-radius: 12px; padding: 1.5rem; }
-        .section-panel h3 { font-family: 'Poppins', sans-serif; font-size: 1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
-        .section-panel h3 i { color: var(--mint); }
-        .quick-list { list-style: none; padding: 0; margin: 0; }
-        .quick-list li { padding: 0.75rem 0; border-bottom: 1px solid var(--dark-border); display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem; }
-        .quick-list li:last-child { border-bottom: none; }
-        .quick-list .ql-label { color: var(--text-secondary); }
-        .quick-list .ql-value { font-weight: 600; color: var(--text-primary); }
-        .action-btn { background: transparent; border: 1px solid var(--dark-border); color: var(--mint); padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; }
-        .action-btn:hover { background: var(--mint); color: var(--dark-bg); }
-        .partner-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--dark-bg); border: 1px solid var(--dark-border); border-radius: 10px; margin-bottom: 0.75rem; }
-        .partner-info h4 { margin: 0 0 4px; font-size: 0.95rem; }
-        .partner-info p { margin: 0; font-size: 0.8rem; color: var(--text-secondary); }
-        .partner-meta { text-align: right; }
-        .partner-meta .partner-type { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 3px 8px; border-radius: 4px; font-weight: 600; }
-        .partner-type.partner { background: rgba(124, 106, 239, 0.15); color: #7c6aef; }
-        .partner-type.self-serve { background: rgba(62, 180, 137, 0.15); color: var(--mint); }
-        .filter-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
-        .filter-tab { background: transparent; border: 1px solid var(--dark-border); color: var(--text-secondary); padding: 0.4rem 1rem; border-radius: 20px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; }
-        .filter-tab.active, .filter-tab:hover { background: var(--mint); color: var(--dark-bg); border-color: var(--mint); }
-        .admin-login-note { text-align: center; margin-top: 1.5rem; color: var(--text-secondary); font-size: 0.85rem; }
-        @media (max-width: 768px) { .section-grid { grid-template-columns: 1fr; } .overview-grid { grid-template-columns: 1fr 1fr; } }
-    </style>
+    <link rel="stylesheet" href="css/mini-player.css">
 </head>
 <body>
-    <nav class="admin-nav">
+    <nav class="portal-nav">
         <div class="nav-brand">
-            <img src="images/logo.png" alt="Wordeth" class="logo">
-            <span class="admin-badge">ADMIN</span>
+            <a href="index.html"><img src="images/logo.png" alt="Wordeth" class="logo"></a>
+            <span class="portal-badge">AD PORTAL</span>
         </div>
-        <div class="nav-user">
-            <span id="adminName">Admin</span>
-            <button onclick="logout()" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+        <div class="nav-links">
+            <a href="ad-docs.html" class="nav-link"><i class="fas fa-book"></i> Documentation</a>
+            <span id="userInfo" style="display: none;">
+                <span id="companyName"></span>
+                <button onclick="logout()" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+            </span>
         </div>
     </nav>
 
-    <div class="admin-container">
-        <aside class="sidebar">
-            <ul class="sidebar-menu">
-                <li class="active" data-tab="overview"><i class="fas fa-th-large"></i> Overview</li>
-                <li data-tab="applications"><i class="fas fa-inbox"></i> Applications <span id="appCount" class="badge">0</span></li>
-                <li data-tab="partners"><i class="fas fa-handshake"></i> Partners</li>
-                <li data-tab="ad-oversight"><i class="fas fa-ad"></i> Ad Oversight <span id="pendingCount" class="badge">0</span></li>
-                <li data-tab="create-ad"><i class="fas fa-plus-circle"></i> Create Ad</li>
-                <li data-tab="settings"><i class="fas fa-cog"></i> Settings</li>
-            </ul>
-            <div class="sidebar-help">
-                <div class="sidebar-section-label">Admin Tools</div>
-                <a href="admin-usage.html"><i class="fas fa-chart-bar"></i> Usage Metrics</a>
-                <a href="privacy-admin.html"><i class="fas fa-shield-alt"></i> Privacy Admin</a>
-                <a href="tournament-admin.html"><i class="fas fa-trophy"></i> Tournaments</a>
-                <div class="sidebar-section-label">Public Pages</div>
-                <a href="index.html"><i class="fas fa-home"></i> Home</a>
-                <a href="verses.html"><i class="fas fa-microphone-alt"></i> Verses</a>
-                <a href="lyrics.html"><i class="fas fa-music"></i> Lyrics</a>
-                <a href="merch.html"><i class="fas fa-tshirt"></i> Merch</a>
-                <a href="pricing.html"><i class="fas fa-tags"></i> Pricing</a>
-                <a href="articles.html"><i class="fas fa-newspaper"></i> Articles</a>
-                <a href="verses-guide.html"><i class="fas fa-book"></i> Verses Guide</a>
-                <a href="verses-tournaments.html"><i class="fas fa-trophy"></i> Tournaments Hub</a>
-                <div class="sidebar-section-label">Advertising</div>
-                <a href="ad-portal.html"><i class="fas fa-bullhorn"></i> Ad Portal</a>
-                <a href="ad-docs.html"><i class="fas fa-file-alt"></i> Ad Documentation</a>
-                <a href="ad-register.html"><i class="fas fa-user-plus"></i> Advertiser Register</a>
-                <div class="sidebar-section-label">Partners & Creators</div>
-                <a href="partner-login.html"><i class="fas fa-sign-in-alt"></i> Partner Login</a>
-                <a href="partner-dashboard.html"><i class="fas fa-chart-line"></i> Partner Dashboard</a>
-                <a href="partner-upload.html"><i class="fas fa-upload"></i> Partner Upload</a>
-                <a href="creator-dashboard.html"><i class="fas fa-palette"></i> Creator Dashboard</a>
-                <a href="creator-register.html"><i class="fas fa-user-edit"></i> Creator Register</a>
-                <div class="sidebar-section-label">User Pages</div>
-                <a href="signin.html"><i class="fas fa-sign-in-alt"></i> Sign In</a>
-                <a href="signup.html"><i class="fas fa-user-plus"></i> Sign Up</a>
-                <a href="profile.html"><i class="fas fa-user-circle"></i> Profile</a>
-                <a href="subscription.html"><i class="fas fa-credit-card"></i> Subscription</a>
-                <div class="sidebar-section-label">Legal</div>
-                <a href="privacy.html"><i class="fas fa-shield-alt"></i> Privacy Policy</a>
-                <a href="terms.html"><i class="fas fa-file-contract"></i> Terms of Service</a>
+    <div id="authSection">
+        <div class="auth-container">
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">Sign In</button>
+                <button class="auth-tab" data-tab="register">Create Account</button>
             </div>
-        </aside>
 
-        <main class="admin-main">
-            <section id="overview-tab" class="tab-content active">
-                <h2>Platform Overview</h2>
-                <div class="overview-grid">
-                    <div class="overview-card warning" id="pendingAppsCard">
-                        <div class="card-label">Pending Applications</div>
-                        <div class="card-value" id="overviewPendingApps">0</div>
-                        <div class="card-sub">Awaiting review</div>
-                    </div>
-                    <div class="overview-card">
-                        <div class="card-label">Active Partners</div>
-                        <div class="card-value" id="overviewActivePartners">0</div>
-                        <div class="card-sub">Approved advertisers</div>
-                    </div>
-                    <div class="overview-card highlight">
-                        <div class="card-label">Active Ads</div>
-                        <div class="card-value" id="overviewActiveAds">0</div>
-                        <div class="card-sub">Currently running</div>
-                    </div>
-                    <div class="overview-card">
-                        <div class="card-label">Pending Ads</div>
-                        <div class="card-value" id="overviewPendingAds">0</div>
-                        <div class="card-sub">Awaiting approval</div>
-                    </div>
-                    <div class="overview-card">
-                        <div class="card-label">Total Impressions</div>
-                        <div class="card-value" id="overviewImpressions">0</div>
-                        <div class="card-sub">All time</div>
-                    </div>
-                    <div class="overview-card">
-                        <div class="card-label">Total Clicks</div>
-                        <div class="card-value" id="overviewClicks">0</div>
-                        <div class="card-sub">All time</div>
-                    </div>
-                </div>
-
-                <div class="section-grid">
-                    <div class="section-panel">
-                        <h3><i class="fas fa-inbox"></i> Recent Applications</h3>
-                        <div id="recentApplications">
-                            <p class="empty-message">No recent applications</p>
-                        </div>
-                        <button class="action-btn" style="margin-top:1rem;" onclick="adAdmin.switchTab('applications')">View All Applications</button>
-                    </div>
-                    <div class="section-panel">
-                        <h3><i class="fas fa-chart-line"></i> Top Performing Ads</h3>
-                        <div id="topAdsList">
-                            <p class="empty-message">No active ads yet</p>
-                        </div>
-                        <button class="action-btn" style="margin-top:1rem;" onclick="adAdmin.switchTab('ad-oversight')">View All Ads</button>
-                    </div>
-                </div>
-            </section>
-
-            <section id="applications-tab" class="tab-content">
-                <h2>Partner Applications</h2>
-                <p style="color:var(--text-secondary); margin-bottom:1.5rem; font-size:0.875rem;">Review and approve or reject advertising partner applications. All applications are routed to advertising@wordeth.com with a 48-72 hour turnaround.</p>
-                <div id="applicationsList" class="ads-list"></div>
-                <p id="noApplications" class="empty-message" style="display:none;">No pending applications</p>
-            </section>
-
-            <section id="partners-tab" class="tab-content">
-                <h2>Advertising Partners</h2>
-                <div class="filter-tabs" id="partnerFilters">
-                    <button class="filter-tab active" data-filter="all">All</button>
-                    <button class="filter-tab" data-filter="approved">Active</button>
-                    <button class="filter-tab" data-filter="pending">Pending</button>
-                    <button class="filter-tab" data-filter="partner">White Glove</button>
-                    <button class="filter-tab" data-filter="self-serve">Self-Serve</button>
-                </div>
-                <div id="partnersList"></div>
-            </section>
-
-            <section id="ad-oversight-tab" class="tab-content">
-                <h2>Ad Oversight</h2>
-                <div class="filter-tabs" id="adFilters">
-                    <button class="filter-tab active" data-filter="">All</button>
-                    <button class="filter-tab" data-filter="pending">Pending Review</button>
-                    <button class="filter-tab" data-filter="active">Active</button>
-                    <button class="filter-tab" data-filter="paused">Paused</button>
-                    <button class="filter-tab" data-filter="rejected">Rejected</button>
-                </div>
-                <div id="allAdsList" class="ads-list"></div>
-            </section>
-
-            <section id="create-ad-tab" class="tab-content">
-                <h2>Create Ad for Managed Client</h2>
-                <div class="info-banner" style="background:rgba(62,180,137,0.08); border:1px solid rgba(62,180,137,0.2); border-radius:10px; padding:1rem; margin-bottom:1.5rem; display:flex; gap:0.75rem; align-items:flex-start;">
-                    <i class="fas fa-info-circle" style="color:var(--mint); margin-top:2px;"></i>
-                    <p style="color:var(--text-secondary); font-size:0.85rem; margin:0;">Use this for White Glove partners whose campaigns are managed by the Wordeth team. Self-serve partners create their own ads through the Ad Portal.</p>
-                </div>
-                <form id="createAdForm" class="ad-form">
-                    <div class="form-group">
-                        <label>Client Email</label>
-                        <input type="email" name="clientEmail" required placeholder="client@company.com">
-                    </div>
-                    <div class="form-group">
-                        <label>Ad Title</label>
-                        <input type="text" name="title" required maxlength="100" placeholder="Company Name or Campaign">
-                    </div>
-                    <div class="form-group">
-                        <label>Description (optional)</label>
-                        <textarea name="description" maxlength="200" placeholder="Brief ad description"></textarea>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Placement</label>
-                            <select name="placement" required>
-                                <option value="header">Header (728x90)</option>
-                                <option value="footer">Footer (728x90)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Size</label>
-                            <select name="size" required>
-                                <option value="728x90">Leaderboard (728x90)</option>
-                                <option value="320x50">Mobile Banner (320x50)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Image URL</label>
-                        <input type="url" name="imageUrl" required placeholder="https://example.com/ad-image.jpg">
-                        <small>Image must match selected size exactly</small>
-                    </div>
-                    <div class="form-group">
-                        <label>Click URL</label>
-                        <input type="url" name="linkUrl" required placeholder="https://client-website.com">
-                    </div>
-                    <div class="form-group">
-                        <label>Keywords (up to 25, comma-separated)</label>
-                        <textarea name="keywords" placeholder="ice cream, dessert, frozen treats, summer, cold"></textarea>
-                        <small>Keywords help match ads to relevant lyrics searches</small>
-                    </div>
-                    <div class="form-group preview-group">
-                        <label>Preview</label>
-                        <div id="adPreview" class="ad-preview">
-                            <p>Enter image URL to preview</p>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn-primary">Create Ad</button>
-                </form>
-            </section>
-
-            <section id="settings-tab" class="tab-content">
-                <h2>Settings</h2>
-                <div class="settings-section">
-                    <h3>Create Admin Account</h3>
-                    <p style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:1.25rem;">Add a new internal team member with admin access to this dashboard.</p>
-                    <form id="createAdminForm" class="ad-form">
-                        <div class="form-group">
-                            <label>Email</label>
-                            <input type="email" name="email" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Name</label>
-                            <input type="text" name="contactName" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Password</label>
-                            <input type="password" name="password" required minlength="8">
-                        </div>
-                        <button type="submit" class="btn-primary">Create Admin</button>
-                    </form>
-                </div>
-            </section>
-        </main>
-    </div>
-
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <h2>Admin Login</h2>
-            <form id="loginForm">
+            <form id="loginForm" class="auth-form active">
+                <h2>Welcome Back</h2>
+                <p class="auth-subtitle">Sign in to manage your ads</p>
                 <div class="form-group">
                     <label>Email</label>
                     <input type="email" name="email" required>
@@ -282,15 +45,151 @@
                     <label>Password</label>
                     <input type="password" name="password" required>
                 </div>
-                <button type="submit" class="btn-primary">Login</button>
+                <button type="submit" class="btn-primary">Sign In</button>
+                <p id="loginError" class="error-message"></p>
+                <p style="text-align:center; margin-top:1rem; color:var(--text-secondary); font-size:0.875rem;">
+                    Don't have an account? <a href="ad-register.html" style="color:var(--mint); text-decoration:none; font-weight:600;">Apply to Register</a>
+                </p>
             </form>
-            <p id="loginError" class="error-message"></p>
-            <p class="admin-login-note">Internal Wordeth team access only. Advertising partners should use the <a href="ad-portal.html" style="color:var(--mint); text-decoration:none; font-weight:600;">Ad Portal</a>.</p>
+
+            <div id="registerForm" class="auth-form">
+                <h2>Create Account</h2>
+                <p class="auth-subtitle">All new accounts require an application and approval.</p>
+                <div style="text-align:center; padding: 2rem 0;">
+                    <p style="color:var(--text-secondary); margin-bottom:1.5rem; line-height:1.6;">Our registration process ensures we maintain quality partnerships. Choose from Self-Serve or Partner (White Glove) account types.</p>
+                    <a href="ad-register.html" class="btn-primary btn-large" style="text-decoration:none; display:inline-block;">Start Your Application</a>
+                    <p style="color:var(--text-secondary); margin-top:1rem; font-size:0.8rem;">Applications are reviewed within 48-72 hours</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="portalSection" style="display: none;">
+        <div class="portal-container">
+            <aside class="sidebar">
+                <ul class="sidebar-menu">
+                    <li class="active" data-tab="my-ads"><i class="fas fa-ad"></i> My Ads</li>
+                    <li data-tab="create-ad"><i class="fas fa-plus-circle"></i> Create Ad</li>
+                    <li data-tab="account"><i class="fas fa-user"></i> Account</li>
+                </ul>
+                <div class="sidebar-help">
+                    <a href="ad-docs.html"><i class="fas fa-question-circle"></i> Help & Documentation</a>
+                </div>
+            </aside>
+
+            <main class="portal-main">
+                <section id="my-ads-tab" class="tab-content active">
+                    <div class="section-header">
+                        <h2>My Ads</h2>
+                        <button onclick="showTab('create-ad')" class="btn-secondary"><i class="fas fa-plus"></i> Create New Ad</button>
+                    </div>
+                    <div id="myAdsList" class="ads-list"></div>
+                    <p id="noAds" class="empty-message" style="display: none;">
+                        You haven't created any ads yet. <a href="#" onclick="showTab('create-ad'); return false;">Create your first ad</a>
+                    </p>
+                </section>
+
+                <section id="create-ad-tab" class="tab-content">
+                    <h2>Create New Ad</h2>
+                    <div class="info-banner">
+                        <i class="fas fa-info-circle"></i>
+                        <p>Ads are reviewed before going live. Most ads are approved within 24 hours.</p>
+                    </div>
+
+                    <form id="createAdForm" class="ad-form">
+                        <div class="form-group">
+                            <label>Ad Title <span class="required">*</span></label>
+                            <input type="text" name="title" required maxlength="100" placeholder="Your brand or campaign name">
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea name="description" maxlength="200" placeholder="Brief description (optional)"></textarea>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Ad Placement & Size</h3>
+                            <div class="placement-options">
+                                <label class="placement-option">
+                                    <input type="radio" name="placement" value="header" checked>
+                                    <div class="placement-card">
+                                        <i class="fas fa-arrow-up"></i>
+                                        <span>Header</span>
+                                        <small>Top of search results</small>
+                                    </div>
+                                </label>
+                                <label class="placement-option">
+                                    <input type="radio" name="placement" value="footer">
+                                    <div class="placement-card">
+                                        <i class="fas fa-arrow-down"></i>
+                                        <span>Footer</span>
+                                        <small>Bottom of search results</small>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label>Size <span class="required">*</span></label>
+                                <select name="size" required>
+                                    <option value="728x90">Desktop: Leaderboard (728x90 pixels)</option>
+                                    <option value="320x50">Mobile: Banner (320x50 pixels)</option>
+                                </select>
+                                <small>Upload an image that exactly matches these dimensions</small>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Creative</h3>
+                            <div class="form-group">
+                                <label>Image URL <span class="required">*</span></label>
+                                <input type="url" name="imageUrl" required placeholder="https://your-domain.com/ad-image.jpg" id="imageUrlInput">
+                                <small>Host your image on your website or use an image hosting service</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Click-through URL <span class="required">*</span></label>
+                                <input type="url" name="linkUrl" required placeholder="https://your-website.com/landing-page">
+                            </div>
+                            <div class="form-group preview-group">
+                                <label>Preview</label>
+                                <div id="adPreview" class="ad-preview">
+                                    <p>Enter image URL above to see preview</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Targeting Keywords</h3>
+                            <p class="section-description">Enter up to 25 keywords that relate to your product or service. Your ad will show when users search for lyrics containing these terms.</p>
+                            <div class="form-group">
+                                <label>Keywords (comma-separated)</label>
+                                <textarea name="keywords" id="keywordsInput" placeholder="ice cream, dessert, summer, frozen treats, sweet"></textarea>
+                                <div class="keyword-count"><span id="keywordCount">0</span>/25 keywords</div>
+                            </div>
+                            <div class="keyword-tips">
+                                <h4><i class="fas fa-lightbulb"></i> Keyword Tips</h4>
+                                <ul>
+                                    <li>Use words that might appear in song lyrics or artist/song names</li>
+                                    <li>Include product names, related terms, and themes</li>
+                                    <li>Think about what music fans might search for</li>
+                                    <li>Example: An ice cream brand could use "ice cream, summer, sweet, cold, treat, dessert"</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary btn-large">Submit Ad for Review</button>
+                    </form>
+                </section>
+
+                <section id="account-tab" class="tab-content">
+                    <h2>Account Settings</h2>
+                    <div id="accountInfo" class="account-info"></div>
+                </section>
+            </main>
         </div>
     </div>
 
     <script src="js/config.js"></script>
-    <script src="js/ad-admin.js"></script>
+    <script src="js/ad-portal.js"></script>
     <script src="js/cookie-consent.js"></script>
+    <script src="js/verse-mini-player.js"></script>
+    <script src="js/spa-router.js"></script>
 </body>
 </html>

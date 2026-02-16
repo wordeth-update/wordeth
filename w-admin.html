@@ -3,228 +3,276 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wordeth Admin</title>
+    <title>Wordeth Admin Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/ads.css">
     <link rel="stylesheet" href="css/cookie-consent.css">
     <style>
-        :root {
-            --dark-bg: #0a0a0f;
-            --dark-surface: #111118;
-            --dark-border: #1e1e2e;
-            --mint: #3EB489;
-            --purple: #7c6aef;
-            --text-primary: #e0e0e0;
-            --text-secondary: #888;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: var(--dark-bg); color: var(--text-primary); font-family: 'Inter', sans-serif; min-height: 100vh; }
-
-        .wa-nav { display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; background: var(--dark-surface); border-bottom: 1px solid var(--dark-border); }
-        .wa-nav .nav-brand { display: flex; align-items: center; gap: 12px; }
-        .wa-nav .logo { height: 32px; }
-        .wa-nav .admin-badge { background: linear-gradient(135deg, var(--purple), var(--mint)); color: #fff; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 4px; letter-spacing: 1px; }
-        .wa-nav .nav-user { display: flex; align-items: center; gap: 12px; }
-        .wa-nav .nav-user span { color: var(--text-secondary); font-size: 0.85rem; }
-        .wa-nav .btn-logout { background: none; border: 1px solid var(--dark-border); color: var(--text-secondary); padding: 6px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
-        .wa-nav .btn-logout:hover { color: #e74c3c; border-color: #e74c3c; }
-
-        .wa-container { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
-        .wa-header { margin-bottom: 2rem; }
-        .wa-header h1 { font-family: 'Poppins', sans-serif; font-size: 1.75rem; margin-bottom: 0.25rem; }
-        .wa-header p { color: var(--text-secondary); font-size: 0.9rem; }
-
-        .wa-section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-secondary); margin-bottom: 0.75rem; font-weight: 600; }
-        .wa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 2.5rem; }
-
-        .wa-card { background: var(--dark-surface); border: 1px solid var(--dark-border); border-radius: 12px; padding: 1.25rem; text-decoration: none; color: var(--text-primary); transition: all 0.2s; display: flex; align-items: flex-start; gap: 1rem; }
-        .wa-card:hover { border-color: var(--mint); transform: translateY(-2px); }
-        .wa-card .card-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
-        .wa-card .card-icon.admin { background: rgba(124, 106, 239, 0.15); color: var(--purple); }
-        .wa-card .card-icon.public { background: rgba(62, 180, 137, 0.15); color: var(--mint); }
-        .wa-card .card-icon.ads { background: rgba(241, 196, 15, 0.15); color: #f1c40f; }
-        .wa-card .card-icon.partner { background: rgba(52, 152, 219, 0.15); color: #3498db; }
-        .wa-card .card-icon.user { background: rgba(155, 89, 182, 0.15); color: #9b59b6; }
-        .wa-card .card-icon.legal { background: rgba(149, 165, 166, 0.15); color: #95a5a6; }
-        .wa-card .card-info h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 2px; }
-        .wa-card .card-info p { font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4; }
-
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-        .modal.hidden { display: none; }
-        .modal-content { background: var(--dark-surface); border: 1px solid var(--dark-border); border-radius: 16px; padding: 2.5rem; width: 100%; max-width: 400px; }
-        .modal-content h2 { font-family: 'Poppins', sans-serif; font-size: 1.5rem; margin-bottom: 0.5rem; text-align: center; background: linear-gradient(135deg, var(--purple), var(--mint)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .modal-content .subtitle { text-align: center; color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem; }
-        .form-group { margin-bottom: 1.25rem; }
-        .form-group label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.4rem; color: var(--text-secondary); }
-        .form-group input { width: 100%; padding: 0.75rem 1rem; background: var(--dark-bg); border: 1px solid var(--dark-border); border-radius: 8px; color: var(--text-primary); font-size: 0.9rem; font-family: 'Inter', sans-serif; }
-        .form-group input:focus { outline: none; border-color: var(--purple); }
-        .btn-primary { width: 100%; padding: 0.75rem; background: linear-gradient(135deg, var(--purple), var(--mint)); border: none; border-radius: 8px; color: #fff; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
-        .btn-primary:hover { opacity: 0.9; }
-        .error-message { color: #e74c3c; text-align: center; font-size: 0.85rem; margin-top: 0.75rem; }
-
-        @media (max-width: 768px) {
-            .wa-container { padding: 1.25rem 1rem; }
-            .wa-grid { grid-template-columns: 1fr 1fr; }
-            .wa-nav { padding: 12px 16px; }
-        }
-        @media (max-width: 480px) {
-            .wa-grid { grid-template-columns: 1fr; }
-        }
+        .admin-badge { background: linear-gradient(135deg, #7c6aef, #3EB489) !important; }
+        .overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+        .overview-card { background: var(--dark-surface); border: 1px solid var(--dark-border); border-radius: 12px; padding: 1.5rem; }
+        .overview-card .card-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.5rem; }
+        .overview-card .card-value { font-size: 1.75rem; font-weight: 700; color: var(--text-primary); font-family: 'Poppins', sans-serif; }
+        .overview-card .card-sub { font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem; }
+        .overview-card.highlight { border-color: var(--mint); background: rgba(62, 180, 137, 0.06); }
+        .overview-card.warning { border-color: #D29922; background: rgba(210, 153, 34, 0.06); }
+        .section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        .section-panel { background: var(--dark-surface); border: 1px solid var(--dark-border); border-radius: 12px; padding: 1.5rem; }
+        .section-panel h3 { font-family: 'Poppins', sans-serif; font-size: 1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .section-panel h3 i { color: var(--mint); }
+        .quick-list { list-style: none; padding: 0; margin: 0; }
+        .quick-list li { padding: 0.75rem 0; border-bottom: 1px solid var(--dark-border); display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem; }
+        .quick-list li:last-child { border-bottom: none; }
+        .quick-list .ql-label { color: var(--text-secondary); }
+        .quick-list .ql-value { font-weight: 600; color: var(--text-primary); }
+        .action-btn { background: transparent; border: 1px solid var(--dark-border); color: var(--mint); padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; }
+        .action-btn:hover { background: var(--mint); color: var(--dark-bg); }
+        .partner-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--dark-bg); border: 1px solid var(--dark-border); border-radius: 10px; margin-bottom: 0.75rem; }
+        .partner-info h4 { margin: 0 0 4px; font-size: 0.95rem; }
+        .partner-info p { margin: 0; font-size: 0.8rem; color: var(--text-secondary); }
+        .partner-meta { text-align: right; }
+        .partner-meta .partner-type { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 3px 8px; border-radius: 4px; font-weight: 600; }
+        .partner-type.partner { background: rgba(124, 106, 239, 0.15); color: #7c6aef; }
+        .partner-type.self-serve { background: rgba(62, 180, 137, 0.15); color: var(--mint); }
+        .filter-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+        .filter-tab { background: transparent; border: 1px solid var(--dark-border); color: var(--text-secondary); padding: 0.4rem 1rem; border-radius: 20px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; }
+        .filter-tab.active, .filter-tab:hover { background: var(--mint); color: var(--dark-bg); border-color: var(--mint); }
+        .admin-login-note { text-align: center; margin-top: 1.5rem; color: var(--text-secondary); font-size: 0.85rem; }
+        @media (max-width: 768px) { .section-grid { grid-template-columns: 1fr; } .overview-grid { grid-template-columns: 1fr 1fr; } }
     </style>
 </head>
 <body>
-    <nav class="wa-nav">
+    <nav class="admin-nav">
         <div class="nav-brand">
             <img src="images/logo.png" alt="Wordeth" class="logo">
             <span class="admin-badge">ADMIN</span>
         </div>
         <div class="nav-user">
             <span id="adminName">Admin</span>
-            <button onclick="wAdmin.logout()" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+            <button onclick="logout()" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
         </div>
     </nav>
 
-    <div class="wa-container" id="adminContent" style="display:none;">
-        <div class="wa-header">
-            <h1>Wordeth Admin</h1>
-            <p>Central dashboard — manage and navigate every part of the platform.</p>
-        </div>
+    <div class="admin-container">
+        <aside class="sidebar">
+            <ul class="sidebar-menu">
+                <li class="active" data-tab="overview"><i class="fas fa-th-large"></i> Overview</li>
+                <li data-tab="applications"><i class="fas fa-inbox"></i> Applications <span id="appCount" class="badge">0</span></li>
+                <li data-tab="partners"><i class="fas fa-handshake"></i> Partners</li>
+                <li data-tab="ad-oversight"><i class="fas fa-ad"></i> Ad Oversight <span id="pendingCount" class="badge">0</span></li>
+                <li data-tab="create-ad"><i class="fas fa-plus-circle"></i> Create Ad</li>
+                <li data-tab="settings"><i class="fas fa-cog"></i> Settings</li>
+            </ul>
+            <div class="sidebar-help">
+                <div class="sidebar-section-label">Admin Tools</div>
+                <a href="admin-usage.html"><i class="fas fa-chart-bar"></i> Usage Metrics</a>
+                <a href="privacy-admin.html"><i class="fas fa-shield-alt"></i> Privacy Admin</a>
+                <a href="tournament-admin.html"><i class="fas fa-trophy"></i> Tournaments</a>
+                <div class="sidebar-section-label">Public Pages</div>
+                <a href="index.html"><i class="fas fa-home"></i> Home</a>
+                <a href="verses.html"><i class="fas fa-microphone-alt"></i> Verses</a>
+                <a href="lyrics.html"><i class="fas fa-music"></i> Lyrics</a>
+                <a href="merch.html"><i class="fas fa-tshirt"></i> Merch</a>
+                <a href="pricing.html"><i class="fas fa-tags"></i> Pricing</a>
+                <a href="articles.html"><i class="fas fa-newspaper"></i> Articles</a>
+                <a href="verses-guide.html"><i class="fas fa-book"></i> Verses Guide</a>
+                <a href="verses-tournaments.html"><i class="fas fa-trophy"></i> Tournaments Hub</a>
+                <div class="sidebar-section-label">Advertising</div>
+                <a href="ad-admin.html"><i class="fas fa-bullhorn"></i> Ad Portal</a>
+                <a href="ad-docs.html"><i class="fas fa-file-alt"></i> Ad Documentation</a>
+                <a href="ad-register.html"><i class="fas fa-user-plus"></i> Advertiser Register</a>
+                <div class="sidebar-section-label">Partners & Creators</div>
+                <a href="partner-login.html"><i class="fas fa-sign-in-alt"></i> Partner Login</a>
+                <a href="partner-dashboard.html"><i class="fas fa-chart-line"></i> Partner Dashboard</a>
+                <a href="partner-upload.html"><i class="fas fa-upload"></i> Partner Upload</a>
+                <a href="creator-dashboard.html"><i class="fas fa-palette"></i> Creator Dashboard</a>
+                <a href="creator-register.html"><i class="fas fa-user-edit"></i> Creator Register</a>
+                <div class="sidebar-section-label">User Pages</div>
+                <a href="signin.html"><i class="fas fa-sign-in-alt"></i> Sign In</a>
+                <a href="signup.html"><i class="fas fa-user-plus"></i> Sign Up</a>
+                <a href="profile.html"><i class="fas fa-user-circle"></i> Profile</a>
+                <a href="subscription.html"><i class="fas fa-credit-card"></i> Subscription</a>
+                <div class="sidebar-section-label">Legal</div>
+                <a href="privacy.html"><i class="fas fa-shield-alt"></i> Privacy Policy</a>
+                <a href="terms.html"><i class="fas fa-file-contract"></i> Terms of Service</a>
+            </div>
+        </aside>
 
-        <div class="wa-section-title">Admin Tools</div>
-        <div class="wa-grid">
-            <a href="ad-admin.html" class="wa-card">
-                <div class="card-icon admin"><i class="fas fa-ad"></i></div>
-                <div class="card-info"><h3>Ad Management</h3><p>Advertisers, ad oversight, create ads</p></div>
-            </a>
-            <a href="admin-usage.html" class="wa-card">
-                <div class="card-icon admin"><i class="fas fa-chart-bar"></i></div>
-                <div class="card-info"><h3>Usage Metrics</h3><p>API usage analytics and event tracking</p></div>
-            </a>
-            <a href="privacy-admin.html" class="wa-card">
-                <div class="card-icon admin"><i class="fas fa-shield-alt"></i></div>
-                <div class="card-info"><h3>Privacy Admin</h3><p>Data management and compliance tools</p></div>
-            </a>
-            <a href="tournament-admin.html" class="wa-card">
-                <div class="card-icon admin"><i class="fas fa-trophy"></i></div>
-                <div class="card-info"><h3>Tournaments</h3><p>Seasons, rounds, matches, sponsors</p></div>
-            </a>
-        </div>
+        <main class="admin-main">
+            <section id="overview-tab" class="tab-content active">
+                <h2>Platform Overview</h2>
+                <div class="overview-grid">
+                    <div class="overview-card warning" id="pendingAppsCard">
+                        <div class="card-label">Pending Applications</div>
+                        <div class="card-value" id="overviewPendingApps">0</div>
+                        <div class="card-sub">Awaiting review</div>
+                    </div>
+                    <div class="overview-card">
+                        <div class="card-label">Active Partners</div>
+                        <div class="card-value" id="overviewActivePartners">0</div>
+                        <div class="card-sub">Approved advertisers</div>
+                    </div>
+                    <div class="overview-card highlight">
+                        <div class="card-label">Active Ads</div>
+                        <div class="card-value" id="overviewActiveAds">0</div>
+                        <div class="card-sub">Currently running</div>
+                    </div>
+                    <div class="overview-card">
+                        <div class="card-label">Pending Ads</div>
+                        <div class="card-value" id="overviewPendingAds">0</div>
+                        <div class="card-sub">Awaiting approval</div>
+                    </div>
+                    <div class="overview-card">
+                        <div class="card-label">Total Impressions</div>
+                        <div class="card-value" id="overviewImpressions">0</div>
+                        <div class="card-sub">All time</div>
+                    </div>
+                    <div class="overview-card">
+                        <div class="card-label">Total Clicks</div>
+                        <div class="card-value" id="overviewClicks">0</div>
+                        <div class="card-sub">All time</div>
+                    </div>
+                </div>
 
-        <div class="wa-section-title">Public Pages</div>
-        <div class="wa-grid">
-            <a href="index.html" class="wa-card">
-                <div class="card-icon public"><i class="fas fa-home"></i></div>
-                <div class="card-info"><h3>Home</h3><p>Main landing page</p></div>
-            </a>
-            <a href="verses.html" class="wa-card">
-                <div class="card-icon public"><i class="fas fa-microphone-alt"></i></div>
-                <div class="card-info"><h3>Verses</h3><p>Live audio rooms</p></div>
-            </a>
-            <a href="lyrics.html" class="wa-card">
-                <div class="card-icon public"><i class="fas fa-music"></i></div>
-                <div class="card-info"><h3>Lyrics</h3><p>Song lyrics search</p></div>
-            </a>
-            <a href="merch.html" class="wa-card">
-                <div class="card-icon public"><i class="fas fa-tshirt"></i></div>
-                <div class="card-info"><h3>Merch</h3><p>Merchandise store</p></div>
-            </a>
-            <a href="pricing.html" class="wa-card">
-                <div class="card-icon public"><i class="fas fa-tags"></i></div>
-                <div class="card-info"><h3>Pricing</h3><p>Plans and pricing tiers</p></div>
-            </a>
-            <a href="articles.html" class="wa-card">
-                <div class="card-icon public"><i class="fas fa-newspaper"></i></div>
-                <div class="card-info"><h3>Articles</h3><p>Blog and content</p></div>
-            </a>
-            <a href="verses-guide.html" class="wa-card">
-                <div class="card-icon public"><i class="fas fa-book"></i></div>
-                <div class="card-info"><h3>Verses Guide</h3><p>How-to guide for audio rooms</p></div>
-            </a>
-            <a href="verses-tournaments.html" class="wa-card">
-                <div class="card-icon public"><i class="fas fa-trophy"></i></div>
-                <div class="card-info"><h3>Tournaments Hub</h3><p>Public tournament page</p></div>
-            </a>
-        </div>
+                <div class="section-grid">
+                    <div class="section-panel">
+                        <h3><i class="fas fa-inbox"></i> Recent Applications</h3>
+                        <div id="recentApplications">
+                            <p class="empty-message">No recent applications</p>
+                        </div>
+                        <button class="action-btn" style="margin-top:1rem;" onclick="adAdmin.switchTab('applications')">View All Applications</button>
+                    </div>
+                    <div class="section-panel">
+                        <h3><i class="fas fa-chart-line"></i> Top Performing Ads</h3>
+                        <div id="topAdsList">
+                            <p class="empty-message">No active ads yet</p>
+                        </div>
+                        <button class="action-btn" style="margin-top:1rem;" onclick="adAdmin.switchTab('ad-oversight')">View All Ads</button>
+                    </div>
+                </div>
+            </section>
 
-        <div class="wa-section-title">Advertising</div>
-        <div class="wa-grid">
-            <a href="ad-portal.html" class="wa-card">
-                <div class="card-icon ads"><i class="fas fa-bullhorn"></i></div>
-                <div class="card-info"><h3>Ad Portal</h3><p>Self-serve advertiser portal</p></div>
-            </a>
-            <a href="ad-docs.html" class="wa-card">
-                <div class="card-icon ads"><i class="fas fa-file-alt"></i></div>
-                <div class="card-info"><h3>Ad Documentation</h3><p>Advertiser onboarding docs</p></div>
-            </a>
-            <a href="ad-register.html" class="wa-card">
-                <div class="card-icon ads"><i class="fas fa-user-plus"></i></div>
-                <div class="card-info"><h3>Advertiser Register</h3><p>New advertiser sign-up</p></div>
-            </a>
-        </div>
+            <section id="applications-tab" class="tab-content">
+                <h2>Partner Applications</h2>
+                <p style="color:var(--text-secondary); margin-bottom:1.5rem; font-size:0.875rem;">Review and approve or reject advertising partner applications. All applications are routed to advertising@wordeth.com with a 48-72 hour turnaround.</p>
+                <div id="applicationsList" class="ads-list"></div>
+                <p id="noApplications" class="empty-message" style="display:none;">No pending applications</p>
+            </section>
 
-        <div class="wa-section-title">Partners & Creators</div>
-        <div class="wa-grid">
-            <a href="partner-login.html" class="wa-card">
-                <div class="card-icon partner"><i class="fas fa-sign-in-alt"></i></div>
-                <div class="card-info"><h3>Partner Login</h3><p>Label partner sign-in</p></div>
-            </a>
-            <a href="partner-dashboard.html" class="wa-card">
-                <div class="card-icon partner"><i class="fas fa-chart-line"></i></div>
-                <div class="card-info"><h3>Partner Dashboard</h3><p>Revenue, earnings, analytics</p></div>
-            </a>
-            <a href="partner-upload.html" class="wa-card">
-                <div class="card-icon partner"><i class="fas fa-upload"></i></div>
-                <div class="card-info"><h3>Partner Upload</h3><p>Label content uploads</p></div>
-            </a>
-            <a href="creator-dashboard.html" class="wa-card">
-                <div class="card-icon partner"><i class="fas fa-palette"></i></div>
-                <div class="card-info"><h3>Creator Dashboard</h3><p>Designer and artist tools</p></div>
-            </a>
-            <a href="creator-register.html" class="wa-card">
-                <div class="card-icon partner"><i class="fas fa-user-edit"></i></div>
-                <div class="card-info"><h3>Creator Register</h3><p>New creator sign-up</p></div>
-            </a>
-        </div>
+            <section id="partners-tab" class="tab-content">
+                <h2>Advertising Partners</h2>
+                <div class="filter-tabs" id="partnerFilters">
+                    <button class="filter-tab active" data-filter="all">All</button>
+                    <button class="filter-tab" data-filter="approved">Active</button>
+                    <button class="filter-tab" data-filter="pending">Pending</button>
+                    <button class="filter-tab" data-filter="partner">White Glove</button>
+                    <button class="filter-tab" data-filter="self-serve">Self-Serve</button>
+                </div>
+                <div id="partnersList"></div>
+            </section>
 
-        <div class="wa-section-title">User Pages</div>
-        <div class="wa-grid">
-            <a href="signin.html" class="wa-card">
-                <div class="card-icon user"><i class="fas fa-sign-in-alt"></i></div>
-                <div class="card-info"><h3>Sign In</h3><p>User login page</p></div>
-            </a>
-            <a href="signup.html" class="wa-card">
-                <div class="card-icon user"><i class="fas fa-user-plus"></i></div>
-                <div class="card-info"><h3>Sign Up</h3><p>New user registration</p></div>
-            </a>
-            <a href="profile.html" class="wa-card">
-                <div class="card-icon user"><i class="fas fa-user-circle"></i></div>
-                <div class="card-info"><h3>Profile</h3><p>User profile page</p></div>
-            </a>
-            <a href="subscription.html" class="wa-card">
-                <div class="card-icon user"><i class="fas fa-credit-card"></i></div>
-                <div class="card-info"><h3>Subscription</h3><p>Plan management</p></div>
-            </a>
-        </div>
+            <section id="ad-oversight-tab" class="tab-content">
+                <h2>Ad Oversight</h2>
+                <div class="filter-tabs" id="adFilters">
+                    <button class="filter-tab active" data-filter="">All</button>
+                    <button class="filter-tab" data-filter="pending">Pending Review</button>
+                    <button class="filter-tab" data-filter="active">Active</button>
+                    <button class="filter-tab" data-filter="paused">Paused</button>
+                    <button class="filter-tab" data-filter="rejected">Rejected</button>
+                </div>
+                <div id="allAdsList" class="ads-list"></div>
+            </section>
 
-        <div class="wa-section-title">Legal</div>
-        <div class="wa-grid">
-            <a href="privacy.html" class="wa-card">
-                <div class="card-icon legal"><i class="fas fa-shield-alt"></i></div>
-                <div class="card-info"><h3>Privacy Policy</h3><p>User privacy policy</p></div>
-            </a>
-            <a href="terms.html" class="wa-card">
-                <div class="card-icon legal"><i class="fas fa-file-contract"></i></div>
-                <div class="card-info"><h3>Terms of Service</h3><p>Platform terms and conditions</p></div>
-            </a>
-        </div>
+            <section id="create-ad-tab" class="tab-content">
+                <h2>Create Ad for Managed Client</h2>
+                <div class="info-banner" style="background:rgba(62,180,137,0.08); border:1px solid rgba(62,180,137,0.2); border-radius:10px; padding:1rem; margin-bottom:1.5rem; display:flex; gap:0.75rem; align-items:flex-start;">
+                    <i class="fas fa-info-circle" style="color:var(--mint); margin-top:2px;"></i>
+                    <p style="color:var(--text-secondary); font-size:0.85rem; margin:0;">Use this for White Glove partners whose campaigns are managed by the Wordeth team. Self-serve partners create their own ads through the Ad Portal.</p>
+                </div>
+                <form id="createAdForm" class="ad-form">
+                    <div class="form-group">
+                        <label>Client Email</label>
+                        <input type="email" name="clientEmail" required placeholder="client@company.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Ad Title</label>
+                        <input type="text" name="title" required maxlength="100" placeholder="Company Name or Campaign">
+                    </div>
+                    <div class="form-group">
+                        <label>Description (optional)</label>
+                        <textarea name="description" maxlength="200" placeholder="Brief ad description"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Placement</label>
+                            <select name="placement" required>
+                                <option value="header">Header (728x90)</option>
+                                <option value="footer">Footer (728x90)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Size</label>
+                            <select name="size" required>
+                                <option value="728x90">Leaderboard (728x90)</option>
+                                <option value="320x50">Mobile Banner (320x50)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Image URL</label>
+                        <input type="url" name="imageUrl" required placeholder="https://example.com/ad-image.jpg">
+                        <small>Image must match selected size exactly</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Click URL</label>
+                        <input type="url" name="linkUrl" required placeholder="https://client-website.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Keywords (up to 25, comma-separated)</label>
+                        <textarea name="keywords" placeholder="ice cream, dessert, frozen treats, summer, cold"></textarea>
+                        <small>Keywords help match ads to relevant lyrics searches</small>
+                    </div>
+                    <div class="form-group preview-group">
+                        <label>Preview</label>
+                        <div id="adPreview" class="ad-preview">
+                            <p>Enter image URL to preview</p>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary">Create Ad</button>
+                </form>
+            </section>
+
+            <section id="settings-tab" class="tab-content">
+                <h2>Settings</h2>
+                <div class="settings-section">
+                    <h3>Create Admin Account</h3>
+                    <p style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:1.25rem;">Add a new internal team member with admin access to this dashboard.</p>
+                    <form id="createAdminForm" class="ad-form">
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Name</label>
+                            <input type="text" name="contactName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" name="password" required minlength="8">
+                        </div>
+                        <button type="submit" class="btn-primary">Create Admin</button>
+                    </form>
+                </div>
+            </section>
+        </main>
     </div>
 
     <div id="loginModal" class="modal">
         <div class="modal-content">
-            <h2>Wordeth Admin</h2>
-            <p class="subtitle">Sign in with your admin credentials</p>
+            <h2>Admin Login</h2>
             <form id="loginForm">
                 <div class="form-group">
                     <label>Email</label>
@@ -234,14 +282,15 @@
                     <label>Password</label>
                     <input type="password" name="password" required>
                 </div>
-                <button type="submit" class="btn-primary">Sign In</button>
+                <button type="submit" class="btn-primary">Login</button>
             </form>
             <p id="loginError" class="error-message"></p>
+            <p class="admin-login-note">Internal Wordeth team access only. Advertising partners should use the <a href="ad-admin.html" style="color:var(--mint); text-decoration:none; font-weight:600;">Ad Portal</a>.</p>
         </div>
     </div>
 
     <script src="js/config.js"></script>
-    <script src="js/w-admin.js"></script>
+    <script src="js/ad-admin.js"></script>
     <script src="js/cookie-consent.js"></script>
 </body>
 </html>
