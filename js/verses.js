@@ -1389,12 +1389,30 @@ class AudioRoomsManager {
             
             this.isRoomHost = isHost;
             this.isSpeaker = isHost;
+            this.isAudioMuted = false;
             this.stageAccess = 'invite-only';
+            if (this.toggleAudioBtn) {
+                this.toggleAudioBtn.innerHTML = '<i class="fas fa-microphone"></i><span class="ctrl-label">Mic</span>';
+                this.toggleAudioBtn.classList.remove('muted');
+            }
             this.karaokeEnabled = isHost ? false : (roomData?.karaokeEnabled || false);
             this.videoMode = isHost ? 'off' : (roomData?.videoMode || 'off');
             this.updateKaraokeButtonState();
             this.updateVideoButtonState();
             this.updateHostControls();
+
+            try {
+                const unlockCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (unlockCtx.state === 'suspended') await unlockCtx.resume();
+                const buf = unlockCtx.createBuffer(1, 1, 22050);
+                const src = unlockCtx.createBufferSource();
+                src.buffer = buf;
+                src.connect(unlockCtx.destination);
+                src.start(0);
+                setTimeout(() => unlockCtx.close().catch(() => {}), 500);
+            } catch (e) {
+                console.warn('Audio unlock gesture failed:', e.message);
+            }
             
             if (isHost) {
                 try {
@@ -1517,13 +1535,34 @@ class AudioRoomsManager {
         this.agoraClient = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
         AgoraRTC.setLogLevel(2);
 
+        AgoraRTC.onAutoplayFailed = () => {
+            console.warn('Agora: autoplay blocked by browser');
+            const banner = document.createElement('div');
+            banner.id = 'agora-autoplay-banner';
+            banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(138,43,226,0.95);color:#fff;text-align:center;padding:14px 20px;font-size:15px;cursor:pointer;backdrop-filter:blur(8px);';
+            banner.innerHTML = '<i class="fas fa-volume-up" style="margin-right:8px;"></i> Tap here to enable audio';
+            banner.addEventListener('click', () => {
+                banner.remove();
+                this.agoraRemoteUsers.forEach(user => {
+                    if (user.audioTrack) user.audioTrack.play();
+                });
+            });
+            if (!document.getElementById('agora-autoplay-banner')) {
+                document.body.appendChild(banner);
+            }
+        };
+
         this.agoraClient.on('user-published', async (user, mediaType) => {
             await this.agoraClient.subscribe(user, mediaType);
             console.log('Agora: subscribed to', user.uid, mediaType);
             if (mediaType === 'audio') {
                 const remoteTrack = user.audioTrack;
                 if (remoteTrack) {
-                    remoteTrack.play();
+                    try {
+                        remoteTrack.play();
+                    } catch (e) {
+                        console.warn('Agora: audio play failed, user may need to tap:', e.message);
+                    }
                     this.agoraRemoteUsers.set(String(user.uid), user);
                 }
             } else if (mediaType === 'video') {
@@ -2593,6 +2632,8 @@ class AudioRoomsManager {
 
         this.leaveAgoraChannel().catch(e => console.warn('Agora leave error:', e));
         if (this._agoraUidMap) this._agoraUidMap.clear();
+        const autoplayBanner = document.getElementById('agora-autoplay-banner');
+        if (autoplayBanner) autoplayBanner.remove();
 
         if (this.audioContext && this.audioContext.state !== 'closed') {
             try { this.audioContext.close(); } catch(e) {}
@@ -3577,6 +3618,11 @@ class AudioRoomsManager {
     async toggleLocalVideo() {
         if (this.videoMode === 'off') {
             this.showToast('Video is disabled by the host.', 'fa-video-slash');
+            return;
+        }
+
+        if (!this.isSpeaker) {
+            this.showToast('You need to be on stage to use the camera', 'fa-video-slash', 3000);
             return;
         }
         
