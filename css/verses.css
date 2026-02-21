@@ -4771,102 +4771,49 @@ body.in-room .audio-rooms-container {
     }
 }
 
-/* ===== LANDSCAPE MODE ===== */
+/* ===== LANDSCAPE BLOCKER — show rotate prompt ===== */
+.landscape-blocker {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%);
+    color: #fff;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.2rem;
+    text-align: center;
+    padding: 2rem;
+}
+
+.landscape-blocker .rotate-icon {
+    font-size: 3rem;
+    color: var(--mint, #96c5b0);
+    animation: rotateHint 2s ease-in-out infinite;
+}
+
+.landscape-blocker h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.landscape-blocker p {
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.6);
+    margin: 0;
+    max-width: 280px;
+}
+
+@keyframes rotateHint {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-20deg); }
+    75% { transform: rotate(20deg); }
+}
+
 @media (orientation: landscape) and (max-height: 500px) {
-    .audio-room {
-        flex-direction: row;
-        height: 100vh;
-        height: 100dvh;
-        overflow: hidden;
-    }
-
-    .audio-section {
-        flex: 1;
-        padding: 0.5rem;
-        gap: 0.5rem;
-        overflow-y: auto;
-        height: 100%;
-    }
-
-    .speakers-stage {
-        padding: 0.5rem;
-        gap: 0.5rem;
-        min-height: auto;
-    }
-
-    .speaker-avatar {
-        width: 50px;
-    }
-
-    .avatar-ring {
-        width: 40px;
-        height: 40px;
-    }
-
-    .speaker-name { font-size: 0.65rem; }
-    .speaker-role { font-size: 0.5rem; }
-
-    .room-header {
-        padding: 0.4rem 0.8rem;
-    }
-
-    .room-title h2 {
-        font-size: 0.9rem;
-    }
-
-    .room-controls {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        z-index: 90;
-        padding: 0.3rem 0.5rem;
-        padding-bottom: env(safe-area-inset-bottom, 4px);
-    }
-
-    .controls-slider {
-        padding: 0.3rem 0.5rem;
-    }
-
-    .control-btn {
-        min-width: 36px;
-        padding: 0.3rem 0.4rem;
-        font-size: 0.75rem;
-    }
-
-    .ctrl-label {
-        font-size: 0.5rem;
-    }
-
-    .audio-room {
-        padding-bottom: 60px;
-    }
-
-    .video-grid-wrapper {
-        margin-bottom: 0;
-    }
-
-    .video-grid {
-        aspect-ratio: auto;
-        min-height: 0;
-        height: 100%;
-    }
-
-    .chat-section {
-        height: 50vh;
-    }
-
-    .host-panel-toggle {
-        padding: 6px 10px;
-        font-size: 0.75rem;
-    }
-
-    .host-controls-panel {
-        padding: 6px;
-    }
-
-    .host-panel-btn {
-        padding: 6px 8px;
-        font-size: 0.65rem;
+    body.in-room .landscape-blocker {
+        display: flex;
     }
 }
