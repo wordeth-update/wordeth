@@ -50,7 +50,7 @@ for (const dir of FRONTEND_DIRS) {
     copyDir(path.join(ROOT, dir), path.join(WWW, dir));
 }
 
-const API_BASE = process.env.WORDETH_API_URL || 'https://your-backend-url.com';
+const API_BASE = process.env.WORDETH_API_URL || 'https://www.wordeth.com';
 const configPath = path.join(WWW, 'js', 'config.js');
 let configContent = fs.readFileSync(configPath, 'utf8');
 configContent = configContent.replace(
