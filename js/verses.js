@@ -1320,29 +1320,7 @@ class AudioRoomsManager {
             
             this.updateRoomInfo(roomId);
             
-            const selfInitial = userName.charAt(0).toUpperCase();
-            const selfAvatarUrl = user.avatar || null;
-            if (this.speakersStage) {
-                const selfAvatar = document.createElement('div');
-                selfAvatar.className = 'speaker-avatar self-speaker';
-                selfAvatar.setAttribute('data-participant-id', 'self');
-                const selfAvatarContent = selfAvatarUrl 
-                    ? `<img src="${selfAvatarUrl}" alt="${userName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.outerHTML='<div class=\\'avatar-initial\\' style=\\'width:100%;height:100%;border-radius:50%;background:var(--mint,#98ff98);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:#1a1a2e;\\'>${selfInitial}</div>'">`
-                    : `<div class="avatar-initial" style="width:100%;height:100%;border-radius:50%;background:var(--mint,#98ff98);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:#1a1a2e;">${selfInitial}</div>`;
-                selfAvatar.innerHTML = `
-                    <div class="avatar-ring">
-                        ${selfAvatarContent}
-                    </div>
-                    <div class="speaker-info">
-                        <span class="speaker-name">${userName} (You)</span>
-                        <span class="speaker-role">${isHost ? 'Host' : 'Speaker'}</span>
-                    </div>
-                    <div class="speaker-status">
-                        <i class="fas fa-microphone"></i>
-                    </div>
-                `;
-                this.speakersStage.appendChild(selfAvatar);
-            }
+            this._addSelfToStage(userName, user.avatar || null, isHost);
             
             this.addChatMessage('System', 'Welcome to the room!', true);
 
@@ -1923,6 +1901,39 @@ class AudioRoomsManager {
         console.log('Initializing WebRTC connections...');
     }
 
+    _addSelfToStage(userName, avatarUrl, isHost) {
+        const stage = this.speakersStage || document.getElementById('speakers-stage');
+        if (!stage) {
+            console.warn('speakers-stage element not found, retrying in 200ms');
+            setTimeout(() => this._addSelfToStage(userName, avatarUrl, isHost), 200);
+            return;
+        }
+        this.speakersStage = stage;
+        const existing = stage.querySelector('[data-participant-id="self"]');
+        if (existing) existing.remove();
+
+        const initial = (userName || 'A').charAt(0).toUpperCase();
+        const avatarContent = avatarUrl
+            ? `<img src="${avatarUrl}" alt="${userName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.outerHTML='<div class=\\'avatar-initial\\' style=\\'width:100%;height:100%;border-radius:50%;background:var(--mint,#98ff98);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:#1a1a2e;\\'>${initial}</div>'">`
+            : `<div class="avatar-initial" style="width:100%;height:100%;border-radius:50%;background:var(--mint,#98ff98);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:#1a1a2e;">${initial}</div>`;
+        const selfAvatar = document.createElement('div');
+        selfAvatar.className = 'speaker-avatar self-speaker';
+        selfAvatar.setAttribute('data-participant-id', 'self');
+        selfAvatar.innerHTML = `
+            <div class="avatar-ring">
+                ${avatarContent}
+            </div>
+            <div class="speaker-info">
+                <span class="speaker-name">${userName} (You)</span>
+                <span class="speaker-role">${isHost ? 'Host' : 'Speaker'}</span>
+            </div>
+            <div class="speaker-status">
+                <i class="fas fa-microphone${this.isAudioMuted ? '-slash' : ''}"></i>
+            </div>
+        `;
+        stage.prepend(selfAvatar);
+    }
+
     updateRoomInfo(roomId) {
         const roomNameEl = document.getElementById('room-name');
         const currentSong = document.getElementById('current-song');
@@ -2496,32 +2507,7 @@ class AudioRoomsManager {
 
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         const userName = user.name || user.username || 'Anonymous';
-        const selfInitial = userName.charAt(0).toUpperCase();
-        if (this.speakersStage) {
-            const existing = this.speakersStage.querySelector('[data-participant-id="self"]');
-            if (!existing) {
-                const selfAvatar = document.createElement('div');
-                selfAvatar.className = 'speaker-avatar self-speaker';
-                selfAvatar.setAttribute('data-participant-id', 'self');
-                const avatarUrl = user.avatar || null;
-                const avatarContent = avatarUrl
-                    ? `<img src="${avatarUrl}" alt="${userName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.outerHTML='<div class=\\'avatar-initial\\' style=\\'width:100%;height:100%;border-radius:50%;background:var(--mint,#98ff98);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:#1a1a2e;\\'>${selfInitial}</div>'">`
-                    : `<div class="avatar-initial" style="width:100%;height:100%;border-radius:50%;background:var(--mint,#98ff98);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:#1a1a2e;">${selfInitial}</div>`;
-                selfAvatar.innerHTML = `
-                    <div class="avatar-ring">
-                        ${avatarContent}
-                    </div>
-                    <div class="speaker-info">
-                        <span class="speaker-name">${userName} (You)</span>
-                        <span class="speaker-role">${this.isRoomHost ? 'Host' : 'Speaker'}</span>
-                    </div>
-                    <div class="speaker-status">
-                        <i class="fas fa-microphone${this.isAudioMuted ? '-slash' : ''}"></i>
-                    </div>
-                `;
-                this.speakersStage.appendChild(selfAvatar);
-            }
-        }
+        this._addSelfToStage(userName, user.avatar || null, this.isRoomHost);
     }
 
     addRemoteSpeaker(participantId, name, stream, isSpeaking = false, userId = null, avatarUrl = null) {
