@@ -283,6 +283,47 @@ function setupSignaling(io) {
             }
         });
 
+        socket.on('promote-to-speaker', ({ roomId, targetSocketId }) => {
+            const room = rooms.get(roomId);
+            if (!room) return;
+            if (socket.id !== room.hostId) return;
+
+            const targetParticipant = room.participants.get(targetSocketId);
+            if (!targetParticipant) return;
+            if (targetParticipant.isSpeaker) return;
+
+            targetParticipant.isSpeaker = true;
+            targetParticipant.isMuted = true;
+
+            io.to(targetSocketId).emit('promoted-to-speaker');
+
+            io.to(roomId).emit('participant-promoted', {
+                socketId: targetSocketId,
+                userId: targetParticipant.userId,
+                userName: targetParticipant.userName,
+                avatar: targetParticipant.avatar || null
+            });
+
+            const updatedList = Array.from(room.participants.values());
+            io.to(roomId).emit('participants-list', {
+                roomId,
+                participants: updatedList,
+                roomName: room.name || null,
+                isLocked: room.isLocked,
+                karaokeEnabled: room.karaokeEnabled,
+                videoMode: room.videoMode || 'off',
+                activeVideos: room.activeVideos || []
+            });
+
+            io.to(roomId).emit('room-event', {
+                event: 'participant-promoted',
+                data: {
+                    socketId: targetSocketId,
+                    userName: targetParticipant.userName
+                }
+            });
+        });
+
         socket.on('room-event', ({ roomId, event, data }) => {
             const room = rooms.get(roomId);
             if (!room) return;

@@ -4771,3 +4771,17 @@ body.in-room .audio-rooms-container {
     }
 }
 
+/* ===== FORCE PORTRAIT IN ROOM ===== */
+@media (orientation: landscape) and (max-height: 500px) {
+    body.in-room {
+        width: 100vh !important;
+        height: 100vw !important;
+        transform: rotate(-90deg);
+        transform-origin: top left;
+        position: fixed;
+        top: 100vw;
+        left: 0;
+        overflow: hidden !important;
+    }
+}
+

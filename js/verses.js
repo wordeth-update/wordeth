@@ -267,6 +267,7 @@ class AudioRoomsManager {
         this.toggleAudioBtn?.addEventListener('click', () => this.toggleAudio());
         this.raiseHandBtn?.addEventListener('click', () => this.toggleHandRaise());
         this.toggleChatBtn?.addEventListener('click', () => this.toggleChat());
+        this._initChatSwipeToDismiss();
         this.shareMusicBtn?.addEventListener('click', () => this.shareMusic());
         this.leaveRoomBtn?.addEventListener('click', () => this.leaveRoom());
 
@@ -1051,6 +1052,47 @@ class AudioRoomsManager {
         this.toggleChatBtn?.classList.toggle('active', this.chatVisible);
     }
 
+    _initChatSwipeToDismiss() {
+        const chatEl = this.chatSection;
+        if (!chatEl) return;
+        let startY = 0, currentY = 0, isDragging = false;
+        const header = chatEl.querySelector('.chat-header');
+        if (!header) return;
+
+        header.addEventListener('touchstart', (e) => {
+            if (window.innerWidth > 768) return;
+            startY = e.touches[0].clientY;
+            currentY = startY;
+            isDragging = true;
+            chatEl.style.transition = 'none';
+        }, { passive: true });
+
+        header.addEventListener('touchmove', (e) => {
+            if (!isDragging || window.innerWidth > 768) return;
+            currentY = e.touches[0].clientY;
+            const dy = currentY - startY;
+            if (dy > 0) {
+                chatEl.style.transform = `translateY(${dy}px)`;
+            }
+        }, { passive: true });
+
+        const endSwipe = () => {
+            if (!isDragging || window.innerWidth > 768) return;
+            isDragging = false;
+            chatEl.style.transition = '';
+            const dy = currentY - startY;
+            if (dy > 80) {
+                chatEl.classList.remove('mobile-visible');
+                this.chatVisible = false;
+                this.toggleChatBtn?.classList.remove('active');
+            }
+            chatEl.style.transform = '';
+        };
+
+        header.addEventListener('touchend', endSwipe);
+        header.addEventListener('touchcancel', endSwipe);
+    }
+
     sendMessage() {
         const message = this.chatInput?.value.trim();
         if (!message) return;
@@ -1608,6 +1650,29 @@ class AudioRoomsManager {
                 this.addChatMessage('System', reason || 'The host has moved you to the crowd.', true);
                 this.showToast('You were moved to the crowd by the host.', 'fa-users', 5000);
             }
+        });
+
+        this.socket.on('promoted-to-speaker', () => {
+            this.isSpeaker = true;
+            if (this.localStream) {
+                this.localStream.getAudioTracks().forEach(t => { t.enabled = false; });
+            }
+            this.isAudioMuted = true;
+            const selfEl = document.querySelector('[data-participant-id="self"]');
+            if (selfEl) selfEl.remove();
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const userName = user.name || user.username || 'Anonymous';
+            this._addSelfToStage(userName, user.avatar || null, false);
+            const muteIcon = this.toggleAudioBtn?.querySelector('i');
+            if (muteIcon) muteIcon.className = 'fas fa-microphone-slash';
+            this.addChatMessage('System', 'The host invited you back to the stage! Unmute when ready.', true);
+            this.showToast('You were invited to the stage!', 'fa-arrow-up', 4000);
+        });
+
+        this.socket.on('participant-promoted', ({ socketId, userId, userName, avatar }) => {
+            const existing = document.querySelector(`[data-participant-id="${socketId}"]`);
+            if (existing) existing.remove();
+            this.addRemoteSpeaker(socketId, userName, null, false, userId, avatar);
         });
 
         return new Promise((resolve) => {
@@ -3196,7 +3261,9 @@ class AudioRoomsManager {
             <div class="kick-menu-header">${name}</div>
             ${isSpeaker ? `<button class="kick-menu-item move-to-crowd" data-action="move-to-crowd">
                 <i class="fas fa-arrow-down"></i> Move to Crowd
-            </button>` : ''}
+            </button>` : `<button class="kick-menu-item invite-to-stage" data-action="invite-to-stage">
+                <i class="fas fa-arrow-up"></i> Invite to Stage
+            </button>`}
             <button class="kick-menu-item remove-from-room" data-action="remove">
                 <i class="fas fa-ban"></i> Remove from Room
             </button>
@@ -3214,6 +3281,11 @@ class AudioRoomsManager {
         menu.querySelector('.move-to-crowd')?.addEventListener('click', (e) => {
             e.stopPropagation();
             this.kickParticipant(participantId, 'move-to-crowd');
+            removeMenu();
+        });
+        menu.querySelector('.invite-to-stage')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.promoteToSpeaker(participantId);
             removeMenu();
         });
         menu.querySelector('.remove-from-room')?.addEventListener('click', (e) => {
@@ -3261,8 +3333,15 @@ class AudioRoomsManager {
             action
         });
     }
-    
-    
+
+    promoteToSpeaker(targetSocketId) {
+        if (!this.isRoomHost || !this.socket || !this.currentRoom) return;
+        this.socket.emit('promote-to-speaker', {
+            roomId: this.currentRoom,
+            targetSocketId
+        });
+    }
+
     // ==========================================
     // VIDEO GRID FEATURE
     // ==========================================
