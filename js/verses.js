@@ -1300,6 +1300,7 @@ class AudioRoomsManager {
             
             if (this.roomSelection) this.roomSelection.style.display = 'none';
             this.audioRoom?.classList.remove('hidden');
+            document.body.classList.add('in-room');
             
             this.currentRoom = roomId;
             this.roomJoinTime = Date.now();
@@ -1689,13 +1690,26 @@ class AudioRoomsManager {
             audioEl = document.createElement('audio');
             audioEl.autoplay = true;
             audioEl.playsInline = true;
+            audioEl.setAttribute('playsinline', '');
             audioEl.id = `remote-audio-${remoteId}`;
-            audioEl.volume = 0;
+            audioEl.volume = 1;
             document.body.appendChild(audioEl);
             this.remoteAudioElements.set(remoteId, audioEl);
-            setTimeout(() => { audioEl.volume = 1; }, 500);
         }
         audioEl.srcObject = stream;
+        const playPromise = audioEl.play();
+        if (playPromise) {
+            playPromise.catch(err => {
+                console.warn('Audio autoplay blocked for', remoteName, '- retrying on user interaction');
+                const resumeAudio = () => {
+                    audioEl.play().catch(() => {});
+                    document.removeEventListener('touchstart', resumeAudio);
+                    document.removeEventListener('click', resumeAudio);
+                };
+                document.addEventListener('touchstart', resumeAudio, { once: true });
+                document.addEventListener('click', resumeAudio, { once: true });
+            });
+        }
         
         this.addRemoteSpeaker(remoteId, remoteName, stream, true);
     }
@@ -2413,6 +2427,7 @@ class AudioRoomsManager {
         this.chatVisible = true;
         
         this.audioRoom?.classList.add('hidden');
+        document.body.classList.remove('in-room');
         if (this.roomSelection) this.roomSelection.style.display = 'block';
         this.currentRoom = null;
         this.roomJoinTime = null;
@@ -2525,6 +2540,12 @@ class AudioRoomsManager {
 
     addRemoteSpeaker(participantId, name, stream, isSpeaking = false, userId = null, avatarUrl = null) {
         if (document.querySelector(`[data-participant-id="${participantId}"]`)) return;
+        if (userId) {
+            const existing = document.querySelector(`[data-user-id="${userId}"]`);
+            if (existing && existing.getAttribute('data-participant-id') !== 'self') {
+                existing.remove();
+            }
+        }
         
         const initial = (name || '?').charAt(0).toUpperCase();
         const speakerAvatar = document.createElement('div');
@@ -2982,7 +3003,9 @@ class AudioRoomsManager {
     
     showKaraokeModal() {
         if (!this.isRoomHost) {
-            this.requestPermission('karaoke', 'A participant');
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const userName = user.name || user.username || 'A participant';
+            this.requestPermission('karaoke', userName);
             return;
         }
         if (!this.karaokeEnabled) {

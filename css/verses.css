@@ -4649,3 +4649,175 @@
     transform: scale(1.05);
     box-shadow: 0 4px 15px rgba(150, 197, 176, 0.3);
 }
+
+/* Hide nav and footer when inside active room */
+.audio-room:not(.hidden) ~ footer,
+.audio-room:not(.hidden) ~ .footer,
+body.in-room footer,
+body.in-room .footer,
+body.in-room .site-footer {
+    display: none !important;
+}
+
+body.in-room .navbar,
+body.in-room nav {
+    display: none !important;
+}
+
+/* Video grid - fill available space, no negative space */
+@media (max-width: 768px) {
+    .video-grid-wrapper {
+        margin-bottom: 0;
+        border-radius: 8px;
+        flex-shrink: 0;
+    }
+
+    .video-grid {
+        aspect-ratio: auto;
+        min-height: 30vh;
+    }
+
+    .video-grid[data-count="1"] {
+        min-height: 45vh;
+    }
+
+    .video-grid[data-count="2"] {
+        grid-template-columns: 1fr 1fr;
+        min-height: 30vh;
+    }
+
+    .video-grid[data-count="3"] {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        min-height: 45vh;
+    }
+
+    .video-tile {
+        min-height: 120px;
+    }
+
+    .video-tile video {
+        object-fit: cover;
+        width: 100%;
+        height: 100%;
+    }
+}
+
+/* Chat panel — swipe down handle and smooth dismiss */
+@media (max-width: 768px) {
+    .chat-section {
+        touch-action: pan-y;
+    }
+
+    .chat-section .chat-header {
+        cursor: grab;
+        padding-top: 1.5rem;
+    }
+
+    .chat-messages {
+        max-height: calc(60vh - 140px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+}
+
+/* ===== LANDSCAPE MODE ===== */
+@media (orientation: landscape) and (max-height: 500px) {
+    .audio-room {
+        flex-direction: row;
+        height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    .audio-section {
+        flex: 1;
+        padding: 0.5rem;
+        gap: 0.5rem;
+        overflow-y: auto;
+        height: 100%;
+    }
+
+    .speakers-stage {
+        padding: 0.5rem;
+        gap: 0.5rem;
+        min-height: auto;
+    }
+
+    .speaker-avatar {
+        width: 50px;
+    }
+
+    .avatar-ring {
+        width: 40px;
+        height: 40px;
+    }
+
+    .speaker-name { font-size: 0.65rem; }
+    .speaker-role { font-size: 0.5rem; }
+
+    .room-header {
+        padding: 0.4rem 0.8rem;
+    }
+
+    .room-title h2 {
+        font-size: 0.9rem;
+    }
+
+    .room-controls {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 90;
+        padding: 0.3rem 0.5rem;
+        padding-bottom: env(safe-area-inset-bottom, 4px);
+    }
+
+    .controls-slider {
+        padding: 0.3rem 0.5rem;
+    }
+
+    .control-btn {
+        min-width: 36px;
+        padding: 0.3rem 0.4rem;
+        font-size: 0.75rem;
+    }
+
+    .ctrl-label {
+        font-size: 0.5rem;
+    }
+
+    .audio-room {
+        padding-bottom: 60px;
+    }
+
+    .video-grid-wrapper {
+        margin-bottom: 0;
+    }
+
+    .video-grid {
+        aspect-ratio: auto;
+        min-height: 0;
+        height: 100%;
+    }
+
+    .chat-section {
+        height: 50vh;
+    }
+
+    .host-panel-toggle {
+        padding: 6px 10px;
+        font-size: 0.75rem;
+    }
+
+    .host-controls-panel {
+        padding: 6px;
+    }
+
+    .host-panel-btn {
+        padding: 6px 8px;
+        font-size: 0.65rem;
+    }
+}
