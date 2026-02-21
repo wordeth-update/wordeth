@@ -1305,6 +1305,7 @@ class AudioRoomsManager {
             if (pageFooter) pageFooter.style.display = 'none';
             const mainContainer = document.querySelector('.audio-rooms-container');
             if (mainContainer) mainContainer.style.overflow = 'hidden';
+            try { screen.orientation?.lock?.('portrait').catch(() => {}); } catch(e) {}
             
             this.currentRoom = roomId;
             this.roomJoinTime = Date.now();
@@ -2436,6 +2437,7 @@ class AudioRoomsManager {
         if (pageFooter) pageFooter.style.display = '';
         const mainContainer = document.querySelector('.audio-rooms-container');
         if (mainContainer) mainContainer.style.overflow = '';
+        try { screen.orientation?.unlock?.(); } catch(e) {}
         if (this.roomSelection) this.roomSelection.style.display = 'block';
         this.currentRoom = null;
         this.roomJoinTime = null;
