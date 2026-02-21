@@ -52,11 +52,14 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: { origin: true, credentials: true },
-    transports: ['websocket', 'polling'],
+    transports: ['polling', 'websocket'],
     allowUpgrades: true,
+    upgradeTimeout: 30000,
     pingTimeout: 60000,
     pingInterval: 25000,
-    maxHttpBufferSize: 15e6
+    maxHttpBufferSize: 15e6,
+    httpCompression: false,
+    perMessageDeflate: false
 });
 
 setupSignaling(io);
@@ -85,11 +88,14 @@ app.use(helmet({
     referrerPolicy: { policy: "strict-origin-when-cross-origin" },
 }));
 
-// Rate limiting
+// Rate limiting — use real client IP behind Cloudflare/proxies
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
-    message: 'Too many requests from this IP, please try again later.'
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: 'Too many requests from this IP, please try again later.',
+    keyGenerator: (req) => {
+        return req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+    }
 });
 app.use('/api/', limiter);
 
@@ -140,6 +146,16 @@ app.use(cors({
 // Middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Prevent Cloudflare from caching any API responses
+app.use('/api', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('CDN-Cache-Control', 'no-store');
+    res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+});
 
 // Serve static files with cache control (Cloudflare-compatible)
 app.use(express.static(path.join(__dirname), {
