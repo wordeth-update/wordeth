@@ -79,7 +79,7 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 
 ### Key Features Architecture
 - **Verses (Audio Rooms)**: Utilizes WebRTC peer-to-peer audio via a Socket.io signaling server. Features Web Audio API for voice filters and audio mixing (microphone + YouTube), and YouTube embed integration for karaoke. Supports WebRTC broadcasting of video with filters and AR genre face filters using MediaPipe Face Landmarker. Allows streaming of local audio files into the room mix. Hosts can kick participants (move to crowd or remove entirely) via a three-dot menu on participant avatars. Multi-person video grid supports up to 6 simultaneous feeds with speaker-priority rotation (unmuted speakers prioritized). Host controls video mode (Off/Ask/Open), Mute All, and Close Room. Video grid adapts layout: 1=full, 2=side-by-side, 3-4=2x2, 5-6=2x3 (mobile: 2x3 becomes 2-column). Photo/image sharing via chat (no live screen sharing — removed for simplicity).
-- **Lyrics**: Server-side search integrating with the Genius API and several fallback sources.
+- **Lyrics**: Server-side search integrating with the Musixmatch API and fallback sources (LRCLIB, Lyrics.ovh).
 - **Advertising**: Contextual keyword-based ads with a self-serve portal (`ad-portal.html`), ad documentation (`ad-docs.html`), advertiser registration (`ad-register.html`), admin approval, and tracking.
 - **Trending Topics**: "Trending This Week" horizontal bar on the Verses page showing conversation starters (Hot/New/Viral topics) to spark discussion in rooms.
 - **Usage Analytics**: Event tracking middleware logs API usage, visualized in an admin dashboard.
@@ -89,4 +89,4 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 ## External Dependencies
 
 - **NPM Packages (Runtime)**: express, mongoose, bcryptjs, jsonwebtoken, cors, helmet, express-rate-limit, express-validator, dotenv, axios, multer, @aws-sdk/client-s3, puppeteer.
-- **External APIs & Services**: Genius API, Musixmatch API, LRCLIB/Lyrics.ovh (lyrics sources), YouTube (audio/video playback), MongoDB (primary database), AWS S3 (historical data archival), InkSoft (merchandise store integration via iframes), Google Fonts, Font Awesome, Google STUN servers (WebRTC connectivity).
+- **External APIs & Services**: Musixmatch API, LRCLIB/Lyrics.ovh (lyrics sources), YouTube (audio/video playback), MongoDB (primary database), AWS S3 (historical data archival), InkSoft (merchandise store integration via iframes), Google Fonts, Font Awesome, Google STUN servers (WebRTC connectivity).

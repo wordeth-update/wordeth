@@ -11,12 +11,12 @@ require('dotenv').config(); // Also load .env
 const requiredVars = {
   development: [
     'JWT_SECRET',
-    'GENIUS_ACCESS_TOKEN'
+    'MUSIXMATCH_API_KEY'
   ],
   production: [
     'JWT_SECRET',
     'MONGODB_URI_PROD',
-    'GENIUS_ACCESS_TOKEN',
+    'MUSIXMATCH_API_KEY',
     'SESSION_SECRET',
     'PRODUCTION_URL',
     'CLIENT_URL',
