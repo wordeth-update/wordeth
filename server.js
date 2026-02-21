@@ -191,13 +191,24 @@ app.use('/api/creator', creatorRoutes); // Independent artist/designer
 app.use('/api/tournaments', tournamentRoutes); // Verses Tournaments
 app.use('/api/agora', agoraRoutes); // Agora RTC tokens
 app.get('/api/rooms/active', (req, res) => {
-    res.json(getActiveRooms());
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('CDN-Cache-Control', 'no-store');
+    res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
+    res.setHeader('Pragma', 'no-cache');
+    const rooms = getActiveRooms();
+    console.log(`[Rooms API] Active rooms: ${rooms.length} rooms`);
+    res.json(rooms);
 });
 
 app.get('/api/rooms/:roomId', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('CDN-Cache-Control', 'no-store');
+    res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
+    res.setHeader('Pragma', 'no-cache');
     const activeRooms = getActiveRooms();
     const room = activeRooms.find(r => r.id === req.params.roomId);
     if (!room) {
+        console.log(`[Rooms API] Room ${req.params.roomId} not found. Active rooms: ${activeRooms.map(r => r.id).join(', ') || 'none'}`);
         return res.status(404).json({ error: 'Room not found or no longer active' });
     }
     res.json(room);
