@@ -750,13 +750,15 @@
     transform: scale(1.1);
 }
 
-/* Audio Room Styles */
+/* Audio Room Styles - viewport-locked */
 .audio-room,
 .video-room {
     height: 100vh;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     background: var(--black);
+    overflow: hidden;
 }
 
 .audio-room.hidden,
@@ -922,9 +924,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.5rem 2rem;
+    padding: 1rem 2rem;
     background: linear-gradient(135deg, var(--purple-dark) 0%, var(--black) 100%);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
 }
 
 .room-title h2 {
@@ -1046,6 +1049,7 @@
     padding: 0.75rem 0;
     background: linear-gradient(135deg, var(--purple-dark) 0%, var(--black) 100%);
     border-top: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
 }
 
 .controls-slider {
@@ -1546,7 +1550,8 @@
 .room-main {
     display: flex;
     flex: 1;
-    height: calc(100vh - 200px);
+    min-height: 0;
+    overflow: hidden;
 }
 
 .video-section {
@@ -1562,6 +1567,8 @@
     display: flex;
     flex-direction: column;
     transition: transform 0.3s ease;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .chat-section.hidden {
@@ -3266,48 +3273,54 @@
     .friend-info h4 { font-size: 0.95rem; }
     .friend-info p { font-size: 0.8rem; }
 
-    /* ===== AUDIO ROOM - CLUBHOUSE MOBILE ===== */
+    /* ===== AUDIO ROOM - VIEWPORT-LOCKED MOBILE ===== */
     .audio-room {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
         height: 100vh;
-        height: -webkit-fill-available;
-        overflow-y: auto;
-        overflow-x: hidden;
-        position: relative;
-        padding-bottom: 110px;
+        height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        z-index: 80;
     }
 
-    /* Room Header - Compact */
+    /* Room Header - Ultra compact */
     .room-header {
         flex-direction: column;
-        gap: 0.5rem;
-        padding: 0.75rem 1rem;
+        gap: 0.3rem;
+        padding: 0.5rem 1rem;
         text-align: center;
+        flex-shrink: 0;
     }
-    .room-title h2 { font-size: 1.1rem; }
+    .room-title h2 { font-size: 1rem; }
     .room-title p,
-    .topic-container { font-size: 0.8rem; }
+    .topic-container { font-size: 0.75rem; }
     .edit-topic-btn { display: none; }
 
-    /* Header action buttons - minimal on mobile */
+    /* Header action buttons - icon-only circles */
     .room-header .room-actions {
-        gap: 0.6rem;
+        gap: 0.5rem;
         flex-wrap: nowrap;
         justify-content: center;
-        padding: 0.25rem 0.5rem;
+        padding: 0.15rem 0.5rem;
     }
     .room-header .room-actions .action-btn {
-        padding: 0.4rem;
+        padding: 0.35rem;
         border-radius: 50%;
-        width: 34px;
-        height: 34px;
-        min-width: 34px;
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 0;
     }
     .room-header .room-actions .action-btn i {
-        font-size: 14px;
+        font-size: 13px;
     }
     .room-header .room-actions .action-btn span,
     .room-header .room-actions .action-btn .lock-text,
@@ -3323,48 +3336,60 @@
         display: none !important;
     }
 
-    /* Room Main - Full height minus header and controls */
+    /* Room Main - fills between header and controls, NO scroll */
     .room-main {
         flex-direction: column;
-        height: calc(100dvh - 130px);
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        height: auto;
+    }
+
+    /* Audio/Speakers Section - fills available space, internal scroll only */
+    .audio-section {
+        padding: 0.75rem;
+        gap: 0.5rem;
+        flex: 1;
+        min-height: 0;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
     }
 
-    /* Audio/Speakers Section */
-    .audio-section {
-        padding: 1rem;
-        gap: 1rem;
-        flex: 1;
-        overflow-y: auto;
-    }
-
     .speakers-stage {
-        gap: 0.75rem;
-        padding: 1rem;
+        gap: 0.6rem;
+        padding: 0.75rem;
         justify-content: center;
+        min-height: 80px;
+        flex-shrink: 0;
     }
 
     .speaker-avatar {
-        width: 62px;
-        gap: 0.25rem;
+        width: 56px;
+        gap: 0.2rem;
     }
 
     .avatar-ring {
-        width: 50px;
-        height: 50px;
+        width: 46px;
+        height: 46px;
     }
 
-    .speaker-name { font-size: 0.75rem; }
-    .speaker-role { font-size: 0.6rem; }
+    .speaker-name { font-size: 0.7rem; }
+    .speaker-role { font-size: 0.55rem; }
     .speaker-status {
-        width: 20px;
-        height: 20px;
-        font-size: 0.6rem;
+        width: 18px;
+        height: 18px;
+        font-size: 0.55rem;
     }
 
-    .listeners-section { padding: 1rem; }
-    .listener-avatar { width: 38px; height: 38px; }
+    .listeners-section {
+        padding: 0.5rem 0.75rem;
+        flex-shrink: 0;
+    }
+    .listeners-section h4 {
+        font-size: 0.75rem;
+        margin-bottom: 0.3rem;
+    }
+    .listener-avatar { width: 34px; height: 34px; }
 
     /* Chat - Slide up overlay on mobile */
     .chat-section {
@@ -3373,16 +3398,15 @@
         left: 0;
         right: 0;
         width: 100%;
-        height: 60vh;
+        height: 55vh;
         z-index: 100;
         border-left: none;
         border-top: none;
         border-radius: 20px 20px 0 0;
         transform: translateY(100%);
-        transition: transform 0.3s ease;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         background: linear-gradient(135deg, #1a1a2e 0%, #0a0a0a 100%);
         box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
-        padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
     }
     .chat-section.hidden {
         transform: translateY(100%);
@@ -3392,22 +3416,36 @@
         transform: translateY(0);
     }
     .chat-header {
-        padding: 1rem;
+        padding: 0.75rem 1rem;
         position: relative;
+        flex-shrink: 0;
+        touch-action: none;
+        cursor: grab;
     }
     .chat-header::before {
         content: '';
         position: absolute;
-        top: 8px;
+        top: 6px;
         left: 50%;
         transform: translateX(-50%);
         width: 40px;
         height: 4px;
-        background: rgba(255,255,255,0.3);
+        background: rgba(255,255,255,0.35);
         border-radius: 2px;
     }
+    .chat-messages {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 0;
+    }
+    .chat-input-container {
+        flex-shrink: 0;
+        padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+    }
 
-    /* ===== BOTTOM CONTROL PANEL - CLUBHOUSE STYLE ===== */
+    /* ===== BOTTOM CONTROL PANEL ===== */
     .room-controls {
         position: fixed;
         bottom: 0;
@@ -3415,18 +3453,20 @@
         right: 0;
         z-index: 90;
         padding: 0;
-        padding-bottom: env(safe-area-inset-bottom, 8px);
+        padding-bottom: env(safe-area-inset-bottom, 6px);
         background: linear-gradient(180deg, rgba(26,26,46,0.97) 0%, rgba(10,10,10,0.99) 100%);
-        border-radius: 20px 20px 0 0;
+        border-radius: 18px 18px 0 0;
         border-top: 1px solid rgba(150, 197, 176, 0.15);
         box-shadow: 0 -8px 30px rgba(0,0,0,0.4);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
+        flex-shrink: 0;
+        overflow: hidden;
     }
     .room-controls::before {
         content: '';
         position: absolute;
-        top: 6px;
+        top: 5px;
         left: 50%;
         transform: translateX(-50%);
         width: 36px;
@@ -3438,8 +3478,16 @@
 
     .controls-slider {
         gap: 0.4rem;
-        padding: 0.6rem 0.75rem 0.4rem;
+        padding: 0.5rem 1rem 0.35rem;
         justify-content: flex-start;
+        scroll-snap-type: x proximity;
+        scroll-padding: 0 1rem;
+    }
+
+    .controls-slider::after {
+        content: '';
+        min-width: 0.5rem;
+        flex-shrink: 0;
     }
 
     .control-btn {
@@ -3449,6 +3497,7 @@
         border-radius: 12px;
         touch-action: manipulation;
         -webkit-tap-highlight-color: rgba(150, 197, 176, 0.3);
+        scroll-snap-align: start;
     }
 
     .ctrl-label {
@@ -3497,13 +3546,13 @@
     /* Float panel adjustments */
     .yt-float-panel {
         width: 180px;
-        bottom: 100px;
+        bottom: 80px;
         right: 8px;
     }
 
     .host-notifications {
         top: auto;
-        bottom: 100px;
+        bottom: 80px;
         right: 0.5rem;
         left: 0.5rem;
         max-width: 100%;
@@ -4650,75 +4699,66 @@
     box-shadow: 0 4px 15px rgba(150, 197, 176, 0.3);
 }
 
-/* Hide nav and footer when inside active room */
-.audio-room:not(.hidden) ~ footer,
-.audio-room:not(.hidden) ~ .footer,
+/* Hide nav/footer and lock body scroll when inside active room */
+body.in-room {
+    overflow: hidden !important;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+}
+
 body.in-room footer,
 body.in-room .footer,
 body.in-room .site-footer {
     display: none !important;
 }
 
-body.in-room .navbar,
-body.in-room nav {
+body.in-room .main-nav,
+body.in-room nav.main-nav {
     display: none !important;
 }
 
+body.in-room .audio-rooms-container {
+    margin-top: 0;
+}
+
 /* Video grid - fill available space, no negative space */
+.video-grid-wrapper {
+    flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
     .video-grid-wrapper {
         margin-bottom: 0;
         border-radius: 8px;
-        flex-shrink: 0;
     }
 
     .video-grid {
         aspect-ratio: auto;
-        min-height: 30vh;
+        max-height: 35vh;
     }
 
     .video-grid[data-count="1"] {
-        min-height: 45vh;
+        max-height: 40vh;
     }
 
     .video-grid[data-count="2"] {
         grid-template-columns: 1fr 1fr;
-        min-height: 30vh;
     }
 
     .video-grid[data-count="3"] {
         grid-template-columns: 1fr 1fr;
         grid-template-rows: 1fr 1fr;
-        min-height: 45vh;
     }
 
     .video-tile {
-        min-height: 120px;
+        min-height: 100px;
     }
 
     .video-tile video {
         object-fit: cover;
         width: 100%;
         height: 100%;
-    }
-}
-
-/* Chat panel — swipe down handle and smooth dismiss */
-@media (max-width: 768px) {
-    .chat-section {
-        touch-action: pan-y;
-    }
-
-    .chat-section .chat-header {
-        cursor: grab;
-        padding-top: 1.5rem;
-    }
-
-    .chat-messages {
-        max-height: calc(60vh - 140px);
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        scroll-behavior: smooth;
     }
 }
 
