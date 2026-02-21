@@ -1,73 +1,7 @@
-// WebRTC Configuration
-const configuration = {
-    iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' }
-    ]
-};
-
-// Global Variables
-let localStream;
-let connections = new Map();
-let currentRoom;
-const MAX_PARTICIPANTS = 6;
-
 // DOM Elements
 const searchInput = document.querySelector('.search-input');
 const searchButton = document.querySelector('.search-button');
 
-// Initialize WebRTC
-async function initializeWebRTC() {
-    try {
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        const videoGrid = document.createElement('div');
-        videoGrid.classList.add('video-grid');
-        document.getElementById('video-container').appendChild(videoGrid);
-        addVideoStream(videoGrid, localStream, 'local');
-    } catch (err) {
-        console.error('Error accessing media devices:', err);
-    }
-}
-
-// Add Video Stream to Grid
-function addVideoStream(grid, stream, userId) {
-    const videoContainer = document.createElement('div');
-    videoContainer.classList.add('video-container');
-    videoContainer.setAttribute('data-user', userId);
-
-    const video = document.createElement('video');
-    video.srcObject = stream;
-    video.autoplay = true;
-    if (userId === 'local') video.muted = true;
-
-    videoContainer.appendChild(video);
-    grid.appendChild(videoContainer);
-}
-
-// Connect to New Peer
-async function connectToPeer(peerId) {
-    if (connections.size >= MAX_PARTICIPANTS - 1) {
-        console.warn('Maximum participants reached');
-        return;
-    }
-
-    const peerConnection = new RTCPeerConnection(configuration);
-    connections.set(peerId, peerConnection);
-
-    // Add local stream
-    localStream.getTracks().forEach(track => {
-        peerConnection.addTrack(track, localStream);
-    });
-
-    // Handle incoming tracks
-    peerConnection.ontrack = event => {
-        const videoGrid = document.querySelector('.video-grid');
-        addVideoStream(videoGrid, event.streams[0], peerId);
-    };
-
-    return peerConnection;
-}
-
-// Genius API Integration
 const API_BASE_URL = window.location.origin;
 
 async function searchLyrics(query) {
@@ -151,13 +85,8 @@ function initCarousel() {
     });
 }
 
-// Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     initCarousel();
-    // Initialize WebRTC only on video call page
-    if (document.getElementById('video-container')) {
-        initializeWebRTC();
-    }
     
     // Mobile Menu Toggle
     const menuToggle = document.getElementById('menuToggle');

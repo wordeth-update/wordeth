@@ -21,7 +21,7 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Technology**: Node.js with Express.js for the HTTP server and Socket.io for real-time WebSockets.
 - **Server Architecture**: HTTP server integrates with Express, and Socket.io manages real-time connections.
 - **API Routes**: Modularized routes for authentication, user management, lyrics, merchandise, advertising, analytics, label partner dashboards, and audio room information.
-- **WebSocket Signaling**: Handles room management (join/leave, host transfer), Agora UID mapping, room events (chat, karaoke, screen share), and a real-time invite system with global notifications. Legacy WebRTC signaling handlers (offer/answer/ICE) retained for backward compatibility.
+- **WebSocket Signaling**: Handles room management (join/leave, host transfer), Agora UID mapping, room events (chat, karaoke, screen share), and a real-time invite system with global notifications.
 - **Agora Token Server**: `routes/agora.js` — generates RTC tokens server-side using `agora-access-token` package, mounted at `/api/agora/token`.
 - **Middleware**: Includes JWT authentication, partner authentication, and automatic usage event tracking.
 - **Security**: Implements Helmet for CSP, express-rate-limit, CORS, and trusts proxies for deployment environments.

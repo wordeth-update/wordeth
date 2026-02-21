@@ -188,27 +188,6 @@ function setupSignaling(io) {
             }
         });
 
-        socket.on('webrtc-offer', ({ targetId, offer }) => {
-            io.to(targetId).emit('webrtc-offer', {
-                senderId: socket.id,
-                senderName: socket.userName,
-                offer
-            });
-        });
-
-        socket.on('webrtc-answer', ({ targetId, answer }) => {
-            io.to(targetId).emit('webrtc-answer', {
-                senderId: socket.id,
-                answer
-            });
-        });
-
-        socket.on('webrtc-ice-candidate', ({ targetId, candidate }) => {
-            io.to(targetId).emit('webrtc-ice-candidate', {
-                senderId: socket.id,
-                candidate
-            });
-        });
 
         socket.on('chat-message', ({ roomId, message, sender }) => {
             socket.to(roomId).emit('chat-message', {

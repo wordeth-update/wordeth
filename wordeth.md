@@ -38,7 +38,7 @@ Wordeth is a social music experience platform that creates an interactive commun
 - Separate auth flows for users and advertisers
 
 ### Key Features
-- **Verses (Audio Rooms)**: WebRTC-based with Web Audio API for audio filters, YouTube integration for karaoke, MediaRecorder for performance recording
+- **Verses (Audio Rooms)**: Agora RTC SFU-based with Web Audio API for audio filters, YouTube integration for karaoke, MediaRecorder for performance recording
 - **Lyrics**: Multi-source lyric search (Genius API primary, Musixmatch, LRCLIB, Lyrics.ovh fallbacks)
 - **Karaoke**: Synchronized scrolling lyrics, YouTube audio, mic tempo sync, performance recording with video filters and Wordeth branding
 - **Advertising**: Contextual keyword-based ads on lyrics pages, self-serve portal with admin approval
