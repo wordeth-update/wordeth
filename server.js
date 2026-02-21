@@ -53,6 +53,9 @@ const server = http.createServer(app);
 const io = new Server(server, {
     cors: { origin: true, credentials: true },
     transports: ['websocket', 'polling'],
+    allowUpgrades: true,
+    pingTimeout: 60000,
+    pingInterval: 25000,
     maxHttpBufferSize: 15e6
 });
 
@@ -138,10 +141,14 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Serve static files with cache control
+// Serve static files with cache control (Cloudflare-compatible)
 app.use(express.static(path.join(__dirname), {
-    setHeaders: (res) => {
+    setHeaders: (res, filePath) => {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('CDN-Cache-Control', 'no-store');
+        res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
     }
 }));
 
