@@ -223,14 +223,18 @@ app.get('/room/:roomId', ogCrawlerHeaders, (req, res) => {
     const joinUrl = `${baseUrl}/verses.html?room=${encodeURIComponent(roomId)}`;
 
     const ua = (req.get('user-agent') || '').toLowerCase();
-    const isCrawler = /bot|crawl|spider|preview|fetch|facebookexternalhit|twitterbot|whatsapp|telegram|slack|discord|imessagebot|applebot|linkedinbot|skype|viber|line\//i.test(ua);
+    const isCrawler = /bot|crawl|spider|preview|fetch|facebookexternalhit|twitterbot|whatsapp|telegram|slack|discord|imessagebot|applebot|linkedinbot|skype|viber|line\/|cfnetwork|dataprovider|urlpreview|embedly|quora|outbrain|pinterest|tumblr|vkshare|w3c_validator/i.test(ua);
 
     if (!isCrawler) {
         res.setHeader('Cache-Control', 'no-store, no-cache');
+        res.setHeader('CDN-Cache-Control', 'no-store');
+        res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
         return res.redirect(302, joinUrl);
     }
 
-    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('CDN-Cache-Control', 'no-store');
+    res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
     res.send(`<!DOCTYPE html>
 <html lang="en" prefix="og: https://ogp.me/ns#">
 <head>
@@ -521,7 +525,9 @@ body {
             await page.evaluate(() => document.fonts.ready);
             const imgBuffer = await page.screenshot({ type: 'jpeg', quality: 85, clip: { x: 0, y: 0, width: 1200, height: 630 } });
             res.setHeader('Content-Type', 'image/jpeg');
-            res.setHeader('Cache-Control', 'public, max-age=60');
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+            res.setHeader('CDN-Cache-Control', 'no-store');
+            res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
             res.setHeader('Content-Length', imgBuffer.length);
             res.send(imgBuffer);
         } finally {
@@ -543,9 +549,24 @@ function escapeHtml(str) {
 
 // Serve frontend files in production
 if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.join(__dirname)));
+    app.use(express.static(path.join(__dirname), {
+        setHeaders: (res, filePath) => {
+            if (filePath.endsWith('.js') || filePath.endsWith('.css')) {
+                res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+                res.setHeader('CDN-Cache-Control', 'no-store');
+                res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
+            } else if (filePath.endsWith('.html')) {
+                res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+                res.setHeader('CDN-Cache-Control', 'no-store');
+                res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
+            }
+        }
+    }));
     
     app.get('*', (req, res) => {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        res.setHeader('CDN-Cache-Control', 'no-store');
+        res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
         res.sendFile(path.join(__dirname, 'index.html'));
     });
 }
