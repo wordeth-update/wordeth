@@ -110,6 +110,7 @@ function setupSignaling(io) {
                     videoMode: 'off',
                     activeVideos: new Set(),
                     isLocked: false,
+                    stageAccess: 'invite-only',
                     createdAt: Date.now()
                 });
             }
@@ -137,8 +138,8 @@ function setupSignaling(io) {
                 userName: socket.userName,
                 avatar: socket.avatar || null,
                 isHost: shouldBeHost,
-                isSpeaker: true,
-                isMuted: false,
+                isSpeaker: shouldBeHost,
+                isMuted: !shouldBeHost,
                 joinedAt: Date.now()
             });
 
@@ -152,7 +153,8 @@ function setupSignaling(io) {
                 karaokeEnabled: room.karaokeEnabled,
                 videoMode: room.videoMode || 'off',
                 activeVideos: Array.from(room.activeVideos || []),
-                isLocked: room.isLocked
+                isLocked: room.isLocked,
+                stageAccess: room.stageAccess || 'invite-only'
             });
 
             socket.to(roomId).emit('participant-joined', {
@@ -161,6 +163,7 @@ function setupSignaling(io) {
                 userName: socket.userName,
                 avatar: socket.avatar || null,
                 isHost: shouldBeHost,
+                isSpeaker: shouldBeHost,
                 participants: participantList
             });
 
@@ -208,7 +211,8 @@ function setupSignaling(io) {
                 isLocked: room.isLocked,
                 karaokeEnabled: room.karaokeEnabled,
                 videoMode: room.videoMode || 'off',
-                activeVideos: Array.from(room.activeVideos || [])
+                activeVideos: Array.from(room.activeVideos || []),
+                stageAccess: room.stageAccess || 'invite-only'
             });
         });
 
@@ -269,7 +273,8 @@ function setupSignaling(io) {
                     participants: updatedList,
                     roomName: room.name || null,
                     isLocked: room.isLocked,
-                    karaokeEnabled: room.karaokeEnabled
+                    karaokeEnabled: room.karaokeEnabled,
+                    stageAccess: room.stageAccess || 'invite-only'
                 });
             }
         });
@@ -303,7 +308,8 @@ function setupSignaling(io) {
                 isLocked: room.isLocked,
                 karaokeEnabled: room.karaokeEnabled,
                 videoMode: room.videoMode || 'off',
-                activeVideos: room.activeVideos || []
+                activeVideos: room.activeVideos || [],
+                stageAccess: room.stageAccess || 'invite-only'
             });
 
             io.to(roomId).emit('room-event', {
@@ -312,6 +318,77 @@ function setupSignaling(io) {
                     socketId: targetSocketId,
                     userName: targetParticipant.userName
                 }
+            });
+        });
+
+        socket.on('request-stage', ({ roomId }) => {
+            const room = rooms.get(roomId);
+            if (!room) return;
+            const participant = room.participants.get(socket.id);
+            if (!participant || participant.isSpeaker) return;
+
+            io.to(room.hostId).emit('stage-request', {
+                socketId: socket.id,
+                userId: participant.userId,
+                userName: participant.userName,
+                avatar: participant.avatar || null
+            });
+
+            io.to(roomId).emit('room-event', {
+                event: 'hand-raise',
+                data: { raised: true, userId: participant.userId, userName: participant.userName }
+            });
+        });
+
+        socket.on('self-promote-to-stage', ({ roomId }) => {
+            const room = rooms.get(roomId);
+            if (!room) return;
+            if (room.stageAccess !== 'open') return;
+
+            const participant = room.participants.get(socket.id);
+            if (!participant || participant.isSpeaker) return;
+
+            participant.isSpeaker = true;
+            participant.isMuted = true;
+
+            io.to(socket.id).emit('promoted-to-speaker');
+
+            io.to(roomId).emit('participant-promoted', {
+                socketId: socket.id,
+                userId: participant.userId,
+                userName: participant.userName,
+                avatar: participant.avatar || null
+            });
+
+            const updatedList = Array.from(room.participants.values());
+            io.to(roomId).emit('participants-list', {
+                roomId,
+                participants: updatedList,
+                roomName: room.name || null,
+                isLocked: room.isLocked,
+                karaokeEnabled: room.karaokeEnabled,
+                videoMode: room.videoMode || 'off',
+                activeVideos: Array.from(room.activeVideos || []),
+                stageAccess: room.stageAccess || 'invite-only'
+            });
+
+            io.to(roomId).emit('room-event', {
+                event: 'participant-promoted',
+                data: { socketId: socket.id, userName: participant.userName }
+            });
+        });
+
+        socket.on('set-stage-access', ({ roomId, mode }) => {
+            const room = rooms.get(roomId);
+            if (!room) return;
+            if (socket.id !== room.hostId) return;
+            if (mode !== 'open' && mode !== 'invite-only') return;
+
+            room.stageAccess = mode;
+
+            io.to(roomId).emit('room-event', {
+                event: 'stage-access-changed',
+                data: { stageAccess: mode }
             });
         });
 

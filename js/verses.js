@@ -48,6 +48,7 @@ class AudioRoomsManager {
         // Karaoke video state
         this.karaokeVideoStream = null;
         this.karaokeVideoActive = false;
+        this.stageAccess = 'invite-only';
         
         // Video grid state
         this.videoMode = 'off';
@@ -264,6 +265,8 @@ class AudioRoomsManager {
         this._initChatSwipeToDismiss();
         this.shareMusicBtn?.addEventListener('click', () => this.shareMusic());
         this.leaveRoomBtn?.addEventListener('click', () => this.leaveRoom());
+        document.getElementById('join-stage-btn')?.addEventListener('click', () => this.joinStage());
+        document.getElementById('stage-access-toggle')?.addEventListener('click', () => this.toggleStageAccess());
 
         // Action buttons
         this.addUsersBtn?.addEventListener('click', () => this.showAddUsersModal());
@@ -1177,41 +1180,115 @@ class AudioRoomsManager {
         });
     }
 
-    // Hand Raise Management
     toggleHandRaise() {
+        if (this.isSpeaker) return;
         this.handRaised = !this.handRaised;
         this.raiseHandBtn?.classList.toggle('hand-raised', this.handRaised);
         
         const handIndicator = document.querySelector('.hand-raise-indicator');
         handIndicator?.classList.toggle('hidden', !this.handRaised);
         
-        this.notifyParticipants('hand-raise', { raised: this.handRaised });
-        
         if (this.handRaised) {
+            this.socket?.emit('request-stage', { roomId: this.currentRoom });
             this.addChatMessage('System', 'You raised your hand to speak', true);
+        } else {
+            this.notifyParticipants('hand-raise', { raised: false });
         }
     }
 
-    // Listener Mode Management (for audio rooms - listener vs speaker)
-    toggleListenerMode() {
-        this.isSpeaker = !this.isSpeaker;
-        this.audioRoom?.classList.toggle('speaker-mode', this.isSpeaker);
-        
-        if (!this.isSpeaker) {
-            // Mute audio when becoming listener
-            if (this.localStream) {
-                const audioTrack = this.localStream.getAudioTracks()[0];
-                if (audioTrack) audioTrack.enabled = false;
-            }
-            this.addChatMessage('System', 'You are now listening', true);
-        } else {
-            // Enable audio when becoming speaker
-            if (this.localStream) {
-                const audioTrack = this.localStream.getAudioTracks()[0];
-                if (audioTrack) audioTrack.enabled = true;
-            }
-            this.addChatMessage('System', 'You are now a speaker', true);
+    requestStage() {
+        if (this.isSpeaker || !this.socket || !this.currentRoom) return;
+        this.socket.emit('request-stage', { roomId: this.currentRoom });
+        this.addChatMessage('System', 'You requested to join the stage.', true);
+        this.showToast('Request sent to host', 'fa-hand-paper', 3000);
+    }
+
+    joinStage() {
+        if (this.isSpeaker || !this.socket || !this.currentRoom) return;
+        if (this.stageAccess !== 'open') {
+            this.requestStage();
+            return;
         }
+        this.socket.emit('self-promote-to-stage', { roomId: this.currentRoom });
+    }
+
+    toggleStageAccess() {
+        if (!this.isRoomHost || !this.socket || !this.currentRoom) return;
+        const newMode = this.stageAccess === 'open' ? 'invite-only' : 'open';
+        this.socket.emit('set-stage-access', { roomId: this.currentRoom, mode: newMode });
+        this.stageAccess = newMode;
+        this.updateStageControls();
+    }
+
+    updateStageControls() {
+        const joinStageBtn = document.getElementById('join-stage-btn');
+        const stageAccessToggle = document.getElementById('stage-access-toggle');
+
+        if (joinStageBtn) {
+            if (this.isSpeaker || this.isRoomHost) {
+                joinStageBtn.style.display = 'none';
+            } else if (this.stageAccess === 'open') {
+                joinStageBtn.style.display = '';
+                joinStageBtn.innerHTML = '<i class="fas fa-arrow-up"></i> Join Stage';
+                joinStageBtn.title = 'Join the stage (open)';
+            } else {
+                joinStageBtn.style.display = '';
+                joinStageBtn.innerHTML = '<i class="fas fa-hand-paper"></i> Request to Speak';
+                joinStageBtn.title = 'Ask the host to join the stage';
+            }
+        }
+
+        if (stageAccessToggle) {
+            if (this.isRoomHost) {
+                stageAccessToggle.style.display = '';
+                if (this.stageAccess === 'open') {
+                    stageAccessToggle.innerHTML = '<i class="fas fa-door-open"></i> Open Stage';
+                    stageAccessToggle.classList.add('active');
+                } else {
+                    stageAccessToggle.innerHTML = '<i class="fas fa-lock"></i> Invite Only';
+                    stageAccessToggle.classList.remove('active');
+                }
+            } else {
+                stageAccessToggle.style.display = 'none';
+            }
+        }
+
+        if (this.raiseHandBtn) {
+            if (this.isSpeaker) {
+                this.raiseHandBtn.style.display = 'none';
+            } else {
+                this.raiseHandBtn.style.display = '';
+            }
+        }
+    }
+
+    _showStageRequestToast(socketId, userName) {
+        let container = document.getElementById('room-toasts');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'room-toasts';
+            container.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
+            document.body.appendChild(container);
+        }
+        const toast = document.createElement('div');
+        toast.style.cssText = 'background:rgba(30,0,50,0.95);color:#e0d0ff;padding:12px 18px;border-radius:16px;font-size:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid rgba(138,43,226,0.4);backdrop-filter:blur(10px);pointer-events:auto;';
+        toast.innerHTML = `
+            <i class="fas fa-hand-paper" style="color:#98ff98;"></i>
+            <span><strong>${this.escapeHtml(userName)}</strong> wants to speak</span>
+            <button class="approve-stage-btn" style="background:#98ff98;color:#1a1a2e;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-weight:600;font-size:0.85rem;">Approve</button>
+            <button class="deny-stage-btn" style="background:transparent;color:#aaa;border:1px solid #555;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.85rem;">Deny</button>
+        `;
+
+        toast.querySelector('.approve-stage-btn').addEventListener('click', () => {
+            this.socket?.emit('promote-to-speaker', { roomId: this.currentRoom, targetSocketId: socketId });
+            toast.remove();
+        });
+        toast.querySelector('.deny-stage-btn').addEventListener('click', () => {
+            toast.remove();
+        });
+
+        container.appendChild(toast);
+        setTimeout(() => { if (toast.parentNode) toast.remove(); }, 15000);
     }
 
     // Replay Management
@@ -1312,26 +1389,27 @@ class AudioRoomsManager {
             
             this.isRoomHost = isHost;
             this.isSpeaker = isHost;
+            this.stageAccess = 'invite-only';
             this.karaokeEnabled = isHost ? false : (roomData?.karaokeEnabled || false);
             this.videoMode = isHost ? 'off' : (roomData?.videoMode || 'off');
             this.updateKaraokeButtonState();
             this.updateVideoButtonState();
             this.updateHostControls();
             
-            try {
-                await this.initializeMedia();
-                if (!isHost) this.isSpeaker = true;
-                if (this.localStream) {
-                    this.localStream.getAudioTracks().forEach(t => { t.enabled = false; });
-                    setTimeout(() => {
-                        if (this.localStream) {
-                            this.localStream.getAudioTracks().forEach(t => { t.enabled = true; });
-                        }
-                    }, 600);
+            if (isHost) {
+                try {
+                    await this.initializeMedia();
+                    if (this.localStream) {
+                        this.localStream.getAudioTracks().forEach(t => { t.enabled = false; });
+                        setTimeout(() => {
+                            if (this.localStream) {
+                                this.localStream.getAudioTracks().forEach(t => { t.enabled = true; });
+                            }
+                        }, 600);
+                    }
+                } catch (e) {
+                    console.warn('Mic access denied, hosting without mic:', e.message);
                 }
-            } catch (e) {
-                console.warn('Mic access denied, joining as listener:', e.message);
-                this.isSpeaker = false;
             }
             
             if (this.roomSelection) this.roomSelection.style.display = 'none';
@@ -1349,8 +1427,13 @@ class AudioRoomsManager {
             const user = JSON.parse(localStorage.getItem('user') || '{}');
             const userName = user.name || user.username || 'Anonymous';
 
-            this._addSelfToStage(userName, user.avatar || null, isHost);
+            if (isHost) {
+                this._addSelfToStage(userName, user.avatar || null, true);
+            } else {
+                this.addRemoteListener('self', userName + ' (You)', false, user._id || user.id, user.avatar);
+            }
             this.updateRoomInfo(roomId);
+            this.updateStageControls();
 
             const audioRoomEl = document.getElementById('audio-room');
             if (audioRoomEl) audioRoomEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1369,7 +1452,11 @@ class AudioRoomsManager {
                 avatar: user.avatar || null
             });
             
-            this.addChatMessage('System', 'Welcome to the room!', true);
+            if (isHost) {
+                this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
+            } else {
+                this.addChatMessage('System', 'Welcome! You joined as a listener. Raise your hand or wait for an invite to speak.', true);
+            }
 
             this._requestWakeLock();
             this._startSilentAudioKeepAlive();
@@ -1392,7 +1479,7 @@ class AudioRoomsManager {
             
         } catch (error) {
             console.error('Error joining room:', error);
-            alert('Failed to join room. Please check your microphone permissions.');
+            alert('Failed to join room. Please try again.');
         }
     }
     
@@ -1686,12 +1773,16 @@ class AudioRoomsManager {
         });
         
         this.socket.on('participant-joined', async (data) => {
-            console.log('Participant joined:', data.userName);
+            console.log('Participant joined:', data.userName, 'isSpeaker:', data.isSpeaker);
             this.addChatMessage('System', `${data.userName} joined the room.`, true);
             this.updateParticipantDisplay(data.participants);
             
             if (!document.querySelector(`[data-participant-id="${data.socketId}"]`)) {
-                this.addRemoteSpeaker(data.socketId, data.userName, null, false, data.userId, data.avatar);
+                if (data.isSpeaker) {
+                    this.addRemoteSpeaker(data.socketId, data.userName, null, false, data.userId, data.avatar);
+                } else {
+                    this.addRemoteListener(data.socketId, data.userName, false, data.userId, data.avatar);
+                }
             }
         });
         
@@ -1748,6 +1839,10 @@ class AudioRoomsManager {
             this.karaokeEnabled = data.karaokeEnabled || false;
             this.videoMode = data.videoMode || 'off';
             this.isRoomLocked = data.isLocked || false;
+            if (data.stageAccess) {
+                this.stageAccess = data.stageAccess;
+                this.updateStageControls();
+            }
             this.updateKaraokeButtonState();
             this.updateVideoButtonState();
             this.updateParticipantDisplay(data.participants);
@@ -1791,6 +1886,7 @@ class AudioRoomsManager {
                     const userName = user.name || user.username || 'Anonymous';
                     this.addRemoteListener('self', userName + ' (You)', false, user._id, user.avatar);
                 }
+                this.updateStageControls();
                 const muteIcon = this.toggleAudioBtn?.querySelector('i');
                 if (muteIcon) muteIcon.className = 'fas fa-microphone-slash';
                 this.addChatMessage('System', reason || 'The host has moved you to the crowd.', true);
@@ -1800,6 +1896,17 @@ class AudioRoomsManager {
 
         this.socket.on('promoted-to-speaker', async () => {
             this.isSpeaker = true;
+            this.handRaised = false;
+            this.raiseHandBtn?.classList.remove('hand-raised');
+
+            if (!this.localStream) {
+                try {
+                    await this.initializeMedia();
+                } catch (e) {
+                    console.warn('Mic access denied on promotion:', e.message);
+                }
+            }
+
             if (this.localStream) {
                 this.localStream.getAudioTracks().forEach(t => { t.enabled = false; });
             }
@@ -1822,8 +1929,15 @@ class AudioRoomsManager {
             this._addSelfToStage(userName, user.avatar || null, false);
             const muteIcon = this.toggleAudioBtn?.querySelector('i');
             if (muteIcon) muteIcon.className = 'fas fa-microphone-slash';
-            this.addChatMessage('System', 'The host invited you back to the stage! Unmute when ready.', true);
+            this.updateStageControls();
+            this.addChatMessage('System', 'You were invited to the stage! Unmute when ready.', true);
             this.showToast('You were invited to the stage!', 'fa-arrow-up', 4000);
+        });
+
+        this.socket.on('stage-request', ({ socketId, userId, userName, avatar }) => {
+            if (!this.isRoomHost) return;
+            this.addChatMessage('System', `${userName} is requesting to speak.`, true);
+            this._showStageRequestToast(socketId, userName);
         });
 
         this.socket.on('participant-promoted', ({ socketId, userId, userName, avatar }) => {
@@ -1997,6 +2111,17 @@ class AudioRoomsManager {
                     this.addChatMessage('System', `${data.userName} was moved to the crowd by the host.`, true);
                 }
                 break;
+            case 'stage-access-changed':
+                this.stageAccess = data.stageAccess;
+                this.updateStageControls();
+                if (data.stageAccess === 'open') {
+                    this.addChatMessage('System', 'The host opened the stage — anyone can join!', true);
+                    this.showToast('Stage is now open!', 'fa-door-open', 4000);
+                } else {
+                    this.addChatMessage('System', 'The stage is now invite-only.', true);
+                    this.showToast('Stage is now invite-only', 'fa-lock', 4000);
+                }
+                break;
             case 'youtube-embed':
                 break;
             case 'karaoke-start':
@@ -2066,6 +2191,10 @@ class AudioRoomsManager {
     }
 
     toggleAudio() {
+        if (!this.isSpeaker) {
+            this.showToast('You need to be on stage to use the mic', 'fa-microphone-slash', 3000);
+            return;
+        }
         this.isAudioMuted = !this.isAudioMuted;
 
         if (this.agoraLocalAudioTrack) {
