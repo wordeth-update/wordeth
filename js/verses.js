@@ -1703,12 +1703,14 @@ class AudioRoomsManager {
             }
             if (this.agoraClient) {
                 await this.agoraClient.leave();
-                console.log('Agora: left channel');
+                this.agoraClient = null;
+                console.log('Agora: left channel and released client');
             }
             this.agoraRemoteUsers.clear();
             this.agoraUid = null;
         } catch (error) {
             console.error('Error leaving Agora channel:', error);
+            this.agoraClient = null;
         }
     }
 
@@ -1730,22 +1732,34 @@ class AudioRoomsManager {
     }
 
     connectSocket() {
-        if (this.socket && this.socket.connected) return Promise.resolve();
-        
-        if (this.socket && !this.socket.connected) {
+        if (this.lobbySocket && this.lobbySocket.connected) {
+            if (!this._roomHandlersRegistered) {
+                this.socket = this.lobbySocket;
+                this._registerRoomHandlers();
+            } else {
+                this.socket = this.lobbySocket;
+            }
+            return Promise.resolve();
+        }
+
+        if (this.lobbySocket && !this.lobbySocket.connected) {
+            this.socket = this.lobbySocket;
             return new Promise((resolve) => {
-                this.socket.once('connect', () => {
-                    console.log('Socket.io reconnected:', this.socket.id);
+                this.lobbySocket.once('connect', () => {
+                    console.log('Socket.io reconnected:', this.lobbySocket.id);
+                    if (!this._roomHandlersRegistered) {
+                        this._registerRoomHandlers();
+                    }
                     resolve();
                 });
-                if (this.socket.disconnected) {
-                    this.socket.connect();
+                if (this.lobbySocket.disconnected) {
+                    this.lobbySocket.connect();
                 }
             });
         }
 
         const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
-        this.socket = io(serverUrl, {
+        this.lobbySocket = io(serverUrl, {
             transports: ['polling', 'websocket'],
             upgrade: true,
             reconnection: true,
@@ -1753,15 +1767,29 @@ class AudioRoomsManager {
             reconnectionDelay: 1000,
             timeout: 20000
         });
+        this.socket = this.lobbySocket;
+        
+        this._registerRoomHandlers();
 
-        this.socket.on('disconnect', (reason) => {
-            console.log('Socket.io disconnected:', reason);
-            if (reason === 'io server disconnect') {
-                this.socket.connect();
+        return new Promise((resolve) => {
+            if (this.socket.connected) {
+                resolve();
+            } else {
+                this.socket.once('connect', () => {
+                    console.log('Socket.io connected:', this.socket.id);
+                    resolve();
+                });
             }
         });
-        
-        this.socket.on('room-error', (data) => {
+    }
+    
+
+    _registerRoomHandlers() {
+        if (this._roomHandlersRegistered) return;
+        this._roomHandlersRegistered = true;
+        const sock = this.socket;
+
+        sock.on('room-error', (data) => {
             console.warn('Room error:', data.message);
             this.showToast?.(data.message || 'Could not join the room.', 'fa-exclamation-circle');
             if (this.roomSelection) this.roomSelection.style.display = '';
@@ -1770,9 +1798,8 @@ class AudioRoomsManager {
             this.loadActiveRooms();
         });
 
-        this.socket.on('room-joined', async (data) => {
+        sock.on('room-joined', async (data) => {
             console.log('Room joined via signaling:', data);
-
             this.showFirstVisitGuide();
 
             if (data.isHost && !this.isRoomHost) {
@@ -1780,14 +1807,14 @@ class AudioRoomsManager {
                 this.updateHostControls();
                 console.log('Host privileges restored by server');
             }
-            
+
             if (data.videoMode) {
                 this.videoMode = data.videoMode;
                 this.updateVideoButtonState();
             }
 
             this.updateParticipantDisplay(data.participants);
-            
+
             if (data.roomName) {
                 const roomNameEl = document.getElementById('room-name');
                 if (roomNameEl) roomNameEl.textContent = data.roomName;
@@ -1798,23 +1825,27 @@ class AudioRoomsManager {
                 const userName = user.name || user.username || 'Anonymous';
                 this._addSelfToStage(userName, user.avatar || null, this.isRoomHost);
             }
-            
+
             for (const p of data.participants) {
-                if (p.socketId !== this.socket.id) {
+                if (p.socketId !== this.socket?.id) {
                     if (p.agoraUid) {
                         if (!this._agoraUidMap) this._agoraUidMap = new Map();
                         this._agoraUidMap.set(p.socketId, p.agoraUid);
                     }
-                    this.addRemoteSpeaker(p.socketId, p.userName, null, false, p.userId, p.avatar);
+                    if (p.isSpeaker) {
+                        this.addRemoteSpeaker(p.socketId, p.userName, null, false, p.userId, p.avatar);
+                    } else {
+                        this.addRemoteListener(p.socketId, p.userName, false, p.userId, p.avatar);
+                    }
                 }
             }
         });
-        
-        this.socket.on('participant-joined', async (data) => {
+
+        sock.on('participant-joined', async (data) => {
             console.log('Participant joined:', data.userName, 'isSpeaker:', data.isSpeaker);
             this.addChatMessage('System', `${data.userName} joined the room.`, true);
             this.updateParticipantDisplay(data.participants);
-            
+
             if (!document.querySelector(`[data-participant-id="${data.socketId}"]`)) {
                 if (data.isSpeaker) {
                     this.addRemoteSpeaker(data.socketId, data.userName, null, false, data.userId, data.avatar);
@@ -1823,8 +1854,8 @@ class AudioRoomsManager {
                 }
             }
         });
-        
-        this.socket.on('participant-left', (data) => {
+
+        sock.on('participant-left', (data) => {
             console.log('Participant left:', data.userName);
             this.addChatMessage('System', `${data.userName} left the room.`, true);
             this.removeVideoTile(data.socketId);
@@ -1832,24 +1863,24 @@ class AudioRoomsManager {
             this.removeRemoteParticipant(data.socketId);
             this.updateParticipantDisplay(data.participants);
         });
-        
-        this.socket.on('agora-uid-mapped', ({ socketId, agoraUid }) => {
+
+        sock.on('agora-uid-mapped', ({ socketId, agoraUid }) => {
             if (!this._agoraUidMap) this._agoraUidMap = new Map();
             this._agoraUidMap.set(socketId, agoraUid);
             console.log('Agora UID mapped:', socketId, '->', agoraUid);
         });
 
-        this.socket.on('chat-message', ({ sender, message, timestamp }) => {
+        sock.on('chat-message', ({ sender, message, timestamp }) => {
             this.addChatMessage(sender, message, false);
         });
 
-        this.socket.on('room-image', ({ sender, imageData }) => {
+        sock.on('room-image', ({ sender, imageData }) => {
             this.addImageChatMessage(sender, imageData);
             this.showToast(`${sender} shared a photo`, 'fa-image');
             this.showSharedImageOverlay(imageData, sender);
         });
 
-        this.socket.on('music-stream-status', ({ sender, songTitle, artistName, playing }) => {
+        sock.on('music-stream-status', ({ sender, songTitle, artistName, playing }) => {
             if (playing) {
                 this.addMusicStreamChatMessage(sender, songTitle, artistName);
                 this.showToast(`${sender} is playing: ${songTitle}`, 'fa-music', 6000);
@@ -1857,18 +1888,18 @@ class AudioRoomsManager {
                 this.addChatMessage('System', `${sender} stopped sharing music.`, true);
             }
         });
-        
-        this.socket.on('room-event', ({ event, data }) => {
+
+        sock.on('room-event', ({ event, data }) => {
             this.handleRemoteRoomEvent(event, data);
         });
-        
-        this.socket.on('audio-mix-status', ({ userName, mixing, videoId }) => {
+
+        sock.on('audio-mix-status', ({ userName, mixing, videoId }) => {
             if (mixing) {
                 this.addChatMessage('System', `${userName} is sharing YouTube audio with the room.`, true);
             }
         });
 
-        this.socket.on('participants-list', (data) => {
+        sock.on('participants-list', (data) => {
             if (data.roomId !== this.currentRoom) return;
             if (data.roomName) {
                 const roomNameEl = document.getElementById('room-name');
@@ -1886,20 +1917,18 @@ class AudioRoomsManager {
             this.updateParticipantDisplay(data.participants);
 
             data.participants.forEach(p => {
-                if (p.socketId === this.socket.id) return;
+                if (p.socketId === this.socket?.id) return;
                 const existing = document.querySelector(`[data-participant-id="${p.socketId}"]`);
                 if (existing) existing.remove();
-
-                if (p.isSpeaker !== false) {
+                if (p.isSpeaker) {
                     this.addRemoteSpeaker(p.socketId, p.userName, null, false, p.userId, p.avatar);
                 } else {
                     this.addRemoteListener(p.socketId, p.userName, false, p.userId, p.avatar);
                 }
             });
-
         });
 
-        this.socket.on('kicked-from-room', ({ action, reason }) => {
+        sock.on('kicked-from-room', ({ action, reason }) => {
             if (action === 'remove') {
                 this.addChatMessage('System', reason || 'You have been removed from the room by the host.', true);
                 this.showToast(reason || 'You were removed by the host.', 'fa-ban', 5000);
@@ -1932,7 +1961,7 @@ class AudioRoomsManager {
             }
         });
 
-        this.socket.on('promoted-to-speaker', async () => {
+        sock.on('promoted-to-speaker', async () => {
             this.isSpeaker = true;
             this.handRaised = false;
             this.raiseHandBtn?.classList.remove('hand-raised');
@@ -1972,30 +2001,18 @@ class AudioRoomsManager {
             this.showToast('You were invited to the stage!', 'fa-arrow-up', 4000);
         });
 
-        this.socket.on('stage-request', ({ socketId, userId, userName, avatar }) => {
+        sock.on('stage-request', ({ socketId, userId, userName, avatar }) => {
             if (!this.isRoomHost) return;
             this.addChatMessage('System', `${userName} is requesting to speak.`, true);
             this._showStageRequestToast(socketId, userName);
         });
 
-        this.socket.on('participant-promoted', ({ socketId, userId, userName, avatar }) => {
+        sock.on('participant-promoted', ({ socketId, userId, userName, avatar }) => {
             const existing = document.querySelector(`[data-participant-id="${socketId}"]`);
             if (existing) existing.remove();
             this.addRemoteSpeaker(socketId, userName, null, false, userId, avatar);
         });
-
-        return new Promise((resolve) => {
-            if (this.socket.connected) {
-                resolve();
-            } else {
-                this.socket.once('connect', () => {
-                    console.log('Socket.io connected:', this.socket.id);
-                    resolve();
-                });
-            }
-        });
     }
-    
 
     async _reconnectRoomMedia() {
         if (!this.isInRoom() || !this.socket?.connected) return;
@@ -2679,9 +2696,8 @@ class AudioRoomsManager {
             this.localStream = null;
         }
         
-        if (this.socket) {
-            this.socket.disconnect();
-            this.socket = null;
+        if (this.socket && this.currentRoom) {
+            this.socket.emit('leave-room', { roomId: this.currentRoom });
         }
         
         this.isSpeaker = false;
@@ -2711,7 +2727,7 @@ class AudioRoomsManager {
     }
 
     isInRoom() {
-        return !!this.currentRoom && !!this.socket && this.socket.connected;
+        return !!this.currentRoom;
     }
 
     getRoomName() {

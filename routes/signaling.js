@@ -192,6 +192,46 @@ function setupSignaling(io) {
         });
 
 
+        socket.on('leave-room', ({ roomId }) => {
+            if (!roomId || !rooms.has(roomId)) return;
+            const room = rooms.get(roomId);
+            if (!room.participants.has(socket.id)) return;
+
+            const participant = room.participants.get(socket.id);
+            if (room.activeVideos) room.activeVideos.delete(socket.id);
+            room.participants.delete(socket.id);
+            socket.leave(roomId);
+
+            const participantList = Array.from(room.participants.values());
+            socket.to(roomId).emit('participant-left', {
+                socketId: socket.id,
+                userId: participant.userId,
+                userName: participant.userName,
+                participants: participantList
+            });
+
+            if (room.participants.size === 0) {
+                rooms.delete(roomId);
+                console.log(`Room ${roomId} removed (empty after leave)`);
+            } else if (socket.id === room.hostId) {
+                const firstParticipant = room.participants.values().next().value;
+                if (firstParticipant) {
+                    room.hostId = firstParticipant.socketId;
+                    firstParticipant.isHost = true;
+                    io.to(roomId).emit('room-event', {
+                        event: 'host-changed',
+                        data: { newHostId: firstParticipant.socketId, newHostName: firstParticipant.userName }
+                    });
+                }
+            }
+
+            socket.roomId = null;
+            socket.userId = null;
+            socket.userName = null;
+            io.emit('rooms-updated', getActiveRooms());
+            console.log(`${participant.userName} left room ${roomId} (${room.participants.size} remaining)`);
+        });
+
         socket.on('chat-message', ({ roomId, message, sender }) => {
             socket.to(roomId).emit('chat-message', {
                 sender: socket.userName,
