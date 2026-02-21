@@ -84,9 +84,29 @@ class AudioRoomsManager {
         this.rtcConfig = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
-            ]
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:openrelay.metered.ca:80' },
+                {
+                    urls: 'turn:openrelay.metered.ca:80',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                },
+                {
+                    urls: 'turn:openrelay.metered.ca:443',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                },
+                {
+                    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                }
+            ],
+            iceCandidatePoolSize: 5
         };
+        this._peerRetryCount = new Map();
+        this._peerHealthTimers = new Map();
+        this._healthCheckInterval = null;
         
         this.isRecording = false;
         this.mediaRecorder = null;
@@ -163,6 +183,7 @@ class AudioRoomsManager {
 
     _handleAppHidden() {
         if (!this.isInRoom()) return;
+        this._hiddenTimestamp = Date.now();
         if (this.audioContext && this.audioContext.state === 'running') {
             this._audioContextWasRunning = true;
         }
@@ -177,13 +198,14 @@ class AudioRoomsManager {
             this.musicAudioElement.play().catch(() => {});
         }
         this._audioContextWasRunning = false;
-        this.remoteAudioElements.forEach((audioEl) => {
-            if (audioEl.paused && audioEl.srcObject) {
-                audioEl.play().catch(() => {});
-            }
-        });
+        
         if (this.socket && !this.socket.connected) {
             this.socket.connect();
+            this.socket.once('connect', () => {
+                this._reconnectRoomMedia();
+            });
+        } else {
+            this._reconnectRoomMedia();
         }
         this._requestWakeLock();
     }
@@ -1379,6 +1401,7 @@ class AudioRoomsManager {
 
             this._requestWakeLock();
             this._startSilentAudioKeepAlive();
+            this._startHealthCheck();
 
             fetch(apiUrl('/api/analytics/track'), {
                 method: 'POST',
@@ -1556,8 +1579,12 @@ class AudioRoomsManager {
         
         this.socket.on('webrtc-answer', async ({ senderId, answer }) => {
             const pc = this.peerConnections.get(senderId);
-            if (pc) {
-                await pc.setRemoteDescription(new RTCSessionDescription(answer));
+            if (pc && pc.signalingState !== 'closed') {
+                try {
+                    await pc.setRemoteDescription(new RTCSessionDescription(answer));
+                } catch (e) {
+                    console.warn('Error setting remote answer description:', e);
+                }
             }
         });
         
@@ -1625,6 +1652,8 @@ class AudioRoomsManager {
                     this.addRemoteListener(p.socketId, p.userName, false, p.userId, p.avatar);
                 }
             });
+
+            this._reconcileMeshConnections(data.participants);
         });
 
         this.socket.on('kicked-from-room', ({ action, reason }) => {
@@ -1694,6 +1723,8 @@ class AudioRoomsManager {
         
         const pc = new RTCPeerConnection(this.rtcConfig);
         this.peerConnections.set(remoteId, pc);
+        pc._remoteName = remoteName;
+        pc._remoteId = remoteId;
         
         const streamToSend = this.mixedStream || this.localStream;
         if (streamToSend) {
@@ -1720,10 +1751,25 @@ class AudioRoomsManager {
             }
         };
         
+        pc.oniceconnectionstatechange = () => {
+            const state = pc.iceConnectionState;
+            console.log(`Peer ${remoteName} ICE state: ${state}`);
+            if (state === 'disconnected') {
+                this._scheduleIceRestart(remoteId, remoteName, pc);
+            } else if (state === 'failed') {
+                this._attemptPeerRecovery(remoteId, remoteName);
+            } else if (state === 'connected' || state === 'completed') {
+                this._clearPeerRetry(remoteId);
+            }
+        };
+
         pc.onconnectionstatechange = () => {
-            console.log(`Peer ${remoteName} connection state: ${pc.connectionState}`);
-            if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-                this.closePeerConnection(remoteId);
+            const state = pc.connectionState;
+            console.log(`Peer ${remoteName} connection state: ${state}`);
+            if (state === 'failed') {
+                this._attemptPeerRecovery(remoteId, remoteName);
+            } else if (state === 'connected') {
+                this._clearPeerRetry(remoteId);
             }
         };
         
@@ -1739,7 +1785,168 @@ class AudioRoomsManager {
         
         return pc;
     }
-    
+
+    _scheduleIceRestart(remoteId, remoteName, pc) {
+        if (this._peerHealthTimers.has(remoteId)) return;
+        console.log(`Scheduling ICE restart for ${remoteName} in 3s...`);
+        const timer = setTimeout(async () => {
+            this._peerHealthTimers.delete(remoteId);
+            const currentPc = this.peerConnections.get(remoteId);
+            if (!currentPc || currentPc !== pc) return;
+            if (currentPc.iceConnectionState === 'connected' || currentPc.iceConnectionState === 'completed') return;
+            
+            console.log(`Attempting ICE restart for ${remoteName}`);
+            try {
+                const offer = await currentPc.createOffer({ iceRestart: true, offerToReceiveAudio: true, offerToReceiveVideo: true });
+                await currentPc.setLocalDescription(offer);
+                this.socket.emit('webrtc-offer', { targetId: remoteId, offer });
+            } catch (e) {
+                console.warn(`ICE restart failed for ${remoteName}, attempting full reconnect`, e);
+                this._attemptPeerRecovery(remoteId, remoteName);
+            }
+        }, 3000);
+        this._peerHealthTimers.set(remoteId, timer);
+    }
+
+    async _attemptPeerRecovery(remoteId, remoteName) {
+        const retries = this._peerRetryCount.get(remoteId) || 0;
+        if (retries >= 3) {
+            console.warn(`Max retries reached for ${remoteName}, giving up on peer connection`);
+            this._peerRetryCount.delete(remoteId);
+            return;
+        }
+        this._peerRetryCount.set(remoteId, retries + 1);
+        const delay = Math.min(1000 * Math.pow(2, retries), 8000);
+        console.log(`Peer recovery attempt ${retries + 1}/3 for ${remoteName} in ${delay}ms`);
+        
+        await new Promise(r => setTimeout(r, delay));
+        
+        if (!this.isInRoom() || !this.socket?.connected) return;
+        
+        this.closePeerConnection(remoteId);
+        try {
+            await this.createPeerConnection(remoteId, remoteName, true);
+            console.log(`Peer recovery: new connection created for ${remoteName}`);
+        } catch (e) {
+            console.error(`Peer recovery failed for ${remoteName}:`, e);
+        }
+    }
+
+    _clearPeerRetry(remoteId) {
+        this._peerRetryCount.delete(remoteId);
+        if (this._peerHealthTimers.has(remoteId)) {
+            clearTimeout(this._peerHealthTimers.get(remoteId));
+            this._peerHealthTimers.delete(remoteId);
+        }
+    }
+
+    _startHealthCheck() {
+        this._stopHealthCheck();
+        this._lastPacketCounts = new Map();
+        this._healthCheckInterval = setInterval(() => this._runHealthCheck(), 10000);
+    }
+
+    _stopHealthCheck() {
+        if (this._healthCheckInterval) {
+            clearInterval(this._healthCheckInterval);
+            this._healthCheckInterval = null;
+        }
+        this._lastPacketCounts = null;
+        this._peerRetryCount.clear();
+        this._peerHealthTimers.forEach(t => clearTimeout(t));
+        this._peerHealthTimers.clear();
+    }
+
+    async _runHealthCheck() {
+        if (!this.isInRoom()) return;
+        
+        for (const [remoteId, pc] of this.peerConnections) {
+            if (pc.connectionState === 'closed') {
+                this.peerConnections.delete(remoteId);
+                continue;
+            }
+            
+            if (pc.connectionState !== 'connected' && pc.connectionState !== 'connecting') continue;
+            
+            try {
+                const stats = await pc.getStats();
+                let totalPackets = 0;
+                stats.forEach(report => {
+                    if (report.type === 'inbound-rtp' && report.kind === 'audio') {
+                        totalPackets += report.packetsReceived || 0;
+                    }
+                });
+                
+                const prevCount = this._lastPacketCounts?.get(remoteId) || 0;
+                if (this._lastPacketCounts?.has(remoteId) && totalPackets === prevCount && prevCount > 0) {
+                    console.warn(`No new audio packets from ${pc._remoteName || remoteId} - triggering ICE restart`);
+                    this._scheduleIceRestart(remoteId, pc._remoteName || 'unknown', pc);
+                }
+                if (this._lastPacketCounts) {
+                    this._lastPacketCounts.set(remoteId, totalPackets);
+                }
+            } catch (e) {}
+        }
+    }
+
+    async _reconnectRoomMedia() {
+        if (!this.isInRoom() || !this.socket?.connected) return;
+        const hiddenDuration = this._hiddenTimestamp ? (Date.now() - this._hiddenTimestamp) : 0;
+        console.log(`Reconnecting room media (was hidden for ${Math.round(hiddenDuration / 1000)}s)...`);
+        this._hiddenTimestamp = null;
+        
+        this.remoteAudioElements.forEach((audioEl) => {
+            if (audioEl.paused && audioEl.srcObject) {
+                audioEl.play().catch(() => {});
+            }
+        });
+        
+        if (hiddenDuration > 30000) {
+            console.log('Long background period detected - rebuilding all peer connections');
+            const peerEntries = Array.from(this.peerConnections.entries()).map(([id, pc]) => ({ id, name: pc._remoteName || 'unknown' }));
+            for (const { id, name } of peerEntries) {
+                this._peerRetryCount.delete(id);
+                this.closePeerConnection(id);
+                try {
+                    await this.createPeerConnection(id, name, true);
+                } catch (e) {
+                    console.error(`Failed to rebuild connection to ${name}:`, e);
+                }
+            }
+        } else {
+            for (const [remoteId, pc] of this.peerConnections) {
+                const state = pc.iceConnectionState;
+                if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+                    console.log(`Re-establishing peer connection to ${pc._remoteName || remoteId}`);
+                    this._peerRetryCount.delete(remoteId);
+                    await this._attemptPeerRecovery(remoteId, pc._remoteName || 'unknown');
+                }
+            }
+        }
+        
+        this.socket.emit('request-participants', { roomId: this.currentRoom });
+    }
+
+    _reconcileMeshConnections(participants) {
+        if (!this.isInRoom() || !this.socket?.connected) return;
+        const myId = this.socket.id;
+        
+        for (const p of participants) {
+            if (p.socketId === myId) continue;
+            if (!this.peerConnections.has(p.socketId)) {
+                console.log(`Mesh reconciliation: creating missing connection to ${p.userName}`);
+                this.createPeerConnection(p.socketId, p.userName, true);
+                if (!document.querySelector(`[data-participant-id="${p.socketId}"]`)) {
+                    if (p.isSpeaker) {
+                        this.addRemoteSpeaker(p.socketId, p.userName, null, false, p.userId, p.avatar);
+                    } else {
+                        this.addRemoteListener(p.socketId, p.userName, false, p.userId, p.avatar);
+                    }
+                }
+            }
+        }
+    }
+
     closePeerConnection(remoteId) {
         const pc = this.peerConnections.get(remoteId);
         if (pc) {
@@ -2432,6 +2639,7 @@ class AudioRoomsManager {
         this._savedRoomName = null;
         this._releaseWakeLock();
         this._stopSilentAudioKeepAlive();
+        this._stopHealthCheck();
         this.resetAudioFilter();
 
         if (this.audioContext && this.audioContext.state !== 'closed') {
