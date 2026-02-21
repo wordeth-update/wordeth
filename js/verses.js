@@ -1300,11 +1300,17 @@ class AudioRoomsManager {
             
             this.currentRoom = roomId;
             this.roomJoinTime = Date.now();
-            
-            await this.connectSocket();
-            
+
             const user = JSON.parse(localStorage.getItem('user') || '{}');
             const userName = user.name || user.username || 'Anonymous';
+
+            this._addSelfToStage(userName, user.avatar || null, isHost);
+            this.updateRoomInfo(roomId);
+
+            const audioRoomEl = document.getElementById('audio-room');
+            if (audioRoomEl) audioRoomEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            await this.connectSocket();
             
             const roomNameEl = document.getElementById('room-name');
             const currentRoomName = roomNameEl?.textContent || '';
@@ -1317,10 +1323,6 @@ class AudioRoomsManager {
                 roomName: currentRoomName || null,
                 avatar: user.avatar || null
             });
-            
-            this.updateRoomInfo(roomId);
-            
-            this._addSelfToStage(userName, user.avatar || null, isHost);
             
             this.addChatMessage('System', 'Welcome to the room!', true);
 
