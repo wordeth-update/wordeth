@@ -1573,7 +1573,6 @@ class AudioRoomsManager {
         try {
             await this.initAgoraClient();
 
-            const role = this.isSpeaker ? 'publisher' : 'audience';
             const agoraRole = this.isSpeaker ? 'host' : 'audience';
             await this.agoraClient.setClientRole(agoraRole);
 
@@ -1583,7 +1582,7 @@ class AudioRoomsManager {
                 body: JSON.stringify({
                     channelName: roomId,
                     uid: 0,
-                    role: role === 'publisher' ? 'publisher' : 'audience'
+                    role: 'publisher'
                 })
             });
             const data = await resp.json();
@@ -1593,7 +1592,7 @@ class AudioRoomsManager {
 
             this.agoraAppId = data.appId;
             this.agoraUid = await this.agoraClient.join(data.appId, roomId, data.token, data.uid || null);
-            console.log('Agora: joined channel', roomId, 'as uid', this.agoraUid);
+            console.log('Agora: joined channel', roomId, 'as uid', this.agoraUid, 'role:', agoraRole);
 
             if (this.socket) {
                 this.socket.emit('agora-uid-map', {
