@@ -5,6 +5,12 @@ class AudioRoomsManager {
         this.currentRoom = null;
         this.localStream = null;
         this.peerConnections = new Map();
+        this.agoraClient = null;
+        this.agoraLocalAudioTrack = null;
+        this.agoraLocalVideoTrack = null;
+        this.agoraUid = null;
+        this.agoraAppId = null;
+        this.agoraRemoteUsers = new Map();
         this.socket = null;
         this.isAudioMuted = false;
         this.isSpeaker = false;
@@ -1401,7 +1407,12 @@ class AudioRoomsManager {
 
             this._requestWakeLock();
             this._startSilentAudioKeepAlive();
-            this._startHealthCheck();
+
+            try {
+                await this.joinAgoraChannel(roomId);
+            } catch (e) {
+                console.error('Agora join failed, room will work without SFU audio:', e);
+            }
 
             fetch(apiUrl('/api/analytics/track'), {
                 method: 'POST',
@@ -1434,7 +1445,6 @@ class AudioRoomsManager {
 
     async initializeMedia() {
         try {
-            // Audio-only for audio rooms (Twitter Spaces style)
             this.localStream = await navigator.mediaDevices.getUserMedia({
                 video: false,
                 audio: {
@@ -1443,11 +1453,189 @@ class AudioRoomsManager {
                     autoGainControl: true
                 }
             });
-            
         } catch (error) {
             console.error('Error accessing audio device:', error);
             throw error;
         }
+    }
+
+    async initAgoraClient() {
+        if (this.agoraClient) return;
+        this.agoraClient = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+        AgoraRTC.setLogLevel(2);
+
+        this.agoraClient.on('user-published', async (user, mediaType) => {
+            await this.agoraClient.subscribe(user, mediaType);
+            console.log('Agora: subscribed to', user.uid, mediaType);
+            if (mediaType === 'audio') {
+                const remoteTrack = user.audioTrack;
+                if (remoteTrack) {
+                    remoteTrack.play();
+                    this.agoraRemoteUsers.set(String(user.uid), user);
+                }
+            } else if (mediaType === 'video') {
+                const remoteTrack = user.videoTrack;
+                if (remoteTrack && this.videoMode !== 'off') {
+                    const participantId = this._findParticipantIdByAgoraUid(user.uid);
+                    if (participantId) {
+                        const pData = this._getParticipantData(participantId);
+                        const userName = pData?.userName || 'User';
+                        const stream = new MediaStream([remoteTrack.getMediaStreamTrack()]);
+                        this.activeVideoFeeds.set(participantId, { userName, stream, muted: false });
+                        this.refreshVideoGrid();
+                        remoteTrack.getMediaStreamTrack().onended = () => {
+                            this.removeVideoTile(participantId);
+                        };
+                    }
+                }
+            }
+        });
+
+        this.agoraClient.on('user-unpublished', (user, mediaType) => {
+            console.log('Agora: user unpublished', user.uid, mediaType);
+            if (mediaType === 'audio') {
+                this.agoraRemoteUsers.delete(String(user.uid));
+            } else if (mediaType === 'video') {
+                const participantId = this._findParticipantIdByAgoraUid(user.uid);
+                if (participantId) {
+                    this.removeVideoTile(participantId);
+                }
+            }
+        });
+
+        this.agoraClient.on('user-left', (user) => {
+            console.log('Agora: user left', user.uid);
+            this.agoraRemoteUsers.delete(String(user.uid));
+        });
+
+        this.agoraClient.on('connection-state-change', (curState, prevState) => {
+            console.log(`Agora connection: ${prevState} -> ${curState}`);
+            if (curState === 'DISCONNECTED' && this.isInRoom()) {
+                console.log('Agora disconnected while in room, will reconnect via Socket.io rejoin');
+            }
+        });
+    }
+
+    async joinAgoraChannel(roomId) {
+        try {
+            await this.initAgoraClient();
+
+            const role = this.isSpeaker ? 'publisher' : 'audience';
+            const agoraRole = this.isSpeaker ? 'host' : 'audience';
+            await this.agoraClient.setClientRole(agoraRole);
+
+            const resp = await fetch(apiUrl('/api/agora/token'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    channelName: roomId,
+                    uid: 0,
+                    role: role === 'publisher' ? 'publisher' : 'audience'
+                })
+            });
+            const data = await resp.json();
+            if (!data.token || !data.appId) {
+                throw new Error('Failed to get Agora token');
+            }
+
+            this.agoraAppId = data.appId;
+            this.agoraUid = await this.agoraClient.join(data.appId, roomId, data.token, data.uid || null);
+            console.log('Agora: joined channel', roomId, 'as uid', this.agoraUid);
+
+            if (this.socket) {
+                this.socket.emit('agora-uid-map', {
+                    roomId,
+                    agoraUid: this.agoraUid,
+                    socketId: this.socket.id
+                });
+            }
+
+            if (this.isSpeaker && this.localStream) {
+                await this.publishAgoraAudio();
+            }
+        } catch (error) {
+            console.error('Error joining Agora channel:', error);
+            throw error;
+        }
+    }
+
+    async publishAgoraAudio() {
+        try {
+            if (this.agoraLocalAudioTrack) {
+                this.agoraLocalAudioTrack.close();
+            }
+
+            const streamToUse = this.mixedStream || this.localStream;
+            const audioTrack = streamToUse?.getAudioTracks()[0];
+            if (!audioTrack) {
+                console.warn('No audio track to publish');
+                return;
+            }
+
+            this.agoraLocalAudioTrack = AgoraRTC.createCustomAudioTrack({
+                mediaStreamTrack: audioTrack
+            });
+
+            if (this.isAudioMuted) {
+                await this.agoraLocalAudioTrack.setMuted(true);
+            }
+
+            await this.agoraClient.publish([this.agoraLocalAudioTrack]);
+            console.log('Agora: published audio track');
+        } catch (error) {
+            console.error('Error publishing Agora audio:', error);
+        }
+    }
+
+    async unpublishAgoraAudio() {
+        try {
+            if (this.agoraLocalAudioTrack) {
+                await this.agoraClient.unpublish([this.agoraLocalAudioTrack]);
+                this.agoraLocalAudioTrack.close();
+                this.agoraLocalAudioTrack = null;
+                console.log('Agora: unpublished audio track');
+            }
+        } catch (error) {
+            console.error('Error unpublishing Agora audio:', error);
+        }
+    }
+
+    async leaveAgoraChannel() {
+        try {
+            if (this.agoraLocalAudioTrack) {
+                this.agoraLocalAudioTrack.close();
+                this.agoraLocalAudioTrack = null;
+            }
+            if (this.agoraLocalVideoTrack) {
+                this.agoraLocalVideoTrack.close();
+                this.agoraLocalVideoTrack = null;
+            }
+            if (this.agoraClient) {
+                await this.agoraClient.leave();
+                console.log('Agora: left channel');
+            }
+            this.agoraRemoteUsers.clear();
+            this.agoraUid = null;
+        } catch (error) {
+            console.error('Error leaving Agora channel:', error);
+        }
+    }
+
+    _findParticipantIdByAgoraUid(agoraUid) {
+        if (!this._agoraUidMap) this._agoraUidMap = new Map();
+        for (const [socketId, uid] of this._agoraUidMap) {
+            if (uid === agoraUid) return socketId;
+        }
+        return null;
+    }
+
+    _getParticipantData(participantId) {
+        const el = document.querySelector(`[data-participant-id="${participantId}"]`);
+        if (el) {
+            const nameEl = el.querySelector('.speaker-name') || el.querySelector('.listener-name');
+            return { userName: nameEl?.textContent || 'User' };
+        }
+        return null;
     }
 
     connectSocket() {
@@ -1522,7 +1710,10 @@ class AudioRoomsManager {
             
             for (const p of data.participants) {
                 if (p.socketId !== this.socket.id) {
-                    await this.createPeerConnection(p.socketId, p.userName, true);
+                    if (p.agoraUid) {
+                        if (!this._agoraUidMap) this._agoraUidMap = new Map();
+                        this._agoraUidMap.set(p.socketId, p.agoraUid);
+                    }
                     this.addRemoteSpeaker(p.socketId, p.userName, null, false, p.userId, p.avatar);
                 }
             }
@@ -1542,63 +1733,17 @@ class AudioRoomsManager {
             console.log('Participant left:', data.userName);
             this.addChatMessage('System', `${data.userName} left the room.`, true);
             this.removeVideoTile(data.socketId);
-            this.closePeerConnection(data.socketId);
+            if (this._agoraUidMap) this._agoraUidMap.delete(data.socketId);
             this.removeRemoteParticipant(data.socketId);
             this.updateParticipantDisplay(data.participants);
         });
         
-        this.socket.on('webrtc-offer', async ({ senderId, senderName, offer }) => {
-            console.log('Received WebRTC offer from:', senderName);
-            let pc = this.peerConnections.get(senderId);
-            if (pc && pc.signalingState !== 'closed') {
-                try {
-                    await pc.setRemoteDescription(new RTCSessionDescription(offer));
-                    const answer = await pc.createAnswer();
-                    await pc.setLocalDescription(answer);
-                    this.socket.emit('webrtc-answer', { targetId: senderId, answer });
-                } catch (e) {
-                    console.warn('Renegotiation failed, recreating connection:', e);
-                    pc = await this.createPeerConnection(senderId, senderName, false);
-                    if (pc) {
-                        await pc.setRemoteDescription(new RTCSessionDescription(offer));
-                        const answer = await pc.createAnswer();
-                        await pc.setLocalDescription(answer);
-                        this.socket.emit('webrtc-answer', { targetId: senderId, answer });
-                    }
-                }
-            } else {
-                pc = await this.createPeerConnection(senderId, senderName, false);
-                if (pc) {
-                    await pc.setRemoteDescription(new RTCSessionDescription(offer));
-                    const answer = await pc.createAnswer();
-                    await pc.setLocalDescription(answer);
-                    this.socket.emit('webrtc-answer', { targetId: senderId, answer });
-                }
-            }
+        this.socket.on('agora-uid-mapped', ({ socketId, agoraUid }) => {
+            if (!this._agoraUidMap) this._agoraUidMap = new Map();
+            this._agoraUidMap.set(socketId, agoraUid);
+            console.log('Agora UID mapped:', socketId, '->', agoraUid);
         });
-        
-        this.socket.on('webrtc-answer', async ({ senderId, answer }) => {
-            const pc = this.peerConnections.get(senderId);
-            if (pc && pc.signalingState !== 'closed') {
-                try {
-                    await pc.setRemoteDescription(new RTCSessionDescription(answer));
-                } catch (e) {
-                    console.warn('Error setting remote answer description:', e);
-                }
-            }
-        });
-        
-        this.socket.on('webrtc-ice-candidate', async ({ senderId, candidate }) => {
-            const pc = this.peerConnections.get(senderId);
-            if (pc && candidate) {
-                try {
-                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
-                } catch (e) {
-                    console.error('Error adding ICE candidate:', e);
-                }
-            }
-        });
-        
+
         this.socket.on('chat-message', ({ sender, message, timestamp }) => {
             this.addChatMessage(sender, message, false);
         });
@@ -1667,6 +1812,13 @@ class AudioRoomsManager {
                     this.localStream.getAudioTracks().forEach(t => { t.enabled = false; });
                 }
                 this.isAudioMuted = true;
+
+                if (this.agoraClient) {
+                    this.unpublishAgoraAudio().then(() => {
+                        this.agoraClient.setClientRole('audience').catch(e => console.warn('Agora role switch error:', e));
+                    }).catch(e => console.warn('Agora unpublish error:', e));
+                }
+
                 const selfEl = document.querySelector('[data-participant-id="self"]');
                 if (selfEl && this.speakersStage && this.listenersGrid) {
                     selfEl.remove();
@@ -1681,12 +1833,23 @@ class AudioRoomsManager {
             }
         });
 
-        this.socket.on('promoted-to-speaker', () => {
+        this.socket.on('promoted-to-speaker', async () => {
             this.isSpeaker = true;
             if (this.localStream) {
                 this.localStream.getAudioTracks().forEach(t => { t.enabled = false; });
             }
             this.isAudioMuted = true;
+
+            if (this.agoraClient) {
+                try {
+                    await this.agoraClient.setClientRole('host');
+                    await this.publishAgoraAudio();
+                    console.log('Agora: promoted to host/publisher role');
+                } catch (e) {
+                    console.error('Agora role switch error on promotion:', e);
+                }
+            }
+
             const selfEl = document.querySelector('[data-participant-id="self"]');
             if (selfEl) selfEl.remove();
             const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -1894,32 +2057,23 @@ class AudioRoomsManager {
         const hiddenDuration = this._hiddenTimestamp ? (Date.now() - this._hiddenTimestamp) : 0;
         console.log(`Reconnecting room media (was hidden for ${Math.round(hiddenDuration / 1000)}s)...`);
         this._hiddenTimestamp = null;
-        
-        this.remoteAudioElements.forEach((audioEl) => {
-            if (audioEl.paused && audioEl.srcObject) {
-                audioEl.play().catch(() => {});
-            }
-        });
-        
-        if (hiddenDuration > 30000) {
-            console.log('Long background period detected - rebuilding all peer connections');
-            const peerEntries = Array.from(this.peerConnections.entries()).map(([id, pc]) => ({ id, name: pc._remoteName || 'unknown' }));
-            for (const { id, name } of peerEntries) {
-                this._peerRetryCount.delete(id);
-                this.closePeerConnection(id);
+
+        if (this.agoraClient) {
+            const agoraState = this.agoraClient.connectionState;
+            if (agoraState === 'DISCONNECTED' || agoraState === 'DISCONNECTING') {
+                console.log('Agora disconnected, rejoining channel...');
                 try {
-                    await this.createPeerConnection(id, name, true);
+                    await this.leaveAgoraChannel();
+                    await this.joinAgoraChannel(this.currentRoom);
                 } catch (e) {
-                    console.error(`Failed to rebuild connection to ${name}:`, e);
+                    console.error('Failed to rejoin Agora channel:', e);
                 }
-            }
-        } else {
-            for (const [remoteId, pc] of this.peerConnections) {
-                const state = pc.iceConnectionState;
-                if (state === 'disconnected' || state === 'failed' || state === 'closed') {
-                    console.log(`Re-establishing peer connection to ${pc._remoteName || remoteId}`);
-                    this._peerRetryCount.delete(remoteId);
-                    await this._attemptPeerRecovery(remoteId, pc._remoteName || 'unknown');
+            } else if (agoraState === 'CONNECTED' && this.isSpeaker && !this.agoraLocalAudioTrack) {
+                console.log('Agora connected but no audio track, re-publishing...');
+                try {
+                    await this.publishAgoraAudio();
+                } catch (e) {
+                    console.error('Failed to re-publish Agora audio:', e);
                 }
             }
         }
@@ -2038,48 +2192,30 @@ class AudioRoomsManager {
         const videoTrack = stream.getVideoTracks()[0];
         if (!videoTrack) return;
         
-        for (const [peerId, pc] of this.peerConnections) {
+        if (this.agoraClient) {
             try {
-                if (pc._videoSender) {
-                    pc._videoSender.replaceTrack(videoTrack);
-                } else {
-                    pc._videoSender = pc.addTrack(videoTrack, stream);
+                if (this.agoraLocalVideoTrack) {
+                    await this.agoraClient.unpublish([this.agoraLocalVideoTrack]);
+                    this.agoraLocalVideoTrack.close();
                 }
+                this.agoraLocalVideoTrack = AgoraRTC.createCustomVideoTrack({ mediaStreamTrack: videoTrack });
+                await this.agoraClient.publish([this.agoraLocalVideoTrack]);
+                console.log('Agora: published video track via addVideoTrackToPeers');
             } catch (e) {
-                console.error('Error adding video track to peer:', peerId, e);
-            }
-        }
-        
-        for (const [peerId, pc] of this.peerConnections) {
-            try {
-                await this.renegotiatePeer(peerId, pc);
-            } catch (e) {
-                console.error('Error renegotiating with peer:', peerId, e);
+                console.error('Error publishing video to Agora:', e);
             }
         }
     }
     
     async removeVideoTrackFromPeers() {
-        let needsRenegotiation = false;
-        for (const [peerId, pc] of this.peerConnections) {
+        if (this.agoraLocalVideoTrack && this.agoraClient) {
             try {
-                if (pc._videoSender) {
-                    pc.removeTrack(pc._videoSender);
-                    pc._videoSender = null;
-                    needsRenegotiation = true;
-                }
+                await this.agoraClient.unpublish([this.agoraLocalVideoTrack]);
+                this.agoraLocalVideoTrack.close();
+                this.agoraLocalVideoTrack = null;
+                console.log('Agora: unpublished video track via removeVideoTrackFromPeers');
             } catch (e) {
-                console.error('Error removing video track from peer:', peerId, e);
-            }
-        }
-        
-        if (needsRenegotiation) {
-            for (const [peerId, pc] of this.peerConnections) {
-                try {
-                    await this.renegotiatePeer(peerId, pc);
-                } catch (e) {
-                    console.error('Error renegotiating with peer:', peerId, e);
-                }
+                console.error('Error unpublishing video from Agora:', e);
             }
         }
     }
@@ -2248,23 +2384,27 @@ class AudioRoomsManager {
     }
 
     toggleAudio() {
+        this.isAudioMuted = !this.isAudioMuted;
+
+        if (this.agoraLocalAudioTrack) {
+            this.agoraLocalAudioTrack.setMuted(this.isAudioMuted);
+        }
         if (this.localStream) {
             const audioTrack = this.localStream.getAudioTracks()[0];
             if (audioTrack) {
-                audioTrack.enabled = !audioTrack.enabled;
-                this.isAudioMuted = !audioTrack.enabled;
-                
-                this.toggleAudioBtn?.classList.toggle('muted', this.isAudioMuted);
-                if (this.toggleAudioBtn) {
-                    this.toggleAudioBtn.innerHTML = this.isAudioMuted ? 
-                        '<i class="fas fa-microphone-slash"></i>' : 
-                        '<i class="fas fa-microphone"></i>';
-                }
-
-                if (window._verseMiniPlayer && window._verseMiniPlayer.isActive()) {
-                    window._verseMiniPlayer._updateMuteIcon();
-                }
+                audioTrack.enabled = !this.isAudioMuted;
             }
+        }
+
+        this.toggleAudioBtn?.classList.toggle('muted', this.isAudioMuted);
+        if (this.toggleAudioBtn) {
+            this.toggleAudioBtn.innerHTML = this.isAudioMuted ? 
+                '<i class="fas fa-microphone-slash"></i>' : 
+                '<i class="fas fa-microphone"></i>';
+        }
+
+        if (window._verseMiniPlayer && window._verseMiniPlayer.isActive()) {
+            window._verseMiniPlayer._updateMuteIcon();
         }
     }
 
@@ -2639,8 +2779,10 @@ class AudioRoomsManager {
         this._savedRoomName = null;
         this._releaseWakeLock();
         this._stopSilentAudioKeepAlive();
-        this._stopHealthCheck();
         this.resetAudioFilter();
+
+        this.leaveAgoraChannel().catch(e => console.warn('Agora leave error:', e));
+        if (this._agoraUidMap) this._agoraUidMap.clear();
 
         if (this.audioContext && this.audioContext.state !== 'closed') {
             try { this.audioContext.close(); } catch(e) {}
@@ -3218,14 +3360,19 @@ class AudioRoomsManager {
                 this.localStream.removeTrack(originalTrack);
                 this.localStream.addTrack(processedTrack);
                 
-                // Update any peer connections with the new track
-                this.peerConnections.forEach((pc) => {
-                    const sender = pc.getSenders().find(s => s.track?.kind === 'audio');
-                    if (sender) {
-                        sender.replaceTrack(processedTrack);
+                if (this.agoraLocalAudioTrack && this.agoraClient) {
+                    try {
+                        const newAgoraTrack = AgoraRTC.createCustomAudioTrack({ mediaStreamTrack: processedTrack });
+                        await this.agoraClient.unpublish([this.agoraLocalAudioTrack]);
+                        this.agoraLocalAudioTrack.close();
+                        this.agoraLocalAudioTrack = newAgoraTrack;
+                        if (this.isAudioMuted) await this.agoraLocalAudioTrack.setMuted(true);
+                        await this.agoraClient.publish([this.agoraLocalAudioTrack]);
+                    } catch (e) {
+                        console.error('Error updating Agora audio track with filter:', e);
                     }
-                });
-                
+                }
+
                 console.log(`Audio filter "${filterType}" applied and routed to stream`);
             }
             
@@ -3249,12 +3396,19 @@ class AudioRoomsManager {
             }
             this.localStream.addTrack(this.originalAudioTrack);
 
-            this.peerConnections.forEach((pc) => {
-                const sender = pc.getSenders().find(s => s.track?.kind === 'audio');
-                if (sender) {
-                    sender.replaceTrack(this.originalAudioTrack);
+            if (this.agoraLocalAudioTrack && this.agoraClient) {
+                try {
+                    const newAgoraTrack = AgoraRTC.createCustomAudioTrack({ mediaStreamTrack: this.originalAudioTrack });
+                    this.agoraClient.unpublish([this.agoraLocalAudioTrack]).then(() => {
+                        this.agoraLocalAudioTrack.close();
+                        this.agoraLocalAudioTrack = newAgoraTrack;
+                        if (this.isAudioMuted) this.agoraLocalAudioTrack.setMuted(true);
+                        this.agoraClient.publish([this.agoraLocalAudioTrack]);
+                    }).catch(e => console.warn('Agora track reset error:', e));
+                } catch (e) {
+                    console.warn('Agora track reset error:', e);
                 }
-            });
+            }
 
             if (this.audioFilterNodes.source) {
                 try { this.audioFilterNodes.source.disconnect(); } catch(e) {}
@@ -3657,18 +3811,14 @@ class AudioRoomsManager {
             
             this.notifyParticipants('video-start', {});
             
-            for (const [peerId, pc] of this.peerConnections) {
+            if (this.agoraClient) {
                 try {
                     const videoTrack = this.localVideoStream.getVideoTracks()[0];
-                    const existingVideoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                    if (existingVideoSender) {
-                        await existingVideoSender.replaceTrack(videoTrack);
-                    } else {
-                        pc.addTrack(videoTrack, this.localVideoStream);
-                    }
-                    await this.renegotiatePeer(peerId, pc);
+                    this.agoraLocalVideoTrack = AgoraRTC.createCustomVideoTrack({ mediaStreamTrack: videoTrack });
+                    await this.agoraClient.publish([this.agoraLocalVideoTrack]);
+                    console.log('Agora: published video track');
                 } catch (e) {
-                    console.error('Error adding video track to peer:', peerId, e);
+                    console.error('Error publishing video to Agora:', e);
                 }
             }
         } catch (e) {
@@ -3688,15 +3838,14 @@ class AudioRoomsManager {
         
         this.notifyParticipants('video-stop', {});
         
-        for (const [peerId, pc] of this.peerConnections) {
-            const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-            if (videoSender) {
-                try {
-                    pc.removeTrack(videoSender);
-                    this.renegotiatePeer(peerId, pc).catch(() => {});
-                } catch (e) {
-                    console.error('Error removing video track from peer:', peerId, e);
-                }
+        if (this.agoraLocalVideoTrack && this.agoraClient) {
+            try {
+                this.agoraClient.unpublish([this.agoraLocalVideoTrack]);
+                this.agoraLocalVideoTrack.close();
+                this.agoraLocalVideoTrack = null;
+                console.log('Agora: unpublished video track');
+            } catch (e) {
+                console.error('Error unpublishing video from Agora:', e);
             }
         }
     }
@@ -3877,6 +4026,9 @@ class AudioRoomsManager {
             this.localStream.getAudioTracks().forEach(t => { t.enabled = false; });
         }
         this.isAudioMuted = true;
+        if (this.agoraLocalAudioTrack) {
+            this.agoraLocalAudioTrack.setMuted(true);
+        }
         const toggleBtn = document.getElementById('toggle-audio');
         if (toggleBtn) {
             toggleBtn.querySelector('i').className = 'fas fa-microphone-slash';
@@ -4489,25 +4641,18 @@ class AudioRoomsManager {
             }
 
             console.log('Broadcasting canvas stream, track state:', canvasTrack.readyState);
-            let needsRenegotiation = false;
-            const replacePromises = [];
-            for (const [peerId, pc] of this.peerConnections) {
-                if (pc._videoSender) {
-                    replacePromises.push(
-                        pc._videoSender.replaceTrack(canvasTrack)
-                            .then(() => console.log('Replaced canvas video track for peer:', peerId))
-                            .catch(e => console.error('Failed to replace canvas track for peer:', peerId, e))
-                    );
-                } else {
-                    const stream = new MediaStream([canvasTrack]);
-                    pc._videoSender = pc.addTrack(canvasTrack, stream);
-                    needsRenegotiation = true;
-                    console.log('Added canvas video track for peer:', peerId);
+            if (this.agoraClient) {
+                try {
+                    if (this.agoraLocalVideoTrack) {
+                        await this.agoraClient.unpublish([this.agoraLocalVideoTrack]);
+                        this.agoraLocalVideoTrack.close();
+                    }
+                    this.agoraLocalVideoTrack = AgoraRTC.createCustomVideoTrack({ mediaStreamTrack: canvasTrack });
+                    await this.agoraClient.publish([this.agoraLocalVideoTrack]);
+                    console.log('Agora: published canvas video track');
+                } catch (e) {
+                    console.error('Error publishing canvas to Agora:', e);
                 }
-            }
-            await Promise.all(replacePromises);
-            if (needsRenegotiation && !this._videoRenegotiating) {
-                await this._renegotiateAllPeers();
             }
         } catch (e) {
             console.error('Error broadcasting canvas stream:', e);
@@ -4519,18 +4664,18 @@ class AudioRoomsManager {
         const videoTrack = this.karaokeVideoStream.getVideoTracks()[0];
         if (!videoTrack) return;
 
-        let needsRenegotiation = false;
-        for (const [, pc] of this.peerConnections) {
-            if (pc._videoSender) {
-                pc._videoSender.replaceTrack(videoTrack);
-            } else {
-                const stream = new MediaStream([videoTrack]);
-                pc._videoSender = pc.addTrack(videoTrack, stream);
-                needsRenegotiation = true;
+        if (this.agoraClient) {
+            try {
+                if (this.agoraLocalVideoTrack) {
+                    await this.agoraClient.unpublish([this.agoraLocalVideoTrack]);
+                    this.agoraLocalVideoTrack.close();
+                }
+                this.agoraLocalVideoTrack = AgoraRTC.createCustomVideoTrack({ mediaStreamTrack: videoTrack });
+                await this.agoraClient.publish([this.agoraLocalVideoTrack]);
+                console.log('Agora: published karaoke video track');
+            } catch (e) {
+                console.error('Error publishing karaoke video to Agora:', e);
             }
-        }
-        if (needsRenegotiation && !this._videoRenegotiating) {
-            await this._renegotiateAllPeers();
         }
     }
 
@@ -5922,30 +6067,18 @@ class AudioRoomsManager {
             console.warn('replaceOutgoingAudioTrack: no track provided');
             return;
         }
-        const promises = [];
-        let needsRenegotiation = false;
-        this.peerConnections.forEach((pc, peerId) => {
-            const sender = pc.getSenders().find(s => s.track?.kind === 'audio' || s.track === null);
-            if (sender) {
-                promises.push(
-                    sender.replaceTrack(newTrack)
-                        .then(() => console.log('Replaced audio track for peer:', peerId))
-                        .catch(e => console.error('Failed to replace audio track for peer:', peerId, e))
-                );
-            } else {
-                const stream = new MediaStream([newTrack]);
-                try {
-                    pc.addTrack(newTrack, stream);
-                    needsRenegotiation = true;
-                    console.log('Added new audio track for peer:', peerId);
-                } catch (e) {
-                    console.error('Failed to add audio track for peer:', peerId, e);
-                }
+        if (this.agoraLocalAudioTrack && this.agoraClient) {
+            try {
+                const newAgoraTrack = AgoraRTC.createCustomAudioTrack({ mediaStreamTrack: newTrack });
+                await this.agoraClient.unpublish([this.agoraLocalAudioTrack]);
+                this.agoraLocalAudioTrack.close();
+                this.agoraLocalAudioTrack = newAgoraTrack;
+                if (this.isAudioMuted) await this.agoraLocalAudioTrack.setMuted(true);
+                await this.agoraClient.publish([this.agoraLocalAudioTrack]);
+                console.log('Agora: replaced outgoing audio track');
+            } catch (e) {
+                console.error('Error replacing Agora audio track:', e);
             }
-        });
-        await Promise.all(promises);
-        if (needsRenegotiation) {
-            await this._renegotiateAllPeers();
         }
     }
     

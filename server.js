@@ -46,6 +46,7 @@ const partnerRoutes = require('./routes/partner'); // Label partner dashboards
 const subscriptionRoutes = require('./routes/subscriptions'); // Subscription & plans
 const creatorRoutes = require('./routes/creator'); // Independent artist/designer
 const tournamentRoutes = require('./routes/tournaments'); // Verses Tournaments
+const agoraRoutes = require('./routes/agora'); // Agora RTC token generation
 const trackingMiddleware = require('./middleware/tracking'); // Event tracking
 
 const app = express();
@@ -72,8 +73,8 @@ app.use(helmet({
         directives: {
             defaultSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://cdn.inksoft.com", "https://stores.inksoft.com", "https://unpkg.com"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'", "https://cdnjs.cloudflare.com", "https://cdn.inksoft.com", "https://stores.inksoft.com", "https://www.youtube.com", "https://s.ytimg.com", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://storage.googleapis.com"],
-            scriptSrcElem: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://cdn.inksoft.com", "https://stores.inksoft.com", "https://www.youtube.com", "https://s.ytimg.com", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://storage.googleapis.com"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'", "https://cdnjs.cloudflare.com", "https://cdn.inksoft.com", "https://stores.inksoft.com", "https://www.youtube.com", "https://s.ytimg.com", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://storage.googleapis.com", "https://download.agora.io"],
+            scriptSrcElem: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://cdn.inksoft.com", "https://stores.inksoft.com", "https://www.youtube.com", "https://s.ytimg.com", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://storage.googleapis.com", "https://download.agora.io"],
             imgSrc: ["'self'", "data:", "https:"],
             connectSrc: ["'self'", "wss:", "ws:", "https:"],
             fontSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com", "https://cdn.inksoft.com"],
@@ -188,6 +189,7 @@ app.use('/api/partner', partnerRoutes); // Label partner dashboards
 app.use('/api/subscriptions', subscriptionRoutes); // Subscription & plans
 app.use('/api/creator', creatorRoutes); // Independent artist/designer
 app.use('/api/tournaments', tournamentRoutes); // Verses Tournaments
+app.use('/api/agora', agoraRoutes); // Agora RTC tokens
 app.get('/api/rooms/active', (req, res) => {
     res.json(getActiveRooms());
 });

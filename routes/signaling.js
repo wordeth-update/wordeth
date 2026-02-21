@@ -176,6 +176,18 @@ function setupSignaling(io) {
             io.emit('rooms-updated', getActiveRooms());
         });
 
+        socket.on('agora-uid-map', ({ roomId, agoraUid }) => {
+            const room = rooms.get(roomId);
+            if (room && room.participants.has(socket.id)) {
+                const participant = room.participants.get(socket.id);
+                participant.agoraUid = agoraUid;
+                socket.to(roomId).emit('agora-uid-mapped', {
+                    socketId: socket.id,
+                    agoraUid: agoraUid
+                });
+            }
+        });
+
         socket.on('webrtc-offer', ({ targetId, offer }) => {
             io.to(targetId).emit('webrtc-offer', {
                 senderId: socket.id,
