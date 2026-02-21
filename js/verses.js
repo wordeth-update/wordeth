@@ -622,8 +622,10 @@ class AudioRoomsManager {
         if (!this.currentRoom) return;
 
         const roomName = document.getElementById('room-name')?.textContent || 'a room';
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const hostName = user.name || user.username || '';
         const baseUrl = window.location.origin;
-        const shareUrl = `${baseUrl}/room/${encodeURIComponent(this.currentRoom)}`;
+        const shareUrl = `${baseUrl}/room/${encodeURIComponent(this.currentRoom)}?name=${encodeURIComponent(roomName)}&host=${encodeURIComponent(hostName)}`;
         const shareText = `Join me in "${roomName}" on Wordeth! Live music discussion happening now.`;
 
         if (navigator.share) {

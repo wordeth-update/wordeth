@@ -225,9 +225,11 @@ app.get('/room/:roomId', ogCrawlerHeaders, (req, res) => {
     const activeRooms = getActiveRooms();
     const room = activeRooms.find(r => r.id === roomId);
 
-    const roomName = escapeHtml(room?.name || 'a Live Verse');
+    const queryName = req.query.name || '';
+    const queryHost = req.query.host || '';
+    const roomName = escapeHtml(room?.name || queryName || 'a Live Verse');
     const participantCount = room?.participantCount || 0;
-    const hostName = room?.participants?.find(p => p.isHost)?.userName || '';
+    const hostName = room?.participants?.find(p => p.isHost)?.userName || queryHost || '';
     const description = escapeHtml(hostName
         ? `${hostName} is live on Wordeth${participantCount > 1 ? ` with ${participantCount - 1} other${participantCount > 2 ? 's' : ''}` : ''}. Tap to join the conversation.`
         : `A live audio room on Wordeth${participantCount > 0 ? ` with ${participantCount} listener${participantCount > 1 ? 's' : ''}` : ''}. Tap to join.`);
@@ -235,7 +237,7 @@ app.get('/room/:roomId', ogCrawlerHeaders, (req, res) => {
     const baseUrl = req.get('x-forwarded-proto') 
         ? `${req.get('x-forwarded-proto')}://${req.get('host')}`
         : `${req.protocol}://${req.get('host')}`;
-    const ogImageUrl = `${baseUrl}/og-image/${encodeURIComponent(roomId)}`;
+    const ogImageUrl = `${baseUrl}/og-image/${encodeURIComponent(roomId)}?name=${encodeURIComponent(queryName)}&host=${encodeURIComponent(queryHost)}`;
     const joinUrl = `${baseUrl}/verses.html?room=${encodeURIComponent(roomId)}`;
 
     const ua = (req.get('user-agent') || '').toLowerCase();
@@ -313,10 +315,12 @@ app.get('/og-image/:roomId', ogCrawlerHeaders, async (req, res) => {
         const activeRooms = getActiveRooms();
         const room = activeRooms.find(r => r.id === roomId);
 
-        const roomName = room?.name || 'Live Verse';
+        const queryName = req.query.name || '';
+        const queryHost = req.query.host || '';
+        const roomName = room?.name || queryName || 'Live Verse';
         const participantCount = room?.participantCount || 0;
         const participants = room?.participants || [];
-        const hostName = participants.find(p => p.isHost)?.userName || '';
+        const hostName = participants.find(p => p.isHost)?.userName || queryHost || '';
         const hostInitial = hostName ? escapeHtml(hostName.charAt(0).toUpperCase()) : 'W';
         const inviteLine = hostName
             ? `<strong>${escapeHtml(hostName)}</strong> invited you`
