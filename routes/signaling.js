@@ -511,7 +511,8 @@ function getActiveRooms() {
             participants: Array.from(room.participants.values()).map(p => ({
                 userId: p.userId,
                 userName: p.userName,
-                isHost: p.isHost
+                isHost: p.isHost,
+                avatar: p.avatar || null
             })),
             isLocked: room.isLocked,
             karaokeEnabled: room.karaokeEnabled,

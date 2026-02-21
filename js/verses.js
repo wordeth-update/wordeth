@@ -1435,6 +1435,12 @@ class AudioRoomsManager {
                 const roomNameEl = document.getElementById('room-name');
                 if (roomNameEl) roomNameEl.textContent = data.roomName;
             }
+
+            if (!document.querySelector('[data-participant-id="self"]')) {
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                const userName = user.name || user.username || 'Anonymous';
+                this._addSelfToStage(userName, user.avatar || null, this.isRoomHost);
+            }
             
             for (const p of data.participants) {
                 if (p.socketId !== this.socket.id) {
