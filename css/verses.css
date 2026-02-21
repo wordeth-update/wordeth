@@ -4709,8 +4709,14 @@ body.in-room {
 
 body.in-room footer,
 body.in-room .footer,
-body.in-room .site-footer {
+body.in-room .site-footer,
+body.in-room .audio-rooms-container > footer {
     display: none !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 body.in-room .main-nav,
@@ -4720,6 +4726,9 @@ body.in-room nav.main-nav {
 
 body.in-room .audio-rooms-container {
     margin-top: 0;
+    overflow: hidden !important;
+    height: 100vh !important;
+    height: 100dvh !important;
 }
 
 /* Video grid - fill available space, no negative space */

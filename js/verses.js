@@ -1301,6 +1301,10 @@ class AudioRoomsManager {
             if (this.roomSelection) this.roomSelection.style.display = 'none';
             this.audioRoom?.classList.remove('hidden');
             document.body.classList.add('in-room');
+            const pageFooter = document.querySelector('footer');
+            if (pageFooter) pageFooter.style.display = 'none';
+            const mainContainer = document.querySelector('.audio-rooms-container');
+            if (mainContainer) mainContainer.style.overflow = 'hidden';
             
             this.currentRoom = roomId;
             this.roomJoinTime = Date.now();
@@ -2428,6 +2432,10 @@ class AudioRoomsManager {
         
         this.audioRoom?.classList.add('hidden');
         document.body.classList.remove('in-room');
+        const pageFooter = document.querySelector('footer');
+        if (pageFooter) pageFooter.style.display = '';
+        const mainContainer = document.querySelector('.audio-rooms-container');
+        if (mainContainer) mainContainer.style.overflow = '';
         if (this.roomSelection) this.roomSelection.style.display = 'block';
         this.currentRoom = null;
         this.roomJoinTime = null;
