@@ -1417,14 +1417,7 @@ class AudioRoomsManager {
             if (isHost) {
                 try {
                     await this.initializeMedia();
-                    if (this.localStream) {
-                        this.localStream.getAudioTracks().forEach(t => { t.enabled = false; });
-                        setTimeout(() => {
-                            if (this.localStream) {
-                                this.localStream.getAudioTracks().forEach(t => { t.enabled = true; });
-                            }
-                        }, 600);
-                    }
+                    console.log('Host mic initialized, localStream tracks:', this.localStream?.getAudioTracks().length);
                 } catch (e) {
                     console.warn('Mic access denied, hosting without mic:', e.message);
                 }
@@ -1481,8 +1474,10 @@ class AudioRoomsManager {
 
             try {
                 await this.joinAgoraChannel(roomId);
+                console.log('Agora: successfully joined, connectionState:', this.agoraClient?.connectionState);
             } catch (e) {
-                console.error('Agora join failed, room will work without SFU audio:', e);
+                console.error('Agora join failed:', e);
+                this.addChatMessage('System', 'Audio connection failed. Try refreshing the page.', true);
             }
 
             fetch(apiUrl('/api/analytics/track'), {
@@ -1553,17 +1548,26 @@ class AudioRoomsManager {
         };
 
         this.agoraClient.on('user-published', async (user, mediaType) => {
-            await this.agoraClient.subscribe(user, mediaType);
-            console.log('Agora: subscribed to', user.uid, mediaType);
+            console.log('Agora: user-published event - uid:', user.uid, 'mediaType:', mediaType);
+            try {
+                await this.agoraClient.subscribe(user, mediaType);
+                console.log('Agora: subscribed to', user.uid, mediaType);
+            } catch (subErr) {
+                console.error('Agora: subscribe failed for', user.uid, mediaType, subErr);
+                return;
+            }
             if (mediaType === 'audio') {
                 const remoteTrack = user.audioTrack;
                 if (remoteTrack) {
                     try {
                         remoteTrack.play();
+                        console.log('Agora: playing remote audio from uid', user.uid);
                     } catch (e) {
                         console.warn('Agora: audio play failed, user may need to tap:', e.message);
                     }
                     this.agoraRemoteUsers.set(String(user.uid), user);
+                } else {
+                    console.warn('Agora: subscribed to audio but audioTrack is null for uid', user.uid);
                 }
             } else if (mediaType === 'video') {
                 const remoteTrack = user.videoTrack;
@@ -1613,25 +1617,34 @@ class AudioRoomsManager {
             await this.initAgoraClient();
 
             const agoraRole = this.isSpeaker ? 'host' : 'audience';
+            console.log('Agora: setting client role to', agoraRole, 'isSpeaker:', this.isSpeaker);
             await this.agoraClient.setClientRole(agoraRole);
 
+            console.log('Agora: requesting token for channel', roomId);
             const resp = await fetch(apiUrl('/api/agora/token'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     channelName: roomId,
                     uid: 0,
-                    role: 'publisher'
+                    role: this.isSpeaker ? 'publisher' : 'audience'
                 })
             });
+
+            if (!resp.ok) {
+                const errText = await resp.text();
+                throw new Error(`Token request failed (${resp.status}): ${errText}`);
+            }
+
             const data = await resp.json();
             if (!data.token || !data.appId) {
-                throw new Error('Failed to get Agora token');
+                throw new Error('Token response missing token or appId: ' + JSON.stringify(data));
             }
+            console.log('Agora: token received, appId present:', !!data.appId);
 
             this.agoraAppId = data.appId;
             this.agoraUid = await this.agoraClient.join(data.appId, roomId, data.token, data.uid || null);
-            console.log('Agora: joined channel', roomId, 'as uid', this.agoraUid, 'role:', agoraRole);
+            console.log('Agora: joined channel', roomId, 'as uid', this.agoraUid, 'role:', agoraRole, 'connectionState:', this.agoraClient.connectionState);
 
             if (this.socket) {
                 this.socket.emit('agora-uid-map', {
@@ -1641,27 +1654,57 @@ class AudioRoomsManager {
                 });
             }
 
-            if (this.isSpeaker && this.localStream) {
-                await this.publishAgoraAudio();
+            if (this.isSpeaker) {
+                if (this.localStream) {
+                    console.log('Agora: speaker with localStream, publishing audio...');
+                    await this.publishAgoraAudio();
+                } else {
+                    console.warn('Agora: speaker but no localStream available, requesting mic...');
+                    try {
+                        await this.initializeMedia();
+                        if (this.localStream) {
+                            await this.publishAgoraAudio();
+                        }
+                    } catch (micErr) {
+                        console.warn('Agora: mic request failed:', micErr.message);
+                    }
+                }
+            } else {
+                console.log('Agora: joined as audience (listener), will subscribe to remote tracks');
             }
         } catch (error) {
-            console.error('Error joining Agora channel:', error);
+            console.error('Agora join failed:', error);
+            this.addChatMessage('System', 'Audio connection issue - audio may not work. Try refreshing the page.', true);
             throw error;
         }
     }
 
     async publishAgoraAudio() {
         try {
+            if (!this.agoraClient || this.agoraClient.connectionState !== 'CONNECTED') {
+                console.warn('Agora: cannot publish - client not connected, state:', this.agoraClient?.connectionState);
+                return;
+            }
+
             if (this.agoraLocalAudioTrack) {
+                try { await this.agoraClient.unpublish([this.agoraLocalAudioTrack]); } catch(e) {}
                 this.agoraLocalAudioTrack.close();
+                this.agoraLocalAudioTrack = null;
             }
 
             const streamToUse = this.mixedStream || this.localStream;
             const audioTrack = streamToUse?.getAudioTracks()[0];
             if (!audioTrack) {
-                console.warn('No audio track to publish');
+                console.warn('Agora: no audio track available to publish');
+                console.warn('  mixedStream:', !!this.mixedStream, 'localStream:', !!this.localStream);
+                if (this.localStream) {
+                    console.warn('  localStream tracks:', this.localStream.getTracks().map(t => `${t.kind}:${t.readyState}:enabled=${t.enabled}`));
+                }
                 return;
             }
+
+            audioTrack.enabled = true;
+            console.log('Agora: creating custom audio track from', audioTrack.kind, 'readyState:', audioTrack.readyState, 'enabled:', audioTrack.enabled);
 
             this.agoraLocalAudioTrack = AgoraRTC.createCustomAudioTrack({
                 mediaStreamTrack: audioTrack
@@ -1672,9 +1715,9 @@ class AudioRoomsManager {
             }
 
             await this.agoraClient.publish([this.agoraLocalAudioTrack]);
-            console.log('Agora: published audio track');
+            console.log('Agora: audio track published successfully, muted:', this.isAudioMuted);
         } catch (error) {
-            console.error('Error publishing Agora audio:', error);
+            console.error('Agora: error publishing audio:', error);
         }
     }
 
@@ -1965,24 +2008,24 @@ class AudioRoomsManager {
             this.isSpeaker = true;
             this.handRaised = false;
             this.raiseHandBtn?.classList.remove('hand-raised');
+            this.isAudioMuted = true;
 
             if (!this.localStream) {
                 try {
                     await this.initializeMedia();
+                    console.log('Promotion: mic initialized, tracks:', this.localStream?.getAudioTracks().length);
                 } catch (e) {
                     console.warn('Mic access denied on promotion:', e.message);
                 }
             }
 
-            if (this.localStream) {
-                this.localStream.getAudioTracks().forEach(t => { t.enabled = false; });
-            }
-            this.isAudioMuted = true;
-
             if (this.agoraClient) {
                 try {
                     await this.agoraClient.setClientRole('host');
-                    await this.publishAgoraAudio();
+                    console.log('Agora: switched to host role for promotion');
+                    if (this.localStream) {
+                        await this.publishAgoraAudio();
+                    }
                     console.log('Agora: promoted to host/publisher role');
                 } catch (e) {
                     console.error('Agora role switch error on promotion:', e);
