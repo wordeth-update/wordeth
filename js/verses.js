@@ -1395,10 +1395,17 @@ class AudioRoomsManager {
 
         const dismiss = () => {
             overlay.remove();
+            closeBtn.remove();
             if (highlight) highlight.remove();
             if (tooltip) tooltip.remove();
             localStorage.setItem(storageKey, '1');
         };
+
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'mobile-walkthrough-close';
+        closeBtn.innerHTML = '<i class="fas fa-times"></i> Close Tour';
+        closeBtn.onclick = dismiss;
+        document.body.appendChild(closeBtn);
 
         overlay.addEventListener('click', dismiss);
 
@@ -1449,11 +1456,19 @@ class AudioRoomsManager {
                 highlight.style.height = (rect.height + 8) + 'px';
                 document.body.appendChild(highlight);
 
-                if (step.position === 'above' || rect.top > window.innerHeight / 2) {
-                    tooltip.style.bottom = (window.innerHeight - rect.top + 12) + 'px';
+                const gap = 20;
+                const highlightBottom = rect.bottom + 8;
+                const highlightTop = rect.top - 4;
+                const spaceBelow = window.innerHeight - highlightBottom;
+                const spaceAbove = highlightTop;
+
+                if (step.position === 'above' || (rect.top > window.innerHeight / 2 && spaceAbove > 120)) {
+                    tooltip.style.bottom = (window.innerHeight - highlightTop + gap) + 'px';
+                    tooltip.style.maxHeight = Math.max(spaceAbove - gap - 10, 120) + 'px';
                     tooltip.classList.add('arrow-below');
                 } else {
-                    tooltip.style.top = (rect.bottom + 12) + 'px';
+                    tooltip.style.top = (highlightBottom + gap) + 'px';
+                    tooltip.style.maxHeight = Math.max(spaceBelow - gap - 60, 120) + 'px';
                     tooltip.classList.add('arrow-above');
                 }
                 tooltip.style.left = '16px';

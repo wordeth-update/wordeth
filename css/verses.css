@@ -4794,6 +4794,39 @@ body.in-room .audio-rooms-container {
     cursor: pointer;
 }
 
+.mobile-walkthrough-close {
+    position: fixed;
+    top: env(safe-area-inset-top, 16px);
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 16px;
+    z-index: 10003;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 14px 32px;
+    border-radius: 28px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    pointer-events: auto;
+    animation: walkClosePulse 2.5s ease-in-out infinite;
+}
+
+.mobile-walkthrough-close i {
+    font-size: 1.1rem;
+}
+
+@keyframes walkClosePulse {
+    0%, 100% { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.35); }
+    50% { background: rgba(255, 255, 255, 0.2); border-color: rgba(255, 255, 255, 0.55); }
+}
+
 .mobile-walkthrough-highlight {
     position: fixed;
     z-index: 10001;
@@ -4823,6 +4856,7 @@ body.in-room .audio-rooms-container {
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(95, 14, 130, 0.15);
     pointer-events: auto;
     animation: walkFadeIn 0.3s ease;
+    overflow-y: auto;
 }
 
 @keyframes walkFadeIn {
