@@ -1388,6 +1388,8 @@ class AudioRoomsManager {
         if (mainContainer) mainContainer.style.overflow = '';
         this.currentRoom = null;
         this._pendingJoinRoom = null;
+        this._joiningFromInvite = false;
+        localStorage.removeItem('wordeth_pending_room');
         this.loadActiveRooms();
     }
 
@@ -6307,13 +6309,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.warn('Invite join: hard timeout reached, forcing cleanup');
                 inviteJoinResolved = true;
                 const mgr = window.audioRoomsManager;
-                if (mgr && !mgr._joinConfirmed && mgr._pendingJoinRoom) {
-                    mgr._restoreLobbyUI();
+                if (mgr) {
+                    mgr._joiningFromInvite = false;
+                    if (!mgr._joinConfirmed && mgr._pendingJoinRoom) {
+                        mgr._restoreLobbyUI();
+                    } else if (!mgr.currentRoom) {
+                        cleanupInviteSpinner();
+                        mgr.loadActiveRooms();
+                    }
                 } else {
                     cleanupInviteSpinner();
-                    if (mgr) mgr.loadActiveRooms();
                 }
-                mgr?.showToast?.('Could not join the room. It may no longer be active.', 'fa-exclamation-circle');
+                if (mgr && !mgr.currentRoom) {
+                    mgr.showToast?.('Could not join the room. It may no longer be active.', 'fa-exclamation-circle');
+                }
             }
         }, 12000);
 
