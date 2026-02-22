@@ -1776,6 +1776,7 @@ class AudioRoomsManager {
             this._invite = { status: 'idle', roomId: null, retries: 0, maxRetries: 3 };
         }
         localStorage.removeItem('wordeth_pending_room');
+        localStorage.removeItem('wordeth_pending_room_ts');
         if (window.location.search.includes('room=')) {
             window.history.replaceState({}, '', '/verses.html');
         }
@@ -1888,7 +1889,7 @@ class AudioRoomsManager {
                         this.showToast?.('Could not join the room. It may no longer be active.', 'fa-exclamation-circle');
                     }
                 }
-            }, 12000);
+            }, 6000);
             
             if (isHost) {
                 this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
@@ -2478,6 +2479,13 @@ class AudioRoomsManager {
 
             this._playSfx('enterRoom');
             this.showFirstVisitGuide();
+
+            try {
+                const shareRoom = confirmedRoom || this.currentRoom;
+                if (shareRoom) {
+                    window.history.replaceState({ room: shareRoom }, '', `/verses.html?room=${encodeURIComponent(shareRoom)}`);
+                }
+            } catch (e) {}
         });
 
         sock.on('participant-joined', async (data) => {
@@ -6704,10 +6712,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!roomToJoin) {
         const pending = localStorage.getItem('wordeth_pending_room');
-        if (pending && localStorage.getItem('authToken')) {
+        const pendingTs = parseInt(localStorage.getItem('wordeth_pending_room_ts') || '0', 10);
+        if (pending && localStorage.getItem('authToken') && (Date.now() - pendingTs < 60000)) {
             roomToJoin = pending;
-            localStorage.removeItem('wordeth_pending_room');
         }
+        localStorage.removeItem('wordeth_pending_room');
+        localStorage.removeItem('wordeth_pending_room_ts');
     }
     if (!roomToJoin) return;
 
@@ -6715,6 +6725,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const token = localStorage.getItem('authToken');
         if (!token) {
             localStorage.setItem('wordeth_pending_room', roomToJoin);
+            localStorage.setItem('wordeth_pending_room_ts', String(Date.now()));
             const returnUrl = `/verses.html?room=${encodeURIComponent(roomToJoin)}`;
             localStorage.setItem('wordeth_return_url', returnUrl);
             const encodedReturn = encodeURIComponent(returnUrl);
