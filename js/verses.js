@@ -1382,7 +1382,7 @@ class AudioRoomsManager {
                 title: 'Host Controls',
                 text: 'You\'re the host! Control stage access, mute speakers, toggle video/karaoke, and manage the room.',
                 icon: 'fa-crown',
-                position: 'below'
+                position: 'center'
             });
         }
 
@@ -1464,7 +1464,11 @@ class AudioRoomsManager {
                 const spaceAbove = highlightTop;
                 const minTipHeight = 140;
 
-                if (step.position === 'above' || (rect.top > window.innerHeight * 0.45 && spaceAbove > minTipHeight)) {
+                if (step.position === 'center') {
+                    tooltip.style.top = '50%';
+                    tooltip.style.transform = 'translateY(-50%)';
+                    tooltip.style.maxHeight = '40vh';
+                } else if (step.position === 'above' || (rect.top > window.innerHeight * 0.45 && spaceAbove > minTipHeight)) {
                     const tipTop = Math.max(60, highlightTop - gap - 200);
                     tooltip.style.top = tipTop + 'px';
                     tooltip.style.maxHeight = Math.max(highlightTop - gap - tipTop, minTipHeight) + 'px';
