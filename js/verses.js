@@ -1218,80 +1218,245 @@ class AudioRoomsManager {
     showFirstVisitGuide() {
         const key = 'wordeth_verses_guide_seen';
         if (localStorage.getItem(key)) return;
-        const overlay = document.getElementById('welcome-guide-overlay');
-        if (!overlay) return;
-        overlay.classList.add('active');
-        const closeBtn = document.getElementById('welcome-guide-close');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-                overlay.classList.remove('active');
-                localStorage.setItem(key, '1');
-            }, { once: true });
-        }
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-                overlay.classList.remove('active');
-                localStorage.setItem(key, '1');
+
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            this._showMobileTooltipWalkthrough(key);
+        } else {
+            const overlay = document.getElementById('welcome-guide-overlay');
+            if (!overlay) return;
+            overlay.classList.add('active');
+            const closeBtn = document.getElementById('welcome-guide-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    overlay.classList.remove('active');
+                    localStorage.setItem(key, '1');
+                }, { once: true });
             }
-        });
-        const fullGuideLink = document.getElementById('welcome-guide-full-link');
-        if (fullGuideLink) {
-            fullGuideLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                overlay.classList.remove('active');
-                localStorage.setItem(key, '1');
-                const guideFrame = document.createElement('div');
-                guideFrame.id = 'inline-guide-overlay';
-                guideFrame.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.92);display:flex;flex-direction:column;align-items:center;padding:16px 12px;';
-                const closeBar = document.createElement('div');
-                closeBar.style.cssText = 'width:100%;max-width:700px;display:flex;justify-content:flex-end;margin-bottom:8px;flex-shrink:0;';
-                const closeGuideBtn = document.createElement('button');
-                closeGuideBtn.innerHTML = '<i class="fas fa-times"></i> Close Guide';
-                closeGuideBtn.style.cssText = 'background:#7c3aed;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;';
-                closeGuideBtn.onclick = () => guideFrame.remove();
-                closeBar.appendChild(closeGuideBtn);
-                const scrollBox = document.createElement('div');
-                scrollBox.style.cssText = 'width:100%;max-width:700px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;border-radius:12px;background:#1a1a2e;padding:24px 20px;color:#e0e0e0;font-family:Inter,sans-serif;line-height:1.6;';
-                scrollBox.innerHTML = `
-                    <h2 style="text-align:center;font-size:1.6rem;margin:0 0 6px;color:#96c5b0;"><i class="fas fa-headphones"></i> Verses Room Guide</h2>
-                    <p style="text-align:center;color:#a78bfa;margin-bottom:24px;font-size:0.95rem;">Everything you need to know about live audio rooms</p>
-                    <div style="margin-bottom:20px;background:rgba(85,53,85,0.25);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:16px;">
-                        <h3 style="color:#96c5b0;margin:0 0 10px;font-size:1rem;"><i class="fas fa-play-circle" style="margin-right:8px;"></i>Getting Started</h3>
-                        <p style="margin:0 0 8px;"><strong>Create a Room</strong> — Tap "Create Room", give it a name, and you're the host.</p>
-                        <p style="margin:0 0 8px;"><strong>Join a Room</strong> — Tap any live room card to join as a listener.</p>
-                        <p style="margin:0;"><strong>Invite Friends</strong> — Use the share or invite buttons to bring others in.</p>
-                    </div>
-                    <div style="margin-bottom:20px;background:rgba(85,53,85,0.25);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:16px;">
-                        <h3 style="color:#96c5b0;margin:0 0 10px;font-size:1rem;"><i class="fas fa-sliders-h" style="margin-right:8px;"></i>Action Bar</h3>
-                        <p style="margin:0 0 8px;"><strong>MIC</strong> — Toggle your microphone on/off (speakers only).</p>
-                        <p style="margin:0 0 8px;"><strong>EFFECTS</strong> — Apply voice filters like Echo, Deep, Radio, and more.</p>
-                        <p style="margin:0 0 8px;"><strong>KARAOKE</strong> — Search and play songs with synced lyrics.</p>
-                        <p style="margin:0 0 8px;"><strong>CAMERA</strong> — Enable video with optional AR filters.</p>
-                        <p style="margin:0 0 8px;"><strong>PHOTO</strong> — Share photos in the room chat.</p>
-                        <p style="margin:0;"><strong>HAND</strong> — Raise your hand to request stage access.</p>
-                    </div>
-                    <div style="margin-bottom:20px;background:rgba(85,53,85,0.25);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:16px;">
-                        <h3 style="color:#96c5b0;margin:0 0 10px;font-size:1rem;"><i class="fas fa-crown" style="margin-right:8px;"></i>Host Controls</h3>
-                        <p style="margin:0 0 8px;"><strong>Stage Access</strong> — Switch between invite-only and open stage.</p>
-                        <p style="margin:0 0 8px;"><strong>Invite to Stage</strong> — Tap the 3-dot menu on a listener to promote them.</p>
-                        <p style="margin:0 0 8px;"><strong>Mute All</strong> — Mute all speakers at once.</p>
-                        <p style="margin:0;"><strong>Lock / Close</strong> — Lock the room or close it entirely.</p>
-                    </div>
-                    <div style="background:rgba(85,53,85,0.25);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:16px;">
-                        <h3 style="color:#96c5b0;margin:0 0 10px;font-size:1rem;"><i class="fas fa-lightbulb" style="margin-right:8px;"></i>Tips</h3>
-                        <p style="margin:0 0 8px;">Use headphones to avoid echo and feedback.</p>
-                        <p style="margin:0 0 8px;">Listeners hear everything — you don't need to be on stage to enjoy.</p>
-                        <p style="margin:0;">If you lose connection, just rejoin — the room stays live as long as someone is in it.</p>
-                    </div>
-                `;
-                guideFrame.appendChild(closeBar);
-                guideFrame.appendChild(scrollBox);
-                document.body.appendChild(guideFrame);
-                guideFrame.addEventListener('click', (ev) => {
-                    if (ev.target === guideFrame) guideFrame.remove();
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.classList.remove('active');
+                    localStorage.setItem(key, '1');
+                }
+            });
+            const fullGuideLink = document.getElementById('welcome-guide-full-link');
+            if (fullGuideLink) {
+                fullGuideLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    overlay.classList.remove('active');
+                    localStorage.setItem(key, '1');
+                    this._showFullInlineGuide();
                 });
+            }
+        }
+    }
+
+    _showFullInlineGuide() {
+        const guideFrame = document.createElement('div');
+        guideFrame.id = 'inline-guide-overlay';
+        guideFrame.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.92);display:flex;flex-direction:column;align-items:center;padding:16px 12px;';
+        const closeBar = document.createElement('div');
+        closeBar.style.cssText = 'width:100%;max-width:700px;display:flex;justify-content:flex-end;margin-bottom:8px;flex-shrink:0;';
+        const closeGuideBtn = document.createElement('button');
+        closeGuideBtn.innerHTML = '<i class="fas fa-times"></i> Close Guide';
+        closeGuideBtn.style.cssText = 'background:#7c3aed;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;';
+        closeGuideBtn.onclick = () => guideFrame.remove();
+        closeBar.appendChild(closeGuideBtn);
+        const scrollBox = document.createElement('div');
+        scrollBox.style.cssText = 'width:100%;max-width:700px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;border-radius:12px;background:#1a1a2e;padding:24px 20px;color:#e0e0e0;font-family:Inter,sans-serif;line-height:1.6;';
+        scrollBox.innerHTML = `
+            <h2 style="text-align:center;font-size:1.6rem;margin:0 0 6px;color:#96c5b0;"><i class="fas fa-headphones"></i> Verses Room Guide</h2>
+            <p style="text-align:center;color:#a78bfa;margin-bottom:24px;font-size:0.95rem;">Everything you need to know about live audio rooms</p>
+            <div style="margin-bottom:20px;background:rgba(85,53,85,0.25);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:16px;">
+                <h3 style="color:#96c5b0;margin:0 0 10px;font-size:1rem;"><i class="fas fa-play-circle" style="margin-right:8px;"></i>Getting Started</h3>
+                <p style="margin:0 0 8px;"><strong>Create a Room</strong> — Tap "Create Room", give it a name, and you're the host.</p>
+                <p style="margin:0 0 8px;"><strong>Join a Room</strong> — Tap any live room card to join as a listener.</p>
+                <p style="margin:0;"><strong>Invite Friends</strong> — Use the share or invite buttons to bring others in.</p>
+            </div>
+            <div style="margin-bottom:20px;background:rgba(85,53,85,0.25);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:16px;">
+                <h3 style="color:#96c5b0;margin:0 0 10px;font-size:1rem;"><i class="fas fa-sliders-h" style="margin-right:8px;"></i>Action Bar</h3>
+                <p style="margin:0 0 8px;"><strong>MIC</strong> — Toggle your microphone on/off (speakers only).</p>
+                <p style="margin:0 0 8px;"><strong>EFFECTS</strong> — Apply voice filters like Echo, Deep, Radio, and more.</p>
+                <p style="margin:0 0 8px;"><strong>KARAOKE</strong> — Search and play songs with synced lyrics.</p>
+                <p style="margin:0 0 8px;"><strong>CAMERA</strong> — Enable video with optional AR filters.</p>
+                <p style="margin:0 0 8px;"><strong>PHOTO</strong> — Share photos in the room chat.</p>
+                <p style="margin:0;"><strong>HAND</strong> — Raise your hand to request stage access.</p>
+            </div>
+            <div style="margin-bottom:20px;background:rgba(85,53,85,0.25);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:16px;">
+                <h3 style="color:#96c5b0;margin:0 0 10px;font-size:1rem;"><i class="fas fa-crown" style="margin-right:8px;"></i>Host Controls</h3>
+                <p style="margin:0 0 8px;"><strong>Stage Access</strong> — Switch between invite-only and open stage.</p>
+                <p style="margin:0 0 8px;"><strong>Invite to Stage</strong> — Tap the 3-dot menu on a listener to promote them.</p>
+                <p style="margin:0 0 8px;"><strong>Mute All</strong> — Mute all speakers at once.</p>
+                <p style="margin:0;"><strong>Lock / Close</strong> — Lock the room or close it entirely.</p>
+            </div>
+            <div style="background:rgba(85,53,85,0.25);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:16px;">
+                <h3 style="color:#96c5b0;margin:0 0 10px;font-size:1rem;"><i class="fas fa-lightbulb" style="margin-right:8px;"></i>Tips</h3>
+                <p style="margin:0 0 8px;">Use headphones to avoid echo and feedback.</p>
+                <p style="margin:0 0 8px;">Listeners hear everything — you don't need to be on stage to enjoy.</p>
+                <p style="margin:0;">If you lose connection, just rejoin — the room stays live as long as someone is in it.</p>
+            </div>
+        `;
+        guideFrame.appendChild(closeBar);
+        guideFrame.appendChild(scrollBox);
+        document.body.appendChild(guideFrame);
+        guideFrame.addEventListener('click', (ev) => {
+            if (ev.target === guideFrame) guideFrame.remove();
+        });
+    }
+
+    _showMobileTooltipWalkthrough(storageKey) {
+        const steps = [
+            {
+                target: '#speakers-stage',
+                title: 'The Stage',
+                text: 'Speakers appear here. As a listener, raise your hand or wait for an invite to join.',
+                icon: 'fa-users',
+                position: 'below'
+            },
+            {
+                target: '#toggle-audio',
+                title: 'Microphone',
+                text: 'Tap to mute or unmute yourself. Only works when you\'re on stage.',
+                icon: 'fa-microphone',
+                position: 'above'
+            },
+            {
+                target: '#audio-filter-btn',
+                title: 'Voice Effects',
+                text: 'Add fun voice filters like Echo, Robot, Deep, and more.',
+                icon: 'fa-pen-fancy',
+                position: 'above'
+            },
+            {
+                target: '#karaoke-btn',
+                title: 'Karaoke',
+                text: 'Search for songs and sing along with synced lyrics.',
+                icon: 'fa-record-vinyl',
+                position: 'above'
+            },
+            {
+                target: '#raise-hand',
+                title: 'Raise Hand',
+                text: 'Request to join the stage. The host will see your request.',
+                icon: 'fa-hand-paper',
+                position: 'above'
+            },
+            {
+                target: '#share-room-mobile-btn, #share-room-btn',
+                title: 'Share & Invite',
+                text: 'Share the room link or invite friends directly.',
+                icon: 'fa-share-alt',
+                position: 'above'
+            },
+            {
+                target: '#chat-input',
+                title: 'Chat',
+                text: 'Send messages to everyone in the room. Share photos too!',
+                icon: 'fa-comment',
+                position: 'above'
+            }
+        ];
+
+        if (this.isRoomHost) {
+            steps.splice(1, 0, {
+                target: '#host-controls-panel, #host-panel-toggle',
+                title: 'Host Controls',
+                text: 'You\'re the host! Control stage access, mute speakers, toggle video/karaoke, and manage the room.',
+                icon: 'fa-crown',
+                position: 'below'
             });
         }
+
+        let currentStep = 0;
+        let highlight = null;
+        let tooltip = null;
+        const overlay = document.createElement('div');
+        overlay.className = 'mobile-walkthrough-overlay';
+        document.body.appendChild(overlay);
+
+        const showStep = (idx) => {
+            if (highlight) highlight.remove();
+            if (tooltip) tooltip.remove();
+
+            if (idx >= steps.length) {
+                overlay.remove();
+                localStorage.setItem(storageKey, '1');
+                return;
+            }
+
+            const step = steps[idx];
+            const targetEl = document.querySelector(step.target.split(',')[0].trim())
+                || document.querySelector(step.target.split(',')[1]?.trim());
+
+            tooltip = document.createElement('div');
+            tooltip.className = 'mobile-walkthrough-tooltip';
+
+            const progressDots = steps.map((_, i) =>
+                `<span class="walk-dot${i === idx ? ' active' : ''}"></span>`
+            ).join('');
+
+            tooltip.innerHTML = `
+                <div class="walk-tip-header">
+                    <div class="walk-tip-icon"><i class="fas ${step.icon}"></i></div>
+                    <div class="walk-tip-title">${step.title}</div>
+                    <button class="walk-tip-skip">Skip</button>
+                </div>
+                <p class="walk-tip-text">${step.text}</p>
+                <div class="walk-tip-footer">
+                    <div class="walk-dots">${progressDots}</div>
+                    <div class="walk-tip-nav">
+                        ${idx > 0 ? '<button class="walk-btn-back"><i class="fas fa-chevron-left"></i></button>' : ''}
+                        <button class="walk-btn-next">${idx === steps.length - 1 ? 'Done' : 'Next <i class="fas fa-chevron-right"></i>'}</button>
+                    </div>
+                </div>
+            `;
+
+            if (targetEl) {
+                const rect = targetEl.getBoundingClientRect();
+                highlight = document.createElement('div');
+                highlight.className = 'mobile-walkthrough-highlight';
+                highlight.style.top = (rect.top - 4) + 'px';
+                highlight.style.left = (rect.left - 4) + 'px';
+                highlight.style.width = (rect.width + 8) + 'px';
+                highlight.style.height = (rect.height + 8) + 'px';
+                document.body.appendChild(highlight);
+
+                if (step.position === 'above' || rect.top > window.innerHeight / 2) {
+                    tooltip.style.bottom = (window.innerHeight - rect.top + 12) + 'px';
+                    tooltip.classList.add('arrow-below');
+                } else {
+                    tooltip.style.top = (rect.bottom + 12) + 'px';
+                    tooltip.classList.add('arrow-above');
+                }
+                tooltip.style.left = '16px';
+                tooltip.style.right = '16px';
+            } else {
+                tooltip.style.bottom = '100px';
+                tooltip.style.left = '16px';
+                tooltip.style.right = '16px';
+            }
+
+            document.body.appendChild(tooltip);
+
+            tooltip.querySelector('.walk-tip-skip').onclick = () => {
+                overlay.remove();
+                if (highlight) highlight.remove();
+                tooltip.remove();
+                localStorage.setItem(storageKey, '1');
+            };
+            tooltip.querySelector('.walk-btn-next').onclick = () => {
+                currentStep++;
+                showStep(currentStep);
+            };
+            const backBtn = tooltip.querySelector('.walk-btn-back');
+            if (backBtn) backBtn.onclick = () => {
+                currentStep--;
+                showStep(currentStep);
+            };
+        };
+
+        setTimeout(() => showStep(0), 600);
     }
 
     toggleHandRaise() {
@@ -1706,6 +1871,16 @@ class AudioRoomsManager {
 
         this.agoraClient.on('user-published', async (user, mediaType) => {
             console.log('Agora: user-published event - uid:', user.uid, 'mediaType:', mediaType, 'connectionState:', this.agoraClient.connectionState, 'localRole:', this.agoraClient.role);
+
+            const oldEntry = this.agoraRemoteUsers.get(String(user.uid));
+            if (oldEntry && oldEntry !== user && mediaType === 'audio') {
+                if (oldEntry.audioTrack) {
+                    try { oldEntry.audioTrack.stop(); } catch(_) {}
+                }
+                this.agoraRemoteUsers.delete(String(user.uid));
+                console.log('Agora: cleaned up stale entry for uid', user.uid);
+            }
+
             try {
                 await this.agoraClient.subscribe(user, mediaType);
                 console.log('Agora: subscribed to', user.uid, mediaType, 'successfully');
@@ -1718,6 +1893,7 @@ class AudioRoomsManager {
                 if (remoteTrack) {
                     this.agoraRemoteUsers.set(String(user.uid), user);
                     try {
+                        remoteTrack.setVolume(100);
                         remoteTrack.play();
                         console.log('Agora: playing remote audio from uid', user.uid, 'volume:', remoteTrack.getVolumeLevel?.() ?? 'N/A');
                     } catch (e) {
@@ -1729,6 +1905,7 @@ class AudioRoomsManager {
                     try {
                         await this.agoraClient.subscribe(user, 'audio');
                         if (user.audioTrack) {
+                            user.audioTrack.setVolume(100);
                             user.audioTrack.play();
                             this.agoraRemoteUsers.set(String(user.uid), user);
                             console.log('Agora: retry subscribe succeeded for uid', user.uid);
@@ -2133,6 +2310,59 @@ class AudioRoomsManager {
                 this.isRoomHost = true;
                 this.updateHostControls();
                 console.log('Host privileges restored by server');
+            }
+
+            if (data.isHost && !this.isSpeaker) {
+                console.log('Server confirmed host status but client is listener — promoting to stage');
+                this.isSpeaker = true;
+                this.isAudioMuted = true;
+
+                const selfEl = document.querySelector('[data-participant-id="self"]');
+                if (selfEl) selfEl.remove();
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                const userName = user.name || user.username || 'Anonymous';
+                this._addSelfToStage(userName, user.avatar || null, true);
+
+                (async () => {
+                    try {
+                        if (!this.localStream) {
+                            await this.initializeMedia();
+                        }
+                        if (this.agoraClient && this.currentRoom) {
+                            const prevState = this.agoraClient.connectionState;
+                            if (prevState === 'CONNECTED') {
+                                if (this.agoraLocalAudioTrack) {
+                                    try { this.agoraLocalAudioTrack.close(); } catch(e) {}
+                                    this.agoraLocalAudioTrack = null;
+                                }
+                                await this.agoraClient.leave();
+                            }
+                            const resp = await fetch(apiUrl('/api/agora/token'), {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ channelName: this.currentRoom, uid: 0, role: 'publisher' })
+                            });
+                            const tokenData = await resp.json();
+                            if (tokenData.token && tokenData.appId) {
+                                await this.agoraClient.setClientRole('host');
+                                this.agoraUid = await this.agoraClient.join(tokenData.appId, this.currentRoom, tokenData.token, tokenData.uid || null);
+                                console.log('Host auto-promotion: rejoined Agora as host, uid:', this.agoraUid);
+                                if (this.socket) {
+                                    this.socket.emit('agora-uid-map', { roomId: this.currentRoom, agoraUid: this.agoraUid, socketId: this.socket.id });
+                                }
+                                if (this.localStream) {
+                                    await this.publishAgoraAudio();
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Host auto-promotion Agora error:', e);
+                        this.addChatMessage('System', 'Audio reconnection had an issue. Try unmuting or refreshing.', true);
+                    }
+                    this.updateStageControls();
+                    const muteIcon = this.toggleAudioBtn?.querySelector('i');
+                    if (muteIcon) muteIcon.className = 'fas fa-microphone-slash';
+                })();
             }
 
             if (data.videoMode) {
