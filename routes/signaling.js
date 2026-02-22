@@ -120,6 +120,22 @@ function setupSignaling(io) {
                 room.name = roomName;
             }
 
+            if (socket.userId && socket.userId !== socket.id) {
+                for (const [sid, p] of room.participants.entries()) {
+                    if (p.userId === socket.userId && sid !== socket.id) {
+                        room.participants.delete(sid);
+                        if (room.activeVideos) room.activeVideos.delete(sid);
+                        console.log(`[Dedup] Removed stale participant ${p.userName} (old socket ${sid}) for userId ${p.userId}`);
+                        socket.to(roomId).emit('participant-left', {
+                            socketId: sid,
+                            userId: p.userId,
+                            userName: p.userName,
+                            participants: Array.from(room.participants.values())
+                        });
+                    }
+                }
+            }
+
             const isOriginalCreator = room.creatorUserId && socket.userId && room.creatorUserId === socket.userId;
             const shouldBeHost = isHost || isOriginalCreator;
 
