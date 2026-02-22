@@ -1448,6 +1448,9 @@ class AudioRoomsManager {
         this._pendingJoinRoom = null;
         this._joiningFromInvite = false;
         localStorage.removeItem('wordeth_pending_room');
+        if (window.location.search.includes('room=')) {
+            window.history.replaceState({}, '', '/verses.html');
+        }
         this.loadActiveRooms();
         setTimeout(() => this.loadActiveRooms(), 2000);
     }
@@ -1531,10 +1534,12 @@ class AudioRoomsManager {
             if (audioRoomEl) audioRoomEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
             await this.connectSocket();
+            console.log('joinRoom: socket connected, id:', this.socket?.id, 'handlers registered:', !!this._roomHandlersRegistered);
             
             const roomNameEl = document.getElementById('room-name');
             const currentRoomName = roomNameEl?.textContent || '';
             
+            console.log('joinRoom: emitting join-room for', roomId, 'as', isHost ? 'host' : 'listener');
             this.socket.emit('join-room', {
                 roomId,
                 userId: user._id || user.id || this.socket.id,
@@ -6413,7 +6418,10 @@ document.addEventListener('DOMContentLoaded', () => {
             mgr._joiningFromInvite = true;
 
             try {
-                await mgr.joinRoom(roomToJoin);
+                mgr.joinRoom(roomToJoin).catch(e => {
+                    console.error('Error in joinRoom from invite link:', e);
+                });
+
                 await new Promise((resolve) => {
                     let checks = 0;
                     const poll = setInterval(() => {
@@ -6424,20 +6432,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }, 250);
                 });
+
                 inviteJoinResolved = true;
+
                 if (mgr.currentRoom) {
+                    const spinner = document.getElementById('invite-joining-msg');
+                    if (spinner) spinner.remove();
                     window.history.replaceState({}, '', '/verses.html');
                 } else {
                     cleanupAndShowRooms();
                     mgr.showToast?.('Could not join the room. It may no longer be active.', 'fa-exclamation-circle');
                 }
             } catch(e) {
-                console.error('Error joining room from link:', e);
+                console.error('Invite join flow error:', e);
                 inviteJoinResolved = true;
                 cleanupAndShowRooms();
-                mgr.showToast?.('Could not join the room. It may no longer be active.', 'fa-exclamation-circle');
             } finally {
-                if (mgr) mgr._joiningFromInvite = false;
+                mgr._joiningFromInvite = false;
             }
         };
         setTimeout(() => tryJoinRoom(0), 300);
