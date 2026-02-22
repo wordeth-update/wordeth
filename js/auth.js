@@ -29,13 +29,20 @@ if (signinForm) {
                 localStorage.setItem('authToken', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
                 const savedReturn = localStorage.getItem('wordeth_return_url');
+                const pendingRoom = localStorage.getItem('wordeth_pending_room');
                 if (savedReturn && savedReturn.startsWith('/') && !savedReturn.startsWith('//')) {
                     localStorage.removeItem('wordeth_return_url');
                     window.location.href = savedReturn;
                 } else {
                     localStorage.removeItem('wordeth_return_url');
                     const returnTo = new URLSearchParams(window.location.search).get('return');
-                    window.location.href = returnTo || '/';
+                    if (returnTo) {
+                        window.location.href = returnTo;
+                    } else if (pendingRoom) {
+                        window.location.href = `/verses.html?room=${encodeURIComponent(pendingRoom)}`;
+                    } else {
+                        window.location.href = '/';
+                    }
                 }
             } else {
                 throw new Error(data.message || 'Sign in failed');
@@ -88,13 +95,20 @@ if (signupForm) {
                 localStorage.setItem('authToken', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
                 const savedReturn = localStorage.getItem('wordeth_return_url');
+                const pendingRoom = localStorage.getItem('wordeth_pending_room');
                 if (savedReturn && savedReturn.startsWith('/') && !savedReturn.startsWith('//')) {
                     localStorage.removeItem('wordeth_return_url');
                     window.location.href = savedReturn;
                 } else {
                     localStorage.removeItem('wordeth_return_url');
                     const returnTo = new URLSearchParams(window.location.search).get('return');
-                    window.location.href = returnTo || '/profile.html';
+                    if (returnTo) {
+                        window.location.href = returnTo;
+                    } else if (pendingRoom) {
+                        window.location.href = `/verses.html?room=${encodeURIComponent(pendingRoom)}`;
+                    } else {
+                        window.location.href = '/profile.html';
+                    }
                 }
             } else {
                 throw new Error(data.message || data.errors?.[0]?.msg || 'Sign up failed');
