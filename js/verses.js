@@ -1424,6 +1424,8 @@ class AudioRoomsManager {
                 }
             }
             
+            const inviteJoiningMsg = document.getElementById('invite-joining-msg');
+            if (inviteJoiningMsg) inviteJoiningMsg.remove();
             if (this.roomSelection) this.roomSelection.style.display = 'none';
             this.audioRoom?.classList.remove('hidden');
             document.body.classList.add('in-room');
@@ -1531,8 +1533,9 @@ class AudioRoomsManager {
         this.agoraClient = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
         AgoraRTC.setLogLevel(2);
 
-        AgoraRTC.onAutoplayFailed = () => {
-            console.warn('Agora: autoplay blocked by browser');
+        this._showAutoplayBanner = () => {
+            if (document.getElementById('agora-autoplay-banner')) return;
+            console.warn('Agora: showing autoplay banner');
             const banner = document.createElement('div');
             banner.id = 'agora-autoplay-banner';
             banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(138,43,226,0.95);color:#fff;text-align:center;padding:14px 20px;font-size:15px;cursor:pointer;backdrop-filter:blur(8px);';
@@ -1540,12 +1543,17 @@ class AudioRoomsManager {
             banner.addEventListener('click', () => {
                 banner.remove();
                 this.agoraRemoteUsers.forEach(user => {
-                    if (user.audioTrack) user.audioTrack.play();
+                    if (user.audioTrack) {
+                        try { user.audioTrack.play(); } catch (e) {}
+                    }
                 });
             });
-            if (!document.getElementById('agora-autoplay-banner')) {
-                document.body.appendChild(banner);
-            }
+            document.body.appendChild(banner);
+        };
+
+        AgoraRTC.onAutoplayFailed = () => {
+            console.warn('Agora: autoplay blocked by browser (global callback)');
+            this._showAutoplayBanner();
         };
 
         this.agoraClient.on('user-published', async (user, mediaType) => {
@@ -1560,14 +1568,14 @@ class AudioRoomsManager {
             if (mediaType === 'audio') {
                 const remoteTrack = user.audioTrack;
                 if (remoteTrack) {
+                    this.agoraRemoteUsers.set(String(user.uid), user);
                     try {
                         remoteTrack.play();
                         console.log('Agora: playing remote audio from uid', user.uid, 'volume:', remoteTrack.getVolumeLevel?.() ?? 'N/A');
                     } catch (e) {
-                        console.warn('Agora: audio autoplay blocked for uid', user.uid, '- user interaction needed:', e.message);
+                        console.warn('Agora: audio autoplay blocked for uid', user.uid, '- showing tap banner:', e.message);
                         this._showAutoplayBanner?.();
                     }
-                    this.agoraRemoteUsers.set(String(user.uid), user);
                 } else {
                     console.warn('Agora: subscribed to audio but audioTrack is null for uid', user.uid);
                     try {
@@ -1584,17 +1592,7 @@ class AudioRoomsManager {
             } else if (mediaType === 'video') {
                 const remoteTrack = user.videoTrack;
                 if (remoteTrack && this.videoMode !== 'off') {
-                    const participantId = this._findParticipantIdByAgoraUid(user.uid);
-                    if (participantId) {
-                        const pData = this._getParticipantData(participantId);
-                        const userName = pData?.userName || 'User';
-                        const stream = new MediaStream([remoteTrack.getMediaStreamTrack()]);
-                        this.activeVideoFeeds.set(participantId, { userName, stream, muted: false });
-                        this.refreshVideoGrid();
-                        remoteTrack.getMediaStreamTrack().onended = () => {
-                            this.removeVideoTile(participantId);
-                        };
-                    }
+                    this._attachRemoteVideo(user.uid, remoteTrack);
                 }
             }
         });
@@ -1604,6 +1602,7 @@ class AudioRoomsManager {
             if (mediaType === 'audio') {
                 this.agoraRemoteUsers.delete(String(user.uid));
             } else if (mediaType === 'video') {
+                if (this._pendingVideoTracks) this._pendingVideoTracks.delete(user.uid);
                 const participantId = this._findParticipantIdByAgoraUid(user.uid);
                 if (participantId) {
                     this.removeVideoTile(participantId);
@@ -1614,6 +1613,7 @@ class AudioRoomsManager {
         this.agoraClient.on('user-left', (user) => {
             console.log('Agora: user left', user.uid);
             this.agoraRemoteUsers.delete(String(user.uid));
+            if (this._pendingVideoTracks) this._pendingVideoTracks.delete(user.uid);
         });
 
         this.agoraClient.on('connection-state-change', (curState, prevState) => {
@@ -1811,6 +1811,40 @@ class AudioRoomsManager {
         return null;
     }
 
+    _attachRemoteVideo(agoraUid, remoteTrack) {
+        let participantId = this._findParticipantIdByAgoraUid(agoraUid);
+        if (participantId) {
+            this._placeRemoteVideo(participantId, remoteTrack);
+        } else {
+            console.log('Agora: video uid', agoraUid, 'has no participant mapping yet, queuing...');
+            if (!this._pendingVideoTracks) this._pendingVideoTracks = new Map();
+            this._pendingVideoTracks.set(agoraUid, remoteTrack);
+        }
+    }
+
+    _placeRemoteVideo(participantId, remoteTrack) {
+        const pData = this._getParticipantData(participantId);
+        const userName = pData?.userName || 'User';
+        this.activeVideoFeeds.set(participantId, { userName, stream: null, muted: false, agoraTrack: remoteTrack });
+        this.refreshVideoGrid();
+        const rawTrack = remoteTrack.getMediaStreamTrack();
+        if (rawTrack) {
+            rawTrack.onended = () => this.removeVideoTile(participantId);
+        }
+    }
+
+    _resolvePendingVideos() {
+        if (!this._pendingVideoTracks || this._pendingVideoTracks.size === 0) return;
+        for (const [uid, track] of this._pendingVideoTracks) {
+            const pid = this._findParticipantIdByAgoraUid(uid);
+            if (pid) {
+                console.log('Agora: resolved pending video for uid', uid, '→ participant', pid);
+                this._placeRemoteVideo(pid, track);
+                this._pendingVideoTracks.delete(uid);
+            }
+        }
+    }
+
     connectSocket() {
         if (this.lobbySocket && this.lobbySocket.connected) {
             if (!this._roomHandlersRegistered) {
@@ -1948,6 +1982,7 @@ class AudioRoomsManager {
             if (!this._agoraUidMap) this._agoraUidMap = new Map();
             this._agoraUidMap.set(socketId, agoraUid);
             console.log('Agora UID mapped:', socketId, '->', agoraUid);
+            this._resolvePendingVideos();
         });
 
         sock.on('chat-message', ({ sender, message, timestamp }) => {
@@ -2123,6 +2158,7 @@ class AudioRoomsManager {
         });
 
         sock.on('participant-promoted', ({ socketId, userId, userName, avatar }) => {
+            if (socketId === this.socket?.id) return;
             const existing = document.querySelector(`[data-participant-id="${socketId}"]`);
             if (existing) existing.remove();
             this.addRemoteSpeaker(socketId, userName, null, false, userId, avatar);
@@ -3898,7 +3934,8 @@ class AudioRoomsManager {
     
     removeVideoTile(id) {
         const feed = this.activeVideoFeeds.get(id);
-        if (feed && feed.stream && id !== 'self') {
+        if (feed && feed.agoraTrack && id !== 'self') {
+            try { feed.agoraTrack.stop(); } catch (e) {}
         }
         this.activeVideoFeeds.delete(id);
         this.refreshVideoGrid();
@@ -3939,23 +3976,48 @@ class AudioRoomsManager {
                 tile.className = 'video-tile' + (feed.id === 'self' ? ' self' : '');
                 tile.dataset.feedId = feed.id;
                 
-                const video = document.createElement('video');
-                video.autoplay = true;
-                video.playsInline = true;
-                video.muted = feed.id === 'self';
+                const videoContainer = document.createElement('div');
+                videoContainer.className = 'video-tile-container';
+                videoContainer.style.cssText = 'width:100%;height:100%;position:relative;';
                 
                 const nameLabel = document.createElement('span');
                 nameLabel.className = 'video-tile-name';
                 nameLabel.textContent = feed.id === 'self' ? 'You' : feed.userName;
                 
-                tile.appendChild(video);
+                tile.appendChild(videoContainer);
                 tile.appendChild(nameLabel);
                 grid.appendChild(tile);
             }
             
-            const videoEl = tile.querySelector('video');
-            if (videoEl && feed.stream && videoEl.srcObject !== feed.stream) {
-                videoEl.srcObject = feed.stream;
+            const container = tile.querySelector('.video-tile-container');
+            if (container) {
+                if (feed.agoraTrack && !container.dataset.agoraPlaying) {
+                    container.innerHTML = '';
+                    try {
+                        feed.agoraTrack.play(container);
+                        container.dataset.agoraPlaying = 'true';
+                        const agoraVideo = container.querySelector('video');
+                        if (agoraVideo) {
+                            agoraVideo.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                        }
+                    } catch (e) {
+                        console.warn('Agora video play error:', e);
+                    }
+                } else if (feed.stream && !feed.agoraTrack) {
+                    let videoEl = container.querySelector('video');
+                    if (!videoEl) {
+                        videoEl = document.createElement('video');
+                        videoEl.autoplay = true;
+                        videoEl.playsInline = true;
+                        videoEl.muted = feed.id === 'self';
+                        videoEl.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                        container.innerHTML = '';
+                        container.appendChild(videoEl);
+                    }
+                    if (videoEl.srcObject !== feed.stream) {
+                        videoEl.srcObject = feed.stream;
+                    }
+                }
             }
             
             const existingMuteTag = tile.querySelector('.video-tile-muted');
@@ -3975,7 +4037,8 @@ class AudioRoomsManager {
             id,
             userName: data.userName,
             stream: data.stream,
-            muted: data.muted
+            muted: data.muted,
+            agoraTrack: data.agoraTrack || null
         }));
         
         feeds.sort((a, b) => {
@@ -6132,7 +6195,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const lobby = document.getElementById('room-selection') || document.querySelector('.room-selection');
-        if (lobby) lobby.style.display = 'none';
+
+        if (lobby) {
+            const joiningMsg = document.createElement('div');
+            joiningMsg.id = 'invite-joining-msg';
+            joiningMsg.style.cssText = 'text-align:center;padding:40px 20px;color:var(--text-secondary,#ccc);font-size:16px;';
+            joiningMsg.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:10px;"></i>Connecting to room...';
+            lobby.parentNode?.insertBefore(joiningMsg, lobby.nextSibling);
+            lobby.style.display = 'none';
+        }
 
         window.history.replaceState({}, '', '/verses.html');
 
@@ -6193,6 +6264,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch(e) {
                 console.error('Error joining room from link:', e);
+                const joiningEl = document.getElementById('invite-joining-msg');
+                if (joiningEl) joiningEl.remove();
                 if (lobby) lobby.style.display = '';
                 mgr.loadActiveRooms();
                 mgr.showToast?.('Could not join the room. It may no longer be active.', 'fa-exclamation-circle');
