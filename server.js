@@ -8,6 +8,7 @@ const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const fs = require('fs');
+const crypto = require('crypto');
 const puppeteer = require('puppeteer');
 const { setupSignaling, getActiveRooms } = require('./routes/signaling');
 
@@ -190,6 +191,23 @@ app.use('/api/subscriptions', subscriptionRoutes); // Subscription & plans
 app.use('/api/creator', creatorRoutes); // Independent artist/designer
 app.use('/api/tournaments', tournamentRoutes); // Verses Tournaments
 app.use('/api/agora', agoraRoutes); // Agora RTC tokens
+function generateRoomId() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const bytes = crypto.randomBytes(18);
+    let id = '';
+    for (let i = 0; i < 18; i++) {
+        id += chars[bytes[i] % chars.length];
+    }
+    return id.slice(0, 8) + '_' + id.slice(8);
+}
+
+app.post('/api/rooms/create', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    const roomId = generateRoomId();
+    console.log(`[Rooms API] Generated room ID: ${roomId}`);
+    res.json({ id: roomId });
+});
+
 app.get('/api/rooms/active', (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.setHeader('CDN-Cache-Control', 'no-store');

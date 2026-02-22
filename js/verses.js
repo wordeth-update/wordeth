@@ -671,7 +671,7 @@ class AudioRoomsManager {
 
         const genre = room.genre || 'general';
         const genreIcon = this.getGenreIcon(genre);
-        const roomName = room.name || `Room ${room.id.replace('room_', '').slice(-4)}`;
+        const roomName = room.name || `Room ${room.id.slice(-5)}`;
         const host = participants.find(p => p.isHost);
         const hostName = host ? (host.userName || host.name || 'Unknown') : 'Unknown';
 
@@ -1745,10 +1745,19 @@ class AudioRoomsManager {
     }
 
     async createRoomOnServer(roomData) {
-        return {
-            id: `room_${Date.now()}`,
-            ...roomData
-        };
+        try {
+            const res = await fetch(apiUrl('/api/rooms/create'), { method: 'POST' });
+            if (res.ok) {
+                const data = await res.json();
+                return { id: data.id, ...roomData };
+            }
+        } catch (e) {
+            console.warn('Server room ID generation failed, using local fallback:', e.message);
+        }
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let id = '';
+        for (let i = 0; i < 18; i++) id += chars[Math.floor(Math.random() * chars.length)];
+        return { id: id.slice(0, 8) + '_' + id.slice(8), ...roomData };
     }
 
     _restoreLobbyUI() {
@@ -2881,7 +2890,7 @@ class AudioRoomsManager {
         const roomNameEl = document.getElementById('room-name');
         const currentSong = document.getElementById('current-song');
         if (roomNameEl && !roomNameEl.textContent.trim()) {
-            roomNameEl.textContent = `Room ${roomId.replace('room_', '').slice(-4)}`;
+            roomNameEl.textContent = `Room ${roomId.slice(-5)}`;
         }
         if (this.participantCount) this.participantCount.textContent = '1 participant';
     }
