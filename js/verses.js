@@ -1627,7 +1627,7 @@ class AudioRoomsManager {
                 body: JSON.stringify({
                     channelName: roomId,
                     uid: 0,
-                    role: this.isSpeaker ? 'publisher' : 'audience'
+                    role: 'publisher'
                 })
             });
 
@@ -2019,16 +2019,51 @@ class AudioRoomsManager {
                 }
             }
 
-            if (this.agoraClient) {
+            if (this.agoraClient && this.currentRoom) {
                 try {
+                    console.log('Promotion: rejoining Agora with publisher token...');
+                    const prevRemoteUsers = new Map(this.agoraRemoteUsers);
+
+                    if (this.agoraLocalAudioTrack) {
+                        try { this.agoraLocalAudioTrack.close(); } catch(e) {}
+                        this.agoraLocalAudioTrack = null;
+                    }
+                    await this.agoraClient.leave();
+                    console.log('Promotion: left Agora channel for rejoin');
+
+                    const resp = await fetch(apiUrl('/api/agora/token'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            channelName: this.currentRoom,
+                            uid: 0,
+                            role: 'publisher'
+                        })
+                    });
+                    const data = await resp.json();
+                    if (!data.token || !data.appId) {
+                        throw new Error('Failed to get publisher token for promotion');
+                    }
+
                     await this.agoraClient.setClientRole('host');
-                    console.log('Agora: switched to host role for promotion');
+                    this.agoraUid = await this.agoraClient.join(data.appId, this.currentRoom, data.token, data.uid || null);
+                    console.log('Promotion: rejoined Agora as host, uid:', this.agoraUid, 'connectionState:', this.agoraClient.connectionState);
+
+                    if (this.socket) {
+                        this.socket.emit('agora-uid-map', {
+                            roomId: this.currentRoom,
+                            agoraUid: this.agoraUid,
+                            socketId: this.socket.id
+                        });
+                    }
+
                     if (this.localStream) {
                         await this.publishAgoraAudio();
                     }
-                    console.log('Agora: promoted to host/publisher role');
+                    console.log('Promotion: audio published, promoted to host/publisher role');
                 } catch (e) {
-                    console.error('Agora role switch error on promotion:', e);
+                    console.error('Agora promotion error:', e);
+                    this.addChatMessage('System', 'Audio setup failed after promotion. Try refreshing.', true);
                 }
             }
 
