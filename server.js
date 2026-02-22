@@ -206,7 +206,11 @@ app.get('/api/rooms/:roomId', (req, res) => {
     res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
     res.setHeader('Pragma', 'no-cache');
     const activeRooms = getActiveRooms();
-    const room = activeRooms.find(r => r.id === req.params.roomId);
+    let room = activeRooms.find(r => r.id === req.params.roomId);
+    if (!room) {
+        const query = req.params.roomId.toLowerCase().trim();
+        room = activeRooms.find(r => r.name && r.name.toLowerCase().trim() === query);
+    }
     if (!room) {
         console.log(`[Rooms API] Room ${req.params.roomId} not found. Active rooms: ${activeRooms.map(r => r.id).join(', ') || 'none'}`);
         return res.status(404).json({ error: 'Room not found or no longer active' });

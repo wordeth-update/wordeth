@@ -473,15 +473,58 @@ class AudioRoomsManager {
             } catch(e) {}
 
             if (this._pendingInviteRoom && !this.currentRoom) {
-                const roomId = this._pendingInviteRoom;
+                const requestedRoom = this._pendingInviteRoom;
                 this._pendingInviteRoom = null;
                 this._joiningFromInvite = true;
-                console.log('Socket connected: auto-joining invite room', roomId);
-                this.joinRoom(roomId).catch(e => {
-                    console.error('Auto-join invite room failed:', e);
-                }).finally(() => {
-                    this._joiningFromInvite = false;
-                });
+                console.log('Socket connected: verifying invite room', requestedRoom);
+
+                (async () => {
+                    try {
+                        if (this.currentRoom) return;
+                        const res = await fetch(apiUrl(`/api/rooms/${encodeURIComponent(requestedRoom)}`));
+                        if (this.currentRoom) return;
+                        if (res.ok) {
+                            const roomData = await res.json();
+                            const actualRoomId = roomData.id || requestedRoom;
+                            console.log('Invite room verified:', actualRoomId, roomData.name);
+                            if (roomData.name) {
+                                const roomNameEl = document.getElementById('room-name');
+                                if (roomNameEl) roomNameEl.textContent = roomData.name;
+                            }
+                            await this.joinRoom(actualRoomId);
+                        } else {
+                            console.warn('Invite room not found via API, checking active rooms');
+                            const rooms = await this.fetchActiveRooms();
+                            if (this.currentRoom) return;
+                            if (rooms && rooms.length > 0) {
+                                const match = rooms.find(r =>
+                                    r.id === requestedRoom ||
+                                    (r.name && r.name.toLowerCase().trim() === requestedRoom.toLowerCase().trim())
+                                );
+                                if (match) {
+                                    console.log('Found matching room by name:', match.id, match.name);
+                                    if (match.name) {
+                                        const roomNameEl = document.getElementById('room-name');
+                                        if (roomNameEl) roomNameEl.textContent = match.name;
+                                    }
+                                    await this.joinRoom(match.id);
+                                } else {
+                                    console.warn('No matching room found, showing room list');
+                                    this._restoreLobbyUI();
+                                    this.showToast?.('This room is no longer live. Check out other active rooms below.', 'fa-exclamation-circle');
+                                }
+                            } else {
+                                this._restoreLobbyUI();
+                                this.showToast?.('No rooms are currently live. Create one to get started!', 'fa-info-circle');
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Invite room verification failed:', e);
+                        if (!this.currentRoom) await this.joinRoom(requestedRoom).catch(() => {});
+                    } finally {
+                        this._joiningFromInvite = false;
+                    }
+                })();
             }
         });
 
@@ -6462,15 +6505,50 @@ document.addEventListener('DOMContentLoaded', () => {
             mgr._pendingInviteRoom = roomToJoin;
             window.history.replaceState({}, '', '/verses.html');
 
-            if (mgr.lobbySocket && mgr.lobbySocket.connected) {
+            if (mgr.lobbySocket && mgr.lobbySocket.connected && !mgr.currentRoom) {
                 mgr._pendingInviteRoom = null;
                 mgr._joiningFromInvite = true;
-                console.log('Invite: socket already connected, joining now');
-                mgr.joinRoom(roomToJoin).catch(e => {
-                    console.error('Invite join failed:', e);
-                }).finally(() => {
-                    mgr._joiningFromInvite = false;
-                });
+                console.log('Invite: socket already connected, verifying room first');
+                (async () => {
+                    try {
+                        if (mgr.currentRoom) return;
+                        const res = await fetch(apiUrl(`/api/rooms/${encodeURIComponent(roomToJoin)}`));
+                        if (mgr.currentRoom) return;
+                        if (res.ok) {
+                            const roomData = await res.json();
+                            const actualId = roomData.id || roomToJoin;
+                            console.log('Invite room verified (immediate):', actualId, roomData.name);
+                            if (roomData.name) {
+                                const rn = document.getElementById('room-name');
+                                if (rn) rn.textContent = roomData.name;
+                            }
+                            await mgr.joinRoom(actualId);
+                        } else {
+                            const rooms = await mgr.fetchActiveRooms();
+                            if (mgr.currentRoom) return;
+                            const match = rooms && rooms.find(r =>
+                                r.id === roomToJoin ||
+                                (r.name && r.name.toLowerCase().trim() === roomToJoin.toLowerCase().trim())
+                            );
+                            if (match) {
+                                if (match.name) {
+                                    const rn = document.getElementById('room-name');
+                                    if (rn) rn.textContent = match.name;
+                                }
+                                await mgr.joinRoom(match.id);
+                            } else {
+                                cleanupSpinner();
+                                mgr._restoreLobbyUI();
+                                mgr.showToast?.('This room is no longer live. Check out other active rooms below.', 'fa-exclamation-circle');
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Immediate invite verification failed:', e);
+                        if (!mgr.currentRoom) await mgr.joinRoom(roomToJoin).catch(() => {});
+                    } finally {
+                        mgr._joiningFromInvite = false;
+                    }
+                })();
             }
         };
         waitForManager(0);
