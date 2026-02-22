@@ -1196,41 +1196,45 @@ class AudioRoomsManager {
                 closeGuideBtn.onclick = () => guideFrame.remove();
                 closeBar.appendChild(closeGuideBtn);
                 const scrollBox = document.createElement('div');
-                scrollBox.style.cssText = 'width:100%;max-width:700px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;border-radius:12px;background:#111;padding:20px;color:#eee;';
-                scrollBox.innerHTML = '<p style="text-align:center;color:#999;">Loading guide...</p>';
+                scrollBox.style.cssText = 'width:100%;max-width:700px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;border-radius:12px;background:#1a1a2e;padding:24px 20px;color:#e0e0e0;font-family:Inter,sans-serif;line-height:1.6;';
+                scrollBox.innerHTML = `
+                    <h2 style="text-align:center;font-size:1.6rem;margin:0 0 6px;color:#96c5b0;"><i class="fas fa-headphones"></i> Verses Room Guide</h2>
+                    <p style="text-align:center;color:#a78bfa;margin-bottom:24px;font-size:0.95rem;">Everything you need to know about live audio rooms</p>
+                    <div style="margin-bottom:20px;background:rgba(85,53,85,0.25);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:16px;">
+                        <h3 style="color:#96c5b0;margin:0 0 10px;font-size:1rem;"><i class="fas fa-play-circle" style="margin-right:8px;"></i>Getting Started</h3>
+                        <p style="margin:0 0 8px;"><strong>Create a Room</strong> — Tap "Create Room", give it a name, and you're the host.</p>
+                        <p style="margin:0 0 8px;"><strong>Join a Room</strong> — Tap any live room card to join as a listener.</p>
+                        <p style="margin:0;"><strong>Invite Friends</strong> — Use the share or invite buttons to bring others in.</p>
+                    </div>
+                    <div style="margin-bottom:20px;background:rgba(85,53,85,0.25);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:16px;">
+                        <h3 style="color:#96c5b0;margin:0 0 10px;font-size:1rem;"><i class="fas fa-sliders-h" style="margin-right:8px;"></i>Action Bar</h3>
+                        <p style="margin:0 0 8px;"><strong>MIC</strong> — Toggle your microphone on/off (speakers only).</p>
+                        <p style="margin:0 0 8px;"><strong>EFFECTS</strong> — Apply voice filters like Echo, Deep, Radio, and more.</p>
+                        <p style="margin:0 0 8px;"><strong>KARAOKE</strong> — Search and play songs with synced lyrics.</p>
+                        <p style="margin:0 0 8px;"><strong>CAMERA</strong> — Enable video with optional AR filters.</p>
+                        <p style="margin:0 0 8px;"><strong>PHOTO</strong> — Share photos in the room chat.</p>
+                        <p style="margin:0;"><strong>HAND</strong> — Raise your hand to request stage access.</p>
+                    </div>
+                    <div style="margin-bottom:20px;background:rgba(85,53,85,0.25);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:16px;">
+                        <h3 style="color:#96c5b0;margin:0 0 10px;font-size:1rem;"><i class="fas fa-crown" style="margin-right:8px;"></i>Host Controls</h3>
+                        <p style="margin:0 0 8px;"><strong>Stage Access</strong> — Switch between invite-only and open stage.</p>
+                        <p style="margin:0 0 8px;"><strong>Invite to Stage</strong> — Tap the 3-dot menu on a listener to promote them.</p>
+                        <p style="margin:0 0 8px;"><strong>Mute All</strong> — Mute all speakers at once.</p>
+                        <p style="margin:0;"><strong>Lock / Close</strong> — Lock the room or close it entirely.</p>
+                    </div>
+                    <div style="background:rgba(85,53,85,0.25);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:16px;">
+                        <h3 style="color:#96c5b0;margin:0 0 10px;font-size:1rem;"><i class="fas fa-lightbulb" style="margin-right:8px;"></i>Tips</h3>
+                        <p style="margin:0 0 8px;">Use headphones to avoid echo and feedback.</p>
+                        <p style="margin:0 0 8px;">Listeners hear everything — you don't need to be on stage to enjoy.</p>
+                        <p style="margin:0;">If you lose connection, just rejoin — the room stays live as long as someone is in it.</p>
+                    </div>
+                `;
                 guideFrame.appendChild(closeBar);
                 guideFrame.appendChild(scrollBox);
                 document.body.appendChild(guideFrame);
                 guideFrame.addEventListener('click', (ev) => {
                     if (ev.target === guideFrame) guideFrame.remove();
                 });
-                fetch('/verses-guide.html')
-                    .then(r => r.text())
-                    .then(html => {
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(html, 'text/html');
-                        const guideContent = doc.querySelector('.guide-container');
-                        if (guideContent) {
-                            const links = doc.querySelectorAll('link[rel="stylesheet"]');
-                            links.forEach(link => {
-                                const href = link.getAttribute('href');
-                                if (href && href.includes('verses-guide') && !document.querySelector(`link[href="${href}"]`)) {
-                                    const newLink = document.createElement('link');
-                                    newLink.rel = 'stylesheet';
-                                    newLink.href = href;
-                                    document.head.appendChild(newLink);
-                                }
-                            });
-                            guideContent.querySelectorAll('a[href="verses.html"]').forEach(a => a.remove());
-                            scrollBox.innerHTML = '';
-                            scrollBox.appendChild(guideContent);
-                        } else {
-                            scrollBox.innerHTML = '<p style="text-align:center;color:#f99;">Could not load guide. Please try again later.</p>';
-                        }
-                    })
-                    .catch(() => {
-                        scrollBox.innerHTML = '<p style="text-align:center;color:#f99;">Could not load guide. Please try again later.</p>';
-                    });
             });
         }
     }
@@ -6406,9 +6410,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 await mgr.joinRoom(roomToJoin);
-                if (mgr._joinConfirmed) {
-                    inviteJoinResolved = true;
-                    cleanupInviteSpinner();
+                await new Promise((resolve) => {
+                    let checks = 0;
+                    const poll = setInterval(() => {
+                        checks++;
+                        if (mgr._joinConfirmed || checks > 40) {
+                            clearInterval(poll);
+                            resolve();
+                        }
+                    }, 250);
+                });
+                inviteJoinResolved = true;
+                cleanupInviteSpinner();
+                if (!mgr.currentRoom) {
+                    mgr.loadActiveRooms();
                 }
             } catch(e) {
                 console.error('Error joining room from link:', e);
