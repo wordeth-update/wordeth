@@ -6241,12 +6241,21 @@ document.addEventListener('DOMContentLoaded', () => {
 // Handle page parameters (if joining via direct link)
 (function() {
     const urlParams = new URLSearchParams(window.location.search);
-    const roomToJoin = urlParams.get('room');
+    let roomToJoin = urlParams.get('room');
+
+    if (!roomToJoin) {
+        const pending = localStorage.getItem('wordeth_pending_room');
+        if (pending && localStorage.getItem('authToken')) {
+            roomToJoin = pending;
+            localStorage.removeItem('wordeth_pending_room');
+        }
+    }
     if (!roomToJoin) return;
 
     document.addEventListener('DOMContentLoaded', () => {
         const token = localStorage.getItem('authToken');
         if (!token) {
+            localStorage.setItem('wordeth_pending_room', roomToJoin);
             const returnUrl = `/verses.html?room=${encodeURIComponent(roomToJoin)}`;
             localStorage.setItem('wordeth_return_url', returnUrl);
             const encodedReturn = encodeURIComponent(returnUrl);
@@ -6286,15 +6295,37 @@ document.addEventListener('DOMContentLoaded', () => {
             const joiningEl = document.getElementById('invite-joining-msg');
             if (joiningEl) joiningEl.remove();
             if (lobby) lobby.style.display = '';
+            const roomSel = document.getElementById('room-selection');
+            if (roomSel) roomSel.style.display = '';
+            localStorage.removeItem('wordeth_pending_room');
         };
 
+        let inviteJoinResolved = false;
+
+        setTimeout(() => {
+            if (!inviteJoinResolved) {
+                console.warn('Invite join: hard timeout reached, forcing cleanup');
+                inviteJoinResolved = true;
+                const mgr = window.audioRoomsManager;
+                if (mgr && !mgr._joinConfirmed && mgr._pendingJoinRoom) {
+                    mgr._restoreLobbyUI();
+                } else {
+                    cleanupInviteSpinner();
+                    if (mgr) mgr.loadActiveRooms();
+                }
+                mgr?.showToast?.('Could not join the room. It may no longer be active.', 'fa-exclamation-circle');
+            }
+        }, 12000);
+
         const tryJoinRoom = async (attempt = 0) => {
+            if (inviteJoinResolved) return;
             const mgr = window.audioRoomsManager;
             if (!mgr) {
                 if (attempt < 40) {
                     setTimeout(() => tryJoinRoom(attempt + 1), 250);
                 } else {
                     console.error('Invite join: AudioRoomsManager never initialized');
+                    inviteJoinResolved = true;
                     cleanupInviteSpinner();
                 }
                 return;
@@ -6312,8 +6343,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 await mgr.joinRoom(roomToJoin);
+                if (mgr._joinConfirmed) {
+                    inviteJoinResolved = true;
+                    cleanupInviteSpinner();
+                }
             } catch(e) {
                 console.error('Error joining room from link:', e);
+                inviteJoinResolved = true;
                 cleanupInviteSpinner();
                 mgr.loadActiveRooms();
                 mgr.showToast?.('Could not join the room. It may no longer be active.', 'fa-exclamation-circle');
