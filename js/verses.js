@@ -1927,6 +1927,10 @@ class AudioRoomsManager {
                 this.updateVideoButtonState();
             }
 
+            if (data.stageAccess) {
+                this.stageAccess = data.stageAccess;
+            }
+
             this.updateParticipantDisplay(data.participants);
 
             if (data.roomName) {
@@ -1937,8 +1941,12 @@ class AudioRoomsManager {
             if (!document.querySelector('[data-participant-id="self"]')) {
                 const user = JSON.parse(localStorage.getItem('user') || '{}');
                 const userName = user.name || user.username || 'Anonymous';
-                this._addSelfToStage(userName, user.avatar || null, this.isRoomHost);
+                if (this.isSpeaker || this.isRoomHost) {
+                    this._addSelfToStage(userName, user.avatar || null, this.isRoomHost);
+                }
             }
+
+            this.updateStageControls();
 
             for (const p of data.participants) {
                 if (p.socketId !== this.socket?.id) {
@@ -1958,6 +1966,7 @@ class AudioRoomsManager {
         sock.on('participant-joined', async (data) => {
             console.log('Participant joined:', data.userName, 'isSpeaker:', data.isSpeaker);
             this.addChatMessage('System', `${data.userName} joined the room.`, true);
+            this._playJoinSound();
             this.updateParticipantDisplay(data.participants);
 
             if (!document.querySelector(`[data-participant-id="${data.socketId}"]`)) {
@@ -2875,6 +2884,28 @@ class AudioRoomsManager {
         if (currentSongEl) currentSongEl.textContent = '';
         
         this.loadActiveRooms();
+    }
+
+    _playJoinSound() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.08);
+            osc.frequency.exponentialRampToValueAtTime(1100, ctx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.08, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.2);
+            osc.onended = () => ctx.close().catch(() => {});
+        } catch (e) {}
+        try {
+            if (navigator.vibrate) navigator.vibrate(50);
+        } catch (e) {}
     }
 
     isInRoom() {
