@@ -49,7 +49,8 @@ function setupSignaling(io) {
             }
         });
 
-        socket.on('join-room', ({ roomId, userId, userName, isHost, roomName, avatar }) => {
+        socket.on('join-room', ({ roomId, userId, userName, isHost: requestedHost, roomName, avatar }) => {
+            let isHost = requestedHost;
             if (socket.roomId && socket.roomId !== roomId && rooms.has(socket.roomId)) {
                 const prevRoom = rooms.get(socket.roomId);
                 prevRoom.participants.delete(socket.id);
@@ -123,8 +124,13 @@ function setupSignaling(io) {
             if (socket.userId && socket.userId !== socket.id) {
                 for (const [sid, p] of room.participants.entries()) {
                     if (p.userId === socket.userId && sid !== socket.id) {
+                        const wasHost = (sid === room.hostId);
                         room.participants.delete(sid);
                         if (room.activeVideos) room.activeVideos.delete(sid);
+                        if (wasHost) {
+                            room.hostId = socket.id;
+                            isHost = true;
+                        }
                         console.log(`[Dedup] Removed stale participant ${p.userName} (old socket ${sid}) for userId ${p.userId}`);
                         socket.to(roomId).emit('participant-left', {
                             socketId: sid,
