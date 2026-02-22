@@ -50,6 +50,13 @@ class AudioRoomsManager {
         this.karaokeVideoActive = false;
         this.stageAccess = 'invite-only';
         
+        this._sfx = {
+            enterRoom: new Audio('/sounds/wordeth_door_close.mp3'),
+            leaveRoom: new Audio('/sounds/wordeth_enter_room.mp3'),
+            onStage: new Audio('/sounds/wordeth_onstage_notification.mp3')
+        };
+        Object.values(this._sfx).forEach(a => { a.preload = 'auto'; a.volume = 0.5; });
+        
         // Video grid state
         this.videoMode = 'off';
         this.localVideoStream = null;
@@ -1212,6 +1219,15 @@ class AudioRoomsManager {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    _playSfx(name) {
+        try {
+            const sound = this._sfx?.[name];
+            if (!sound) return;
+            sound.currentTime = 0;
+            sound.play().catch(() => {});
+        } catch(e) {}
     }
 
     showToast(message, icon = 'fa-info-circle', duration = 4000) {
@@ -2431,6 +2447,7 @@ class AudioRoomsManager {
                 if (muteIcon) muteIcon.className = 'fas fa-microphone-slash';
             }
 
+            this._playSfx('enterRoom');
             this.showFirstVisitGuide();
         });
 
@@ -2561,6 +2578,7 @@ class AudioRoomsManager {
             this.handRaised = false;
             this.raiseHandBtn?.classList.remove('hand-raised');
             this.isAudioMuted = true;
+            this._playSfx('onStage');
 
             if (!this.localStream) {
                 try {
@@ -3241,6 +3259,7 @@ class AudioRoomsManager {
     }
 
     leaveRoom() {
+        this._playSfx('leaveRoom');
         if (window._verseMiniPlayer) {
             window._verseMiniPlayer.deactivate();
         }
