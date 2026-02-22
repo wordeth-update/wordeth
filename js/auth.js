@@ -93,7 +93,8 @@ if (signupForm) {
                     window.location.href = savedReturn;
                 } else {
                     localStorage.removeItem('wordeth_return_url');
-                    window.location.href = '/profile.html';
+                    const returnTo = new URLSearchParams(window.location.search).get('return');
+                    window.location.href = returnTo || '/profile.html';
                 }
             } else {
                 throw new Error(data.message || data.errors?.[0]?.msg || 'Sign up failed');

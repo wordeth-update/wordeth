@@ -790,8 +790,9 @@ class AudioRoomsManager {
     showCreateRoomModal() {
         const token = localStorage.getItem('authToken');
         if (!token) {
-            localStorage.setItem('wordeth_return_url', '/verses.html');
-            window.location.href = '/signin.html';
+            const returnUrl = '/verses.html';
+            localStorage.setItem('wordeth_return_url', returnUrl);
+            window.location.href = `/signin.html?return=${encodeURIComponent(returnUrl)}`;
             return;
         }
         this.createRoomModal?.classList.add('active');
@@ -6105,13 +6106,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const roomToJoin = urlParams.get('room');
     if (!roomToJoin) return;
 
-    window.history.replaceState({}, '', '/verses.html');
-
     document.addEventListener('DOMContentLoaded', () => {
         const token = localStorage.getItem('authToken');
         if (!token) {
             const returnUrl = `/verses.html?room=${encodeURIComponent(roomToJoin)}`;
             localStorage.setItem('wordeth_return_url', returnUrl);
+            const encodedReturn = encodeURIComponent(returnUrl);
+
+            window.history.replaceState({}, '', '/verses.html');
 
             const joinBanner = document.createElement('div');
             joinBanner.className = 'join-invite-banner';
@@ -6120,8 +6122,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <i class="fas fa-headphones"></i>
                     <p>You've been invited to a live room! Sign up or sign in to join.</p>
                     <div class="invite-actions">
-                        <a href="/signup.html" class="invite-btn primary">Sign Up Free</a>
-                        <a href="/signin.html" class="invite-btn secondary">Sign In</a>
+                        <a href="/signup.html?return=${encodedReturn}" class="invite-btn primary">Sign Up Free</a>
+                        <a href="/signin.html?return=${encodedReturn}" class="invite-btn secondary">Sign In</a>
                     </div>
                 </div>
             `;
@@ -6132,49 +6134,50 @@ document.addEventListener('DOMContentLoaded', () => {
         const lobby = document.getElementById('room-selection') || document.querySelector('.room-selection');
         if (lobby) lobby.style.display = 'none';
 
+        window.history.replaceState({}, '', '/verses.html');
+
         const tryJoinRoom = async (attempt = 0) => {
             const mgr = window.audioRoomsManager;
             if (!mgr) {
-                if (attempt < 20) {
+                if (attempt < 30) {
                     setTimeout(() => tryJoinRoom(attempt + 1), 300);
                 }
                 return;
             }
 
             if (!mgr.lobbySocket || !mgr.lobbySocket.connected) {
-                if (attempt < 15) {
-                    setTimeout(() => tryJoinRoom(attempt + 1), 400);
+                if (attempt < 25) {
+                    setTimeout(() => tryJoinRoom(attempt + 1), 500);
                     return;
                 }
+                console.warn('Invite join: socket not connected after max attempts, trying anyway');
             }
 
             mgr._joiningFromInvite = true;
 
             try {
                 let targetRoom = null;
+                const maxRetries = 5;
 
-                try {
-                    const directRes = await fetch(apiUrl(`/api/rooms/${encodeURIComponent(roomToJoin)}`));
-                    if (directRes.ok) {
-                        targetRoom = await directRes.json();
-                    }
-                } catch (_) {}
-
-                if (!targetRoom) {
-                    let rooms = [];
-                    const maxRetries = 3;
-                    for (let i = 0; i < maxRetries; i++) {
-                        try { rooms = await mgr.fetchActiveRooms() || []; } catch (_) {}
-                        targetRoom = rooms.find(r => r.id === roomToJoin);
-                        if (targetRoom) break;
-                        if (rooms.length > 0) {
-                            if (lobby) lobby.style.display = '';
-                            mgr.loadActiveRooms();
-                            mgr.showToast?.('This room is no longer live. Check out other active rooms below.', 'fa-exclamation-circle');
-                            mgr._joiningFromInvite = false;
-                            return;
+                for (let i = 0; i < maxRetries; i++) {
+                    try {
+                        const directRes = await fetch(apiUrl(`/api/rooms/${encodeURIComponent(roomToJoin)}`));
+                        if (directRes.ok) {
+                            targetRoom = await directRes.json();
+                            break;
                         }
-                        if (i < maxRetries - 1) await new Promise(r => setTimeout(r, 800));
+                    } catch (_) {}
+
+                    if (!targetRoom) {
+                        try {
+                            const rooms = await mgr.fetchActiveRooms() || [];
+                            targetRoom = rooms.find(r => r.id === roomToJoin);
+                            if (targetRoom) break;
+                        } catch (_) {}
+                    }
+
+                    if (i < maxRetries - 1) {
+                        await new Promise(r => setTimeout(r, 1000));
                     }
                 }
 
@@ -6183,8 +6186,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (roomNameEl && targetRoom.name) {
                         roomNameEl.textContent = targetRoom.name;
                     }
+                    await mgr.joinRoom(roomToJoin);
+                } else {
+                    console.warn('Invite join: room not found after retries, attempting direct join');
+                    await mgr.joinRoom(roomToJoin);
                 }
-                await mgr.joinRoom(roomToJoin);
             } catch(e) {
                 console.error('Error joining room from link:', e);
                 if (lobby) lobby.style.display = '';
