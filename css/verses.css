@@ -4796,17 +4796,16 @@ body.in-room .audio-rooms-container {
 
 .mobile-walkthrough-close {
     position: fixed;
-    top: env(safe-area-inset-top, 16px);
+    bottom: 24px;
     left: 50%;
     transform: translateX(-50%);
-    margin-top: 16px;
     z-index: 10003;
-    background: rgba(255, 255, 255, 0.12);
-    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    background: rgba(220, 50, 80, 0.85);
+    border: 1.5px solid rgba(255, 100, 120, 0.6);
     color: #fff;
-    font-size: 1rem;
-    font-weight: 600;
-    padding: 14px 32px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    padding: 14px 36px;
     border-radius: 28px;
     cursor: pointer;
     display: flex;
@@ -4816,6 +4815,7 @@ body.in-room .audio-rooms-container {
     -webkit-backdrop-filter: blur(12px);
     pointer-events: auto;
     animation: walkClosePulse 2.5s ease-in-out infinite;
+    letter-spacing: 0.3px;
 }
 
 .mobile-walkthrough-close i {
@@ -4823,8 +4823,8 @@ body.in-room .audio-rooms-container {
 }
 
 @keyframes walkClosePulse {
-    0%, 100% { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.35); }
-    50% { background: rgba(255, 255, 255, 0.2); border-color: rgba(255, 255, 255, 0.55); }
+    0%, 100% { background: rgba(220, 50, 80, 0.85); border-color: rgba(255, 100, 120, 0.6); }
+    50% { background: rgba(240, 60, 90, 0.95); border-color: rgba(255, 140, 160, 0.8); }
 }
 
 .mobile-walkthrough-highlight {
