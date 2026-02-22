@@ -84,7 +84,10 @@ class AudioRoomsManager {
         this.mixDestination = null;
         this._wakeLock = null;
         this._silentAudioTimer = null;
-        
+
+        this._agoraJoinLock = null;
+        this._serverReady = null;
+        this._inviteHandled = false;
         
         this.isRecording = false;
         this.mediaRecorder = null;
@@ -100,9 +103,17 @@ class AudioRoomsManager {
         this.initializeElements();
         this.setupEventListeners();
         this.setupVisibilityHandler();
-        this.connectToServer();
-        this.loadActiveRooms();
-        this.loadReplays();
+        this._init();
+    }
+
+    async _init() {
+        try {
+            await this.connectToServer();
+            await this.loadActiveRooms();
+            this.loadReplays();
+        } catch (e) {
+            console.error('Initialization error:', e);
+        }
     }
     
     setupVisibilityHandler() {
@@ -453,93 +464,100 @@ class AudioRoomsManager {
     }
 
     connectToServer() {
-        console.log('Connecting to signaling server...');
-        const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
-        this.lobbySocket = io(serverUrl, {
-            transports: ['polling', 'websocket'],
-            upgrade: true,
-            reconnection: true,
-            reconnectionAttempts: 10,
-            reconnectionDelay: 1000
-        });
+        return new Promise((resolve) => {
+            console.log('Connecting to signaling server...');
+            const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
+            this.lobbySocket = io(serverUrl, {
+                transports: ['polling', 'websocket'],
+                upgrade: true,
+                reconnection: true,
+                reconnectionAttempts: 10,
+                reconnectionDelay: 1000
+            });
 
-        this.lobbySocket.on('connect', () => {
-            console.log('Connected to signaling server');
-            try {
-                const user = JSON.parse(localStorage.getItem('user'));
-                if (user && user._id) {
-                    this.lobbySocket.emit('register-user', { userId: user._id, userName: user.name || 'User' });
-                }
-            } catch(e) {}
-
-            if (this._pendingInviteRoom && !this.currentRoom) {
-                const requestedRoom = this._pendingInviteRoom;
-                this._pendingInviteRoom = null;
-                this._joiningFromInvite = true;
-                console.log('Socket connected: verifying invite room', requestedRoom);
-
-                (async () => {
-                    try {
-                        if (this.currentRoom) return;
-                        const res = await fetch(apiUrl(`/api/rooms/${encodeURIComponent(requestedRoom)}`));
-                        if (this.currentRoom) return;
-                        if (res.ok) {
-                            const roomData = await res.json();
-                            const actualRoomId = roomData.id || requestedRoom;
-                            console.log('Invite room verified:', actualRoomId, roomData.name);
-                            if (roomData.name) {
-                                const roomNameEl = document.getElementById('room-name');
-                                if (roomNameEl) roomNameEl.textContent = roomData.name;
-                            }
-                            await this.joinRoom(actualRoomId);
-                        } else {
-                            console.warn('Invite room not found via API, checking active rooms');
-                            const rooms = await this.fetchActiveRooms();
-                            if (this.currentRoom) return;
-                            if (rooms && rooms.length > 0) {
-                                const match = rooms.find(r =>
-                                    r.id === requestedRoom ||
-                                    (r.name && r.name.toLowerCase().trim() === requestedRoom.toLowerCase().trim())
-                                );
-                                if (match) {
-                                    console.log('Found matching room by name:', match.id, match.name);
-                                    if (match.name) {
-                                        const roomNameEl = document.getElementById('room-name');
-                                        if (roomNameEl) roomNameEl.textContent = match.name;
-                                    }
-                                    await this.joinRoom(match.id);
-                                } else {
-                                    console.warn('No matching room found, showing room list');
-                                    this._restoreLobbyUI();
-                                    this.showToast?.('This room is no longer live. Check out other active rooms below.', 'fa-exclamation-circle');
-                                }
-                            } else {
-                                this._restoreLobbyUI();
-                                this.showToast?.('No rooms are currently live. Create one to get started!', 'fa-info-circle');
-                            }
-                        }
-                    } catch (e) {
-                        console.error('Invite room verification failed:', e);
-                        if (!this.currentRoom) await this.joinRoom(requestedRoom).catch(() => {});
-                    } finally {
-                        this._joiningFromInvite = false;
+            this.lobbySocket.on('connect', () => {
+                console.log('Connected to signaling server');
+                try {
+                    const user = JSON.parse(localStorage.getItem('user'));
+                    if (user && user._id) {
+                        this.lobbySocket.emit('register-user', { userId: user._id, userName: user.name || 'User' });
                     }
-                })();
+                } catch(e) {}
+
+                resolve();
+
+                if (this._pendingInviteRoom && !this.currentRoom && !this._inviteHandled) {
+                    this._handleInviteJoin(this._pendingInviteRoom);
+                }
+            });
+
+            this.lobbySocket.on('rooms-updated', (rooms) => {
+                console.log('Rooms updated in real-time:', rooms.length, 'rooms');
+                this.renderRooms(rooms);
+            });
+
+            this.lobbySocket.on('room-invite', (data) => {
+                this.showRoomInviteNotification(data);
+            });
+
+            this.lobbySocket.on('disconnect', () => {
+                console.log('Lobby socket disconnected');
+            });
+        });
+    }
+
+    async _handleInviteJoin(requestedRoom) {
+        if (this._inviteHandled || this.currentRoom) return;
+        this._inviteHandled = true;
+        this._pendingInviteRoom = null;
+        this._joiningFromInvite = true;
+        console.log('Handling invite join for room:', requestedRoom);
+
+        try {
+            if (this.currentRoom) return;
+            const res = await fetch(apiUrl(`/api/rooms/${encodeURIComponent(requestedRoom)}`));
+            if (this.currentRoom) return;
+            if (res.ok) {
+                const roomData = await res.json();
+                const actualRoomId = roomData.id || requestedRoom;
+                console.log('Invite room verified:', actualRoomId, roomData.name);
+                if (roomData.name) {
+                    const roomNameEl = document.getElementById('room-name');
+                    if (roomNameEl) roomNameEl.textContent = roomData.name;
+                }
+                await this.joinRoom(actualRoomId);
+            } else {
+                console.warn('Invite room not found via API, checking active rooms');
+                const rooms = await this.fetchActiveRooms();
+                if (this.currentRoom) return;
+                if (rooms && rooms.length > 0) {
+                    const match = rooms.find(r =>
+                        r.id === requestedRoom ||
+                        (r.name && r.name.toLowerCase().trim() === requestedRoom.toLowerCase().trim())
+                    );
+                    if (match) {
+                        console.log('Found matching room by name:', match.id, match.name);
+                        if (match.name) {
+                            const roomNameEl = document.getElementById('room-name');
+                            if (roomNameEl) roomNameEl.textContent = match.name;
+                        }
+                        await this.joinRoom(match.id);
+                    } else {
+                        console.warn('No matching room found, showing room list');
+                        this._restoreLobbyUI();
+                        this.showToast?.('This room is no longer live. Check out other active rooms below.', 'fa-exclamation-circle');
+                    }
+                } else {
+                    this._restoreLobbyUI();
+                    this.showToast?.('No rooms are currently live. Create one to get started!', 'fa-info-circle');
+                }
             }
-        });
-
-        this.lobbySocket.on('rooms-updated', (rooms) => {
-            console.log('Rooms updated in real-time:', rooms.length, 'rooms');
-            this.renderRooms(rooms);
-        });
-
-        this.lobbySocket.on('room-invite', (data) => {
-            this.showRoomInviteNotification(data);
-        });
-
-        this.lobbySocket.on('disconnect', () => {
-            console.log('Lobby socket disconnected');
-        });
+        } catch (e) {
+            console.error('Invite room verification failed:', e);
+            if (!this.currentRoom) await this.joinRoom(requestedRoom).catch(() => {});
+        } finally {
+            this._joiningFromInvite = false;
+        }
     }
 
     async loadActiveRooms() {
@@ -1786,15 +1804,6 @@ class AudioRoomsManager {
             this._requestWakeLock();
             this._startSilentAudioKeepAlive();
 
-            const agoraRoomId = this.currentRoom || roomId;
-            try {
-                await this.joinAgoraChannel(agoraRoomId);
-                console.log('Agora: successfully joined channel', agoraRoomId, 'connectionState:', this.agoraClient?.connectionState);
-            } catch (e) {
-                console.error('Agora join failed:', e);
-                this.addChatMessage('System', 'Audio connection failed. Try refreshing the page.', true);
-            }
-
             fetch(apiUrl('/api/analytics/track'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1949,11 +1958,35 @@ class AudioRoomsManager {
         });
     }
 
-    async joinAgoraChannel(roomId) {
+    async _agoraWithLock(fn) {
+        while (this._agoraJoinLock) {
+            console.log('Agora: waiting for previous operation to complete...');
+            try { await this._agoraJoinLock; } catch(_) {}
+        }
+        let resolve;
+        this._agoraJoinLock = new Promise(r => { resolve = r; });
+        try {
+            return await fn();
+        } finally {
+            this._agoraJoinLock = null;
+            resolve();
+        }
+    }
+
+    async _agoraJoinGuarded(roomId, options = {}) {
+        return this._agoraWithLock(() => this.joinAgoraChannel(roomId, options));
+    }
+
+    async _agoraLeaveGuarded() {
+        return this._agoraWithLock(() => this.leaveAgoraChannel());
+    }
+
+    async joinAgoraChannel(roomId, options = {}) {
+        const { forceRole, skipPublish } = options;
         try {
             await this.initAgoraClient();
 
-            const agoraRole = this.isSpeaker ? 'host' : 'audience';
+            const agoraRole = forceRole || (this.isSpeaker ? 'host' : 'audience');
             console.log('Agora: setting client role to', agoraRole, 'isSpeaker:', this.isSpeaker);
             if (agoraRole === 'audience') {
                 await this.agoraClient.setClientRole('audience', { level: 1 });
@@ -1997,7 +2030,7 @@ class AudioRoomsManager {
                 });
             }
 
-            if (this.isSpeaker) {
+            if (!skipPublish && (agoraRole === 'host' || this.isSpeaker)) {
                 if (this.localStream) {
                     console.log('Agora: speaker with localStream, publishing audio...');
                     await this.publishAgoraAudio();
@@ -2012,7 +2045,7 @@ class AudioRoomsManager {
                         console.warn('Agora: mic request failed:', micErr.message);
                     }
                 }
-            } else {
+            } else if (agoraRole === 'audience') {
                 console.log('Agora: joined as audience (listener), will subscribe to remote tracks');
                 setTimeout(() => {
                     const remoteUsers = this.agoraClient?.remoteUsers || [];
@@ -2023,6 +2056,7 @@ class AudioRoomsManager {
                             try {
                                 await this.agoraClient.subscribe(user, 'audio');
                                 if (user.audioTrack) {
+                                    user.audioTrack.setVolume(100);
                                     user.audioTrack.play();
                                     this.agoraRemoteUsers.set(String(user.uid), user);
                                     console.log('Agora: fallback subscribe+play succeeded for uid', user.uid);
@@ -2279,32 +2313,15 @@ class AudioRoomsManager {
         sock.on('room-joined', async (data) => {
             console.log('Room joined via signaling:', data);
             this._joinConfirmed = true;
-            const previousRoom = this._pendingJoinRoom;
             this._pendingJoinRoom = null;
 
-            if (data.roomId && data.roomId !== this.currentRoom) {
+            const confirmedRoom = data.roomId || this.currentRoom;
+            const wasRedirected = data.roomId && data.roomId !== this.currentRoom;
+
+            if (wasRedirected) {
                 console.log('Server redirected to room:', data.roomId, '(was:', this.currentRoom, ')');
-                const oldRoom = this.currentRoom;
                 this.currentRoom = data.roomId;
-
-                if (this.agoraClient && this.agoraClient.connectionState !== 'DISCONNECTED') {
-                    try {
-                        console.log('Agora: leaving old channel', oldRoom, 'for redirect');
-                        await this.agoraClient.leave();
-                    } catch (e) {
-                        console.warn('Agora: error leaving old channel:', e.message);
-                    }
-                }
-                try {
-                    console.log('Agora: joining redirected channel', data.roomId);
-                    await this.joinAgoraChannel(data.roomId);
-                } catch (e) {
-                    console.error('Agora: failed to join redirected channel:', e);
-                    this.addChatMessage('System', 'Audio connection failed. Try refreshing the page.', true);
-                }
             }
-
-            this.showFirstVisitGuide();
 
             if (data.isHost && !this.isRoomHost) {
                 this.isRoomHost = true;
@@ -2323,46 +2340,11 @@ class AudioRoomsManager {
                 const userName = user.name || user.username || 'Anonymous';
                 this._addSelfToStage(userName, user.avatar || null, true);
 
-                (async () => {
-                    try {
-                        if (!this.localStream) {
-                            await this.initializeMedia();
-                        }
-                        if (this.agoraClient && this.currentRoom) {
-                            const prevState = this.agoraClient.connectionState;
-                            if (prevState === 'CONNECTED') {
-                                if (this.agoraLocalAudioTrack) {
-                                    try { this.agoraLocalAudioTrack.close(); } catch(e) {}
-                                    this.agoraLocalAudioTrack = null;
-                                }
-                                await this.agoraClient.leave();
-                            }
-                            const resp = await fetch(apiUrl('/api/agora/token'), {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ channelName: this.currentRoom, uid: 0, role: 'publisher' })
-                            });
-                            const tokenData = await resp.json();
-                            if (tokenData.token && tokenData.appId) {
-                                await this.agoraClient.setClientRole('host');
-                                this.agoraUid = await this.agoraClient.join(tokenData.appId, this.currentRoom, tokenData.token, tokenData.uid || null);
-                                console.log('Host auto-promotion: rejoined Agora as host, uid:', this.agoraUid);
-                                if (this.socket) {
-                                    this.socket.emit('agora-uid-map', { roomId: this.currentRoom, agoraUid: this.agoraUid, socketId: this.socket.id });
-                                }
-                                if (this.localStream) {
-                                    await this.publishAgoraAudio();
-                                }
-                            }
-                        }
-                    } catch (e) {
-                        console.error('Host auto-promotion Agora error:', e);
-                        this.addChatMessage('System', 'Audio reconnection had an issue. Try unmuting or refreshing.', true);
+                if (!this.localStream) {
+                    try { await this.initializeMedia(); } catch(e) {
+                        console.warn('Mic access denied on host rejoin:', e.message);
                     }
-                    this.updateStageControls();
-                    const muteIcon = this.toggleAudioBtn?.querySelector('i');
-                    if (muteIcon) muteIcon.className = 'fas fa-microphone-slash';
-                })();
+                }
             }
 
             if (data.videoMode) {
@@ -2389,8 +2371,6 @@ class AudioRoomsManager {
                 }
             }
 
-            this.updateStageControls();
-
             for (const p of data.participants) {
                 if (p.socketId !== this.socket?.id) {
                     if (p.agoraUid) {
@@ -2404,6 +2384,26 @@ class AudioRoomsManager {
                     }
                 }
             }
+
+            try {
+                if (wasRedirected && this.agoraClient && this.agoraClient.connectionState !== 'DISCONNECTED') {
+                    await this._agoraLeaveGuarded();
+                }
+                await this._agoraJoinGuarded(confirmedRoom, { forceRole: this.isSpeaker ? 'host' : 'audience' });
+                console.log('Agora: joined after room-joined confirmation, room:', confirmedRoom);
+            } catch (e) {
+                console.error('Agora join after room-joined failed:', e);
+                this.addChatMessage('System', 'Audio connection failed. Try refreshing the page.', true);
+            }
+
+            this.updateStageControls();
+
+            if (this.isSpeaker && this.isAudioMuted) {
+                const muteIcon = this.toggleAudioBtn?.querySelector('i');
+                if (muteIcon) muteIcon.className = 'fas fa-microphone-slash';
+            }
+
+            this.showFirstVisitGuide();
         });
 
         sock.on('participant-joined', async (data) => {
@@ -2543,48 +2543,18 @@ class AudioRoomsManager {
                 }
             }
 
-            if (this.agoraClient && this.currentRoom) {
+            if (this.currentRoom) {
                 try {
-                    console.log('Promotion: rejoining Agora with publisher token...');
-                    const prevRemoteUsers = new Map(this.agoraRemoteUsers);
-
-                    if (this.agoraLocalAudioTrack) {
-                        try { this.agoraLocalAudioTrack.close(); } catch(e) {}
-                        this.agoraLocalAudioTrack = null;
-                    }
-                    await this.agoraClient.leave();
-                    console.log('Promotion: left Agora channel for rejoin');
-
-                    const resp = await fetch(apiUrl('/api/agora/token'), {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            channelName: this.currentRoom,
-                            uid: 0,
-                            role: 'publisher'
-                        })
+                    console.log('Promotion: rejoining Agora with publisher token via guard...');
+                    await this._agoraWithLock(async () => {
+                        if (this.agoraLocalAudioTrack) {
+                            try { this.agoraLocalAudioTrack.close(); } catch(e) {}
+                            this.agoraLocalAudioTrack = null;
+                        }
+                        await this.leaveAgoraChannel();
+                        await this.joinAgoraChannel(this.currentRoom, { forceRole: 'host' });
                     });
-                    const data = await resp.json();
-                    if (!data.token || !data.appId) {
-                        throw new Error('Failed to get publisher token for promotion');
-                    }
-
-                    await this.agoraClient.setClientRole('host');
-                    this.agoraUid = await this.agoraClient.join(data.appId, this.currentRoom, data.token, data.uid || null);
-                    console.log('Promotion: rejoined Agora as host, uid:', this.agoraUid, 'connectionState:', this.agoraClient.connectionState);
-
-                    if (this.socket) {
-                        this.socket.emit('agora-uid-map', {
-                            roomId: this.currentRoom,
-                            agoraUid: this.agoraUid,
-                            socketId: this.socket.id
-                        });
-                    }
-
-                    if (this.localStream) {
-                        await this.publishAgoraAudio();
-                    }
-                    console.log('Promotion: audio published, promoted to host/publisher role');
+                    console.log('Promotion: Agora rejoined as host via guard');
                 } catch (e) {
                     console.error('Agora promotion error:', e);
                     this.addChatMessage('System', 'Audio setup failed after promotion. Try refreshing.', true);
@@ -2626,10 +2596,12 @@ class AudioRoomsManager {
         if (this.agoraClient) {
             const agoraState = this.agoraClient.connectionState;
             if (agoraState === 'DISCONNECTED' || agoraState === 'DISCONNECTING') {
-                console.log('Agora disconnected, rejoining channel...');
+                console.log('Agora disconnected, rejoining channel via guard...');
                 try {
-                    await this.leaveAgoraChannel();
-                    await this.joinAgoraChannel(this.currentRoom);
+                    await this._agoraWithLock(async () => {
+                        await this.leaveAgoraChannel();
+                        await this.joinAgoraChannel(this.currentRoom);
+                    });
                 } catch (e) {
                     console.error('Failed to rejoin Agora channel:', e);
                 }
@@ -3250,7 +3222,7 @@ class AudioRoomsManager {
         this._stopSilentAudioKeepAlive();
         this.resetAudioFilter();
 
-        this.leaveAgoraChannel().catch(e => console.warn('Agora leave error:', e));
+        this._agoraLeaveGuarded().catch(e => console.warn('Agora leave error:', e));
         if (this._agoraUidMap) this._agoraUidMap.clear();
         const autoplayBanner = document.getElementById('agora-autoplay-banner');
         if (autoplayBanner) autoplayBanner.remove();
@@ -3306,6 +3278,7 @@ class AudioRoomsManager {
         this.isSpeaker = false;
         this.handRaised = false;
         this.chatVisible = true;
+        this._inviteHandled = false;
         
         this.audioRoom?.classList.add('hidden');
         document.body.classList.remove('in-room');
@@ -6732,53 +6705,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             console.log('Invite: setting pending room', roomToJoin, 'on manager');
-            mgr._pendingInviteRoom = roomToJoin;
             window.history.replaceState({}, '', '/verses.html');
 
-            if (mgr.lobbySocket && mgr.lobbySocket.connected && !mgr.currentRoom) {
-                mgr._pendingInviteRoom = null;
-                mgr._joiningFromInvite = true;
-                console.log('Invite: socket already connected, verifying room first');
-                (async () => {
-                    try {
-                        if (mgr.currentRoom) return;
-                        const res = await fetch(apiUrl(`/api/rooms/${encodeURIComponent(roomToJoin)}`));
-                        if (mgr.currentRoom) return;
-                        if (res.ok) {
-                            const roomData = await res.json();
-                            const actualId = roomData.id || roomToJoin;
-                            console.log('Invite room verified (immediate):', actualId, roomData.name);
-                            if (roomData.name) {
-                                const rn = document.getElementById('room-name');
-                                if (rn) rn.textContent = roomData.name;
-                            }
-                            await mgr.joinRoom(actualId);
-                        } else {
-                            const rooms = await mgr.fetchActiveRooms();
-                            if (mgr.currentRoom) return;
-                            const match = rooms && rooms.find(r =>
-                                r.id === roomToJoin ||
-                                (r.name && r.name.toLowerCase().trim() === roomToJoin.toLowerCase().trim())
-                            );
-                            if (match) {
-                                if (match.name) {
-                                    const rn = document.getElementById('room-name');
-                                    if (rn) rn.textContent = match.name;
-                                }
-                                await mgr.joinRoom(match.id);
-                            } else {
-                                cleanupSpinner();
-                                mgr._restoreLobbyUI();
-                                mgr.showToast?.('This room is no longer live. Check out other active rooms below.', 'fa-exclamation-circle');
-                            }
-                        }
-                    } catch (e) {
-                        console.error('Immediate invite verification failed:', e);
-                        if (!mgr.currentRoom) await mgr.joinRoom(roomToJoin).catch(() => {});
-                    } finally {
-                        mgr._joiningFromInvite = false;
-                    }
-                })();
+            if (mgr.lobbySocket && mgr.lobbySocket.connected && !mgr.currentRoom && !mgr._inviteHandled) {
+                mgr._handleInviteJoin(roomToJoin);
+            } else if (!mgr._inviteHandled) {
+                mgr._pendingInviteRoom = roomToJoin;
             }
         };
         waitForManager(0);
