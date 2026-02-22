@@ -94,7 +94,8 @@ class AudioRoomsManager {
 
         this._agoraJoinLock = null;
         this._serverReady = null;
-        this._inviteHandled = false;
+        this._invite = { status: 'idle', roomId: null, retries: 0, maxRetries: 3 };
+        this._initComplete = false;
         
         this.isRecording = false;
         this.mediaRecorder = null;
@@ -120,6 +121,92 @@ class AudioRoomsManager {
             this.loadReplays();
         } catch (e) {
             console.error('Initialization error:', e);
+        } finally {
+            this._initComplete = true;
+            if (this._invite.status === 'pending') {
+                this._processInvite();
+            }
+        }
+    }
+
+    queueInvite(roomId) {
+        if (!roomId) return;
+        if (this.currentRoom) {
+            console.log('Invite: already in a room, ignoring invite for', roomId);
+            return;
+        }
+        if (this._invite.status === 'joining' || this._invite.status === 'pending') {
+            console.log('Invite: already processing', this._invite.roomId, '- ignoring new invite for', roomId);
+            return;
+        }
+        console.log('Invite: queued room', roomId);
+        this._invite = { status: 'pending', roomId, retries: 0, maxRetries: 3 };
+        if (this._initComplete && this.lobbySocket?.connected) {
+            this._processInvite();
+        }
+    }
+
+    async _processInvite() {
+        const inv = this._invite;
+        if (inv.status !== 'pending' || !inv.roomId) return;
+        if (this.currentRoom) { inv.status = 'idle'; return; }
+        inv.status = 'joining';
+        console.log('Invite: processing room', inv.roomId, 'attempt', inv.retries + 1);
+
+        const lobby = document.getElementById('room-selection') || document.querySelector('.room-selection');
+        if (lobby && !document.getElementById('invite-joining-msg')) {
+            const joiningMsg = document.createElement('div');
+            joiningMsg.id = 'invite-joining-msg';
+            joiningMsg.style.cssText = 'text-align:center;padding:40px 20px;color:var(--text-secondary,#ccc);font-size:16px;';
+            joiningMsg.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:10px;"></i>Connecting to room...';
+            lobby.parentNode?.insertBefore(joiningMsg, lobby.nextSibling);
+            lobby.style.display = 'none';
+        }
+
+        try {
+            let resolvedId = inv.roomId;
+            try {
+                const res = await fetch(apiUrl(`/api/rooms/${encodeURIComponent(inv.roomId)}`));
+                if (res.ok) {
+                    const roomData = await res.json();
+                    resolvedId = roomData.id || inv.roomId;
+                    console.log('Invite: room verified via API as', resolvedId);
+                    const roomNameEl = document.getElementById('room-name');
+                    if (roomNameEl && roomData.name) roomNameEl.textContent = roomData.name;
+                } else {
+                    console.log('Invite: API 404 for', inv.roomId, '- will attempt direct join and let server resolve');
+                }
+            } catch (fetchErr) {
+                console.warn('Invite: room API fetch failed, proceeding with direct join:', fetchErr.message);
+            }
+
+            if (this.currentRoom) { inv.status = 'idle'; return; }
+            await this.joinRoom(resolvedId, false, true);
+        } catch (e) {
+            console.error('Invite: join failed:', e);
+            this._failInvite('Could not connect to the room. Please try joining from the list.');
+        }
+    }
+
+    _failInvite(message) {
+        const inv = this._invite;
+        inv.retries++;
+        if (this.currentRoom && !this._joinConfirmed) {
+            this.currentRoom = null;
+            this._pendingJoinRoom = null;
+        }
+        if (inv.retries < inv.maxRetries) {
+            console.log('Invite: retrying in 2s, attempt', inv.retries + 1);
+            inv.status = 'pending';
+            this._restoreLobbyUI();
+            setTimeout(() => this._processInvite(), 2000);
+        } else {
+            console.warn('Invite: giving up after', inv.retries, 'attempts');
+            inv.status = 'failed';
+            inv.roomId = null;
+            inv.retries = 0;
+            this._restoreLobbyUI();
+            this.showToast?.(message || 'Could not connect to the room.', 'fa-exclamation-circle');
         }
     }
     
@@ -421,7 +508,7 @@ class AudioRoomsManager {
         });
 
         document.addEventListener('click', (e) => {
-            if (this._joiningFromInvite) return;
+            if (this._invite.status === 'joining') return;
 
             const joinBtn = e.target.closest('.join-room-btn');
             if (joinBtn) {
@@ -493,8 +580,8 @@ class AudioRoomsManager {
 
                 resolve();
 
-                if (this._pendingInviteRoom && !this.currentRoom && !this._inviteHandled) {
-                    this._handleInviteJoin(this._pendingInviteRoom);
+                if (this._invite.status === 'pending' && this._initComplete && !this.currentRoom) {
+                    this._processInvite();
                 }
             });
 
@@ -513,59 +600,7 @@ class AudioRoomsManager {
         });
     }
 
-    async _handleInviteJoin(requestedRoom) {
-        if (this._inviteHandled || this.currentRoom) return;
-        this._inviteHandled = true;
-        this._pendingInviteRoom = null;
-        this._joiningFromInvite = true;
-        console.log('Handling invite join for room:', requestedRoom);
-
-        try {
-            if (this.currentRoom) return;
-            const res = await fetch(apiUrl(`/api/rooms/${encodeURIComponent(requestedRoom)}`));
-            if (this.currentRoom) return;
-            if (res.ok) {
-                const roomData = await res.json();
-                const actualRoomId = roomData.id || requestedRoom;
-                console.log('Invite room verified:', actualRoomId, roomData.name);
-                if (roomData.name) {
-                    const roomNameEl = document.getElementById('room-name');
-                    if (roomNameEl) roomNameEl.textContent = roomData.name;
-                }
-                await this.joinRoom(actualRoomId);
-            } else {
-                console.warn('Invite room not found via API, checking active rooms');
-                const rooms = await this.fetchActiveRooms();
-                if (this.currentRoom) return;
-                if (rooms && rooms.length > 0) {
-                    const match = rooms.find(r =>
-                        r.id === requestedRoom ||
-                        (r.name && r.name.toLowerCase().trim() === requestedRoom.toLowerCase().trim())
-                    );
-                    if (match) {
-                        console.log('Found matching room by name:', match.id, match.name);
-                        if (match.name) {
-                            const roomNameEl = document.getElementById('room-name');
-                            if (roomNameEl) roomNameEl.textContent = match.name;
-                        }
-                        await this.joinRoom(match.id);
-                    } else {
-                        console.warn('No matching room found, showing room list');
-                        this._restoreLobbyUI();
-                        this.showToast?.('This room is no longer live. Check out other active rooms below.', 'fa-exclamation-circle');
-                    }
-                } else {
-                    this._restoreLobbyUI();
-                    this.showToast?.('No rooms are currently live. Create one to get started!', 'fa-info-circle');
-                }
-            }
-        } catch (e) {
-            console.error('Invite room verification failed:', e);
-            if (!this.currentRoom) await this.joinRoom(requestedRoom).catch(() => {});
-        } finally {
-            this._joiningFromInvite = false;
-        }
-    }
+    
 
     async loadActiveRooms() {
         try {
@@ -1728,7 +1763,9 @@ class AudioRoomsManager {
         if (mainContainer) mainContainer.style.overflow = '';
         this.currentRoom = null;
         this._pendingJoinRoom = null;
-        this._joiningFromInvite = false;
+        if (this._invite.status !== 'pending') {
+            this._invite = { status: 'idle', roomId: null, retries: 0, maxRetries: 3 };
+        }
         localStorage.removeItem('wordeth_pending_room');
         if (window.location.search.includes('room=')) {
             window.history.replaceState({}, '', '/verses.html');
@@ -1737,7 +1774,7 @@ class AudioRoomsManager {
         setTimeout(() => this.loadActiveRooms(), 2000);
     }
 
-    async joinRoom(roomId, isHost = false) {
+    async joinRoom(roomId, isHost = false, isInvite = false) {
         if (!roomId) {
             console.warn('joinRoom called with empty roomId');
             return;
@@ -1745,6 +1782,7 @@ class AudioRoomsManager {
         try {
             const roomData = await this.checkRoomLockStatus(roomId);
             if (roomData && roomData.isLocked) {
+                if (isInvite) throw new Error('Room is locked');
                 alert('This room is currently locked. The host has prevented new participants from joining.');
                 return;
             }
@@ -1834,10 +1872,14 @@ class AudioRoomsManager {
             setTimeout(() => {
                 if (this._pendingJoinRoom === roomId && !this._joinConfirmed) {
                     console.warn('Join timeout: no room-joined or room-error received for', roomId);
-                    this._restoreLobbyUI();
-                    this.showToast?.('Could not join the room. It may no longer be active.', 'fa-exclamation-circle');
+                    if (isInvite) {
+                        this._failInvite('Could not join the room. It may no longer be active.');
+                    } else {
+                        this._restoreLobbyUI();
+                        this.showToast?.('Could not join the room. It may no longer be active.', 'fa-exclamation-circle');
+                    }
                 }
-            }, 10000);
+            }, 12000);
             
             if (isHost) {
                 this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
@@ -1860,6 +1902,9 @@ class AudioRoomsManager {
             
         } catch (error) {
             console.error('Error joining room:', error);
+            if (isInvite) {
+                throw error;
+            }
             this._restoreLobbyUI();
             this.showToast?.('Failed to join room. Please try again.', 'fa-exclamation-circle');
         }
@@ -2315,49 +2360,24 @@ class AudioRoomsManager {
 
         sock.on('room-error', async (data) => {
             console.warn('Room error:', data.message);
-
-            if (this._pendingJoinRoom && !this._roomErrorRetried) {
-                this._roomErrorRetried = true;
-                console.log('Room error: attempting fallback room search for', this._pendingJoinRoom);
-                try {
-                    const rooms = await this.fetchActiveRooms();
-                    const pendingId = this._pendingJoinRoom;
-                    const match = rooms.find(r =>
-                        r.id === pendingId ||
-                        (r.name && pendingId && r.name.toLowerCase().trim() === pendingId.toLowerCase().trim())
-                    );
-                    if (match && match.id !== pendingId) {
-                        console.log('Room error fallback: found matching room', match.id, match.name);
-                        this.currentRoom = null;
-                        this._pendingJoinRoom = null;
-                        this._joinConfirmed = false;
-                        this._roomErrorRetried = false;
-                        this.socket.emit('join-room', {
-                            roomId: match.id,
-                            userId: this.socket.userId || JSON.parse(localStorage.getItem('user') || '{}')._id || this.socket.id,
-                            userName: this.socket.userName || JSON.parse(localStorage.getItem('user') || '{}').name || 'Anonymous',
-                            isHost: false,
-                            avatar: this.socket.avatar || JSON.parse(localStorage.getItem('user') || '{}').avatar || null
-                        });
-                        this.currentRoom = match.id;
-                        this._pendingJoinRoom = match.id;
-                        return;
-                    }
-                } catch (e) {
-                    console.warn('Room error fallback search failed:', e);
-                }
-                this._roomErrorRetried = false;
-            }
-
-            this.showToast?.(data.message || 'Could not join the room.', 'fa-exclamation-circle');
             this._joinConfirmed = true;
-            this._restoreLobbyUI();
+
+            if (this._invite.status === 'joining') {
+                this._failInvite(data.message || 'This room is no longer live.');
+            } else {
+                this.showToast?.(data.message || 'Could not join the room.', 'fa-exclamation-circle');
+                this._restoreLobbyUI();
+            }
         });
 
         sock.on('room-joined', async (data) => {
             console.log('Room joined via signaling:', data);
             this._joinConfirmed = true;
             this._pendingJoinRoom = null;
+            if (this._invite.status === 'joining') {
+                this._invite.status = 'joined';
+                console.log('Invite: successfully joined room');
+            }
 
             const confirmedRoom = data.roomId || this.currentRoom;
             const wasRedirected = data.roomId && data.roomId !== this.currentRoom;
@@ -3325,7 +3345,7 @@ class AudioRoomsManager {
         this.isSpeaker = false;
         this.handRaised = false;
         this.chatVisible = true;
-        this._inviteHandled = false;
+        this._invite = { status: 'idle', roomId: null, retries: 0, maxRetries: 3 };
         
         this.audioRoom?.classList.add('hidden');
         document.body.classList.remove('in-room');
@@ -6668,7 +6688,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.audioRoomsManager = audioRoomsManager;
 });
 
-// Handle page parameters (if joining via direct link)
+// Handle page parameters (if joining via direct link or pending invite)
 (function() {
     const urlParams = new URLSearchParams(window.location.search);
     let roomToJoin = urlParams.get('room');
@@ -6708,57 +6728,19 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const lobby = document.getElementById('room-selection') || document.querySelector('.room-selection');
-        if (lobby) {
-            const joiningMsg = document.createElement('div');
-            joiningMsg.id = 'invite-joining-msg';
-            joiningMsg.style.cssText = 'text-align:center;padding:40px 20px;color:var(--text-secondary,#ccc);font-size:16px;';
-            joiningMsg.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:10px;"></i>Connecting to room...';
-            lobby.parentNode?.insertBefore(joiningMsg, lobby.nextSibling);
-            lobby.style.display = 'none';
-        }
-
-        const cleanupSpinner = () => {
-            const joiningEl = document.getElementById('invite-joining-msg');
-            if (joiningEl) joiningEl.remove();
-            if (lobby) lobby.style.display = '';
-            const roomSel = document.getElementById('room-selection');
-            if (roomSel) roomSel.style.display = '';
-            window.history.replaceState({}, '', '/verses.html');
-        };
-
-        setTimeout(() => {
-            const mgr = window.audioRoomsManager;
-            if (!mgr || !mgr.currentRoom) {
-                console.warn('Invite: safety timeout, restoring lobby');
-                cleanupSpinner();
-                if (mgr) {
-                    mgr._pendingInviteRoom = null;
-                    mgr._joiningFromInvite = false;
-                    mgr.loadActiveRooms();
-                    mgr.showToast?.('Could not connect to the room. Please try joining from the list.', 'fa-exclamation-circle');
-                }
-            }
-        }, 15000);
+        window.history.replaceState({}, '', '/verses.html');
 
         const waitForManager = (attempt = 0) => {
             const mgr = window.audioRoomsManager;
             if (!mgr) {
-                if (attempt < 30) {
-                    setTimeout(() => waitForManager(attempt + 1), 200);
+                if (attempt < 50) {
+                    setTimeout(() => waitForManager(attempt + 1), 100);
                 } else {
-                    cleanupSpinner();
+                    console.error('Invite: manager never initialized');
                 }
                 return;
             }
-            console.log('Invite: setting pending room', roomToJoin, 'on manager');
-            window.history.replaceState({}, '', '/verses.html');
-
-            if (mgr.lobbySocket && mgr.lobbySocket.connected && !mgr.currentRoom && !mgr._inviteHandled) {
-                mgr._handleInviteJoin(roomToJoin);
-            } else if (!mgr._inviteHandled) {
-                mgr._pendingInviteRoom = roomToJoin;
-            }
+            mgr.queueInvite(roomToJoin);
         };
         waitForManager(0);
     });
