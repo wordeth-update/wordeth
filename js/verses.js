@@ -1393,6 +1393,15 @@ class AudioRoomsManager {
         overlay.className = 'mobile-walkthrough-overlay';
         document.body.appendChild(overlay);
 
+        const dismiss = () => {
+            overlay.remove();
+            if (highlight) highlight.remove();
+            if (tooltip) tooltip.remove();
+            localStorage.setItem(storageKey, '1');
+        };
+
+        overlay.addEventListener('click', dismiss);
+
         const showStep = (idx) => {
             if (highlight) highlight.remove();
             if (tooltip) tooltip.remove();
@@ -1457,12 +1466,7 @@ class AudioRoomsManager {
 
             document.body.appendChild(tooltip);
 
-            tooltip.querySelector('.walk-tip-skip').onclick = () => {
-                overlay.remove();
-                if (highlight) highlight.remove();
-                tooltip.remove();
-                localStorage.setItem(storageKey, '1');
-            };
+            tooltip.querySelector('.walk-tip-skip').onclick = dismiss;
             tooltip.querySelector('.walk-btn-next').onclick = () => {
                 currentStep++;
                 showStep(currentStep);
