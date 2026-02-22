@@ -1376,6 +1376,21 @@ class AudioRoomsManager {
         };
     }
 
+    _restoreLobbyUI() {
+        const inviteSpinner = document.getElementById('invite-joining-msg');
+        if (inviteSpinner) inviteSpinner.remove();
+        if (this.roomSelection) this.roomSelection.style.display = '';
+        this.audioRoom?.classList.add('hidden');
+        document.body.classList.remove('in-room');
+        const pageFooter = document.querySelector('footer');
+        if (pageFooter) pageFooter.style.display = '';
+        const mainContainer = document.querySelector('.audio-rooms-container');
+        if (mainContainer) mainContainer.style.overflow = '';
+        this.currentRoom = null;
+        this._pendingJoinRoom = null;
+        this.loadActiveRooms();
+    }
+
     async joinRoom(roomId, isHost = false) {
         if (!roomId) {
             console.warn('joinRoom called with empty roomId');
@@ -1435,8 +1450,10 @@ class AudioRoomsManager {
             if (mainContainer) mainContainer.style.overflow = 'hidden';
             try { screen.orientation?.lock?.('portrait').catch(() => {}); } catch(e) {}
             
+            this._pendingJoinRoom = roomId;
             this.currentRoom = roomId;
             this.roomJoinTime = Date.now();
+            this._joinConfirmed = false;
 
             const user = JSON.parse(localStorage.getItem('user') || '{}');
             const userName = user.name || user.username || 'Anonymous';
@@ -1465,6 +1482,14 @@ class AudioRoomsManager {
                 roomName: currentRoomName || null,
                 avatar: user.avatar || null
             });
+
+            setTimeout(() => {
+                if (this._pendingJoinRoom === roomId && !this._joinConfirmed) {
+                    console.warn('Join timeout: no room-joined or room-error received for', roomId);
+                    this._restoreLobbyUI();
+                    this.showToast?.('Could not join the room. It may no longer be active.', 'fa-exclamation-circle');
+                }
+            }, 10000);
             
             if (isHost) {
                 this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
@@ -1495,7 +1520,8 @@ class AudioRoomsManager {
             
         } catch (error) {
             console.error('Error joining room:', error);
-            alert('Failed to join room. Please try again.');
+            this._restoreLobbyUI();
+            this.showToast?.('Failed to join room. Please try again.', 'fa-exclamation-circle');
         }
     }
     
@@ -1913,17 +1939,14 @@ class AudioRoomsManager {
         sock.on('room-error', (data) => {
             console.warn('Room error:', data.message);
             this.showToast?.(data.message || 'Could not join the room.', 'fa-exclamation-circle');
-            const inviteSpinner = document.getElementById('invite-joining-msg');
-            if (inviteSpinner) inviteSpinner.remove();
-            if (this.roomSelection) this.roomSelection.style.display = '';
-            this.audioRoom?.classList.add('hidden');
-            document.body.classList.remove('in-room');
-            this.currentRoom = null;
-            this.loadActiveRooms();
+            this._joinConfirmed = true;
+            this._restoreLobbyUI();
         });
 
         sock.on('room-joined', async (data) => {
             console.log('Room joined via signaling:', data);
+            this._joinConfirmed = true;
+            this._pendingJoinRoom = null;
             this.showFirstVisitGuide();
 
             if (data.isHost && !this.isRoomHost) {
@@ -6289,15 +6312,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 await mgr.joinRoom(roomToJoin);
-
-                setTimeout(() => {
-                    if (!mgr.currentRoom) {
-                        console.warn('Invite join: room join may have failed, cleaning up');
-                        cleanupInviteSpinner();
-                        mgr.loadActiveRooms();
-                        mgr.showToast?.('Could not join the room. It may no longer be active.', 'fa-exclamation-circle');
-                    }
-                }, 8000);
             } catch(e) {
                 console.error('Error joining room from link:', e);
                 cleanupInviteSpinner();
