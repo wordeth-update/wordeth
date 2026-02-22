@@ -1566,9 +1566,10 @@ class AudioRoomsManager {
             this._requestWakeLock();
             this._startSilentAudioKeepAlive();
 
+            const agoraRoomId = this.currentRoom || roomId;
             try {
-                await this.joinAgoraChannel(roomId);
-                console.log('Agora: successfully joined, connectionState:', this.agoraClient?.connectionState);
+                await this.joinAgoraChannel(agoraRoomId);
+                console.log('Agora: successfully joined channel', agoraRoomId, 'connectionState:', this.agoraClient?.connectionState);
             } catch (e) {
                 console.error('Agora join failed:', e);
                 this.addChatMessage('System', 'Audio connection failed. Try refreshing the page.', true);
@@ -1580,7 +1581,7 @@ class AudioRoomsManager {
                 body: JSON.stringify({
                     eventType: 'verse_join',
                     segment: 'community',
-                    metadata: { roomId, page: 'verses' }
+                    metadata: { roomId: this.currentRoom || roomId, page: 'verses' }
                 })
             }).catch(() => {});
             
@@ -2002,8 +2003,42 @@ class AudioRoomsManager {
         this._roomHandlersRegistered = true;
         const sock = this.socket;
 
-        sock.on('room-error', (data) => {
+        sock.on('room-error', async (data) => {
             console.warn('Room error:', data.message);
+
+            if (this._pendingJoinRoom && !this._roomErrorRetried) {
+                this._roomErrorRetried = true;
+                console.log('Room error: attempting fallback room search for', this._pendingJoinRoom);
+                try {
+                    const rooms = await this.fetchActiveRooms();
+                    const pendingId = this._pendingJoinRoom;
+                    const match = rooms.find(r =>
+                        r.id === pendingId ||
+                        (r.name && pendingId && r.name.toLowerCase().trim() === pendingId.toLowerCase().trim())
+                    );
+                    if (match && match.id !== pendingId) {
+                        console.log('Room error fallback: found matching room', match.id, match.name);
+                        this.currentRoom = null;
+                        this._pendingJoinRoom = null;
+                        this._joinConfirmed = false;
+                        this._roomErrorRetried = false;
+                        this.socket.emit('join-room', {
+                            roomId: match.id,
+                            userId: this.socket.userId || JSON.parse(localStorage.getItem('user') || '{}')._id || this.socket.id,
+                            userName: this.socket.userName || JSON.parse(localStorage.getItem('user') || '{}').name || 'Anonymous',
+                            isHost: false,
+                            avatar: this.socket.avatar || JSON.parse(localStorage.getItem('user') || '{}').avatar || null
+                        });
+                        this.currentRoom = match.id;
+                        this._pendingJoinRoom = match.id;
+                        return;
+                    }
+                } catch (e) {
+                    console.warn('Room error fallback search failed:', e);
+                }
+                this._roomErrorRetried = false;
+            }
+
             this.showToast?.(data.message || 'Could not join the room.', 'fa-exclamation-circle');
             this._joinConfirmed = true;
             this._restoreLobbyUI();
@@ -2012,7 +2047,31 @@ class AudioRoomsManager {
         sock.on('room-joined', async (data) => {
             console.log('Room joined via signaling:', data);
             this._joinConfirmed = true;
+            const previousRoom = this._pendingJoinRoom;
             this._pendingJoinRoom = null;
+
+            if (data.roomId && data.roomId !== this.currentRoom) {
+                console.log('Server redirected to room:', data.roomId, '(was:', this.currentRoom, ')');
+                const oldRoom = this.currentRoom;
+                this.currentRoom = data.roomId;
+
+                if (this.agoraClient && this.agoraClient.connectionState !== 'DISCONNECTED') {
+                    try {
+                        console.log('Agora: leaving old channel', oldRoom, 'for redirect');
+                        await this.agoraClient.leave();
+                    } catch (e) {
+                        console.warn('Agora: error leaving old channel:', e.message);
+                    }
+                }
+                try {
+                    console.log('Agora: joining redirected channel', data.roomId);
+                    await this.joinAgoraChannel(data.roomId);
+                } catch (e) {
+                    console.error('Agora: failed to join redirected channel:', e);
+                    this.addChatMessage('System', 'Audio connection failed. Try refreshing the page.', true);
+                }
+            }
+
             this.showFirstVisitGuide();
 
             if (data.isHost && !this.isRoomHost) {

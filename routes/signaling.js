@@ -90,30 +90,48 @@ function setupSignaling(io) {
 
             if (!rooms.has(roomId)) {
                 if (!isHost) {
-                    socket.emit('room-error', { message: 'This room is no longer live.' });
-                    socket.leave(roomId);
-                    socket.roomId = null;
-                    return;
+                    let matchedRoom = null;
+                    for (const [rid, r] of rooms.entries()) {
+                        if (rid === roomId) continue;
+                        if (r.name && roomId && r.name.toLowerCase().trim() === roomId.toLowerCase().trim()) {
+                            matchedRoom = { id: rid, room: r };
+                            break;
+                        }
+                    }
+
+                    if (matchedRoom) {
+                        console.log(`[Join] Room ID "${roomId}" not found, but matched room by name: "${matchedRoom.id}"`);
+                        socket.leave(roomId);
+                        roomId = matchedRoom.id;
+                        socket.join(roomId);
+                        socket.roomId = roomId;
+                    } else {
+                        socket.emit('room-error', { message: 'This room is no longer live.' });
+                        socket.leave(roomId);
+                        socket.roomId = null;
+                        return;
+                    }
+                } else {
+                    if (!roomName) {
+                        socket.emit('room-error', { message: 'This room has expired. Please create a new one.' });
+                        socket.leave(roomId);
+                        socket.roomId = null;
+                        return;
+                    }
+                    rooms.set(roomId, {
+                        id: roomId,
+                        name: roomName,
+                        hostId: socket.id,
+                        creatorUserId: socket.userId,
+                        participants: new Map(),
+                        karaokeEnabled: false,
+                        videoMode: 'off',
+                        activeVideos: new Set(),
+                        isLocked: false,
+                        stageAccess: 'invite-only',
+                        createdAt: Date.now()
+                    });
                 }
-                if (!roomName) {
-                    socket.emit('room-error', { message: 'This room has expired. Please create a new one.' });
-                    socket.leave(roomId);
-                    socket.roomId = null;
-                    return;
-                }
-                rooms.set(roomId, {
-                    id: roomId,
-                    name: roomName,
-                    hostId: socket.id,
-                    creatorUserId: socket.userId,
-                    participants: new Map(),
-                    karaokeEnabled: false,
-                    videoMode: 'off',
-                    activeVideos: new Set(),
-                    isLocked: false,
-                    stageAccess: 'invite-only',
-                    createdAt: Date.now()
-                });
             }
 
             const room = rooms.get(roomId);
