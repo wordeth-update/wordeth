@@ -1179,6 +1179,33 @@ class AudioRoomsManager {
                 localStorage.setItem(key, '1');
             }
         });
+        const fullGuideLink = document.getElementById('welcome-guide-full-link');
+        if (fullGuideLink) {
+            fullGuideLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                overlay.classList.remove('active');
+                localStorage.setItem(key, '1');
+                const guideFrame = document.createElement('div');
+                guideFrame.id = 'inline-guide-overlay';
+                guideFrame.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.85);display:flex;flex-direction:column;align-items:center;padding:20px;';
+                const closeBar = document.createElement('div');
+                closeBar.style.cssText = 'width:100%;max-width:700px;display:flex;justify-content:flex-end;margin-bottom:10px;';
+                const closeGuideBtn = document.createElement('button');
+                closeGuideBtn.innerHTML = '<i class="fas fa-times"></i> Close Guide';
+                closeGuideBtn.style.cssText = 'background:var(--purple,#7c3aed);color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;';
+                closeGuideBtn.onclick = () => guideFrame.remove();
+                closeBar.appendChild(closeGuideBtn);
+                const iframe = document.createElement('iframe');
+                iframe.src = '/verses-guide.html';
+                iframe.style.cssText = 'width:100%;max-width:700px;flex:1;border:none;border-radius:12px;background:var(--bg-primary,#0a0a0a);';
+                guideFrame.appendChild(closeBar);
+                guideFrame.appendChild(iframe);
+                document.body.appendChild(guideFrame);
+                guideFrame.addEventListener('click', (ev) => {
+                    if (ev.target === guideFrame) guideFrame.remove();
+                });
+            });
+        }
     }
 
     toggleHandRaise() {
