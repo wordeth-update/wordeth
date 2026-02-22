@@ -1711,7 +1711,14 @@ class AudioRoomsManager {
             }
         } catch (error) {
             console.error('Agora join failed:', error);
-            this.addChatMessage('System', 'Audio connection issue - audio may not work. Try refreshing the page.', true);
+            const msg = error.message || '';
+            if (msg.includes('not configured') || msg.includes('credentials')) {
+                this.addChatMessage('System', 'Audio service is temporarily unavailable. The room host has been notified.', true);
+            } else if (msg.includes('Token') || msg.includes('token')) {
+                this.addChatMessage('System', 'Audio authentication failed. Please try refreshing the page.', true);
+            } else {
+                this.addChatMessage('System', 'Audio connection issue - try refreshing the page.', true);
+            }
             throw error;
         }
     }
@@ -2891,7 +2898,34 @@ class AudioRoomsManager {
 
     _playJoinSound() {
         try {
-            if (navigator.vibrate) navigator.vibrate(50);
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const now = ctx.currentTime;
+
+            const noise = ctx.createBufferSource();
+            const buf = ctx.createBuffer(1, ctx.sampleRate * 0.06, ctx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < data.length; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (data.length * 0.15));
+            }
+            noise.buffer = buf;
+
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 600;
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(ctx.destination);
+            noise.start(now);
+            noise.stop(now + 0.08);
+            noise.onended = () => ctx.close().catch(() => {});
+        } catch (e) {}
+        try {
+            if (navigator.vibrate) navigator.vibrate(40);
         } catch (e) {}
     }
 

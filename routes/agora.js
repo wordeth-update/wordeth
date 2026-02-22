@@ -33,7 +33,12 @@ router.post('/token', (req, res) => {
       PRIVILEGE_EXPIRY_SECONDS
     );
 
-    console.log(`Agora token generated: channel=${channelName}, uid=${agoraUid}, role=${role}, expiresIn=${TOKEN_EXPIRY_SECONDS}s`);
+    if (!token) {
+      console.error('Agora token build returned empty - check APP_ID/APP_CERTIFICATE format (must be 32-char hex)');
+      return res.status(500).json({ error: 'Token generation returned empty' });
+    }
+
+    console.log(`Agora token generated: channel=${channelName}, uid=${agoraUid}, role=${role}, len=${token.length}, expiresIn=${TOKEN_EXPIRY_SECONDS}s`);
 
     return res.json({
       token,
