@@ -1548,12 +1548,12 @@ class AudioRoomsManager {
         };
 
         this.agoraClient.on('user-published', async (user, mediaType) => {
-            console.log('Agora: user-published event - uid:', user.uid, 'mediaType:', mediaType);
+            console.log('Agora: user-published event - uid:', user.uid, 'mediaType:', mediaType, 'connectionState:', this.agoraClient.connectionState, 'localRole:', this.agoraClient.role);
             try {
                 await this.agoraClient.subscribe(user, mediaType);
-                console.log('Agora: subscribed to', user.uid, mediaType);
+                console.log('Agora: subscribed to', user.uid, mediaType, 'successfully');
             } catch (subErr) {
-                console.error('Agora: subscribe failed for', user.uid, mediaType, subErr);
+                console.error('Agora: subscribe failed for', user.uid, mediaType, subErr.message || subErr);
                 return;
             }
             if (mediaType === 'audio') {
@@ -1561,13 +1561,24 @@ class AudioRoomsManager {
                 if (remoteTrack) {
                     try {
                         remoteTrack.play();
-                        console.log('Agora: playing remote audio from uid', user.uid);
+                        console.log('Agora: playing remote audio from uid', user.uid, 'volume:', remoteTrack.getVolumeLevel?.() ?? 'N/A');
                     } catch (e) {
-                        console.warn('Agora: audio play failed, user may need to tap:', e.message);
+                        console.warn('Agora: audio autoplay blocked for uid', user.uid, '- user interaction needed:', e.message);
+                        this._showAutoplayBanner?.();
                     }
                     this.agoraRemoteUsers.set(String(user.uid), user);
                 } else {
                     console.warn('Agora: subscribed to audio but audioTrack is null for uid', user.uid);
+                    try {
+                        await this.agoraClient.subscribe(user, 'audio');
+                        if (user.audioTrack) {
+                            user.audioTrack.play();
+                            this.agoraRemoteUsers.set(String(user.uid), user);
+                            console.log('Agora: retry subscribe succeeded for uid', user.uid);
+                        }
+                    } catch (retryErr) {
+                        console.error('Agora: retry subscribe also failed for uid', user.uid);
+                    }
                 }
             } else if (mediaType === 'video') {
                 const remoteTrack = user.videoTrack;
@@ -1618,7 +1629,11 @@ class AudioRoomsManager {
 
             const agoraRole = this.isSpeaker ? 'host' : 'audience';
             console.log('Agora: setting client role to', agoraRole, 'isSpeaker:', this.isSpeaker);
-            await this.agoraClient.setClientRole(agoraRole);
+            if (agoraRole === 'audience') {
+                await this.agoraClient.setClientRole('audience', { level: 1 });
+            } else {
+                await this.agoraClient.setClientRole('host');
+            }
 
             console.log('Agora: requesting token for channel', roomId);
             const resp = await fetch(apiUrl('/api/agora/token'), {
@@ -1645,6 +1660,8 @@ class AudioRoomsManager {
             this.agoraAppId = data.appId;
             this.agoraUid = await this.agoraClient.join(data.appId, roomId, data.token, data.uid || null);
             console.log('Agora: joined channel', roomId, 'as uid', this.agoraUid, 'role:', agoraRole, 'connectionState:', this.agoraClient.connectionState);
+            const remoteUsersOnJoin = this.agoraClient.remoteUsers;
+            console.log('Agora: remote users already in channel:', remoteUsersOnJoin.length, remoteUsersOnJoin.map(u => ({ uid: u.uid, hasAudio: u.hasAudio, hasVideo: u.hasVideo })));
 
             if (this.socket) {
                 this.socket.emit('agora-uid-map', {
@@ -1671,6 +1688,25 @@ class AudioRoomsManager {
                 }
             } else {
                 console.log('Agora: joined as audience (listener), will subscribe to remote tracks');
+                setTimeout(() => {
+                    const remoteUsers = this.agoraClient?.remoteUsers || [];
+                    console.log('Agora: post-join check - remote users:', remoteUsers.length);
+                    remoteUsers.forEach(async (user) => {
+                        if (user.hasAudio && !this.agoraRemoteUsers.has(String(user.uid))) {
+                            console.log('Agora: found unsubscribed remote audio from uid', user.uid, '- subscribing now');
+                            try {
+                                await this.agoraClient.subscribe(user, 'audio');
+                                if (user.audioTrack) {
+                                    user.audioTrack.play();
+                                    this.agoraRemoteUsers.set(String(user.uid), user);
+                                    console.log('Agora: fallback subscribe+play succeeded for uid', user.uid);
+                                }
+                            } catch (e) {
+                                console.warn('Agora: fallback subscribe failed for uid', user.uid, e.message);
+                            }
+                        }
+                    });
+                }, 2000);
             }
         } catch (error) {
             console.error('Agora join failed:', error);

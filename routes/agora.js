@@ -19,8 +19,7 @@ router.post('/token', (req, res) => {
 
     const agoraRole = role === 'audience' ? RtcRole.SUBSCRIBER : RtcRole.PUBLISHER;
     const agoraUid = parseInt(uid) || 0;
-    const tokenExpireSeconds = 3600;
-    const privilegeExpireSeconds = 3600;
+    const privilegeExpiredTs = Math.floor(Date.now() / 1000) + 3600;
 
     const token = RtcTokenBuilder.buildTokenWithUid(
       APP_ID,
@@ -28,11 +27,10 @@ router.post('/token', (req, res) => {
       channelName,
       agoraUid,
       agoraRole,
-      tokenExpireSeconds,
-      privilegeExpireSeconds
+      privilegeExpiredTs
     );
 
-    console.log(`Agora token generated: channel=${channelName}, uid=${agoraUid}, role=${role}`);
+    console.log(`Agora token generated: channel=${channelName}, uid=${agoraUid}, role=${role}, expires=${new Date(privilegeExpiredTs * 1000).toISOString()}`);
 
     return res.json({
       token,
@@ -57,14 +55,14 @@ router.get('/test', (req, res) => {
       });
     }
 
+    const privilegeExpiredTs = Math.floor(Date.now() / 1000) + 3600;
     const testToken = RtcTokenBuilder.buildTokenWithUid(
       APP_ID,
       APP_CERTIFICATE,
       'test-channel',
       0,
       RtcRole.PUBLISHER,
-      3600,
-      3600
+      privilegeExpiredTs
     );
 
     return res.json({
@@ -73,7 +71,9 @@ router.get('/test', (req, res) => {
       appIdPresent: true,
       certificatePresent: true,
       tokenGenerated: !!testToken,
-      tokenPrefix: testToken.substring(0, 10) + '...'
+      tokenPrefix: testToken.substring(0, 10) + '...',
+      tokenFormat: '006',
+      expiresAt: new Date(privilegeExpiredTs * 1000).toISOString()
     });
   } catch (error) {
     return res.json({
