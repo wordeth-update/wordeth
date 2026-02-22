@@ -5,6 +5,9 @@ const { RtcTokenBuilder, RtcRole } = require('agora-token');
 const APP_ID = process.env.AGORA_APP_ID;
 const APP_CERTIFICATE = process.env.AGORA_APP_CERTIFICATE;
 
+const TOKEN_EXPIRY_SECONDS = 86400;
+const PRIVILEGE_EXPIRY_SECONDS = 86400;
+
 router.post('/token', (req, res) => {
   try {
     const { channelName, uid, role } = req.body;
@@ -26,10 +29,11 @@ router.post('/token', (req, res) => {
       channelName,
       agoraUid,
       agoraRole,
-      0
+      TOKEN_EXPIRY_SECONDS,
+      PRIVILEGE_EXPIRY_SECONDS
     );
 
-    console.log(`Agora token generated: channel=${channelName}, uid=${agoraUid}, role=${role}, expires=never`);
+    console.log(`Agora token generated: channel=${channelName}, uid=${agoraUid}, role=${role}, expiresIn=${TOKEN_EXPIRY_SECONDS}s`);
 
     return res.json({
       token,
@@ -60,7 +64,8 @@ router.get('/test', (req, res) => {
       'test-channel',
       0,
       RtcRole.PUBLISHER,
-      0
+      TOKEN_EXPIRY_SECONDS,
+      PRIVILEGE_EXPIRY_SECONDS
     );
 
     return res.json({
@@ -70,8 +75,8 @@ router.get('/test', (req, res) => {
       certificatePresent: true,
       tokenGenerated: !!testToken,
       tokenPrefix: testToken.substring(0, 10) + '...',
-      tokenFormat: '006',
-      expires: 'never (valid until user leaves room)'
+      tokenFormat: '007',
+      expires: `${TOKEN_EXPIRY_SECONDS}s (24 hours)`
     });
   } catch (error) {
     return res.json({
