@@ -1187,23 +1187,50 @@ class AudioRoomsManager {
                 localStorage.setItem(key, '1');
                 const guideFrame = document.createElement('div');
                 guideFrame.id = 'inline-guide-overlay';
-                guideFrame.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.85);display:flex;flex-direction:column;align-items:center;padding:20px;';
+                guideFrame.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.92);display:flex;flex-direction:column;align-items:center;padding:16px 12px;';
                 const closeBar = document.createElement('div');
-                closeBar.style.cssText = 'width:100%;max-width:700px;display:flex;justify-content:flex-end;margin-bottom:10px;';
+                closeBar.style.cssText = 'width:100%;max-width:700px;display:flex;justify-content:flex-end;margin-bottom:8px;flex-shrink:0;';
                 const closeGuideBtn = document.createElement('button');
                 closeGuideBtn.innerHTML = '<i class="fas fa-times"></i> Close Guide';
-                closeGuideBtn.style.cssText = 'background:var(--purple,#7c3aed);color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;';
+                closeGuideBtn.style.cssText = 'background:#7c3aed;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;';
                 closeGuideBtn.onclick = () => guideFrame.remove();
                 closeBar.appendChild(closeGuideBtn);
-                const iframe = document.createElement('iframe');
-                iframe.src = '/verses-guide.html';
-                iframe.style.cssText = 'width:100%;max-width:700px;flex:1;border:none;border-radius:12px;background:var(--bg-primary,#0a0a0a);';
+                const scrollBox = document.createElement('div');
+                scrollBox.style.cssText = 'width:100%;max-width:700px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;border-radius:12px;background:#111;padding:20px;color:#eee;';
+                scrollBox.innerHTML = '<p style="text-align:center;color:#999;">Loading guide...</p>';
                 guideFrame.appendChild(closeBar);
-                guideFrame.appendChild(iframe);
+                guideFrame.appendChild(scrollBox);
                 document.body.appendChild(guideFrame);
                 guideFrame.addEventListener('click', (ev) => {
                     if (ev.target === guideFrame) guideFrame.remove();
                 });
+                fetch('/verses-guide.html')
+                    .then(r => r.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const guideContent = doc.querySelector('.guide-container');
+                        if (guideContent) {
+                            const links = doc.querySelectorAll('link[rel="stylesheet"]');
+                            links.forEach(link => {
+                                const href = link.getAttribute('href');
+                                if (href && href.includes('verses-guide') && !document.querySelector(`link[href="${href}"]`)) {
+                                    const newLink = document.createElement('link');
+                                    newLink.rel = 'stylesheet';
+                                    newLink.href = href;
+                                    document.head.appendChild(newLink);
+                                }
+                            });
+                            guideContent.querySelectorAll('a[href="verses.html"]').forEach(a => a.remove());
+                            scrollBox.innerHTML = '';
+                            scrollBox.appendChild(guideContent);
+                        } else {
+                            scrollBox.innerHTML = '<p style="text-align:center;color:#f99;">Could not load guide. Please try again later.</p>';
+                        }
+                    })
+                    .catch(() => {
+                        scrollBox.innerHTML = '<p style="text-align:center;color:#f99;">Could not load guide. Please try again later.</p>';
+                    });
             });
         }
     }
