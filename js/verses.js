@@ -471,6 +471,18 @@ class AudioRoomsManager {
                     this.lobbySocket.emit('register-user', { userId: user._id, userName: user.name || 'User' });
                 }
             } catch(e) {}
+
+            if (this._pendingInviteRoom && !this.currentRoom) {
+                const roomId = this._pendingInviteRoom;
+                this._pendingInviteRoom = null;
+                this._joiningFromInvite = true;
+                console.log('Socket connected: auto-joining invite room', roomId);
+                this.joinRoom(roomId).catch(e => {
+                    console.error('Auto-join invite room failed:', e);
+                }).finally(() => {
+                    this._joiningFromInvite = false;
+                });
+            }
         });
 
         this.lobbySocket.on('rooms-updated', (rooms) => {
@@ -6404,7 +6416,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const lobby = document.getElementById('room-selection') || document.querySelector('.room-selection');
-
         if (lobby) {
             const joiningMsg = document.createElement('div');
             joiningMsg.id = 'invite-joining-msg';
@@ -6414,102 +6425,54 @@ document.addEventListener('DOMContentLoaded', () => {
             lobby.style.display = 'none';
         }
 
-        const cleanupAndShowRooms = () => {
+        const cleanupSpinner = () => {
             const joiningEl = document.getElementById('invite-joining-msg');
             if (joiningEl) joiningEl.remove();
             if (lobby) lobby.style.display = '';
             const roomSel = document.getElementById('room-selection');
             if (roomSel) roomSel.style.display = '';
-            localStorage.removeItem('wordeth_pending_room');
             window.history.replaceState({}, '', '/verses.html');
-            const mgr = window.audioRoomsManager;
-            if (mgr) {
-                mgr.loadActiveRooms();
-                setTimeout(() => mgr.loadActiveRooms(), 2000);
-            }
         };
 
-        let inviteJoinResolved = false;
-
         setTimeout(() => {
-            if (!inviteJoinResolved) {
-                console.warn('Invite join: hard timeout reached, forcing cleanup');
-                inviteJoinResolved = true;
-                const mgr = window.audioRoomsManager;
+            const mgr = window.audioRoomsManager;
+            if (!mgr || !mgr.currentRoom) {
+                console.warn('Invite: safety timeout, restoring lobby');
+                cleanupSpinner();
                 if (mgr) {
+                    mgr._pendingInviteRoom = null;
                     mgr._joiningFromInvite = false;
-                    if (!mgr._joinConfirmed && mgr._pendingJoinRoom) {
-                        mgr._restoreLobbyUI();
-                    } else if (!mgr.currentRoom) {
-                        cleanupAndShowRooms();
-                    }
-                } else {
-                    cleanupAndShowRooms();
-                }
-                if (mgr && !mgr.currentRoom) {
-                    mgr.showToast?.('Could not join the room. It may no longer be active.', 'fa-exclamation-circle');
+                    mgr.loadActiveRooms();
+                    mgr.showToast?.('Could not connect to the room. Please try joining from the list.', 'fa-exclamation-circle');
                 }
             }
-        }, 12000);
+        }, 15000);
 
-        const tryJoinRoom = async (attempt = 0) => {
-            if (inviteJoinResolved) return;
+        const waitForManager = (attempt = 0) => {
             const mgr = window.audioRoomsManager;
             if (!mgr) {
-                if (attempt < 40) {
-                    setTimeout(() => tryJoinRoom(attempt + 1), 250);
+                if (attempt < 30) {
+                    setTimeout(() => waitForManager(attempt + 1), 200);
                 } else {
-                    console.error('Invite join: AudioRoomsManager never initialized');
-                    inviteJoinResolved = true;
-                    cleanupAndShowRooms();
+                    cleanupSpinner();
                 }
                 return;
             }
+            console.log('Invite: setting pending room', roomToJoin, 'on manager');
+            mgr._pendingInviteRoom = roomToJoin;
+            window.history.replaceState({}, '', '/verses.html');
 
-            if (!mgr.lobbySocket || !mgr.lobbySocket.connected) {
-                if (attempt < 40) {
-                    setTimeout(() => tryJoinRoom(attempt + 1), 400);
-                    return;
-                }
-                console.warn('Invite join: socket not connected after max attempts, trying anyway');
-            }
-
-            mgr._joiningFromInvite = true;
-
-            try {
+            if (mgr.lobbySocket && mgr.lobbySocket.connected) {
+                mgr._pendingInviteRoom = null;
+                mgr._joiningFromInvite = true;
+                console.log('Invite: socket already connected, joining now');
                 mgr.joinRoom(roomToJoin).catch(e => {
-                    console.error('Error in joinRoom from invite link:', e);
+                    console.error('Invite join failed:', e);
+                }).finally(() => {
+                    mgr._joiningFromInvite = false;
                 });
-
-                await new Promise((resolve) => {
-                    let checks = 0;
-                    const poll = setInterval(() => {
-                        checks++;
-                        if (mgr._joinConfirmed || checks > 40) {
-                            clearInterval(poll);
-                            resolve();
-                        }
-                    }, 250);
-                });
-
-                inviteJoinResolved = true;
-
-                if (mgr.currentRoom) {
-                    const spinner = document.getElementById('invite-joining-msg');
-                    if (spinner) spinner.remove();
-                    window.history.replaceState({}, '', '/verses.html');
-                } else {
-                    cleanupAndShowRooms();
-                    mgr.showToast?.('Could not join the room. It may no longer be active.', 'fa-exclamation-circle');
-                }
-            } catch(e) {
-                console.error('Invite join flow error:', e);
-                inviteJoinResolved = true;
-                cleanupAndShowRooms();
-            } finally {
-                mgr._joiningFromInvite = false;
             }
         };
-        setTimeout(() => tryJoinRoom(0), 300);
+        waitForManager(0);
     });
 })();
