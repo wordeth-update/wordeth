@@ -6835,6 +6835,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 15000);
         }
 
+        const roomSel = document.getElementById('room-selection');
+        if (roomSel) roomSel.style.display = 'none';
+
+        const joiningMsg = document.createElement('div');
+        joiningMsg.id = 'invite-joining-msg';
+        joiningMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;min-height:60vh;color:#fff;font-family:Inter,sans-serif;';
+        joiningMsg.innerHTML = '<div style="width:40px;height:40px;border:3px solid rgba(255,255,255,0.2);border-top-color:#a855f7;border-radius:50%;animation:spin 0.8s linear infinite;"></div><div style="font-size:18px;font-weight:500;">Joining room\u2026</div>';
+        const styleEl = document.createElement('style');
+        styleEl.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+        document.head.appendChild(styleEl);
+        const mainEl = document.querySelector('main');
+        if (mainEl) mainEl.prepend(joiningMsg);
+
         const waitForManager = (attempt = 0) => {
             const mgr = window.audioRoomsManager;
             if (!mgr) {
@@ -6842,6 +6855,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     setTimeout(() => waitForManager(attempt + 1), 100);
                 } else {
                     console.error('Invite: manager never initialized');
+                    const msg = document.getElementById('invite-joining-msg');
+                    if (msg) msg.remove();
+                    if (roomSel) roomSel.style.display = '';
                 }
                 return;
             }
