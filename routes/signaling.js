@@ -14,12 +14,19 @@ function setupSignaling(io) {
                 }
                 const userSockets = connectedUsers.get(userId);
                 userSockets.add(socket.id);
-                if (userSockets.size > 3) {
-                    const oldest = userSockets.values().next().value;
-                    if (oldest !== socket.id) {
-                        userSockets.delete(oldest);
-                        const oldSock = io.sockets.sockets.get(oldest);
-                        if (oldSock && !oldSock.roomId) oldSock.disconnect(true);
+                if (userSockets.size > 1) {
+                    const stale = [];
+                    for (const sid of userSockets) {
+                        if (sid === socket.id) continue;
+                        const oldSock = io.sockets.sockets.get(sid);
+                        if (!oldSock || !oldSock.connected || !oldSock.roomId) {
+                            stale.push(sid);
+                        }
+                    }
+                    for (const sid of stale) {
+                        userSockets.delete(sid);
+                        const oldSock = io.sockets.sockets.get(sid);
+                        if (oldSock) oldSock.disconnect(true);
                     }
                 }
                 console.log(`User registered: ${userName} (${userId}) on socket ${socket.id} (${userSockets.size} connections)`);
@@ -43,14 +50,14 @@ function setupSignaling(io) {
 
             const targetSockets = connectedUsers.get(targetUserId);
             if (targetSockets && targetSockets.size > 0) {
-                targetSockets.forEach(socketId => {
-                    io.to(socketId).emit('room-invite', {
-                        roomId,
-                        roomName: roomName || roomId,
-                        inviterName: inviterName || socket.registeredUserName || 'Someone',
-                        inviterId: socket.registeredUserId,
-                        timestamp: now
-                    });
+                const socketIds = Array.from(targetSockets);
+                const latestSocketId = socketIds[socketIds.length - 1];
+                io.to(latestSocketId).emit('room-invite', {
+                    roomId,
+                    roomName: roomName || roomId,
+                    inviterName: inviterName || socket.registeredUserName || 'Someone',
+                    inviterId: socket.registeredUserId,
+                    timestamp: now
                 });
                 socket.emit('invite-sent', { targetUserId, success: true });
             } else {

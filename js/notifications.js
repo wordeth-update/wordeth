@@ -60,8 +60,8 @@
                     </div>
                 </div>
                 <div class="invite-card-actions">
-                    <button class="invite-action-btn dismiss" onclick="this.closest('.invite-notification').remove()">Not now</button>
-                    <button class="invite-action-btn join" onclick="window.location.href='/room/${encodeURIComponent(data.roomId)}'">
+                    <button class="invite-action-btn dismiss" id="notif-invite-dismiss">Not now</button>
+                    <button class="invite-action-btn join" id="notif-invite-join">
                         <i class="fas fa-headphones"></i> Join
                     </button>
                 </div>
@@ -71,13 +71,25 @@
 
         document.body.appendChild(notification);
 
-        requestAnimationFrame(() => {
+        document.getElementById('notif-invite-join').addEventListener('click', function() {
+            notification.remove();
+            localStorage.setItem('wordeth_pending_room', data.roomId);
+            localStorage.setItem('wordeth_pending_room_ts', String(Date.now()));
+            window.location.href = '/room/' + encodeURIComponent(data.roomId);
+        });
+
+        document.getElementById('notif-invite-dismiss').addEventListener('click', function() {
+            notification.classList.remove('visible');
+            setTimeout(function() { notification.remove(); }, 400);
+        });
+
+        requestAnimationFrame(function() {
             notification.classList.add('visible');
         });
 
-        setTimeout(() => {
+        setTimeout(function() {
             notification.classList.remove('visible');
-            setTimeout(() => notification.remove(), 500);
+            setTimeout(function() { notification.remove(); }, 500);
         }, 15000);
     }
 
