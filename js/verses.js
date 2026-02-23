@@ -784,6 +784,10 @@ class AudioRoomsManager {
     showRoomInviteNotification(data) {
         if (this.currentRoom === data.roomId) return;
 
+        const dedupKey = `${data.roomId}_${data.inviterId}_${Math.floor((data.timestamp || Date.now()) / 5000)}`;
+        if (this._lastInviteKey === dedupKey) return;
+        this._lastInviteKey = dedupKey;
+
         const existing = document.getElementById('wordeth-invite-notification');
         if (existing) existing.remove();
 

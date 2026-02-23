@@ -12,8 +12,17 @@ function setupSignaling(io) {
                 if (!connectedUsers.has(userId)) {
                     connectedUsers.set(userId, new Set());
                 }
-                connectedUsers.get(userId).add(socket.id);
-                console.log(`User registered: ${userName} (${userId}) on socket ${socket.id}`);
+                const userSockets = connectedUsers.get(userId);
+                userSockets.add(socket.id);
+                if (userSockets.size > 3) {
+                    const oldest = userSockets.values().next().value;
+                    if (oldest !== socket.id) {
+                        userSockets.delete(oldest);
+                        const oldSock = io.sockets.sockets.get(oldest);
+                        if (oldSock && !oldSock.roomId) oldSock.disconnect(true);
+                    }
+                }
+                console.log(`User registered: ${userName} (${userId}) on socket ${socket.id} (${userSockets.size} connections)`);
             }
         });
 
