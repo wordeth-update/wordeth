@@ -6805,10 +6805,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let roomToJoin = urlParams.get('room');
 
     if (!roomToJoin) {
-        const pathMatch = window.location.pathname.match(/^\/room\/([^/?#]+)/);
+        const fullPath = window.location.pathname + window.location.search;
+        const pathMatch = fullPath.match(/\/room\/([^/?&#\s]+)/);
         if (pathMatch) {
             roomToJoin = decodeURIComponent(pathMatch[1]);
         }
+    }
+    if (roomToJoin) {
+        roomToJoin = roomToJoin.split('?')[0].split('&')[0].split('#')[0].trim();
     }
 
     if (!roomToJoin) {
