@@ -96,6 +96,7 @@ class AudioRoomsManager {
         this._serverReady = null;
         this._invite = { status: 'idle', roomId: null, retries: 0, maxRetries: 3 };
         this._initComplete = false;
+        this.isGuest = !localStorage.getItem('authToken');
         
         this.isRecording = false;
         this.mediaRecorder = null;
@@ -152,16 +153,6 @@ class AudioRoomsManager {
         if (this.currentRoom) { inv.status = 'idle'; return; }
         inv.status = 'joining';
         console.log('Invite: processing room', inv.roomId, 'attempt', inv.retries + 1);
-
-        const lobby = document.getElementById('room-selection') || document.querySelector('.room-selection');
-        if (lobby && !document.getElementById('invite-joining-msg')) {
-            const joiningMsg = document.createElement('div');
-            joiningMsg.id = 'invite-joining-msg';
-            joiningMsg.style.cssText = 'text-align:center;padding:40px 20px;color:var(--text-secondary,#ccc);font-size:16px;';
-            joiningMsg.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:10px;"></i>Connecting to room...';
-            lobby.parentNode?.insertBefore(joiningMsg, lobby.nextSibling);
-            lobby.style.display = 'none';
-        }
 
         try {
             let resolvedId = inv.roomId;
@@ -1206,7 +1197,67 @@ class AudioRoomsManager {
         header.addEventListener('touchcancel', endSwipe);
     }
 
+    _guestGate(action) {
+        if (!this.isGuest) return false;
+        this._showGuestSignupPrompt(action);
+        return true;
+    }
+
+    _showGuestSignupPrompt(action) {
+        if (document.getElementById('guest-signup-modal')) return;
+        const roomId = this.currentRoom || '';
+        const returnUrl = `/verses.html?room=${encodeURIComponent(roomId)}`;
+        const encodedReturn = encodeURIComponent(returnUrl);
+        const messages = {
+            chat: 'Sign up to chat with everyone in the room.',
+            'raise hand': 'Sign up to raise your hand and get on stage.',
+            mic: 'Sign up to use your microphone.',
+            interact: 'Sign up to participate in the conversation.',
+            leave: 'You just experienced a live Verse! Create a free account to join conversations, chat, and more.'
+        };
+        const msg = messages[action] || messages.interact;
+        const isLeave = action === 'leave';
+
+        const modal = document.createElement('div');
+        modal.id = 'guest-signup-modal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:20px;';
+        modal.innerHTML = `
+            <div style="background:linear-gradient(135deg,#1a1033,#2d1b4e);border:1px solid rgba(124,58,237,0.4);border-radius:16px;padding:32px 24px;max-width:380px;width:100%;text-align:center;color:#fff;font-family:Inter,sans-serif;">
+                <div style="font-size:40px;margin-bottom:16px;">${isLeave ? '🎶' : '🔒'}</div>
+                <h3 style="margin:0 0 8px;font-size:1.2rem;color:#96c5b0;">${isLeave ? 'Enjoying the Vibe?' : 'Join the Conversation'}</h3>
+                <p style="margin:0 0 24px;color:#ccc;font-size:0.95rem;line-height:1.5;">${msg}</p>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    <a href="/signup.html?return=${encodedReturn}" style="display:block;background:#7c3aed;color:white;text-decoration:none;padding:14px 20px;border-radius:10px;font-weight:600;font-size:1rem;">Sign Up Free</a>
+                    <a href="/signin.html?return=${encodedReturn}" style="display:block;background:rgba(124,58,237,0.2);color:#a78bfa;text-decoration:none;padding:12px 20px;border-radius:10px;font-size:0.95rem;border:1px solid rgba(124,58,237,0.3);">Sign In</a>
+                    <button id="guest-signup-dismiss" style="background:none;border:none;color:#888;padding:10px;font-size:0.85rem;cursor:pointer;margin-top:4px;">${isLeave ? 'Leave without signing up' : 'Maybe later'}</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('guest-signup-dismiss').addEventListener('click', () => {
+            modal.remove();
+            if (isLeave) {
+                this.isGuest = false;
+                this.leaveRoom();
+                this.isGuest = true;
+            }
+        }, { once: true });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+                if (isLeave) {
+                    this.isGuest = false;
+                    this.leaveRoom();
+                    this.isGuest = true;
+                }
+            }
+        });
+    }
+
     sendMessage() {
+        if (this._guestGate('chat')) return;
         const message = this.chatInput?.value.trim();
         if (!message) return;
 
@@ -1286,7 +1337,7 @@ class AudioRoomsManager {
 
     showFirstVisitGuide() {
         const key = 'wordeth_verses_guide_seen';
-        if (localStorage.getItem(key)) return;
+        if (!this.isGuest && localStorage.getItem(key)) return;
 
         const isMobile = window.innerWidth <= 768;
 
@@ -1375,7 +1426,37 @@ class AudioRoomsManager {
     }
 
     _showMobileTooltipWalkthrough(storageKey) {
-        const steps = [
+        const isGuest = this.isGuest;
+        const steps = isGuest ? [
+            {
+                target: '#speakers-stage',
+                title: 'The Stage',
+                text: 'Speakers appear here. You\'re listening live right now!',
+                icon: 'fa-users',
+                position: 'below'
+            },
+            {
+                target: '#chat-input',
+                title: 'Chat',
+                text: 'Sign up to send messages and join the conversation.',
+                icon: 'fa-comment',
+                position: 'above'
+            },
+            {
+                target: '#raise-hand',
+                title: 'Get On Stage',
+                text: 'Sign up to raise your hand and speak with everyone.',
+                icon: 'fa-hand-paper',
+                position: 'above'
+            },
+            {
+                target: '#share-room-mobile-btn, #share-room-btn',
+                title: 'Share This Room',
+                text: 'Invite your friends to listen along.',
+                icon: 'fa-share-alt',
+                position: 'above'
+            }
+        ] : [
             {
                 target: '#speakers-stage',
                 title: 'The Stage',
@@ -1427,7 +1508,7 @@ class AudioRoomsManager {
             }
         ];
 
-        if (this.isRoomHost) {
+        if (this.isRoomHost && !isGuest) {
             steps.splice(1, 0, {
                 target: '#host-controls-panel, #host-panel-toggle',
                 title: 'Host Controls',
@@ -1557,6 +1638,7 @@ class AudioRoomsManager {
     }
 
     toggleHandRaise() {
+        if (this._guestGate('raise hand')) return;
         if (this.isSpeaker) return;
         this.handRaised = !this.handRaised;
         this.raiseHandBtn?.classList.toggle('hand-raised', this.handRaised);
@@ -1573,6 +1655,7 @@ class AudioRoomsManager {
     }
 
     requestStage() {
+        if (this._guestGate('interact')) return;
         if (this.isSpeaker || !this.socket || !this.currentRoom) return;
         this.socket.emit('request-stage', { roomId: this.currentRoom });
         this.addChatMessage('System', 'You requested to join the stage.', true);
@@ -1580,6 +1663,7 @@ class AudioRoomsManager {
     }
 
     joinStage() {
+        if (this._guestGate('interact')) return;
         if (this.isSpeaker || !this.socket || !this.currentRoom) return;
         if (this.stageAccess !== 'open') {
             this.requestStage();
@@ -1849,13 +1933,13 @@ class AudioRoomsManager {
             this.roomJoinTime = Date.now();
             this._joinConfirmed = false;
 
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            const userName = user.name || user.username || 'Anonymous';
+            const user = this.isGuest ? {} : JSON.parse(localStorage.getItem('user') || '{}');
+            const userName = this.isGuest ? 'Guest' : (user.name || user.username || 'Anonymous');
 
-            if (isHost) {
+            if (isHost && !this.isGuest) {
                 this._addSelfToStage(userName, user.avatar || null, true);
             } else {
-                this.addRemoteListener('self', userName + ' (You)', false, user._id || user.id, user.avatar);
+                this.addRemoteListener('self', userName + ' (You)', false, user._id || user.id || null, user.avatar);
             }
             this.updateRoomInfo(roomId);
             this.updateStageControls();
@@ -1869,12 +1953,13 @@ class AudioRoomsManager {
             const roomNameEl = document.getElementById('room-name');
             const currentRoomName = roomNameEl?.textContent || '';
             
-            console.log('joinRoom: emitting join-room for', roomId, 'as', isHost ? 'host' : 'listener');
+            const guestJoin = this.isGuest;
+            console.log('joinRoom: emitting join-room for', roomId, 'as', isHost ? 'host' : (guestJoin ? 'guest-listener' : 'listener'));
             this.socket.emit('join-room', {
                 roomId,
-                userId: user._id || user.id || this.socket.id,
+                userId: guestJoin ? `guest_${this.socket.id}` : (user._id || user.id || this.socket.id),
                 userName,
-                isHost,
+                isHost: guestJoin ? false : isHost,
                 roomName: currentRoomName || null,
                 avatar: user.avatar || null
             });
@@ -1891,7 +1976,9 @@ class AudioRoomsManager {
                 }
             }, 6000);
             
-            if (isHost) {
+            if (guestJoin) {
+                this.addChatMessage('System', 'Welcome! You\'re listening as a guest. Sign up to chat and join the conversation.', true);
+            } else if (isHost) {
                 this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
             } else {
                 this.addChatMessage('System', 'Welcome! You joined as a listener. Raise your hand or wait for an invite to speak.', true);
@@ -2403,7 +2490,7 @@ class AudioRoomsManager {
                 console.log('Host privileges restored by server');
             }
 
-            if (data.isHost && !this.isSpeaker) {
+            if (data.isHost && !this.isSpeaker && !this.isGuest) {
                 console.log('Server confirmed host status but client is listener — promoting to stage');
                 this.isSpeaker = true;
                 this.isAudioMuted = true;
@@ -2611,6 +2698,10 @@ class AudioRoomsManager {
         });
 
         sock.on('promoted-to-speaker', async () => {
+            if (this.isGuest) {
+                console.log('Guest ignoring promotion event');
+                return;
+            }
             this.isSpeaker = true;
             this.handRaised = false;
             this.raiseHandBtn?.classList.remove('hand-raised');
@@ -2904,6 +2995,7 @@ class AudioRoomsManager {
     }
 
     toggleAudio() {
+        if (this._guestGate('mic')) return;
         if (!this.isSpeaker) {
             this.showToast('You need to be on stage to use the mic', 'fa-microphone-slash', 3000);
             return;
@@ -2933,6 +3025,7 @@ class AudioRoomsManager {
     }
 
     shareMusic() {
+        if (this._guestGate('interact')) return;
         const modal = document.getElementById('music-share-modal');
         if (!modal) return;
 
@@ -3296,6 +3389,7 @@ class AudioRoomsManager {
     }
 
     leaveRoom() {
+        if (this._guestGate('leave')) return;
         this._playSfx('leaveRoom');
         if (window._verseMiniPlayer) {
             window._verseMiniPlayer.deactivate();
@@ -3460,19 +3554,11 @@ class AudioRoomsManager {
         document.getElementById('close-room-btn')?.addEventListener('click', () => this.closeRoom());
 
         this.sendMessageBtn?.addEventListener('click', () => {
-            const msg = this.chatInput?.value?.trim();
-            if (msg) {
-                this.sendChatMessage(msg);
-                this.chatInput.value = '';
-            }
+            this.sendMessage();
         });
         this.chatInput?.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                const msg = this.chatInput.value.trim();
-                if (msg) {
-                    this.sendChatMessage(msg);
-                    this.chatInput.value = '';
-                }
+                this.sendMessage();
             }
         });
 
@@ -3632,6 +3718,7 @@ class AudioRoomsManager {
     // ==========================================
     
     showAudioFiltersModal() {
+        if (this._guestGate('interact')) return;
         this.audioFiltersModal?.classList.add('active');
     }
     
@@ -3990,6 +4077,7 @@ class AudioRoomsManager {
     // ==========================================
     
     showKaraokeModal() {
+        if (this._guestGate('interact')) return;
         if (!this.isRoomHost) {
             const user = JSON.parse(localStorage.getItem('user') || '{}');
             const userName = user.name || user.username || 'A participant';
@@ -4772,6 +4860,7 @@ class AudioRoomsManager {
     }
 
     async startNativeScreenShare() {
+        if (this._guestGate('interact')) return;
         if (!window.NativeScreenCapture || !NativeScreenCapture.isAvailable()) {
             this.showToast('Screen sharing not available on this device', 'fa-exclamation-circle');
             return;
@@ -4821,6 +4910,7 @@ class AudioRoomsManager {
     }
 
     async shareImage(file) {
+        if (this._guestGate('interact')) return;
         if (file.size > 10 * 1024 * 1024) {
             this.showToast('Image too large (max 10MB)', 'fa-exclamation-circle');
             return;
@@ -6722,34 +6812,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!roomToJoin) return;
 
     document.addEventListener('DOMContentLoaded', () => {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-            localStorage.setItem('wordeth_pending_room', roomToJoin);
-            localStorage.setItem('wordeth_pending_room_ts', String(Date.now()));
-            const returnUrl = `/verses.html?room=${encodeURIComponent(roomToJoin)}`;
-            localStorage.setItem('wordeth_return_url', returnUrl);
-            const encodedReturn = encodeURIComponent(returnUrl);
-
-            window.history.replaceState({}, '', '/verses.html');
-
-            const joinBanner = document.createElement('div');
-            joinBanner.className = 'join-invite-banner';
-            joinBanner.innerHTML = `
-                <div class="invite-content">
-                    <i class="fas fa-headphones"></i>
-                    <p>You've been invited to a live room! Sign up or sign in to join.</p>
-                    <div class="invite-actions">
-                        <a href="/signup.html?return=${encodedReturn}" class="invite-btn primary">Sign Up Free</a>
-                        <a href="/signin.html?return=${encodedReturn}" class="invite-btn secondary">Sign In</a>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(joinBanner);
-            return;
-        }
-
-        window.history.replaceState({}, '', '/verses.html');
-
         const waitForManager = (attempt = 0) => {
             const mgr = window.audioRoomsManager;
             if (!mgr) {
