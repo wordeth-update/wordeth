@@ -1865,7 +1865,7 @@ class AudioRoomsManager {
         }
         localStorage.removeItem('wordeth_pending_room');
         localStorage.removeItem('wordeth_pending_room_ts');
-        if (window.location.search.includes('room=')) {
+        if (window.location.search.includes('room=') || window.location.pathname.startsWith('/room/')) {
             window.history.replaceState({}, '', '/verses.html');
         }
         this.loadActiveRooms();
