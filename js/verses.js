@@ -118,6 +118,13 @@ class AudioRoomsManager {
     async _init() {
         try {
             await this.connectToServer();
+            if (this._invite.status === 'pending') {
+                this._initComplete = true;
+                this._processInvite();
+                this.loadActiveRooms().catch(() => {});
+                this.loadReplays();
+                return;
+            }
             await this.loadActiveRooms();
             this.loadReplays();
         } catch (e) {
@@ -155,24 +162,8 @@ class AudioRoomsManager {
         console.log('Invite: processing room', inv.roomId, 'attempt', inv.retries + 1);
 
         try {
-            let resolvedId = inv.roomId;
-            try {
-                const res = await fetch(apiUrl(`/api/rooms/${encodeURIComponent(inv.roomId)}`));
-                if (res.ok) {
-                    const roomData = await res.json();
-                    resolvedId = roomData.id || inv.roomId;
-                    console.log('Invite: room verified via API as', resolvedId);
-                    const roomNameEl = document.getElementById('room-name');
-                    if (roomNameEl && roomData.name) roomNameEl.textContent = roomData.name;
-                } else {
-                    console.log('Invite: API 404 for', inv.roomId, '- will attempt direct join and let server resolve');
-                }
-            } catch (fetchErr) {
-                console.warn('Invite: room API fetch failed, proceeding with direct join:', fetchErr.message);
-            }
-
             if (this.currentRoom) { inv.status = 'idle'; return; }
-            await this.joinRoom(resolvedId, false, true);
+            await this.joinRoom(inv.roomId, false, true);
         } catch (e) {
             console.error('Invite: join failed:', e);
             this._failInvite('Could not connect to the room. Please try joining from the list.');
@@ -187,10 +178,9 @@ class AudioRoomsManager {
             this._pendingJoinRoom = null;
         }
         if (inv.retries < inv.maxRetries) {
-            console.log('Invite: retrying in 2s, attempt', inv.retries + 1);
+            console.log('Invite: retrying in 1s, attempt', inv.retries + 1);
             inv.status = 'pending';
-            this._restoreLobbyUI();
-            setTimeout(() => this._processInvite(), 2000);
+            setTimeout(() => this._processInvite(), 1000);
         } else {
             console.warn('Invite: giving up after', inv.retries, 'attempts');
             inv.status = 'failed';
@@ -553,11 +543,11 @@ class AudioRoomsManager {
             console.log('Connecting to signaling server...');
             const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
             this.lobbySocket = io(serverUrl, {
-                transports: ['polling', 'websocket'],
-                upgrade: true,
+                transports: ['websocket', 'polling'],
                 reconnection: true,
                 reconnectionAttempts: 10,
-                reconnectionDelay: 1000
+                reconnectionDelay: 1000,
+                timeout: 10000
             });
 
             this.lobbySocket.on('connect', () => {
@@ -1878,11 +1868,12 @@ class AudioRoomsManager {
             return;
         }
         try {
-            const roomData = await this.checkRoomLockStatus(roomId);
-            if (roomData && roomData.isLocked) {
-                if (isInvite) throw new Error('Room is locked');
-                alert('This room is currently locked. The host has prevented new participants from joining.');
-                return;
+            if (!isInvite) {
+                const roomData = await this.checkRoomLockStatus(roomId);
+                if (roomData && roomData.isLocked) {
+                    alert('This room is currently locked. The host has prevented new participants from joining.');
+                    return;
+                }
             }
             
             this.isRoomHost = isHost;
@@ -1978,7 +1969,7 @@ class AudioRoomsManager {
                         this.showToast?.('Could not join the room. It may no longer be active.', 'fa-exclamation-circle');
                     }
                 }
-            }, 6000);
+            }, 5000);
             
             if (guestJoin) {
                 this.addChatMessage('System', 'Welcome! You\'re listening as a guest. Sign up to chat and join the conversation.', true);
@@ -2430,12 +2421,11 @@ class AudioRoomsManager {
 
         const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
         this.lobbySocket = io(serverUrl, {
-            transports: ['polling', 'websocket'],
-            upgrade: true,
+            transports: ['websocket', 'polling'],
             reconnection: true,
             reconnectionAttempts: 10,
             reconnectionDelay: 1000,
-            timeout: 20000
+            timeout: 10000
         });
         this.socket = this.lobbySocket;
         
