@@ -6801,6 +6801,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let roomToJoin = urlParams.get('room');
 
     if (!roomToJoin) {
+        const pathMatch = window.location.pathname.match(/^\/room\/([^/?#]+)/);
+        if (pathMatch) {
+            roomToJoin = decodeURIComponent(pathMatch[1]);
+        }
+    }
+
+    if (!roomToJoin) {
         const pending = localStorage.getItem('wordeth_pending_room');
         const pendingTs = parseInt(localStorage.getItem('wordeth_pending_room_ts') || '0', 10);
         if (pending && localStorage.getItem('authToken') && (Date.now() - pendingTs < 60000)) {
@@ -6812,6 +6819,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!roomToJoin) return;
 
     document.addEventListener('DOMContentLoaded', () => {
+        const banner = document.getElementById('cookie-consent-banner');
+        if (banner) {
+            banner.style.display = 'none';
+            setTimeout(() => {
+                banner.style.display = '';
+            }, 15000);
+        }
+
         const waitForManager = (attempt = 0) => {
             const mgr = window.audioRoomsManager;
             if (!mgr) {

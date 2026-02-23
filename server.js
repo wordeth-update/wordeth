@@ -282,7 +282,7 @@ app.get('/room/:roomId', ogCrawlerHeaders, (req, res) => {
         res.setHeader('Cache-Control', 'no-store, no-cache');
         res.setHeader('CDN-Cache-Control', 'no-store');
         res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
-        return res.redirect(302, joinUrl);
+        return res.sendFile(path.join(__dirname, 'verses.html'));
     }
 
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
