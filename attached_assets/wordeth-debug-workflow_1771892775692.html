@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wordeth — Invite Flow Debug Workflow</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080810;
+    --surface: #0f0f1c;
+    --surface2: #15152a;
+    --border: rgba(255,255,255,0.07);
+    --mint: #3EB489;
+    --mint2: #2e9a76;
+    --purple: #7c3aed;
+    --purple2: #5b21b6;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --blue: #3b82f6;
+    --text: #e8e4f7;
+    --muted: #7c7a99;
+    --tag-h: 28px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── Grain overlay ─── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  /* ─── Header ─── */
+  header {
+    padding: 48px 48px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 36px;
+  }
+  .logo-mark {
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, var(--mint) 0%, var(--purple) 100%);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-size: 22px; font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+    box-shadow: 0 0 30px rgba(62,180,137,0.3);
+  }
+  .header-text h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+  .header-text p {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.5px;
+  }
+  .verdict-badge {
+    margin-left: auto;
+    background: rgba(62,180,137,0.12);
+    border: 1px solid rgba(62,180,137,0.35);
+    color: var(--mint);
+    font-family: 'Syne', sans-serif;
+    font-size: 12px; font-weight: 700;
+    padding: 8px 16px;
+    border-radius: 100px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    align-self: center;
+  }
+
+  /* ─── Layout ─── */
+  main {
+    padding: 40px 48px 80px;
+    max-width: 1200px;
+  }
+
+  /* ─── Section labels ─── */
+  .section-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ─── Flow Pipeline ─── */
+  .pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 56px;
+  }
+  .step {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 0 20px;
+    position: relative;
+  }
+  .step-spine {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .step-num {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px; font-weight: 800;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+  .step-num.ok { background: rgba(62,180,137,0.15); border: 2px solid rgba(62,180,137,0.5); color: var(--mint); }
+  .step-num.warn { background: rgba(245,158,11,0.15); border: 2px solid rgba(245,158,11,0.5); color: var(--amber); }
+  .step-num.bug { background: rgba(239,68,68,0.15); border: 2px solid rgba(239,68,68,0.5); color: var(--red); }
+  .step-num.critical { background: rgba(239,68,68,0.25); border: 2px solid var(--red); color: var(--red); box-shadow: 0 0 20px rgba(239,68,68,0.3); }
+  .connector {
+    flex: 1;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--border), var(--border));
+    min-height: 20px;
+  }
+  .step-body {
+    padding: 0 0 32px;
+  }
+  .step-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-top: 0;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .step-card:hover { border-color: rgba(255,255,255,0.12); }
+  .step-card.has-bug { border-color: rgba(239,68,68,0.25); }
+  .step-card.has-warn { border-color: rgba(245,158,11,0.2); }
+  .step-card.critical-card {
+    border-color: rgba(239,68,68,0.4);
+    box-shadow: 0 0 40px rgba(239,68,68,0.08) inset, 0 0 40px rgba(239,68,68,0.05);
+  }
+  .step-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px; font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .step-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-bottom: 14px;
+  }
+  .step-file {
+    display: inline-block;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  /* ─── Tags ─── */
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .tag {
+    height: var(--tag-h);
+    display: inline-flex; align-items: center;
+    padding: 0 10px;
+    border-radius: 6px;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.3px;
+    gap: 5px;
+  }
+  .tag.bug { background: rgba(239,68,68,0.12); color: #fca5a5; border: 1px solid rgba(239,68,68,0.25); }
+  .tag.fix { background: rgba(62,180,137,0.1); color: var(--mint); border: 1px solid rgba(62,180,137,0.25); }
+  .tag.warn { background: rgba(245,158,11,0.1); color: #fcd34d; border: 1px solid rgba(245,158,11,0.25); }
+  .tag.info { background: rgba(59,130,246,0.1); color: #93c5fd; border: 1px solid rgba(59,130,246,0.25); }
+
+  /* ─── Bugs Grid ─── */
+  .bugs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 56px;
+  }
+  .bug-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .bug-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .bug-card.critical::before { background: linear-gradient(90deg, var(--red), #b91c1c); }
+  .bug-card.high::before { background: linear-gradient(90deg, var(--amber), #d97706); }
+  .bug-card.medium::before { background: linear-gradient(90deg, var(--blue), #2563eb); }
+  .bug-card.low::before { background: linear-gradient(90deg, var(--muted), #4b5563); }
+  .bug-severity {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .bug-severity.critical { color: var(--red); }
+  .bug-severity.high { color: var(--amber); }
+  .bug-severity.medium { color: var(--blue); }
+  .bug-severity.low { color: var(--muted); }
+  .bug-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px; font-weight: 700;
+    margin-bottom: 10px;
+    line-height: 1.3;
+  }
+  .bug-desc {
+    font-size: 11.5px;
+    color: var(--muted);
+    line-height: 1.8;
+    margin-bottom: 14px;
+  }
+  .code-snippet {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 11px;
+    color: #94a3b8;
+    line-height: 1.6;
+    overflow-x: auto;
+    margin-bottom: 12px;
+  }
+  .code-snippet .hl { color: var(--red); }
+  .code-snippet .hl-fix { color: var(--mint); }
+  .code-snippet .hl-ok { color: #94a3b8; }
+
+  /* ─── Fix Panel ─── */
+  .fix-panel {
+    background: rgba(62,180,137,0.05);
+    border: 1px solid rgba(62,180,137,0.2);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 11px;
+    color: #6ee7b7;
+    line-height: 1.7;
+  }
+  .fix-panel strong { color: var(--mint); }
+
+  /* ─── Architecture Decision ─── */
+  .arch-box {
+    background: linear-gradient(135deg, rgba(62,180,137,0.08) 0%, rgba(124,58,237,0.08) 100%);
+    border: 1px solid rgba(62,180,137,0.25);
+    border-radius: 16px;
+    padding: 32px 36px;
+    margin-bottom: 56px;
+    position: relative;
+    overflow: hidden;
+  }
+  .arch-box::before {
+    content: 'VERDICT';
+    position: absolute;
+    top: 20px; right: 24px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: rgba(62,180,137,0.4);
+  }
+  .arch-box h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--mint) 0%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .arch-box p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.9;
+    max-width: 800px;
+    margin-bottom: 24px;
+  }
+  .stack-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .stack-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .stack-item .stack-status {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .stack-item .stack-status.keep { color: var(--mint); }
+  .stack-item .stack-status.add { color: var(--amber); }
+  .stack-item .stack-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px; font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .stack-item .stack-note { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+  /* ─── Priority Checklist ─── */
+  .checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 56px;
+  }
+  .check-item {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    transition: padding-left 0.2s;
+  }
+  .check-item:hover { padding-left: 4px; }
+  .check-item:last-child { border-bottom: none; }
+  .check-box {
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+    margin-top: 2px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    font-size: 13px;
+  }
+  .check-item.done .check-box {
+    background: var(--mint);
+    border-color: var(--mint);
+    color: #082a1a;
+  }
+  .check-item.done .check-text { opacity: 0.4; text-decoration: line-through; }
+  .check-priority {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 3px;
+    flex-shrink: 0;
+    width: 72px;
+    text-align: center;
+  }
+  .check-priority.p1 { background: rgba(239,68,68,0.15); color: #fca5a5; }
+  .check-priority.p2 { background: rgba(245,158,11,0.15); color: #fcd34d; }
+  .check-priority.p3 { background: rgba(59,130,246,0.15); color: #93c5fd; }
+  .check-text h4 {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px; font-weight: 700;
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+  .check-text p {
+    font-size: 11.5px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  /* ─── Footer bar ─── */
+  footer {
+    padding: 24px 48px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  footer .note { font-size: 11px; color: var(--muted); }
+
+  /* Responsive */
+  @media (max-width: 800px) {
+    header, main, footer { padding-left: 20px; padding-right: 20px; }
+    .bugs-grid { grid-template-columns: 1fr; }
+    .stack-grid { grid-template-columns: 1fr 1fr; }
+    .verdict-badge { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">W</div>
+  <div class="header-text">
+    <h1>Wordeth — Invite Flow Debug</h1>
+    <p>CODEBASE AUDIT · INVITE → ROOM JOIN SEQUENCE · RAILWAY + CLOUDFLARE</p>
+  </div>
+  <div class="verdict-badge">✓ Keep Current Stack</div>
+</header>
+
+<main>
+
+  <!-- ─── Architecture Verdict ─── -->
+  <div style="margin-bottom: 52px; margin-top: 8px;">
+    <div class="section-label">ARCHITECTURE VERDICT</div>
+    <div class="arch-box">
+      <h2>Don't rebuild. Reconfigure + add Redis.</h2>
+      <p>
+        After auditing all four files — <code>server.js</code>, <code>signaling.js</code>, <code>verses.js</code>, and <code>notifications.js</code> — 
+        your Socket.io + Express + Agora RTC stack is the right choice for a Clubhouse/Spaces competitor. 
+        The invite-join flow is architecturally sound but has <strong>6 concrete bugs</strong> causing the connectivity issues. 
+        The only infrastructure addition you need is <strong>Redis</strong> for room state persistence. 
+        Everything else is code-level fixes that don't require a new tech.
+      </p>
+      <div class="stack-grid">
+        <div class="stack-item">
+          <div class="stack-status keep">✓ KEEP</div>
+          <div class="stack-name">Socket.io</div>
+          <div class="stack-note">Real-time signaling. Fix transport config mismatch.</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-status keep">✓ KEEP</div>
+          <div class="stack-name">Express.js</div>
+          <div class="stack-note">Solid. Add Cloudflare WebSocket headers.</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-status keep">✓ KEEP</div>
+          <div class="stack-name">Agora RTC</div>
+          <div class="stack-note">Right choice for audio at scale. No changes needed.</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-status add">+ ADD</div>
+          <div class="stack-name">Redis</div>
+          <div class="stack-note">Replace in-memory Map. Survives restarts & scales horizontally.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Flow Pipeline ─── -->
+  <div class="section-label">INVITE → JOIN FLOW (WITH BUG ANNOTATIONS)</div>
+  <div class="pipeline">
+
+    <!-- Step 1 -->
+    <div class="step">
+      <div class="step-spine">
+        <div class="step-num ok">1</div>
+        <div class="connector"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-card">
+          <div class="step-file">notifications.js</div>
+          <div class="step-title">Host emits <code>room-invite</code> via Socket</div>
+          <div class="step-desc">The host (in their room) clicks "Invite User." The active socket emits <code>room-invite</code> with <code>targetUserId, roomId, roomName, inviterName</code> to the server.</div>
+          <div class="tags">
+            <span class="tag info">← inviteUser() in verses.js</span>
+            <span class="tag info">Uses lobbySocket OR socket (active socket)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step">
+      <div class="step-spine">
+        <div class="step-num warn">2</div>
+        <div class="connector"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-card has-warn">
+          <div class="step-file">signaling.js</div>
+          <div class="step-title">Server routes invite to invitee's latest socket</div>
+          <div class="step-desc">Server looks up <code>connectedUsers.get(targetUserId)</code> and picks the LAST socket ID in the Set. It sends <code>room-invite</code> only to that single socket.</div>
+          <div class="tags">
+            <span class="tag warn">⚠ Risk: "latest" socket may be stale</span>
+            <span class="tag warn">⚠ Rate limit: 10 invites/min per socket</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step">
+      <div class="step-spine">
+        <div class="step-num ok">3</div>
+        <div class="connector"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-card">
+          <div class="step-file">notifications.js</div>
+          <div class="step-title">Invitee sees toast notification</div>
+          <div class="step-desc">If the invitee is on a non-Verses page, <code>notifSocket</code> receives the event and renders the invite card UI. The "LIVE NOW" banner appears with "Join" and "Not now" buttons.</div>
+          <div class="tags">
+            <span class="tag info">Auto-dismisses after 15s</span>
+            <span class="tag info">Deduplication via 5-second window key</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="step">
+      <div class="step-spine">
+        <div class="step-num warn">4</div>
+        <div class="connector"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-card has-warn">
+          <div class="step-file">notifications.js → browser</div>
+          <div class="step-title">User clicks Join → page navigate to <code>/room/ROOM_ID</code></div>
+          <div class="step-desc">
+            <code>localStorage.setItem('wordeth_pending_room', data.roomId)</code> is set, then the browser navigates to <code>/room/ROOM_ID</code>. This destroys the current page (and the <code>notifSocket</code> connection). A full page reload begins.
+          </div>
+          <div class="tags">
+            <span class="tag warn">⚠ Full page nav = fresh socket + 300–800ms overhead</span>
+            <span class="tag info">pending_room localStorage is a fallback; URL path is primary</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5 -->
+    <div class="step">
+      <div class="step-spine">
+        <div class="step-num ok">5</div>
+        <div class="connector"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-card">
+          <div class="step-file">server.js</div>
+          <div class="step-title">Server detects real user, serves <code>verses.html</code></div>
+          <div class="step-desc">The <code>GET /room/:roomId</code> handler checks the User-Agent. If not a crawler bot, it calls <code>res.sendFile('verses.html')</code>. OG meta tags are served only to bots.</div>
+          <div class="tags">
+            <span class="tag info">Room ID correctly extracted from URL path (no query param bleed)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 6 -->
+    <div class="step">
+      <div class="step-spine">
+        <div class="step-num bug">6</div>
+        <div class="connector"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-card has-bug">
+          <div class="step-file">verses.js — bottom IIFE + AudioRoomsManager constructor</div>
+          <div class="step-title">verses.html loads → two DOMContentLoaded listeners race</div>
+          <div class="step-desc">
+            The IIFE at the bottom of verses.js and the class initialization both attach to <code>DOMContentLoaded</code>. The IIFE polls for <code>window.audioRoomsManager</code> every 100ms. If the manager initializes fast (socket connects fast), the IIFE may run AFTER <code>_init()</code> has already completed and moved on — meaning the pending room invite is never queued.
+          </div>
+          <div class="tags">
+            <span class="tag bug">🐛 Race condition: invite lost if manager inits before IIFE detects it</span>
+            <span class="tag fix">✓ Fix: queueInvite() in constructor if URL has room param</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 7 -->
+    <div class="step">
+      <div class="step-spine">
+        <div class="step-num bug">7</div>
+        <div class="connector"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-card has-bug">
+          <div class="step-file">verses.js — connectToServer()</div>
+          <div class="step-title">Socket connects → <code>_processInvite()</code> guard is broken</div>
+          <div class="step-desc">
+            Inside the <code>connect</code> event handler in <code>connectToServer()</code>, the guard <code>this._initComplete && this._invite.status === 'pending'</code> will always be <code>false</code> at that moment because <code>_initComplete</code> is only set <em>after</em> <code>await connectToServer()</code> returns in <code>_init()</code>. The code in <code>_init()</code> handles this as a fallback — but the dead guard creates confusing control flow that makes debugging very hard.
+          </div>
+          <div class="tags">
+            <span class="tag bug">🐛 Dead guard: _initComplete always false in connect handler</span>
+            <span class="tag warn">⚠ Works via fallback in _init() but creates unpredictable ordering</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 8 -->
+    <div class="step">
+      <div class="step-spine">
+        <div class="step-num critical">!</div>
+        <div class="connector"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-card critical-card">
+          <div class="step-file">server.js + signaling.js</div>
+          <div class="step-title">🔴 CRITICAL: Room state lives in memory only</div>
+          <div class="step-desc">
+            <code>const rooms = new Map()</code> in signaling.js is module-level. Any Railway deployment, crash, or server restart wipes all active rooms. The invitee navigates to the room URL, the socket connects, emits <code>join-room</code> — but the room no longer exists. Server returns <code>room-error: "This room is no longer live."</code> This is likely the primary cause of failed invite joins in production.
+          </div>
+          <div class="tags">
+            <span class="tag bug">🐛 Server restart = all rooms vanish</span>
+            <span class="tag fix">✓ Fix: Replace Map with Redis (ioredis + TTL per room)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 9 -->
+    <div class="step">
+      <div class="step-spine">
+        <div class="step-num bug">9</div>
+        <div class="connector"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-card has-bug">
+          <div class="step-file">server.js Socket.io init vs verses.js connectToServer()</div>
+          <div class="step-title">Transport config mismatch causes connection overhead</div>
+          <div class="step-desc">
+            The server initializes Socket.io with <code>transports: ['polling', 'websocket']</code> (polling first). The verses.js client uses <code>transports: ['websocket', 'polling']</code> (WebSocket first). Behind Cloudflare, WebSocket upgrades can fail silently, causing the client to fall back to polling — then attempt upgrade again — adding 200-600ms latency before any room join logic begins.
+          </div>
+          <div class="tags">
+            <span class="tag bug">🐛 Mismatch: server=polling→WS, client=WS→polling</span>
+            <span class="tag fix">✓ Fix: Both server + client should use ['websocket'] only on Railway/CF</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 10 -->
+    <div class="step">
+      <div class="step-spine">
+        <div class="step-num ok">10</div>
+        <div class="connector" style="opacity:0.3;"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-card">
+          <div class="step-file">verses.js + signaling.js + agora</div>
+          <div class="step-title">join-room → room-joined → Agora join</div>
+          <div class="step-desc">
+            Once the socket is connected and <code>join-room</code> is emitted, the server validates room existence, adds the participant, and emits <code>room-joined</code> back. The client then calls <code>_agoraJoinGuarded()</code> which fetches an Agora token and joins the RTC channel. This sequence itself is well-implemented with the lock guard.
+          </div>
+          <div class="tags">
+            <span class="tag info">5s timeout guards against hung joins</span>
+            <span class="tag info">Agora join happens AFTER room-joined confirmation — correct</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ─── Bug Cards ─── -->
+  <div class="section-label">BUGS — RANKED BY IMPACT</div>
+  <div class="bugs-grid">
+
+    <div class="bug-card critical">
+      <div class="bug-severity critical">🔴 Critical</div>
+      <div class="bug-title">In-Memory Room State (signaling.js)</div>
+      <div class="bug-desc">
+        <code>const rooms = new Map()</code> is ephemeral. Railway restarts (deploys, crashes, memory limits, sleep) destroy all rooms. The invitee follows the link to a ghost room.
+      </div>
+      <div class="code-snippet"><span class="hl">// signaling.js — line 1</span><br>
+<span class="hl">const rooms = new Map(); // ← dies on restart</span><br><br>
+<span class="hl-fix">// Fix: use Redis with TTL</span><br>
+<span class="hl-fix">const redis = new Redis(process.env.REDIS_URL);</span><br>
+<span class="hl-fix">// Store rooms as JSON with EXPIRE 3600 (1hr)</span></div>
+      <div class="fix-panel">
+        <strong>Fix:</strong> Add a Redis instance on Railway (Redis service, $5/mo). Use <code>ioredis</code>. Store room state as JSON strings with a 1-hour TTL. On room close/empty, explicitly delete the key.
+      </div>
+    </div>
+
+    <div class="bug-card high">
+      <div class="bug-severity high">🟡 High</div>
+      <div class="bug-title">Socket Transport Mismatch (server.js vs verses.js)</div>
+      <div class="bug-desc">
+        Server is configured polling-first; the verses.js client is WebSocket-first. Cloudflare may reject the WS upgrade on the first attempt, causing a retry cycle that adds 200–600ms before the join can begin.
+      </div>
+      <div class="code-snippet"><span class="hl">// server.js — Socket.io init</span><br>
+transports: <span class="hl">['polling', 'websocket']</span><br><br>
+<span class="hl">// verses.js — connectToServer()</span><br>
+transports: <span class="hl">['websocket', 'polling']</span><br><br>
+<span class="hl-fix">// Fix: match both to WebSocket-only</span><br>
+<span class="hl-fix">transports: ['websocket']</span></div>
+      <div class="fix-panel">
+        <strong>Fix:</strong> Set both server and all clients to <code>transports: ['websocket']</code>. Cloudflare supports WebSocket on all plans. Remove polling entirely — it requires sticky sessions which Railway doesn't guarantee by default.
+      </div>
+    </div>
+
+    <div class="bug-card high">
+      <div class="bug-severity high">🟡 High</div>
+      <div class="bug-title">Race: Manager Init vs IIFE queueInvite (verses.js)</div>
+      <div class="bug-desc">
+        The bottom IIFE polls for <code>window.audioRoomsManager</code> every 100ms. If the socket connects very fast on a good network, <code>_init()</code> completes before the IIFE's first poll fires — so <code>_invite.status</code> is never set to 'pending' before <code>_init()</code> finishes, and no join is triggered.
+      </div>
+      <div class="code-snippet"><span class="hl">// Current: IIFE waits for manager to exist</span><br>
+const waitForManager = (attempt = 0) => { <span class="hl">...</span> }<br><br>
+<span class="hl-fix">// Fix: parse room from URL in constructor</span><br>
+<span class="hl-fix">constructor() {</span><br>
+<span class="hl-fix">  const urlRoom = this._parseRoomFromUrl();</span><br>
+<span class="hl-fix">  if (urlRoom) this.queueInvite(urlRoom);</span><br>
+<span class="hl-fix">  // ...rest of constructor</span><br>
+<span class="hl-fix">}</span></div>
+      <div class="fix-panel">
+        <strong>Fix:</strong> Parse the room ID from the URL <em>inside the constructor</em> before calling <code>_init()</code>. This eliminates the race entirely — the invite is queued synchronously before any async work begins.
+      </div>
+    </div>
+
+    <div class="bug-card high">
+      <div class="bug-severity high">🟡 High</div>
+      <div class="bug-title">register-user Not Re-emitted on Reconnect (verses.js)</div>
+      <div class="bug-desc">
+        The <code>register-user</code> event is emitted only in the first <code>connect</code> handler in <code>connectToServer()</code>. If Cloudflare drops the WebSocket (100s timeout on inactivity), the socket reconnects but <code>register-user</code> is NOT re-emitted. The server's <code>connectedUsers</code> Map now has a stale socket ID, so future invites are sent to a dead socket.
+      </div>
+      <div class="code-snippet"><span class="hl">// Missing: re-register on reconnect</span><br>
+this.lobbySocket.on('connect', () => {<br>
+<span class="hl-fix">  // This fires on EVERY connect + reconnect</span><br>
+  this.lobbySocket.emit('register-user', {...})<br>
+}); <span class="hl">// ← Already here! But also need:</span><br><br>
+<span class="hl-fix">// Add in connectSocket() reuse path:</span><br>
+<span class="hl-fix">if (lobbySocket.connected) {</span><br>
+<span class="hl-fix">  lobbySocket.emit('register-user', user);</span><br>
+<span class="hl-fix">}</span></div>
+      <div class="fix-panel">
+        <strong>Fix:</strong> The <code>on('connect')</code> handler in <code>connectToServer()</code> already re-emits on reconnect (Socket.io fires 'connect' on reconnects too). But <code>connectSocket()</code> skips this path when reusing a connected socket. Add a <code>register-user</code> emit in the <code>connectSocket()</code> reuse branch.
+      </div>
+    </div>
+
+    <div class="bug-card medium">
+      <div class="bug-severity medium">🔵 Medium</div>
+      <div class="bug-title">Dead Guard in connectToServer() (verses.js)</div>
+      <div class="bug-desc">
+        Inside the <code>connect</code> handler, the condition <code>this._initComplete && ...</code> is always <code>false</code> because <code>_initComplete</code> is set after <code>await connectToServer()</code> resolves. The code works (via the <code>_init()</code> fallback) but the dead branch creates confusing debugging paths and hides real state.
+      </div>
+      <div class="code-snippet">lobbySocket.on('connect', () => {<br>
+  resolve();<br>
+  <span class="hl">// This condition is ALWAYS false here:</span><br>
+  <span class="hl">if (this._invite.status === 'pending'</span><br>
+  <span class="hl">  && this._initComplete  ← always false</span><br>
+  <span class="hl">  && !this.currentRoom) {</span><br>
+  <span class="hl">    this._processInvite();</span><br>
+  <span class="hl">}</span><br>
+});</div>
+      <div class="fix-panel">
+        <strong>Fix:</strong> Remove the <code>_initComplete</code> guard from the <code>connect</code> handler. The <code>_init()</code> method already handles <code>_processInvite()</code> after the await. Simplify to just <code>resolve()</code> + <code>register-user</code> emit.
+      </div>
+    </div>
+
+    <div class="bug-card medium">
+      <div class="bug-severity medium">🔵 Medium</div>
+      <div class="bug-title">Cloudflare WebSocket + Railway: No Sticky Sessions</div>
+      <div class="bug-desc">
+        If Wordeth ever scales to multiple Railway instances, Socket.io's polling fallback requires sticky sessions (same backend server per client). Without this, polling requests go to different instances that don't share the socket handshake state. WebSocket-only mode eliminates this entirely.
+      </div>
+      <div class="code-snippet"><span class="hl">// Cloudflare → Railway without sticky sessions</span><br>
+<span class="hl">// HTTP polling requests can hit different instances</span><br>
+<span class="hl">// = handshake fails = no socket = no join</span><br><br>
+<span class="hl-fix">// Solution: WebSocket-only (no polling fallback)</span><br>
+<span class="hl-fix">// Cloudflare handles WS on all plans</span><br>
+<span class="hl-fix">// Railway single instance is fine for now</span></div>
+      <div class="fix-panel">
+        <strong>Fix (now):</strong> Switch to WebSocket-only transport. <strong>Fix (later, at scale):</strong> Add Redis adapter for Socket.io (<code>@socket.io/redis-adapter</code>) so multiple Railway instances share socket state through the same Redis instance.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ─── Priority Fix Checklist ─── -->
+  <div class="section-label">IMPLEMENTATION CHECKLIST — IN ORDER</div>
+  <div class="checklist" id="checklist">
+
+    <div class="check-item" onclick="toggle(this)">
+      <div class="check-box"></div>
+      <div class="check-priority p1">P1 NOW</div>
+      <div class="check-text">
+        <h4>Add Redis to Railway & update signaling.js</h4>
+        <p>Provision a Redis service on Railway. Replace <code>const rooms = new Map()</code> with ioredis calls. Store room state as JSON with <code>SETEX roomId 3600 json</code>. This single change fixes the most common production failure (server restart → dead invite link).</p>
+      </div>
+    </div>
+
+    <div class="check-item" onclick="toggle(this)">
+      <div class="check-box"></div>
+      <div class="check-priority p1">P1 NOW</div>
+      <div class="check-text">
+        <h4>Set WebSocket-only transport on server and ALL clients</h4>
+        <p>In server.js <code>new Server()</code> options, set <code>transports: ['websocket']</code>. Do the same in verses.js <code>connectToServer()</code> and notifications.js socket init. Verify Cloudflare's "WebSockets" toggle is ON in the Network settings for your domain.</p>
+      </div>
+    </div>
+
+    <div class="check-item" onclick="toggle(this)">
+      <div class="check-box"></div>
+      <div class="check-priority p1">P1 NOW</div>
+      <div class="check-text">
+        <h4>Move room URL parsing into AudioRoomsManager constructor (before _init)</h4>
+        <p>Extract the room-from-URL logic from the bottom IIFE into a <code>_parseRoomFromUrl()</code> method. Call <code>this.queueInvite(roomId)</code> synchronously in the constructor, before <code>this._init()</code>. Delete the polling waitForManager IIFE — it's no longer needed.</p>
+      </div>
+    </div>
+
+    <div class="check-item" onclick="toggle(this)">
+      <div class="check-box"></div>
+      <div class="check-priority p2">P2 NEXT</div>
+      <div class="check-text">
+        <h4>Add register-user re-emit in connectSocket() reuse path</h4>
+        <p>In verses.js <code>connectSocket()</code>, when <code>lobbySocket</code> is already connected, add a <code>lobbySocket.emit('register-user', ...)</code> call. This ensures the server's <code>connectedUsers</code> map is always fresh after reconnects or navigation.</p>
+      </div>
+    </div>
+
+    <div class="check-item" onclick="toggle(this)">
+      <div class="check-box"></div>
+      <div class="check-priority p2">P2 NEXT</div>
+      <div class="check-text">
+        <h4>Remove the dead _initComplete guard from the connect handler</h4>
+        <p>Simplify <code>connectToServer()</code>'s <code>on('connect', ...)</code> to only: call <code>resolve()</code>, emit <code>register-user</code>, and update rooms display. Remove the <code>_processInvite()</code> call from there — <code>_init()</code> already handles it correctly.</p>
+      </div>
+    </div>
+
+    <div class="check-item" onclick="toggle(this)">
+      <div class="check-box"></div>
+      <div class="check-priority p2">P2 NEXT</div>
+      <div class="check-text">
+        <h4>Add @socket.io/redis-adapter for horizontal scalability</h4>
+        <p>Install the adapter and pass your Redis client to <code>io.adapter(createAdapter(pubClient, subClient))</code>. This ensures socket events (like <code>rooms-updated</code>) broadcast across all Railway instances. Not blocking today, but essential before scaling past 1 server.</p>
+      </div>
+    </div>
+
+    <div class="check-item" onclick="toggle(this)">
+      <div class="check-box"></div>
+      <div class="check-priority p3">P3 LATER</div>
+      <div class="check-text">
+        <h4>Add Cloudflare Worker or health-ping to keep Railway from sleeping</h4>
+        <p>Railway may put your service to sleep on inactivity (depending on plan). A cron-based ping every 5 minutes prevents cold starts. Alternatively, upgrade to a paid Railway plan with "Always On" instances. This also prevents Cloudflare's 100s WebSocket timeout from killing idle connections.</p>
+      </div>
+    </div>
+
+    <div class="check-item" onclick="toggle(this)">
+      <div class="check-box"></div>
+      <div class="check-priority p3">P3 LATER</div>
+      <div class="check-text">
+        <h4>Add join-room retry with exponential backoff</h4>
+        <p>Currently, if <code>join-room</code> is emitted but no <code>room-joined</code> arrives within 5s, the flow fails silently. Add an explicit retry: re-emit <code>join-room</code> after 2s if no response, before giving up at 5s. Useful for temporary Cloudflare hiccups.</p>
+      </div>
+    </div>
+
+    <div class="check-item" onclick="toggle(this)">
+      <div class="check-box"></div>
+      <div class="check-priority p3">P3 LATER</div>
+      <div class="check-text">
+        <h4>Wire server-side invite delivery confirmation back to host</h4>
+        <p>Currently, if the invitee's socket has gone stale, the host sees "Invite sent" but the invitee never receives it. Use the existing <code>invite-sent</code> event to show a real-time "User is offline — link copied" fallback in the host UI instead of the generic <code>fallbackInvite()</code>.</p>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<footer>
+  <div class="note">Wordeth Debug Audit — All findings based on static analysis of server.js, signaling.js, verses.js, notifications.js</div>
+  <div class="note" style="color: var(--mint);">6 bugs identified · 1 new technology (Redis) · 0 stack rewrites needed</div>
+</footer>
+
+<script>
+  function toggle(el) {
+    el.classList.toggle('done');
+    const box = el.querySelector('.check-box');
+    box.textContent = el.classList.contains('done') ? '✓' : '';
+  }
+</script>
+</body>
+</html>

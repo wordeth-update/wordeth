@@ -107,12 +107,75 @@ class AudioRoomsManager {
         this.recordingStartTime = 0;
         this.currentVideoFilter = 'none';
         
+        const urlRoom = this._parseRoomFromUrl();
+        if (urlRoom) {
+            this.queueInvite(urlRoom);
+            this._showJoiningOverlay();
+        }
+        
         this.initYouTubePlayer();
         
         this.initializeElements();
         this.setupEventListeners();
         this.setupVisibilityHandler();
         this._init();
+    }
+
+    _parseRoomFromUrl() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let roomId = urlParams.get('room');
+        if (!roomId) {
+            const fullPath = window.location.pathname + window.location.search;
+            const pathMatch = fullPath.match(/\/room\/([^/?&#\s]+)/);
+            if (pathMatch) {
+                roomId = decodeURIComponent(pathMatch[1]);
+            }
+        }
+        if (roomId) {
+            roomId = roomId.split('?')[0].split('&')[0].split('#')[0].trim();
+        }
+        if (!roomId) {
+            const pending = localStorage.getItem('wordeth_pending_room');
+            const pendingTs = parseInt(localStorage.getItem('wordeth_pending_room_ts') || '0', 10);
+            if (pending && localStorage.getItem('authToken') && (Date.now() - pendingTs < 60000)) {
+                roomId = pending;
+            }
+            localStorage.removeItem('wordeth_pending_room');
+            localStorage.removeItem('wordeth_pending_room_ts');
+        }
+        return roomId || null;
+    }
+
+    _showJoiningOverlay() {
+        const doShow = () => {
+            const banner = document.getElementById('cookie-consent-banner');
+            if (banner) {
+                banner.style.display = 'none';
+                setTimeout(() => { banner.style.display = ''; }, 15000);
+            }
+            const roomSel = document.getElementById('room-selection');
+            if (roomSel) roomSel.style.display = 'none';
+
+            if (!document.getElementById('invite-joining-msg')) {
+                const joiningMsg = document.createElement('div');
+                joiningMsg.id = 'invite-joining-msg';
+                joiningMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;min-height:60vh;color:#fff;font-family:Inter,sans-serif;';
+                joiningMsg.innerHTML = '<div style="width:40px;height:40px;border:3px solid rgba(255,255,255,0.2);border-top-color:#a855f7;border-radius:50%;animation:spin 0.8s linear infinite;"></div><div style="font-size:18px;font-weight:500;">Joining room\u2026</div>';
+                if (!document.getElementById('invite-spin-style')) {
+                    const styleEl = document.createElement('style');
+                    styleEl.id = 'invite-spin-style';
+                    styleEl.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+                    document.head.appendChild(styleEl);
+                }
+                const mainEl = document.querySelector('main');
+                if (mainEl) mainEl.prepend(joiningMsg);
+            }
+        };
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', doShow);
+        } else {
+            doShow();
+        }
     }
 
     async _init() {
@@ -538,12 +601,24 @@ class AudioRoomsManager {
         });
     }
 
+    _emitRegisterUser() {
+        try {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (user && user._id) {
+                const sock = this.lobbySocket || this.socket;
+                if (sock && sock.connected) {
+                    sock.emit('register-user', { userId: user._id, userName: user.name || 'User' });
+                }
+            }
+        } catch(e) {}
+    }
+
     connectToServer() {
         return new Promise((resolve) => {
             console.log('Connecting to signaling server...');
             const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
             this.lobbySocket = io(serverUrl, {
-                transports: ['websocket', 'polling'],
+                transports: ['websocket'],
                 reconnection: true,
                 reconnectionAttempts: 10,
                 reconnectionDelay: 1000,
@@ -552,18 +627,8 @@ class AudioRoomsManager {
 
             this.lobbySocket.on('connect', () => {
                 console.log('Connected to signaling server');
-                try {
-                    const user = JSON.parse(localStorage.getItem('user'));
-                    if (user && user._id) {
-                        this.lobbySocket.emit('register-user', { userId: user._id, userName: user.name || 'User' });
-                    }
-                } catch(e) {}
-
+                this._emitRegisterUser();
                 resolve();
-
-                if (this._invite.status === 'pending' && this._initComplete && !this.currentRoom) {
-                    this._processInvite();
-                }
             });
 
             this.lobbySocket.on('rooms-updated', (rooms) => {
@@ -1868,8 +1933,9 @@ class AudioRoomsManager {
             return;
         }
         try {
+            let roomData = null;
             if (!isInvite) {
-                const roomData = await this.checkRoomLockStatus(roomId);
+                roomData = await this.checkRoomLockStatus(roomId);
                 if (roomData && roomData.isLocked) {
                     alert('This room is currently locked. The host has prevented new participants from joining.');
                     return;
@@ -2400,6 +2466,7 @@ class AudioRoomsManager {
             } else {
                 this.socket = this.lobbySocket;
             }
+            this._emitRegisterUser();
             return Promise.resolve();
         }
 
@@ -2408,6 +2475,7 @@ class AudioRoomsManager {
             return new Promise((resolve) => {
                 this.lobbySocket.once('connect', () => {
                     console.log('Socket.io reconnected:', this.lobbySocket.id);
+                    this._emitRegisterUser();
                     if (!this._roomHandlersRegistered) {
                         this._registerRoomHandlers();
                     }
@@ -2421,7 +2489,7 @@ class AudioRoomsManager {
 
         const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
         this.lobbySocket = io(serverUrl, {
-            transports: ['websocket', 'polling'],
+            transports: ['websocket'],
             reconnection: true,
             reconnectionAttempts: 10,
             reconnectionDelay: 1000,
@@ -6789,70 +6857,3 @@ document.addEventListener('DOMContentLoaded', () => {
     window.audioRoomsManager = audioRoomsManager;
 });
 
-// Handle page parameters (if joining via direct link or pending invite)
-(function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    let roomToJoin = urlParams.get('room');
-
-    if (!roomToJoin) {
-        const fullPath = window.location.pathname + window.location.search;
-        const pathMatch = fullPath.match(/\/room\/([^/?&#\s]+)/);
-        if (pathMatch) {
-            roomToJoin = decodeURIComponent(pathMatch[1]);
-        }
-    }
-    if (roomToJoin) {
-        roomToJoin = roomToJoin.split('?')[0].split('&')[0].split('#')[0].trim();
-    }
-
-    if (!roomToJoin) {
-        const pending = localStorage.getItem('wordeth_pending_room');
-        const pendingTs = parseInt(localStorage.getItem('wordeth_pending_room_ts') || '0', 10);
-        if (pending && localStorage.getItem('authToken') && (Date.now() - pendingTs < 60000)) {
-            roomToJoin = pending;
-        }
-        localStorage.removeItem('wordeth_pending_room');
-        localStorage.removeItem('wordeth_pending_room_ts');
-    }
-    if (!roomToJoin) return;
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const banner = document.getElementById('cookie-consent-banner');
-        if (banner) {
-            banner.style.display = 'none';
-            setTimeout(() => {
-                banner.style.display = '';
-            }, 15000);
-        }
-
-        const roomSel = document.getElementById('room-selection');
-        if (roomSel) roomSel.style.display = 'none';
-
-        const joiningMsg = document.createElement('div');
-        joiningMsg.id = 'invite-joining-msg';
-        joiningMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;min-height:60vh;color:#fff;font-family:Inter,sans-serif;';
-        joiningMsg.innerHTML = '<div style="width:40px;height:40px;border:3px solid rgba(255,255,255,0.2);border-top-color:#a855f7;border-radius:50%;animation:spin 0.8s linear infinite;"></div><div style="font-size:18px;font-weight:500;">Joining room\u2026</div>';
-        const styleEl = document.createElement('style');
-        styleEl.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
-        document.head.appendChild(styleEl);
-        const mainEl = document.querySelector('main');
-        if (mainEl) mainEl.prepend(joiningMsg);
-
-        const waitForManager = (attempt = 0) => {
-            const mgr = window.audioRoomsManager;
-            if (!mgr) {
-                if (attempt < 50) {
-                    setTimeout(() => waitForManager(attempt + 1), 100);
-                } else {
-                    console.error('Invite: manager never initialized');
-                    const msg = document.getElementById('invite-joining-msg');
-                    if (msg) msg.remove();
-                    if (roomSel) roomSel.style.display = '';
-                }
-                return;
-            }
-            mgr.queueInvite(roomToJoin);
-        };
-        waitForManager(0);
-    });
-})();

@@ -14,8 +14,7 @@
     const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
 
     const notifSocket = io(serverUrl, {
-        transports: ['polling', 'websocket'],
-        upgrade: true,
+        transports: ['websocket'],
         reconnection: true,
         reconnectionAttempts: 10,
         reconnectionDelay: 2000
