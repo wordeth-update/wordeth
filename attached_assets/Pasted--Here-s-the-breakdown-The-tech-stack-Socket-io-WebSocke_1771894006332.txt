@@ -1,0 +1,26 @@
+
+Here's the breakdown:
+
+The tech stack:
+
+Socket.io — WebSocket library that handles real-time communication between the browser and your server. It's what carries the invite notifications, room join requests, and all the live room events (chat, audio state, etc.).
+Express.js — Your web server. It serves the pages and handles the /room/:roomId URL route that invite links point to.
+Agora RTC — The actual audio/video transport for the rooms. Once someone successfully joins a room via Socket.io, Agora handles the media streaming.
+How the invite flow works:
+
+Host sends an invite → server delivers it to the invitee's socket connection
+Invitee clicks "Join" → browser navigates to /room/ROOM_ID
+Server sees it's a real user (not a social media bot), serves the Verses page
+JavaScript on the Verses page detects the room ID in the URL
+It connects a Socket.io websocket to the server
+It emits a join-room event with the room ID
+Server checks if that room exists, and either admits them or sends back an error
+My approach so far:
+
+Fixed the room ID parsing — the URL query parameters for the OG card (?name=...&host=...) were accidentally being included in the room ID, so the server could never find a match.
+Eliminated redundant network calls — the flow was doing 3 separate API calls (verify room, check lock status, fetch room list) before even attempting to join. I cut it down to just the socket join, since the server validates everything in one step.
+Added the "Joining room..." spinner — so users see immediate feedback instead of a confusing lobby page.
+Prioritized WebSocket transport — Socket.io defaults to HTTP polling first then upgrades. I switched it to try WebSocket first, which connects faster.
+Shortened timeouts and retries — reduced wait times between retry attempts.
+Where I think the remaining issue might be:
+The socket connection itself might be slow on production (Railway + Cloudflare). The invite join can't start until the socket connects, and that initial connection could be taking longer than expected in the production environment. Getting browser console logs from a real test on production would help pinpoint exactly where the delay is happening — whether it's the socket connect, the join-room emission, or the server response.
