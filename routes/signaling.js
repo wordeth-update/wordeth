@@ -3,6 +3,33 @@ const { saveRoom, deleteRoom, loadAllRooms, loadRoom, getClient } = require('../
 let rooms = new Map();
 const connectedUsers = new Map();
 let isShuttingDown = false;
+const roomDeletionTimers = new Map();
+const ROOM_EMPTY_GRACE_PERIOD = 120000;
+
+function scheduleRoomDeletion(roomId, reason) {
+    if (roomDeletionTimers.has(roomId)) return;
+    console.log(`Room ${roomId} empty (${reason}) — will delete in ${ROOM_EMPTY_GRACE_PERIOD / 1000}s if no one rejoins`);
+    const timer = setTimeout(() => {
+        roomDeletionTimers.delete(roomId);
+        const room = rooms.get(roomId);
+        if (room && room.participants.size === 0) {
+            rooms.delete(roomId);
+            if (!isShuttingDown) {
+                deleteRoom(roomId);
+            }
+            console.log(`Room ${roomId} deleted after grace period (${reason})`);
+        }
+    }, ROOM_EMPTY_GRACE_PERIOD);
+    roomDeletionTimers.set(roomId, timer);
+}
+
+function cancelRoomDeletion(roomId) {
+    if (roomDeletionTimers.has(roomId)) {
+        clearTimeout(roomDeletionTimers.get(roomId));
+        roomDeletionTimers.delete(roomId);
+        console.log(`Room ${roomId} deletion cancelled — someone rejoined`);
+    }
+}
 
 async function initRooms() {
     getClient();
@@ -111,9 +138,7 @@ function setupSignaling(io) {
                 });
 
                 if (prevRoom.participants.size === 0) {
-                    rooms.delete(socket.roomId);
-                    deleteRoom(socket.roomId);
-                    console.log(`Room ${socket.roomId} removed (empty after room switch)`);
+                    scheduleRoomDeletion(socket.roomId, 'room switch');
                 } else if (socket.id === prevRoom.hostId) {
                     const firstParticipant = prevRoom.participants.values().next().value;
                     if (firstParticipant) {
@@ -137,6 +162,8 @@ function setupSignaling(io) {
             socket.userId = userId || socket.id;
             socket.userName = userName || 'Anonymous';
             socket.avatar = avatar || null;
+
+            cancelRoomDeletion(roomId);
 
             if (!rooms.has(roomId)) {
                 const redisRoom = await loadRoom(roomId);
@@ -321,9 +348,7 @@ function setupSignaling(io) {
             });
 
             if (room.participants.size === 0) {
-                rooms.delete(roomId);
-                deleteRoom(roomId);
-                console.log(`Room ${roomId} removed (empty after leave)`);
+                scheduleRoomDeletion(roomId, 'explicit leave');
             } else if (socket.id === room.hostId) {
                 const firstParticipant = room.participants.values().next().value;
                 if (firstParticipant) {
@@ -751,12 +776,10 @@ function setupSignaling(io) {
                 });
 
                 if (room.participants.size === 0) {
-                    rooms.delete(socket.roomId);
-                    if (!isShuttingDown) {
-                        deleteRoom(socket.roomId);
-                        console.log(`Room ${socket.roomId} removed (empty)`);
-                    } else {
+                    if (isShuttingDown) {
                         console.log(`Room ${socket.roomId} emptied during shutdown — preserved in Redis for restore`);
+                    } else {
+                        scheduleRoomDeletion(socket.roomId, 'disconnect');
                     }
                 } else if (socket.id === room.hostId) {
                     const firstParticipant = room.participants.values().next().value;
@@ -835,6 +858,7 @@ function joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar }) {
     }
 
     const room = rooms.get(roomId);
+    cancelRoomDeletion(roomId);
     if (room.isLocked && !isHost) {
         return { success: false, message: 'This room is currently locked.' };
     }
