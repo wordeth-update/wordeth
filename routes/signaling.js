@@ -834,8 +834,22 @@ function setShuttingDown() {
     console.log('[Signaling] Shutdown flag set — rooms will be preserved in Redis');
 }
 
-function joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar }) {
+async function joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar }) {
     if (!roomId) return { success: false, message: 'Missing roomId' };
+
+    if (!rooms.has(roomId)) {
+        try {
+            const redisRoom = await loadRoom(roomId);
+            if (redisRoom) {
+                console.log(`[HTTP Join] Room "${roomId}" restored from Redis`);
+                redisRoom.participants = new Map();
+                redisRoom.activeVideos = new Set();
+                rooms.set(roomId, redisRoom);
+            }
+        } catch (e) {
+            console.warn('[HTTP Join] Redis fallback error:', e.message);
+        }
+    }
 
     if (!rooms.has(roomId)) {
         if (isHost && roomName) {

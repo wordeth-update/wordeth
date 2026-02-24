@@ -208,15 +208,20 @@ app.post('/api/rooms/create', (req, res) => {
     res.json({ id: roomId });
 });
 
-app.post('/api/rooms/join', (req, res) => {
+app.post('/api/rooms/join', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     const { roomId, userId, userName, isHost, roomName, avatar } = req.body;
     console.log(`[Rooms API] HTTP join request: roomId=${roomId}, userName=${userName}, isHost=${isHost}`);
-    const result = joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar });
-    if (result.success) {
-        res.json(result);
-    } else {
-        res.status(404).json(result);
+    try {
+        const result = await joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar });
+        if (result.success) {
+            res.json(result);
+        } else {
+            res.status(404).json(result);
+        }
+    } catch (err) {
+        console.error('[Rooms API] HTTP join error:', err);
+        res.status(500).json({ success: false, message: 'Server error joining room' });
     }
 });
 
