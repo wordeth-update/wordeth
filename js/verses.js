@@ -2173,7 +2173,6 @@ class AudioRoomsManager {
                         const wasInviteJoin = this._invite.status === 'joining' || this._pendingJoinIsInvite;
                         if (this._invite.status === 'joining') this._invite.status = 'joined';
                         if (wasInviteJoin) {
-                            this._hideJoiningOverlay();
                             this._showRoomUI(httpData.roomId || roomId, httpData.isHost || isHost);
                             if (guestJoin) {
                                 this.addChatMessage('System', 'Welcome! You\'re listening as a guest. Sign up to chat and join the conversation.', true);
