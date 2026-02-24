@@ -1,7 +1,19 @@
-const rooms = new Map();
+const { saveRoom, deleteRoom, loadAllRooms, getClient } = require('../services/redisClient');
+
+let rooms = new Map();
 const connectedUsers = new Map();
 
+async function initRooms() {
+    getClient();
+    const restored = await loadAllRooms();
+    if (restored.size > 0) {
+        rooms = restored;
+        console.log(`[Signaling] ${restored.size} room(s) restored from Redis`);
+    }
+}
+
 function setupSignaling(io) {
+    initRooms().catch(err => console.error('[Signaling] Room restore failed:', err.message));
     io.on('connection', (socket) => {
         console.log(`Socket connected: ${socket.id}`);
 
@@ -82,6 +94,7 @@ function setupSignaling(io) {
 
                 if (prevRoom.participants.size === 0) {
                     rooms.delete(socket.roomId);
+                    deleteRoom(socket.roomId);
                     console.log(`Room ${socket.roomId} removed (empty after room switch)`);
                 } else if (socket.id === prevRoom.hostId) {
                     const firstParticipant = prevRoom.participants.values().next().value;
@@ -93,6 +106,9 @@ function setupSignaling(io) {
                             data: { newHostId: firstParticipant.socketId, newHostName: firstParticipant.userName }
                         });
                     }
+                    saveRoom(socket.roomId, prevRoom);
+                } else {
+                    saveRoom(socket.roomId, prevRoom);
                 }
 
                 io.emit('rooms-updated', getActiveRooms());
@@ -232,6 +248,7 @@ function setupSignaling(io) {
 
             console.log(`${socket.userName} joined room ${roomId} (${room.participants.size} participants)`);
 
+            saveRoom(roomId, room);
             io.emit('rooms-updated', getActiveRooms());
         });
 
@@ -268,6 +285,7 @@ function setupSignaling(io) {
 
             if (room.participants.size === 0) {
                 rooms.delete(roomId);
+                deleteRoom(roomId);
                 console.log(`Room ${roomId} removed (empty after leave)`);
             } else if (socket.id === room.hostId) {
                 const firstParticipant = room.participants.values().next().value;
@@ -279,6 +297,9 @@ function setupSignaling(io) {
                         data: { newHostId: firstParticipant.socketId, newHostName: firstParticipant.userName }
                     });
                 }
+                saveRoom(roomId, room);
+            } else {
+                saveRoom(roomId, room);
             }
 
             socket.roomId = null;
@@ -344,6 +365,7 @@ function setupSignaling(io) {
                     event: 'participant-kicked',
                     data: { userName: targetParticipant.userName, action: 'remove' }
                 });
+                saveRoom(roomId, room);
                 io.emit('rooms-updated', getActiveRooms());
             } else if (action === 'move-to-crowd') {
                 targetParticipant.isSpeaker = false;
@@ -372,6 +394,7 @@ function setupSignaling(io) {
                     karaokeEnabled: room.karaokeEnabled,
                     stageAccess: room.stageAccess || 'invite-only'
                 });
+                saveRoom(roomId, room);
             }
         });
 
@@ -415,6 +438,7 @@ function setupSignaling(io) {
                     userName: targetParticipant.userName
                 }
             });
+            saveRoom(roomId, room);
         });
 
         socket.on('request-stage', ({ roomId }) => {
@@ -472,6 +496,7 @@ function setupSignaling(io) {
                 event: 'participant-promoted',
                 data: { socketId: socket.id, userName: participant.userName }
             });
+            saveRoom(roomId, room);
         });
 
         socket.on('set-stage-access', ({ roomId, mode }) => {
@@ -481,6 +506,7 @@ function setupSignaling(io) {
             if (mode !== 'open' && mode !== 'invite-only') return;
 
             room.stageAccess = mode;
+            saveRoom(roomId, room);
 
             io.to(roomId).emit('room-event', {
                 event: 'stage-access-changed',
@@ -497,6 +523,7 @@ function setupSignaling(io) {
                     if (socket.id === room.hostId) {
                         room.isLocked = data.locked;
                         socket.to(roomId).emit('room-event', { event, data });
+                        saveRoom(roomId, room);
                     }
                     break;
 
@@ -510,6 +537,7 @@ function setupSignaling(io) {
                     if (socket.id === room.hostId) {
                         room.karaokeEnabled = data.enabled;
                         socket.to(roomId).emit('room-event', { event, data });
+                        saveRoom(roomId, room);
                     }
                     break;
 
@@ -521,6 +549,7 @@ function setupSignaling(io) {
                             room.activeVideos.clear();
                         }
                         socket.to(roomId).emit('room-event', { event, data });
+                        saveRoom(roomId, room);
                     }
                     break;
 
@@ -528,12 +557,14 @@ function setupSignaling(io) {
                     if (room.videoMode !== 'off' && room.activeVideos.size < 6) {
                         room.activeVideos.add(socket.id);
                         socket.to(roomId).emit('room-event', { event, data: { ...data, socketId: socket.id, userName: socket.userName, userId: socket.userId } });
+                        saveRoom(roomId, room);
                     }
                     break;
 
                 case 'video-stop':
                     room.activeVideos.delete(socket.id);
                     socket.to(roomId).emit('room-event', { event, data: { ...data, socketId: socket.id, userName: socket.userName, userId: socket.userId } });
+                    saveRoom(roomId, room);
                     break;
 
                 case 'video-request':
@@ -580,6 +611,7 @@ function setupSignaling(io) {
                         });
                         room.participants.clear();
                         rooms.delete(roomId);
+                        deleteRoom(roomId);
                         io.emit('rooms-updated', getActiveRooms());
                         console.log(`Room ${roomId} closed by host ${socket.userName}`);
                     }
@@ -683,6 +715,7 @@ function setupSignaling(io) {
 
                 if (room.participants.size === 0) {
                     rooms.delete(socket.roomId);
+                    deleteRoom(socket.roomId);
                     console.log(`Room ${socket.roomId} removed (empty)`);
                 } else if (socket.id === room.hostId) {
                     const firstParticipant = room.participants.values().next().value;
@@ -694,6 +727,9 @@ function setupSignaling(io) {
                             data: { newHostId: firstParticipant.socketId, newHostName: firstParticipant.userName }
                         });
                     }
+                    saveRoom(socket.roomId, room);
+                } else {
+                    saveRoom(socket.roomId, room);
                 }
 
                 io.emit('rooms-updated', getActiveRooms());

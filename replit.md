@@ -30,6 +30,13 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Technology**: MongoDB with Mongoose ODM.
 - **Models**: Includes models for Users, Advertisements, Advertisers, Usage Events, Labels, Partner Users, Merch Sales, Dashboard Shares, Subscription Plans, Subscriptions, and an immutable Events Ledger for financial tracking.
 
+### Redis (Room State Persistence)
+- **Technology**: Redis via ioredis, hosted on Railway.
+- **Purpose**: Persists live Verses audio room state so rooms survive server restarts/deployments.
+- **Client**: `services/redisClient.js` — singleton client with auto-reconnect, pipeline batching, and graceful fallback (rooms still work in-memory if Redis is unavailable).
+- **Data Model**: Each room stored as `wordeth:room:{roomId}` (JSON, 24h TTL). Room index stored in `wordeth:rooms` (SET). On boot, `initRooms()` in `routes/signaling.js` restores rooms from Redis (participants/activeVideos are cleared since socket connections don't survive restarts).
+- **Sync Strategy**: Write-through — every room mutation (create, join, leave, kick, promote, settings change, close) calls `saveRoom()` or `deleteRoom()` to keep Redis in sync with the in-memory Map. Reads always hit the in-memory Map for zero-latency real-time performance.
+
 ### Authentication
 - Uses JWT tokens (7-day expiry) stored client-side in localStorage.
 - Employs bcrypt for password hashing for users, advertisers, and partner accounts.
