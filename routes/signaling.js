@@ -2,6 +2,7 @@ const { saveRoom, deleteRoom, loadAllRooms, loadRoom, getClient } = require('../
 
 let rooms = new Map();
 const connectedUsers = new Map();
+let isShuttingDown = false;
 
 async function initRooms() {
     getClient();
@@ -751,8 +752,12 @@ function setupSignaling(io) {
 
                 if (room.participants.size === 0) {
                     rooms.delete(socket.roomId);
-                    deleteRoom(socket.roomId);
-                    console.log(`Room ${socket.roomId} removed (empty)`);
+                    if (!isShuttingDown) {
+                        deleteRoom(socket.roomId);
+                        console.log(`Room ${socket.roomId} removed (empty)`);
+                    } else {
+                        console.log(`Room ${socket.roomId} emptied during shutdown — preserved in Redis for restore`);
+                    }
                 } else if (socket.id === room.hostId) {
                     const firstParticipant = room.participants.values().next().value;
                     if (firstParticipant) {
@@ -800,4 +805,9 @@ function getActiveRooms() {
     return activeRooms;
 }
 
-module.exports = { setupSignaling, getActiveRooms };
+function setShuttingDown() {
+    isShuttingDown = true;
+    console.log('[Signaling] Shutdown flag set — rooms will be preserved in Redis');
+}
+
+module.exports = { setupSignaling, getActiveRooms, setShuttingDown };

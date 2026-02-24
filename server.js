@@ -10,7 +10,7 @@ const rateLimit = require('express-rate-limit');
 const fs = require('fs');
 const crypto = require('crypto');
 const puppeteer = require('puppeteer');
-const { setupSignaling, getActiveRooms } = require('./routes/signaling');
+const { setupSignaling, getActiveRooms, setShuttingDown } = require('./routes/signaling');
 
 let ogLogoBase64 = '';
 let ogBrowser = null;
@@ -717,5 +717,19 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('🔌 WebSocket signaling server active');
 }); 
 }
+
+['SIGTERM', 'SIGINT'].forEach(signal => {
+    process.on(signal, () => {
+        console.log(`\n${signal} received — shutting down gracefully`);
+        setShuttingDown();
+        setTimeout(() => {
+            server.close(() => {
+                console.log('Server closed');
+                process.exit(0);
+            });
+        }, 500);
+        setTimeout(() => process.exit(0), 5000);
+    });
+});
 
 module.exports = { app, server, io };

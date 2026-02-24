@@ -267,9 +267,37 @@ class AudioRoomsManager {
         console.log('Invite: processing room', inv.roomId, 'attempt', inv.retries + 1);
 
         try {
+            this._updateJoiningStatus('Checking room\u2026');
+            let roomExists = false;
+            try {
+                const checkResp = await fetch(apiUrl(`/api/rooms/debug/${inv.roomId}`));
+                if (checkResp.ok) {
+                    const checkData = await checkResp.json();
+                    console.log('Invite: room check:', JSON.stringify(checkData));
+                    roomExists = checkData.inMemory || checkData.inRedis;
+                    if (!roomExists) {
+                        const activeResp = await fetch(apiUrl('/api/rooms/active'));
+                        if (activeResp.ok) {
+                            const activeRooms = await activeResp.json();
+                            console.log('Invite: active rooms:', activeRooms.length);
+                            roomExists = activeRooms.some(r => r.id === inv.roomId);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Invite: room check failed, proceeding anyway:', e.message);
+                roomExists = true;
+            }
+
+            if (!roomExists) {
+                console.warn('Invite: room does not exist on server');
+                this._failInvite('This room is no longer live. It may have ended or the server restarted.', true);
+                return;
+            }
+
             if (!this.lobbySocket || !this.lobbySocket.connected) {
                 console.warn('Invite: socket not connected, waiting...');
-                this._updateJoiningStatus('Waiting for connection\u2026');
+                this._updateJoiningStatus('Connecting\u2026');
                 await new Promise((resolve) => {
                     const timeout = setTimeout(resolve, 8000);
                     if (this.lobbySocket) {
@@ -285,7 +313,7 @@ class AudioRoomsManager {
                 }
             }
             if (this.currentRoom) { inv.status = 'idle'; return; }
-            this._updateJoiningStatus('Sending join request\u2026');
+            this._updateJoiningStatus('Joining room\u2026');
             await this.joinRoom(inv.roomId, false, true);
         } catch (e) {
             console.error('Invite: join failed:', e);

@@ -98,7 +98,13 @@ async function saveRoom(roomId, room) {
     const pipeline = client.pipeline();
     pipeline.set(roomKey(roomId), serializeRoom(room), 'EX', 86400);
     pipeline.sadd(ROOMS_INDEX_KEY, roomId);
-    await pipeline.exec();
+    const results = await pipeline.exec();
+    const hasError = results.some(([err]) => err);
+    if (hasError) {
+      console.error('[Redis] saveRoom partial failure for', roomId, results);
+    } else {
+      console.log(`[Redis] Room saved: ${roomId} (${room.name || 'unnamed'}, ${room.participants.size} participants)`);
+    }
   } catch (err) {
     console.error('[Redis] saveRoom error:', err.message);
   }
