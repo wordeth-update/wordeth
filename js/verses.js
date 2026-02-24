@@ -2131,11 +2131,8 @@ class AudioRoomsManager {
                 this._showRoomUI(roomId, isHost);
             }
 
-            await this.connectSocket();
-            console.log('joinRoom: socket connected, id:', this.socket?.id, 'handlers registered:', !!this._roomHandlersRegistered);
-            
             const roomNameEl = document.getElementById('room-name');
-            const currentRoomName = roomNameEl?.textContent || '';
+            const currentRoomName = roomNameEl?.textContent || this._inviteMeta?.name || '';
             
             const guestJoin = this.isGuest;
             this._pendingJoinIsInvite = isInvite;
@@ -2194,13 +2191,6 @@ class AudioRoomsManager {
                     this.updateVideoButtonState();
                     this.updateHostControls();
                     if (httpData.participants) this.updateParticipantDisplay(httpData.participants);
-                    
-                    try {
-                        const agoraRole = (httpData.isHost || isHost) ? 'host' : 'audience';
-                        await this.safeJoinAgora(roomId, { forceRole: agoraRole });
-                    } catch (agoraErr) {
-                        console.warn('joinRoom: Agora join deferred, will retry on socket connect:', agoraErr.message);
-                    }
                 } else {
                     console.warn('joinRoom: HTTP join failed:', httpData.message);
                     if (isInvite) {
@@ -2212,50 +2202,31 @@ class AudioRoomsManager {
                     return;
                 }
             } catch (httpErr) {
-                console.warn('joinRoom: HTTP join failed with error:', httpErr.message, '- falling back to socket');
+                console.warn('joinRoom: HTTP join failed with error:', httpErr.message);
+                if (isInvite) {
+                    this._failInvite('Could not connect to the server. Please check your connection and try again.');
+                } else {
+                    this._restoreLobbyUI();
+                    this.showToast?.('Could not connect to the server.', 'fa-exclamation-circle');
+                }
+                return;
             }
 
-            await this.connectSocket();
-            console.log('joinRoom: socket connected, id:', this.socket?.id, 'connected:', this.socket?.connected);
+            this.connectSocket().then(() => {
+                console.log('joinRoom: socket connected, id:', this.socket?.id, 'connected:', this.socket?.connected);
+                if (this.socket?.connected) {
+                    joinPayload.userId = guestJoin ? `guest_${this.socket.id}` : (user._id || user.id || this.socket.id);
+                    this.socket.emit('join-room', joinPayload, (ack) => {
+                        console.log('joinRoom: socket join-room ack:', ack?.success);
+                    });
+                }
+            }).catch(e => console.warn('Background socket connect error:', e));
 
-            if (this.socket?.connected) {
-                joinPayload.userId = guestJoin ? `guest_${this.socket.id}` : (user._id || user.id || this.socket.id);
-                this.socket.emit('join-room', joinPayload, (ack) => {
-                    console.log('joinRoom: socket ack received:', ack?.success);
-                    if (ack && ack.success && !this._joinConfirmed) {
-                        this._joinConfirmed = true;
-                        this._pendingJoinRoom = null;
-                        if (this._inviteHardTimeout) {
-                            clearTimeout(this._inviteHardTimeout);
-                            this._inviteHardTimeout = null;
-                        }
-                        const handlers = this.socket.listeners('room-joined');
-                        if (handlers.length > 0) handlers[0](ack);
-                    }
-                });
-            }
-
-            if (!httpJoinOk) {
-                setTimeout(async () => {
-                    if (this._pendingJoinRoom === roomId && !this._joinConfirmed) {
-                        console.warn('Join timeout: no response for', roomId);
-                        let debugInfo = `socket: ${this.socket?.connected ? 'connected' : 'disconnected'}, id: ${this.socket?.id || 'none'}`;
-                        try {
-                            const debugResp = await fetch(apiUrl(`/api/rooms/debug/${roomId}`));
-                            const debugData = await debugResp.json();
-                            debugInfo += ` | room: mem=${debugData.inMemory}, redis=${debugData.inRedis}, sockets=${debugData.connectedSockets}, uptime=${debugData.serverUptime}s`;
-                        } catch (e) {
-                            debugInfo += ` | debug unreachable`;
-                        }
-                        this._lastJoinDebug = debugInfo;
-                        if (isInvite) {
-                            this._failInvite('Could not join the room. It may no longer be active.');
-                        } else {
-                            this._restoreLobbyUI();
-                            this.showToast?.('Could not join the room.', 'fa-exclamation-circle');
-                        }
-                    }
-                }, 8000);
+            try {
+                const agoraRole = (isHost) ? 'host' : 'audience';
+                await this.safeJoinAgora(roomId, { forceRole: agoraRole });
+            } catch (agoraErr) {
+                console.warn('joinRoom: Agora join error:', agoraErr.message);
             }
             
             if (!isInvite) {
