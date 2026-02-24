@@ -111,14 +111,24 @@ class AudioRoomsManager {
         if (urlRoom) {
             this.queueInvite(urlRoom);
             this._showJoiningOverlay();
-            this._inviteHardTimeout = setTimeout(() => {
+            this._inviteHardTimeout = setTimeout(async () => {
                 if (this._invite.status === 'joining' || this._invite.status === 'pending') {
-                    console.warn('Invite: hard timeout reached (20s)');
+                    console.warn('Invite: hard timeout reached (25s)');
+                    const socketState = `socket: ${this.socket?.connected ? 'connected' : (this.lobbySocket?.connected ? 'lobby-connected' : 'disconnected')}, id: ${this.socket?.id || this.lobbySocket?.id || 'none'}`;
+                    let debugInfo = socketState;
+                    try {
+                        const debugResp = await fetch(apiUrl(`/api/rooms/debug/${urlRoom}`));
+                        const debugData = await debugResp.json();
+                        debugInfo += ` | room: mem=${debugData.inMemory}, redis=${debugData.inRedis}, sockets=${debugData.connectedSockets}, uptime=${debugData.serverUptime}s`;
+                    } catch (e) {
+                        debugInfo += ` | debug endpoint unreachable: ${e.message}`;
+                    }
+                    this._lastJoinDebug = debugInfo;
                     this._invite.status = 'failed';
                     this._invite.roomId = null;
                     this._showRoomEndedScreen('Could not connect to the room. The server may be unreachable.');
                 }
-            }, 20000);
+            }, 25000);
         }
         
         this.initYouTubePlayer();
@@ -347,6 +357,10 @@ class AudioRoomsManager {
             html += `<div style="font-size:14px;color:rgba(255,255,255,0.5);">Was hosted by ${this.sanitizeText(hostLabel)}</div>`;
         }
         html += '<a href="/verses.html" style="margin-top:16px;display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;transition:transform 0.15s;"><i class="fas fa-headphones"></i> Browse Active Rooms</a>';
+        if (this._lastJoinDebug) {
+            html += `<div style="margin-top:24px;padding:12px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;font-size:11px;color:rgba(255,255,255,0.4);font-family:monospace;word-break:break-all;max-width:90vw;text-align:left;">Debug: ${this.sanitizeText(this._lastJoinDebug)}</div>`;
+            this._lastJoinDebug = null;
+        }
         screen.innerHTML = html;
 
         const mainEl = document.querySelector('main');
@@ -2173,14 +2187,18 @@ class AudioRoomsManager {
 
             setTimeout(async () => {
                 if (this._pendingJoinRoom === roomId && !this._joinConfirmed) {
-                    console.warn('Join timeout: no room-joined, room-error, or ack received for', roomId, '- socket state:', this.socket?.connected, this.socket?.id);
+                    const socketState = `socket: ${this.socket?.connected ? 'connected' : 'disconnected'}, id: ${this.socket?.id || 'none'}`;
+                    console.warn('Join timeout: no room-joined, room-error, or ack received for', roomId, '-', socketState);
+                    let debugInfo = socketState;
                     try {
                         const debugResp = await fetch(apiUrl(`/api/rooms/debug/${roomId}`));
                         const debugData = await debugResp.json();
                         console.warn('Join timeout debug info:', JSON.stringify(debugData));
+                        debugInfo += ` | room: mem=${debugData.inMemory}, redis=${debugData.inRedis}, sockets=${debugData.connectedSockets}, uptime=${debugData.serverUptime}s`;
                     } catch (e) {
-                        console.warn('Join timeout: could not reach debug endpoint:', e.message);
+                        debugInfo += ` | debug endpoint unreachable: ${e.message}`;
                     }
+                    this._lastJoinDebug = debugInfo;
                     if (isInvite) {
                         this._failInvite('Could not join the room. It may no longer be active.');
                     } else {
