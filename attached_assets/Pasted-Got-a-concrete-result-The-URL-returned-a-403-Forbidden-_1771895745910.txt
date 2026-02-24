@@ -1,0 +1,32 @@
+Got a concrete result. The URL returned a 403 Forbidden — and that's a Cloudflare-level block, not an Express/Node error. Here's exactly what's happening and why:
+
+🔴 New Finding: Cloudflare is blocking the /room/* path entirely
+The request never reached your Railway server. Cloudflare intercepted it and returned 403 before Express could serve verses.html. This is a new problem on top of the code-level bugs we already found.
+Why this matters for your invite flow:
+The invite link wordeth.com/room/tIxD2Jqn_tTPDDNayrf?name=...&host=... is the exact URL users navigate to when they tap "Join" from the notification. If Cloudflare is 403-ing that path, no one can follow an invite link — they'd hit a blank or error page before JavaScript even loads.
+
+Three likely Cloudflare causes, in order of probability:
+1. Bot Fight Mode / Super Bot Fight Mode is ON
+Cloudflare's Bot Fight Mode blocks requests it classifies as automated. My fetch (and any social media preview bot — WhatsApp, iMessage, Discord) gets 403'd. If "Under Attack Mode" is also on, even real browser users may be getting CAPTCHa challenged on the /room/ path, which would abort the join flow silently.
+Check: Cloudflare dashboard → Security → Bots. If "Super Bot Fight Mode" or "Bot Fight Mode" is enabled, it needs either a WAF exception for /room/* or to be turned off for your use case.
+2. A WAF or Firewall Rule is blocking /room/*
+Someone may have added a custom firewall rule (Security → WAF → Custom Rules) that blocks or challenges the room path — possibly added during a spam/scraping incident and never removed.
+Check: Cloudflare dashboard → Security → WAF → Custom Rules. Look for any rule matching /room/ or using URI path conditions.
+3. Cloudflare is caching a previous 403 response
+If the route ever returned an error and the caching rules aren't set correctly, Cloudflare may be serving a cached 403. Your server.js does set no-store headers on the room route — but if Cloudflare's page rules or cache rules override those, a stale 403 could be stuck.
+Check: Cloudflare dashboard → Caching → Purge Cache → purge wordeth.com/room/*. Then check Page Rules and Cache Rules for anything matching that path.
+
+Immediate fix to try:
+Go to Cloudflare → Security → WAF → Custom Rules and add:
+(http.request.uri.path contains "/room/") → Action: Skip → Skip all remaining custom rules
+Also add a firewall exception for known social crawlers (WhatsApp, iMessage, Twitter) on the /room/ path so your OG preview cards actually generate.
+
+The compounded failure you're hitting in production is now clear:
+
+User taps invite → navigates to /room/ROOM_ID
+Cloudflare blocks it with 403 → user sees an error page or blank screen
+Even if Cloudflare passes it through → Express serves verses.html → socket connects
+In-memory room state may be gone (server restart) → room-error: no longer live
+Even if room exists → transport mismatch adds 600ms+ delay
+
+The Cloudflare 403 is the immediate wall. Fix that first — everything else we diagnosed is still valid once traffic actually reaches your server.

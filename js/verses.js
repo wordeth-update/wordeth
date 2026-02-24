@@ -134,6 +134,10 @@ class AudioRoomsManager {
         if (roomId) {
             roomId = roomId.split('?')[0].split('&')[0].split('#')[0].trim();
         }
+        this._inviteMeta = {
+            name: urlParams.get('name') || null,
+            host: urlParams.get('host') || null
+        };
         if (!roomId) {
             const pending = localStorage.getItem('wordeth_pending_room');
             const pendingTs = parseInt(localStorage.getItem('wordeth_pending_room_ts') || '0', 10);
@@ -157,10 +161,22 @@ class AudioRoomsManager {
             if (roomSel) roomSel.style.display = 'none';
 
             if (!document.getElementById('invite-joining-msg')) {
+                const meta = this._inviteMeta || {};
+                const roomLabel = meta.name || '';
+                const hostLabel = meta.host || '';
                 const joiningMsg = document.createElement('div');
                 joiningMsg.id = 'invite-joining-msg';
-                joiningMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;min-height:60vh;color:#fff;font-family:Inter,sans-serif;';
-                joiningMsg.innerHTML = '<div style="width:40px;height:40px;border:3px solid rgba(255,255,255,0.2);border-top-color:#a855f7;border-radius:50%;animation:spin 0.8s linear infinite;"></div><div style="font-size:18px;font-weight:500;">Joining room\u2026</div>';
+                joiningMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;min-height:60vh;color:#fff;font-family:Inter,sans-serif;text-align:center;padding:20px;';
+                let html = '<div style="width:40px;height:40px;border:3px solid rgba(255,255,255,0.2);border-top-color:#a855f7;border-radius:50%;animation:spin 0.8s linear infinite;"></div>';
+                if (roomLabel) {
+                    html += `<div style="font-size:20px;font-weight:600;color:#d8b4fe;">Joining &ldquo;${this.sanitizeText(roomLabel)}&rdquo;</div>`;
+                } else {
+                    html += '<div style="font-size:18px;font-weight:500;">Joining room\u2026</div>';
+                }
+                if (hostLabel) {
+                    html += `<div style="font-size:14px;color:rgba(255,255,255,0.6);">Hosted by ${this.sanitizeText(hostLabel)}</div>`;
+                }
+                joiningMsg.innerHTML = html;
                 if (!document.getElementById('invite-spin-style')) {
                     const styleEl = document.createElement('style');
                     styleEl.id = 'invite-spin-style';
@@ -248,24 +264,76 @@ class AudioRoomsManager {
         }
     }
 
-    _failInvite(message) {
+    _failInvite(message, permanent = false) {
         const inv = this._invite;
         inv.retries++;
         if (this.currentRoom && !this._joinConfirmed) {
             this.currentRoom = null;
             this._pendingJoinRoom = null;
         }
-        if (inv.retries < inv.maxRetries) {
+        const isPermanent = permanent ||
+            (message && (message.includes('no longer live') || message.includes('expired') || message.includes('not found')));
+        if (!isPermanent && inv.retries < inv.maxRetries) {
             console.log('Invite: retrying in 1s, attempt', inv.retries + 1);
             inv.status = 'pending';
             setTimeout(() => this._processInvite(), 1000);
         } else {
-            console.warn('Invite: giving up after', inv.retries, 'attempts');
+            console.warn('Invite: giving up -', isPermanent ? 'room gone' : `max retries (${inv.retries})`);
             inv.status = 'failed';
             inv.roomId = null;
             inv.retries = 0;
-            this._restoreLobbyUI();
-            this.showToast?.(message || 'Could not connect to the room.', 'fa-exclamation-circle');
+            this._showRoomEndedScreen(message);
+        }
+    }
+
+    _showRoomEndedScreen(message) {
+        const inviteSpinner = document.getElementById('invite-joining-msg');
+        if (inviteSpinner) inviteSpinner.remove();
+        if (this.roomSelection) this.roomSelection.style.display = 'none';
+        this.audioRoom?.classList.add('hidden');
+        document.body.classList.remove('in-room');
+        const pageFooter = document.querySelector('footer');
+        if (pageFooter) pageFooter.style.display = '';
+
+        this.currentRoom = null;
+        this._pendingJoinRoom = null;
+        this._joinConfirmed = false;
+        this._pendingJoinIsInvite = false;
+        this._pendingJoinIsHost = false;
+        this.isRoomHost = false;
+        this.isSpeaker = false;
+        this.isAudioMuted = false;
+        this._releaseWakeLock();
+
+        const existing = document.getElementById('room-ended-screen');
+        if (existing) existing.remove();
+
+        const meta = this._inviteMeta || {};
+        const roomLabel = meta.name || '';
+        const hostLabel = meta.host || '';
+
+        const screen = document.createElement('div');
+        screen.id = 'room-ended-screen';
+        screen.style.cssText = 'display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;min-height:60vh;color:#fff;font-family:Inter,sans-serif;text-align:center;padding:40px 20px;';
+        let html = '<div style="font-size:48px;margin-bottom:8px;"><i class="fas fa-microphone-slash" style="color:#a855f7;"></i></div>';
+        if (roomLabel) {
+            html += `<div style="font-size:22px;font-weight:600;color:#d8b4fe;">&ldquo;${this.sanitizeText(roomLabel)}&rdquo;</div>`;
+        }
+        html += `<div style="font-size:18px;font-weight:500;color:rgba(255,255,255,0.8);">${this.sanitizeText(message || 'This room has ended.')}</div>`;
+        if (hostLabel) {
+            html += `<div style="font-size:14px;color:rgba(255,255,255,0.5);">Was hosted by ${this.sanitizeText(hostLabel)}</div>`;
+        }
+        html += '<a href="/verses.html" style="margin-top:16px;display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;transition:transform 0.15s;"><i class="fas fa-headphones"></i> Browse Active Rooms</a>';
+        screen.innerHTML = html;
+
+        const mainEl = document.querySelector('main');
+        if (mainEl) mainEl.prepend(screen);
+
+        this._invite = { status: 'idle', roomId: null, retries: 0, maxRetries: 3 };
+        localStorage.removeItem('wordeth_pending_room');
+        localStorage.removeItem('wordeth_pending_room_ts');
+        if (window.location.pathname.startsWith('/room/')) {
+            window.history.replaceState({}, '', window.location.pathname);
         }
     }
     
@@ -1953,6 +2021,33 @@ class AudioRoomsManager {
         setTimeout(() => this.loadActiveRooms(), 2000);
     }
 
+    _showRoomUI(roomId, isHost) {
+        const inviteJoiningMsg = document.getElementById('invite-joining-msg');
+        if (inviteJoiningMsg) inviteJoiningMsg.remove();
+        const endedScreen = document.getElementById('room-ended-screen');
+        if (endedScreen) endedScreen.remove();
+        if (this.roomSelection) this.roomSelection.style.display = 'none';
+        this.audioRoom?.classList.remove('hidden');
+        document.body.classList.add('in-room');
+        const pageFooter = document.querySelector('footer');
+        if (pageFooter) pageFooter.style.display = 'none';
+        const mainContainer = document.querySelector('.audio-rooms-container');
+        if (mainContainer) mainContainer.style.overflow = 'hidden';
+        try { screen.orientation?.lock?.('portrait').catch(() => {}); } catch(e) {}
+
+        const user = this.isGuest ? {} : JSON.parse(localStorage.getItem('user') || '{}');
+        const userName = this.isGuest ? 'Guest' : (user.name || user.username || 'Anonymous');
+        if (isHost && !this.isGuest) {
+            this._addSelfToStage(userName, user.avatar || null, true);
+        } else {
+            this.addRemoteListener('self', userName + ' (You)', false, user._id || user.id || null, user.avatar);
+        }
+        this.updateRoomInfo(roomId);
+        this.updateStageControls();
+        const audioRoomEl = document.getElementById('audio-room');
+        if (audioRoomEl) audioRoomEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
     async joinRoom(roomId, isHost = false, isInvite = false) {
         if (!roomId) {
             console.warn('joinRoom called with empty roomId');
@@ -2004,17 +2099,6 @@ class AudioRoomsManager {
                 }
             }
             
-            const inviteJoiningMsg = document.getElementById('invite-joining-msg');
-            if (inviteJoiningMsg) inviteJoiningMsg.remove();
-            if (this.roomSelection) this.roomSelection.style.display = 'none';
-            this.audioRoom?.classList.remove('hidden');
-            document.body.classList.add('in-room');
-            const pageFooter = document.querySelector('footer');
-            if (pageFooter) pageFooter.style.display = 'none';
-            const mainContainer = document.querySelector('.audio-rooms-container');
-            if (mainContainer) mainContainer.style.overflow = 'hidden';
-            try { screen.orientation?.lock?.('portrait').catch(() => {}); } catch(e) {}
-            
             this._pendingJoinRoom = roomId;
             this.currentRoom = roomId;
             this.roomJoinTime = Date.now();
@@ -2023,16 +2107,9 @@ class AudioRoomsManager {
             const user = this.isGuest ? {} : JSON.parse(localStorage.getItem('user') || '{}');
             const userName = this.isGuest ? 'Guest' : (user.name || user.username || 'Anonymous');
 
-            if (isHost && !this.isGuest) {
-                this._addSelfToStage(userName, user.avatar || null, true);
-            } else {
-                this.addRemoteListener('self', userName + ' (You)', false, user._id || user.id || null, user.avatar);
+            if (!isInvite) {
+                this._showRoomUI(roomId, isHost);
             }
-            this.updateRoomInfo(roomId);
-            this.updateStageControls();
-
-            const audioRoomEl = document.getElementById('audio-room');
-            if (audioRoomEl) audioRoomEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
             await this.connectSocket();
             console.log('joinRoom: socket connected, id:', this.socket?.id, 'handlers registered:', !!this._roomHandlersRegistered);
@@ -2041,6 +2118,8 @@ class AudioRoomsManager {
             const currentRoomName = roomNameEl?.textContent || '';
             
             const guestJoin = this.isGuest;
+            this._pendingJoinIsInvite = isInvite;
+            this._pendingJoinIsHost = isHost;
             console.log('joinRoom: emitting join-room for', roomId, 'as', isHost ? 'host' : (guestJoin ? 'guest-listener' : 'listener'));
             this.socket.emit('join-room', {
                 roomId,
@@ -2063,16 +2142,17 @@ class AudioRoomsManager {
                 }
             }, 5000);
             
-            if (guestJoin) {
-                this.addChatMessage('System', 'Welcome! You\'re listening as a guest. Sign up to chat and join the conversation.', true);
-            } else if (isHost) {
-                this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
-            } else {
-                this.addChatMessage('System', 'Welcome! You joined as a listener. Raise your hand or wait for an invite to speak.', true);
+            if (!isInvite) {
+                if (guestJoin) {
+                    this.addChatMessage('System', 'Welcome! You\'re listening as a guest. Sign up to chat and join the conversation.', true);
+                } else if (isHost) {
+                    this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
+                } else {
+                    this.addChatMessage('System', 'Welcome! You joined as a listener. Raise your hand or wait for an invite to speak.', true);
+                }
+                this._requestWakeLock();
+                this._startSilentAudioKeepAlive();
             }
-
-            this._requestWakeLock();
-            this._startSilentAudioKeepAlive();
 
             fetch(apiUrl('/api/analytics/track'), {
                 method: 'POST',
@@ -2566,9 +2646,31 @@ class AudioRoomsManager {
             console.log('Room joined via signaling:', data);
             this._joinConfirmed = true;
             this._pendingJoinRoom = null;
+            const wasInviteJoin = this._invite.status === 'joining' || this._pendingJoinIsInvite;
             if (this._invite.status === 'joining') {
                 this._invite.status = 'joined';
                 console.log('Invite: successfully joined room');
+            }
+
+            if (wasInviteJoin) {
+                const isHost = this._pendingJoinIsHost || data.isHost || false;
+                if (isHost) {
+                    this.isRoomHost = true;
+                    this.isSpeaker = true;
+                }
+                this._showRoomUI(data.roomId || this.currentRoom, isHost);
+                const guestJoin = this.isGuest;
+                if (guestJoin) {
+                    this.addChatMessage('System', 'Welcome! You\'re listening as a guest. Sign up to chat and join the conversation.', true);
+                } else if (isHost) {
+                    this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
+                } else {
+                    this.addChatMessage('System', 'Welcome! You joined as a listener. Raise your hand or wait for an invite to speak.', true);
+                }
+                this._requestWakeLock();
+                this._startSilentAudioKeepAlive();
+                this._pendingJoinIsInvite = false;
+                this._pendingJoinIsHost = false;
             }
 
             const confirmedRoom = data.roomId || this.currentRoom;
@@ -2612,7 +2714,7 @@ class AudioRoomsManager {
                 this.stageAccess = data.stageAccess;
             }
 
-            this.updateParticipantDisplay(data.participants);
+            this.updateParticipantDisplay(data.participants || []);
 
             if (data.roomName) {
                 const roomNameEl = document.getElementById('room-name');
@@ -2627,7 +2729,7 @@ class AudioRoomsManager {
                 }
             }
 
-            for (const p of data.participants) {
+            for (const p of (data.participants || [])) {
                 if (p.socketId !== this.socket?.id) {
                     if (p.agoraUid) {
                         if (!this._agoraUidMap) this._agoraUidMap = new Map();

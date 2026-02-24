@@ -314,6 +314,17 @@ app.get('/room/:roomId', ogCrawlerHeaders, (req, res) => {
 </html>`);
 });
 
+app.get('/join/:roomId', (req, res) => {
+    const roomId = req.params.roomId;
+    const name = req.query.name || '';
+    const host = req.query.host || '';
+    const qs = new URLSearchParams();
+    qs.set('room', roomId);
+    if (name) qs.set('name', name);
+    if (host) qs.set('host', host);
+    res.redirect(302, `/verses.html?${qs.toString()}`);
+});
+
 async function ensureOgBrowser() {
     if (ogBrowser && ogBrowser.isConnected()) return ogBrowser;
     if (ogBrowserLaunching) return ogBrowserLaunching;
