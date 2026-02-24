@@ -193,10 +193,25 @@ async function loadAllRooms() {
 
 async function loadRoom(roomId) {
   const client = getClient();
-  if (!client || !isConnected) return null;
+  if (!client) {
+    console.warn(`[Redis] loadRoom: no client available for ${roomId}`);
+    return null;
+  }
+  if (!isConnected) {
+    console.log(`[Redis] loadRoom: waiting for connection to load ${roomId}...`);
+    const connected = await waitForConnection(5000);
+    if (!connected) {
+      console.warn(`[Redis] loadRoom: connection timeout for ${roomId}`);
+      return null;
+    }
+  }
   try {
     const json = await client.get(roomKey(roomId));
-    if (!json) return null;
+    if (!json) {
+      console.log(`[Redis] loadRoom: no data found for ${roomId}`);
+      return null;
+    }
+    console.log(`[Redis] loadRoom: found room ${roomId}`);
     return deserializeRoom(json);
   } catch (err) {
     console.error(`[Redis] loadRoom error for ${roomId}:`, err.message);

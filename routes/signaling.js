@@ -837,14 +837,19 @@ function setShuttingDown() {
 async function joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar }) {
     if (!roomId) return { success: false, message: 'Missing roomId' };
 
+    console.log(`[HTTP Join] Looking for room ${roomId} — in-memory: ${rooms.has(roomId)}, total rooms: ${rooms.size}`);
+
     if (!rooms.has(roomId)) {
         try {
+            console.log(`[HTTP Join] Room ${roomId} not in memory, checking Redis...`);
             const redisRoom = await loadRoom(roomId);
             if (redisRoom) {
-                console.log(`[HTTP Join] Room "${roomId}" restored from Redis`);
+                console.log(`[HTTP Join] Room "${roomId}" restored from Redis: "${redisRoom.name}"`);
                 redisRoom.participants = new Map();
                 redisRoom.activeVideos = new Set();
                 rooms.set(roomId, redisRoom);
+            } else {
+                console.log(`[HTTP Join] Room ${roomId} not found in Redis either`);
             }
         } catch (e) {
             console.warn('[HTTP Join] Redis fallback error:', e.message);
