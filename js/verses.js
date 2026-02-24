@@ -223,8 +223,8 @@ class AudioRoomsManager {
             if (this._invite.status === 'pending') {
                 this._initComplete = true;
                 this._updateJoiningStatus('Joining room\u2026');
-                this.connectToServer().catch(e => console.warn('Background socket connect error:', e));
                 this._processInvite();
+                this.connectToServer().catch(e => console.warn('Background socket connect error:', e));
                 this.loadActiveRooms().catch(() => {});
                 this.loadReplays();
                 return;
@@ -2187,24 +2187,15 @@ class AudioRoomsManager {
                 }
             }
 
-            const waitForLobbySocket = () => new Promise(resolve => {
-                if (this.lobbySocket?.connected) return resolve();
-                const check = setInterval(() => {
-                    if (this.lobbySocket?.connected) { clearInterval(check); resolve(); }
-                }, 200);
-                setTimeout(() => { clearInterval(check); resolve(); }, 10000);
-            });
-
-            waitForLobbySocket().then(() => {
-                this.socket = this.lobbySocket;
-                if (!this._roomHandlersRegistered) this._registerRoomHandlers();
-                this._emitRegisterUser();
-                console.log('joinRoom: lobby socket ready, id:', this.socket?.id, '- emitting join-room');
-                joinPayload.userId = guestJoin ? `guest_${this.socket.id}` : (user._id || user.id || this.socket.id);
-                this.socket.emit('join-room', joinPayload, (ack) => {
-                    console.log('joinRoom: socket join-room ack:', ack?.success);
-                });
-            }).catch(e => console.warn('Background socket join error:', e));
+            this.connectSocket().then(() => {
+                console.log('joinRoom: socket connected, id:', this.socket?.id);
+                if (this.socket?.connected) {
+                    joinPayload.userId = guestJoin ? `guest_${this.socket.id}` : (user._id || user.id || this.socket.id);
+                    this.socket.emit('join-room', joinPayload, (ack) => {
+                        console.log('joinRoom: socket join-room ack:', ack?.success);
+                    });
+                }
+            }).catch(e => console.warn('Background socket connect error:', e));
 
             try {
                 const agoraRole = isHost ? 'host' : 'audience';
