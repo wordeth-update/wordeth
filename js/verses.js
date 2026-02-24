@@ -225,6 +225,21 @@ class AudioRoomsManager {
         console.log('Invite: processing room', inv.roomId, 'attempt', inv.retries + 1);
 
         try {
+            if (!this.lobbySocket || !this.lobbySocket.connected) {
+                console.warn('Invite: socket not connected, waiting...');
+                await new Promise((resolve) => {
+                    const timeout = setTimeout(resolve, 8000);
+                    if (this.lobbySocket) {
+                        this.lobbySocket.once('connect', () => { clearTimeout(timeout); resolve(); });
+                    } else {
+                        clearTimeout(timeout);
+                        resolve();
+                    }
+                });
+                if (!this.lobbySocket?.connected) {
+                    throw new Error('Socket connection failed');
+                }
+            }
             if (this.currentRoom) { inv.status = 'idle'; return; }
             await this.joinRoom(inv.roomId, false, true);
         } catch (e) {
@@ -614,21 +629,32 @@ class AudioRoomsManager {
     }
 
     connectToServer() {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             console.log('Connecting to signaling server...');
             const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
             this.lobbySocket = io(serverUrl, {
-                transports: ['websocket'],
+                transports: ['websocket', 'polling'],
+                upgrade: true,
                 reconnection: true,
                 reconnectionAttempts: 10,
                 reconnectionDelay: 1000,
                 timeout: 10000
             });
 
+            const connectTimeout = setTimeout(() => {
+                console.warn('Signaling server connection timed out');
+                resolve();
+            }, 12000);
+
             this.lobbySocket.on('connect', () => {
+                clearTimeout(connectTimeout);
                 console.log('Connected to signaling server');
                 this._emitRegisterUser();
                 resolve();
+            });
+
+            this.lobbySocket.on('connect_error', (err) => {
+                console.warn('Signaling connection error:', err.message);
             });
 
             this.lobbySocket.on('rooms-updated', (rooms) => {
@@ -2489,7 +2515,8 @@ class AudioRoomsManager {
 
         const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
         this.lobbySocket = io(serverUrl, {
-            transports: ['websocket'],
+            transports: ['websocket', 'polling'],
+            upgrade: true,
             reconnection: true,
             reconnectionAttempts: 10,
             reconnectionDelay: 1000,
@@ -2500,10 +2527,16 @@ class AudioRoomsManager {
         this._registerRoomHandlers();
 
         return new Promise((resolve) => {
+            const connectTimeout = setTimeout(() => {
+                console.warn('connectSocket: connection timed out');
+                resolve();
+            }, 12000);
             if (this.socket.connected) {
+                clearTimeout(connectTimeout);
                 resolve();
             } else {
                 this.socket.once('connect', () => {
+                    clearTimeout(connectTimeout);
                     console.log('Socket.io connected:', this.socket.id);
                     resolve();
                 });
