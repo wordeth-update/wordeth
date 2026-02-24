@@ -663,6 +663,7 @@ function setupSignaling(io) {
 
                 case 'close-room':
                     if (socket.id === room.hostId) {
+                        cancelRoomDeletion(roomId);
                         io.to(roomId).emit('room-event', { event, data: { hostName: socket.userName } });
                         room.participants.forEach((p, sid) => {
                             const s = io.sockets.sockets.get(sid);
