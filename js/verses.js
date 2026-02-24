@@ -220,16 +220,16 @@ class AudioRoomsManager {
 
     async _init() {
         try {
-            this._updateJoiningStatus('Connecting to server\u2026');
-            await this.connectToServer();
-            this._updateJoiningStatus(this.lobbySocket?.connected ? 'Connected. Joining room\u2026' : 'Connection slow, retrying\u2026');
             if (this._invite.status === 'pending') {
                 this._initComplete = true;
+                this._updateJoiningStatus('Joining room\u2026');
                 this._processInvite();
+                this.connectToServer().catch(e => console.warn('Background socket connect error:', e));
                 this.loadActiveRooms().catch(() => {});
                 this.loadReplays();
                 return;
             }
+            await this.connectToServer();
             await this.loadActiveRooms();
             this.loadReplays();
         } catch (e) {
@@ -267,51 +267,6 @@ class AudioRoomsManager {
         console.log('Invite: processing room', inv.roomId, 'attempt', inv.retries + 1);
 
         try {
-            this._updateJoiningStatus('Checking room\u2026');
-            let roomExists = false;
-            try {
-                const checkResp = await fetch(apiUrl(`/api/rooms/debug/${inv.roomId}`));
-                if (checkResp.ok) {
-                    const checkData = await checkResp.json();
-                    console.log('Invite: room check:', JSON.stringify(checkData));
-                    roomExists = checkData.inMemory || checkData.inRedis;
-                    if (!roomExists) {
-                        const activeResp = await fetch(apiUrl('/api/rooms/active'));
-                        if (activeResp.ok) {
-                            const activeRooms = await activeResp.json();
-                            console.log('Invite: active rooms:', activeRooms.length);
-                            roomExists = activeRooms.some(r => r.id === inv.roomId);
-                        }
-                    }
-                }
-            } catch (e) {
-                console.warn('Invite: room check failed, proceeding anyway:', e.message);
-                roomExists = true;
-            }
-
-            if (!roomExists) {
-                console.warn('Invite: room does not exist on server');
-                this._failInvite('This room is no longer live. It may have ended or the server restarted.', true);
-                return;
-            }
-
-            if (!this.lobbySocket || !this.lobbySocket.connected) {
-                console.warn('Invite: socket not connected, waiting...');
-                this._updateJoiningStatus('Connecting\u2026');
-                await new Promise((resolve) => {
-                    const timeout = setTimeout(resolve, 8000);
-                    if (this.lobbySocket) {
-                        this.lobbySocket.once('connect', () => { clearTimeout(timeout); resolve(); });
-                    } else {
-                        clearTimeout(timeout);
-                        resolve();
-                    }
-                });
-                if (!this.lobbySocket?.connected) {
-                    this._updateJoiningStatus('Connection failed. Retrying\u2026');
-                    throw new Error('Socket connection failed');
-                }
-            }
             if (this.currentRoom) { inv.status = 'idle'; return; }
             this._updateJoiningStatus('Joining room\u2026');
             await this.joinRoom(inv.roomId, false, true);
@@ -2185,93 +2140,124 @@ class AudioRoomsManager {
             const guestJoin = this.isGuest;
             this._pendingJoinIsInvite = isInvite;
             this._pendingJoinIsHost = isHost;
-            console.log('joinRoom: emitting join-room for', roomId, 'as', isHost ? 'host' : (guestJoin ? 'guest-listener' : 'listener'), 'socketId:', this.socket?.id, 'connected:', this.socket?.connected);
-            
-            const pingOk = await new Promise((resolve) => {
-                const t = setTimeout(() => { console.warn('joinRoom: ping-check timed out (3s) - socket may be dead'); resolve(false); }, 3000);
-                try {
-                    this.socket.emit('ping-check', { ts: Date.now() }, (resp) => {
-                        clearTimeout(t);
-                        console.log('joinRoom: ping-check response:', resp);
-                        resolve(resp && resp.ok);
-                    });
-                } catch (e) {
-                    clearTimeout(t);
-                    console.warn('joinRoom: ping-check emit error:', e.message);
-                    resolve(false);
-                }
-            });
-            
-            if (!pingOk) {
-                console.warn('joinRoom: socket is dead despite connected=true, recreating...');
-                this._updateJoiningStatus('Reconnecting\u2026');
-                if (this.lobbySocket) {
-                    this.lobbySocket.removeAllListeners();
-                    this.lobbySocket.disconnect();
-                }
-                this.lobbySocket = null;
-                this.socket = null;
-                this._roomHandlersRegistered = false;
-                await this.connectSocket();
-                console.log('joinRoom: recreated socket, new id:', this.socket?.id, 'connected:', this.socket?.connected);
-                if (!this.socket?.connected) {
-                    if (isInvite) {
-                        this._failInvite('Could not establish a connection to the server.');
-                    }
-                    return;
-                }
-                this._updateJoiningStatus('Sending join request\u2026');
-            }
+            console.log('joinRoom: attempting HTTP join for', roomId, 'as', isHost ? 'host' : (guestJoin ? 'guest-listener' : 'listener'));
             
             const joinPayload = {
                 roomId,
-                userId: guestJoin ? `guest_${this.socket.id}` : (user._id || user.id || this.socket.id),
+                userId: guestJoin ? `guest_${Date.now()}` : (user._id || user.id || `anon_${Date.now()}`),
                 userName,
                 isHost: guestJoin ? false : isHost,
                 roomName: currentRoomName || null,
                 avatar: user.avatar || null
             };
-            this.socket.emit('join-room', joinPayload, (ack) => {
-                console.log('joinRoom: ack callback received:', ack);
-                if (ack && ack.success && !this._joinConfirmed) {
-                    console.log('joinRoom: processing ack (room-joined event may have been lost), triggering handler');
-                    const handlers = this.socket.listeners('room-joined');
-                    if (handlers.length > 0) {
-                        handlers[0](ack);
-                    }
-                } else if (ack && !ack.success && !this._joinConfirmed) {
-                    console.warn('joinRoom: ack returned error:', ack.message);
-                    const errorHandlers = this.socket.listeners('room-error');
-                    if (errorHandlers.length > 0) {
-                        errorHandlers[0]({ message: ack.message });
-                    } else if (isInvite) {
-                        this._failInvite(ack.message || 'Room is no longer available.', true);
-                    }
-                }
-            });
 
-            setTimeout(async () => {
-                if (this._pendingJoinRoom === roomId && !this._joinConfirmed) {
-                    const socketState = `socket: ${this.socket?.connected ? 'connected' : 'disconnected'}, id: ${this.socket?.id || 'none'}`;
-                    console.warn('Join timeout: no room-joined, room-error, or ack received for', roomId, '-', socketState);
-                    let debugInfo = socketState;
-                    try {
-                        const debugResp = await fetch(apiUrl(`/api/rooms/debug/${roomId}`));
-                        const debugData = await debugResp.json();
-                        console.warn('Join timeout debug info:', JSON.stringify(debugData));
-                        debugInfo += ` | room: mem=${debugData.inMemory}, redis=${debugData.inRedis}, sockets=${debugData.connectedSockets}, uptime=${debugData.serverUptime}s`;
-                    } catch (e) {
-                        debugInfo += ` | debug endpoint unreachable: ${e.message}`;
+            let httpJoinOk = false;
+            try {
+                this._updateJoiningStatus('Joining room\u2026');
+                const httpResp = await fetch(apiUrl('/api/rooms/join'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(joinPayload)
+                });
+                const httpData = await httpResp.json();
+                console.log('joinRoom: HTTP join response:', httpData.success, httpData.message || '');
+                if (httpData.success) {
+                    httpJoinOk = true;
+                    this._joinConfirmed = true;
+                    this._pendingJoinRoom = null;
+                    if (this._inviteHardTimeout) {
+                        clearTimeout(this._inviteHardTimeout);
+                        this._inviteHardTimeout = null;
                     }
-                    this._lastJoinDebug = debugInfo;
                     if (isInvite) {
-                        this._failInvite('Could not join the room. It may no longer be active.');
+                        const wasInviteJoin = this._invite.status === 'joining' || this._pendingJoinIsInvite;
+                        if (this._invite.status === 'joining') this._invite.status = 'joined';
+                        if (wasInviteJoin) {
+                            this._hideJoiningOverlay();
+                            this._showRoomUI(httpData.roomId || roomId, httpData.isHost || isHost);
+                            if (guestJoin) {
+                                this.addChatMessage('System', 'Welcome! You\'re listening as a guest. Sign up to chat and join the conversation.', true);
+                            } else if (httpData.isHost || isHost) {
+                                this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
+                            } else {
+                                this.addChatMessage('System', 'Welcome! You joined as a listener. Raise your hand or wait for an invite to speak.', true);
+                            }
+                            this._requestWakeLock();
+                            this._startSilentAudioKeepAlive();
+                            this._pendingJoinIsInvite = false;
+                            this._pendingJoinIsHost = false;
+                        }
+                    }
+                    if (httpData.karaokeEnabled !== undefined) this.karaokeEnabled = httpData.karaokeEnabled;
+                    if (httpData.videoMode) this.videoMode = httpData.videoMode;
+                    if (httpData.stageAccess) this.stageAccess = httpData.stageAccess;
+                    this.updateKaraokeButtonState();
+                    this.updateVideoButtonState();
+                    this.updateHostControls();
+                    if (httpData.participants) this.updateParticipantDisplay(httpData.participants);
+                    
+                    try {
+                        const agoraRole = (httpData.isHost || isHost) ? 'host' : 'audience';
+                        await this.safeJoinAgora(roomId, { forceRole: agoraRole });
+                    } catch (agoraErr) {
+                        console.warn('joinRoom: Agora join deferred, will retry on socket connect:', agoraErr.message);
+                    }
+                } else {
+                    console.warn('joinRoom: HTTP join failed:', httpData.message);
+                    if (isInvite) {
+                        this._failInvite(httpData.message || 'This room is no longer live.', true);
                     } else {
                         this._restoreLobbyUI();
-                        this.showToast?.('Could not join the room. It may no longer be active.', 'fa-exclamation-circle');
+                        this.showToast?.(httpData.message || 'Could not join the room.', 'fa-exclamation-circle');
                     }
+                    return;
                 }
-            }, 8000);
+            } catch (httpErr) {
+                console.warn('joinRoom: HTTP join failed with error:', httpErr.message, '- falling back to socket');
+            }
+
+            await this.connectSocket();
+            console.log('joinRoom: socket connected, id:', this.socket?.id, 'connected:', this.socket?.connected);
+
+            if (this.socket?.connected) {
+                joinPayload.userId = guestJoin ? `guest_${this.socket.id}` : (user._id || user.id || this.socket.id);
+                this.socket.emit('join-room', joinPayload, (ack) => {
+                    console.log('joinRoom: socket ack received:', ack?.success);
+                    if (ack && ack.success && !this._joinConfirmed) {
+                        this._joinConfirmed = true;
+                        this._pendingJoinRoom = null;
+                        if (this._inviteHardTimeout) {
+                            clearTimeout(this._inviteHardTimeout);
+                            this._inviteHardTimeout = null;
+                        }
+                        const handlers = this.socket.listeners('room-joined');
+                        if (handlers.length > 0) handlers[0](ack);
+                    }
+                });
+            }
+
+            if (!httpJoinOk) {
+                setTimeout(async () => {
+                    if (this._pendingJoinRoom === roomId && !this._joinConfirmed) {
+                        console.warn('Join timeout: no response for', roomId);
+                        let debugInfo = `socket: ${this.socket?.connected ? 'connected' : 'disconnected'}, id: ${this.socket?.id || 'none'}`;
+                        try {
+                            const debugResp = await fetch(apiUrl(`/api/rooms/debug/${roomId}`));
+                            const debugData = await debugResp.json();
+                            debugInfo += ` | room: mem=${debugData.inMemory}, redis=${debugData.inRedis}, sockets=${debugData.connectedSockets}, uptime=${debugData.serverUptime}s`;
+                        } catch (e) {
+                            debugInfo += ` | debug unreachable`;
+                        }
+                        this._lastJoinDebug = debugInfo;
+                        if (isInvite) {
+                            this._failInvite('Could not join the room. It may no longer be active.');
+                        } else {
+                            this._restoreLobbyUI();
+                            this.showToast?.('Could not join the room.', 'fa-exclamation-circle');
+                        }
+                    }
+                }, 8000);
+            }
             
             if (!isInvite) {
                 if (guestJoin) {

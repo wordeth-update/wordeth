@@ -810,4 +810,53 @@ function setShuttingDown() {
     console.log('[Signaling] Shutdown flag set — rooms will be preserved in Redis');
 }
 
-module.exports = { setupSignaling, getActiveRooms, setShuttingDown };
+function joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar }) {
+    if (!roomId) return { success: false, message: 'Missing roomId' };
+
+    if (!rooms.has(roomId)) {
+        if (isHost && roomName) {
+            rooms.set(roomId, {
+                id: roomId,
+                name: roomName,
+                hostId: null,
+                creatorUserId: userId,
+                participants: new Map(),
+                karaokeEnabled: false,
+                videoMode: 'off',
+                activeVideos: new Set(),
+                isLocked: false,
+                stageAccess: 'invite-only',
+                createdAt: Date.now()
+            });
+            console.log(`[HTTP Join] Room created: ${roomId} "${roomName}" by ${userName}`);
+        } else {
+            return { success: false, message: 'This room is no longer live.' };
+        }
+    }
+
+    const room = rooms.get(roomId);
+    if (room.isLocked && !isHost) {
+        return { success: false, message: 'This room is currently locked.' };
+    }
+
+    saveRoom(roomId, room);
+
+    return {
+        success: true,
+        roomId,
+        roomName: room.name || null,
+        participants: Array.from(room.participants.values()),
+        isHost: isHost || false,
+        karaokeEnabled: room.karaokeEnabled,
+        videoMode: room.videoMode || 'off',
+        activeVideos: Array.from(room.activeVideos || []),
+        isLocked: room.isLocked,
+        stageAccess: room.stageAccess || 'invite-only'
+    };
+}
+
+function getRoomsMap() {
+    return rooms;
+}
+
+module.exports = { setupSignaling, getActiveRooms, setShuttingDown, joinRoomHTTP, getRoomsMap };
