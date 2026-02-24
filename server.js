@@ -64,6 +64,7 @@ const io = new Server(server, {
 });
 
 setupSignaling(io);
+app.set('io', io);
 
 app.set('trust proxy', 1);
 
@@ -245,6 +246,29 @@ app.get('/api/rooms/active', async (req, res) => {
     }
     console.log(`[Rooms API] Active rooms: ${rooms.length} rooms`);
     res.json(rooms);
+});
+
+app.get('/api/rooms/debug/:roomId', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    const activeRooms = getActiveRooms();
+    const room = activeRooms.find(r => r.id === req.params.roomId);
+    let redisExists = false;
+    try {
+        const { loadRoom } = require('./services/redisClient');
+        const redisRoom = await loadRoom(req.params.roomId);
+        redisExists = !!redisRoom;
+    } catch (e) { }
+    const io = req.app.get('io');
+    const socketCount = io ? io.engine.clientsCount : 'unknown';
+    res.json({
+        roomId: req.params.roomId,
+        inMemory: !!room,
+        inRedis: redisExists,
+        participantCount: room ? room.participantCount : 0,
+        totalActiveRooms: activeRooms.length,
+        connectedSockets: socketCount,
+        serverUptime: Math.floor(process.uptime())
+    });
 });
 
 app.get('/api/rooms/:roomId', (req, res) => {

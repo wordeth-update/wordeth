@@ -84,8 +84,13 @@ function setupSignaling(io) {
             }
         });
 
-        socket.on('join-room', async ({ roomId, userId, userName, isHost: requestedHost, roomName, avatar }) => {
-            if (!roomsReady) await roomsReadyPromise;
+        socket.on('join-room', async ({ roomId, userId, userName, isHost: requestedHost, roomName, avatar }, ackCallback) => {
+          try {
+            console.log(`[join-room] Received from ${socket.id}: roomId=${roomId}, userName=${userName}, isHost=${requestedHost}`);
+            if (!roomsReady) {
+                console.log('[join-room] Waiting for rooms to restore from Redis...');
+                await roomsReadyPromise;
+            }
             let isHost = requestedHost;
             if (socket.roomId && socket.roomId !== roomId && rooms.has(socket.roomId)) {
                 const prevRoom = rooms.get(socket.roomId);
@@ -157,6 +162,7 @@ function setupSignaling(io) {
                         socket.roomId = roomId;
                     } else {
                         socket.emit('room-error', { message: 'This room is no longer live.' });
+                        if (typeof ackCallback === 'function') ackCallback({ success: false, message: 'This room is no longer live.' });
                         socket.leave(roomId);
                         socket.roomId = null;
                         return;
@@ -164,6 +170,7 @@ function setupSignaling(io) {
                 } else {
                     if (!roomName) {
                         socket.emit('room-error', { message: 'This room has expired. Please create a new one.' });
+                        if (typeof ackCallback === 'function') ackCallback({ success: false, message: 'This room has expired. Please create a new one.' });
                         socket.leave(roomId);
                         socket.roomId = null;
                         return;
@@ -235,7 +242,7 @@ function setupSignaling(io) {
 
             const participantList = Array.from(room.participants.values());
 
-            socket.emit('room-joined', {
+            const joinData = {
                 roomId,
                 roomName: room.name || null,
                 participants: participantList,
@@ -245,7 +252,9 @@ function setupSignaling(io) {
                 activeVideos: Array.from(room.activeVideos || []),
                 isLocked: room.isLocked,
                 stageAccess: room.stageAccess || 'invite-only'
-            });
+            };
+            socket.emit('room-joined', joinData);
+            if (typeof ackCallback === 'function') ackCallback({ success: true, ...joinData });
 
             socket.to(roomId).emit('participant-joined', {
                 socketId: socket.id,
@@ -268,6 +277,11 @@ function setupSignaling(io) {
 
             saveRoom(roomId, room);
             io.emit('rooms-updated', getActiveRooms());
+          } catch (err) {
+            console.error('[join-room] Unhandled error:', err);
+            socket.emit('room-error', { message: 'Server error while joining room. Please try again.' });
+            if (typeof ackCallback === 'function') ackCallback({ success: false, message: 'Server error while joining room.' });
+          }
         });
 
         socket.on('agora-uid-map', ({ roomId, agoraUid }) => {

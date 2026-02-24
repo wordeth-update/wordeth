@@ -2143,19 +2143,44 @@ class AudioRoomsManager {
             const guestJoin = this.isGuest;
             this._pendingJoinIsInvite = isInvite;
             this._pendingJoinIsHost = isHost;
-            console.log('joinRoom: emitting join-room for', roomId, 'as', isHost ? 'host' : (guestJoin ? 'guest-listener' : 'listener'));
-            this.socket.emit('join-room', {
+            console.log('joinRoom: emitting join-room for', roomId, 'as', isHost ? 'host' : (guestJoin ? 'guest-listener' : 'listener'), 'socketId:', this.socket?.id, 'connected:', this.socket?.connected);
+            const joinPayload = {
                 roomId,
                 userId: guestJoin ? `guest_${this.socket.id}` : (user._id || user.id || this.socket.id),
                 userName,
                 isHost: guestJoin ? false : isHost,
                 roomName: currentRoomName || null,
                 avatar: user.avatar || null
+            };
+            this.socket.emit('join-room', joinPayload, (ack) => {
+                console.log('joinRoom: ack callback received:', ack);
+                if (ack && ack.success && !this._joinConfirmed) {
+                    console.log('joinRoom: processing ack (room-joined event may have been lost), triggering handler');
+                    const handlers = this.socket.listeners('room-joined');
+                    if (handlers.length > 0) {
+                        handlers[0](ack);
+                    }
+                } else if (ack && !ack.success && !this._joinConfirmed) {
+                    console.warn('joinRoom: ack returned error:', ack.message);
+                    const errorHandlers = this.socket.listeners('room-error');
+                    if (errorHandlers.length > 0) {
+                        errorHandlers[0]({ message: ack.message });
+                    } else if (isInvite) {
+                        this._failInvite(ack.message || 'Room is no longer available.', true);
+                    }
+                }
             });
 
-            setTimeout(() => {
+            setTimeout(async () => {
                 if (this._pendingJoinRoom === roomId && !this._joinConfirmed) {
-                    console.warn('Join timeout: no room-joined or room-error received for', roomId);
+                    console.warn('Join timeout: no room-joined, room-error, or ack received for', roomId, '- socket state:', this.socket?.connected, this.socket?.id);
+                    try {
+                        const debugResp = await fetch(apiUrl(`/api/rooms/debug/${roomId}`));
+                        const debugData = await debugResp.json();
+                        console.warn('Join timeout debug info:', JSON.stringify(debugData));
+                    } catch (e) {
+                        console.warn('Join timeout: could not reach debug endpoint:', e.message);
+                    }
                     if (isInvite) {
                         this._failInvite('Could not join the room. It may no longer be active.');
                     } else {
@@ -2163,7 +2188,7 @@ class AudioRoomsManager {
                         this.showToast?.('Could not join the room. It may no longer be active.', 'fa-exclamation-circle');
                     }
                 }
-            }, 5000);
+            }, 8000);
             
             if (!isInvite) {
                 if (guestJoin) {
