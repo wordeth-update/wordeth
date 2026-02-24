@@ -1,0 +1,148 @@
+🔴 2. services/redisClient.js — Delete two lines in loadAllRooms()
+Lines 91–92 (the self-defeating wipe):
+javascript// BEFORE
+const room = deserializeRoom(json);
+room.participants = new Map();   // ← DELETE THIS
+room.activeVideos = new Set();   // ← DELETE THIS
+rooms.set(roomIds[i], room);
+
+// AFTER
+const room = deserializeRoom(json);
+rooms.set(roomIds[i], room);
+This is the primary reason rooms appear live but joins fail after a server restart. deserializeRoom() already correctly rebuilds both Maps and Sets — these two lines silently undo all of that work.
+
+🟡 3. js/verses.js — Add timeout to connectSocket() reconnect path
+Around line 2579. The disconnected-socket branch has no timeout — if the socket never reconnects, joinRoom() hangs forever and the 5-second invite timeout is never reached.
+javascript// BEFORE
+if (this.lobbySocket && !this.lobbySocket.connected) {
+    this.socket = this.lobbySocket;
+    return new Promise((resolve) => {
+        this.lobbySocket.once('connect', () => {
+            console.log('Socket.io reconnected:', this.lobbySocket.id);
+            this._emitRegisterUser();
+            if (!this._roomHandlersRegistered) {
+                this._registerRoomHandlers();
+            }
+            resolve();
+        });
+        if (this.lobbySocket.disconnected) {
+            this.lobbySocket.connect();
+        }
+    });
+}
+
+// AFTER
+if (this.lobbySocket && !this.lobbySocket.connected) {
+    this.socket = this.lobbySocket;
+    return new Promise((resolve) => {
+        const reconnectTimeout = setTimeout(() => {
+            console.warn('connectSocket: reconnect timed out');
+            resolve();
+        }, 10000);
+        this.lobbySocket.once('connect', () => {
+            clearTimeout(reconnectTimeout);
+            console.log('Socket.io reconnected:', this.lobbySocket.id);
+            this._emitRegisterUser();
+            if (!this._roomHandlersRegistered) {
+                this._registerRoomHandlers();
+            }
+            resolve();
+        });
+        if (this.lobbySocket.disconnected) {
+            this.lobbySocket.connect();
+        }
+    });
+}
+
+🟡 4. server.js — Change transport order to WebSocket-first
+Line 54. Both server and client currently list ['websocket', 'polling'] which looks right, but allowUpgrades: true means Socket.io will still attempt a polling handshake first on some Cloudflare configurations. Locking to WebSocket-only eliminates the upgrade dance and the 200–600ms it adds.
+javascript// BEFORE
+const io = new Server(server, {
+    cors: { origin: true, credentials: true },
+    transports: ['websocket', 'polling'],
+    allowUpgrades: true,
+    ...
+});
+
+// AFTER
+const io = new Server(server, {
+    cors: { origin: true, credentials: true },
+    transports: ['websocket'],
+    allowUpgrades: false,
+    ...
+});
+Then match it in two places in verses.js — connectToServer() (line ~705) and connectSocket() (line ~2597), and in notifications.js (line 17):
+javascript// In all three places, change:
+transports: ['websocket', 'polling'],
+upgrade: true,
+
+// To:
+transports: ['websocket'],
+
+⚠️ Before doing this, verify in Cloudflare that WebSockets are enabled: Network → WebSockets → On. If that toggle is off, WebSocket-only will break everything. Check it first.
+
+
+🟡 5. services/redisClient.js — Guard saveRoom() against the startup no-op window
+Currently saveRoom() silently skips if isConnected is false, which can happen in the first 1–2 seconds after boot. A room created in that window won't persist to Redis and will vanish on the next restart.
+javascript// BEFORE
+async function saveRoom(roomId, room) {
+  const client = getClient();
+  if (!client || !isConnected) return;
+  ...
+}
+
+// AFTER
+async function saveRoom(roomId, room) {
+  const client = getClient();
+  if (!client) return;
+  if (!isConnected) {
+    const connected = await waitForConnection(3000);
+    if (!connected) return;
+  }
+  ...
+}
+
+🟡 6. routes/signaling.js — Guard against startup race on initRooms()
+initRooms() is called but not awaited, so if a socket connects before Redis has finished restoring rooms, the in-memory rooms Map is empty and valid rooms get a room-error. Low probability in production but it does happen on rapid deploys.
+javascript// BEFORE
+function setupSignaling(io) {
+    initRooms().catch(err => console.error('[Signaling] Room restore failed:', err.message));
+    io.on('connection', (socket) => {
+        ...
+    });
+}
+
+// AFTER
+function setupSignaling(io) {
+    let roomsReady = false;
+    const roomsReadyPromise = initRooms()
+        .then(() => { roomsReady = true; })
+        .catch(err => {
+            console.error('[Signaling] Room restore failed:', err.message);
+            roomsReady = true; // fail open so the server still works
+        });
+
+    io.on('connection', (socket) => {
+        socket.on('join-room', async (data) => {
+            if (!roomsReady) await roomsReadyPromise;
+            // ... rest of join-room handler unchanged
+        });
+        // ... rest of handlers unchanged
+    });
+}
+
+🔵 7. server.js — Redirect /room/ to verses.html instead of relying on verses.html self-loading
+This is more of a resilience improvement. Your current /room/:roomId route serves verses.html directly for real users, which requires verses.html to parse the URL path and extract the room ID — which it does correctly via _parseRoomFromUrl(). However, if Cloudflare or a CDN ever caches the verses.html response, the room ID info in the URL is lost.
+A safer approach redirects to verses.html with an explicit query param:
+javascript// In the non-crawler branch of app.get('/room/:roomId'):
+
+// BEFORE
+return res.sendFile(path.join(__dirname, 'verses.html'));
+
+// AFTER
+const qs = new URLSearchParams();
+qs.set('room', roomId);
+if (req.query.name) qs.set('name', req.query.name);
+if (req.query.host) qs.set('host', req.query.host);
+return res.redirect(302, `/verses.html?${qs.toString()}`);
+This also makes the existing /join/:roomId route redundant (it already does the same thing) — you could remove it or keep it as a legacy alias.

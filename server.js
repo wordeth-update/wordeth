@@ -54,8 +54,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: { origin: true, credentials: true },
-    transports: ['websocket', 'polling'],
-    allowUpgrades: true,
+    transports: ['websocket'],
+    allowUpgrades: false,
     pingTimeout: 60000,
     pingInterval: 25000,
     maxHttpBufferSize: 15e6,
@@ -281,7 +281,11 @@ app.get('/room/:roomId', ogCrawlerHeaders, (req, res) => {
         res.setHeader('Cache-Control', 'no-store, no-cache');
         res.setHeader('CDN-Cache-Control', 'no-store');
         res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
-        return res.sendFile(path.join(__dirname, 'verses.html'));
+        const qs = new URLSearchParams();
+        qs.set('room', roomId);
+        if (req.query.name) qs.set('name', req.query.name);
+        if (req.query.host) qs.set('host', req.query.host);
+        return res.redirect(302, `/verses.html?${qs.toString()}`);
     }
 
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');

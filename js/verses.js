@@ -701,8 +701,7 @@ class AudioRoomsManager {
             console.log('Connecting to signaling server...');
             const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
             this.lobbySocket = io(serverUrl, {
-                transports: ['websocket', 'polling'],
-                upgrade: true,
+                transports: ['websocket'],
                 reconnection: true,
                 reconnectionAttempts: 10,
                 reconnectionDelay: 1000,
@@ -2579,7 +2578,12 @@ class AudioRoomsManager {
         if (this.lobbySocket && !this.lobbySocket.connected) {
             this.socket = this.lobbySocket;
             return new Promise((resolve) => {
+                const reconnectTimeout = setTimeout(() => {
+                    console.warn('connectSocket: reconnect timed out');
+                    resolve();
+                }, 10000);
                 this.lobbySocket.once('connect', () => {
+                    clearTimeout(reconnectTimeout);
                     console.log('Socket.io reconnected:', this.lobbySocket.id);
                     this._emitRegisterUser();
                     if (!this._roomHandlersRegistered) {
@@ -2595,8 +2599,7 @@ class AudioRoomsManager {
 
         const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
         this.lobbySocket = io(serverUrl, {
-            transports: ['websocket', 'polling'],
-            upgrade: true,
+            transports: ['websocket'],
             reconnection: true,
             reconnectionAttempts: 10,
             reconnectionDelay: 1000,

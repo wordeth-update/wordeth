@@ -13,7 +13,14 @@ async function initRooms() {
 }
 
 function setupSignaling(io) {
-    initRooms().catch(err => console.error('[Signaling] Room restore failed:', err.message));
+    let roomsReady = false;
+    const roomsReadyPromise = initRooms()
+        .then(() => { roomsReady = true; })
+        .catch(err => {
+            console.error('[Signaling] Room restore failed:', err.message);
+            roomsReady = true;
+        });
+
     io.on('connection', (socket) => {
         console.log(`Socket connected: ${socket.id}`);
 
@@ -77,7 +84,8 @@ function setupSignaling(io) {
             }
         });
 
-        socket.on('join-room', ({ roomId, userId, userName, isHost: requestedHost, roomName, avatar }) => {
+        socket.on('join-room', async ({ roomId, userId, userName, isHost: requestedHost, roomName, avatar }) => {
+            if (!roomsReady) await roomsReadyPromise;
             let isHost = requestedHost;
             if (socket.roomId && socket.roomId !== roomId && rooms.has(socket.roomId)) {
                 const prevRoom = rooms.get(socket.roomId);

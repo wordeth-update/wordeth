@@ -89,7 +89,11 @@ function deserializeRoom(json) {
 
 async function saveRoom(roomId, room) {
   const client = getClient();
-  if (!client || !isConnected) return;
+  if (!client) return;
+  if (!isConnected) {
+    const connected = await waitForConnection(3000);
+    if (!connected) return;
+  }
   try {
     const pipeline = client.pipeline();
     pipeline.set(roomKey(roomId), serializeRoom(room), 'EX', 86400);
@@ -157,8 +161,6 @@ async function loadAllRooms() {
       }
       try {
         const room = deserializeRoom(json);
-        room.participants = new Map();
-        room.activeVideos = new Set();
         rooms.set(roomIds[i], room);
       } catch (parseErr) {
         console.error(`[Redis] Failed to parse room ${roomIds[i]}:`, parseErr.message);
