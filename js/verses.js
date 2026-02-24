@@ -2099,7 +2099,9 @@ class AudioRoomsManager {
 
             try {
                 const unlockCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (unlockCtx.state === 'suspended') await unlockCtx.resume();
+                const resumePromise = unlockCtx.state === 'suspended' ? unlockCtx.resume() : Promise.resolve();
+                const timeoutPromise = new Promise(r => setTimeout(r, 500));
+                await Promise.race([resumePromise, timeoutPromise]);
                 const buf = unlockCtx.createBuffer(1, 1, 22050);
                 const src = unlockCtx.createBufferSource();
                 src.buffer = buf;
