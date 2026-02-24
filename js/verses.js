@@ -701,7 +701,8 @@ class AudioRoomsManager {
             console.log('Connecting to signaling server...');
             const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
             this.lobbySocket = io(serverUrl, {
-                transports: ['websocket'],
+                transports: ['websocket', 'polling'],
+                upgrade: true,
                 reconnection: true,
                 reconnectionAttempts: 10,
                 reconnectionDelay: 1000,
@@ -2599,7 +2600,8 @@ class AudioRoomsManager {
 
         const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
         this.lobbySocket = io(serverUrl, {
-            transports: ['websocket'],
+            transports: ['websocket', 'polling'],
+            upgrade: true,
             reconnection: true,
             reconnectionAttempts: 10,
             reconnectionDelay: 1000,
