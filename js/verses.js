@@ -111,6 +111,14 @@ class AudioRoomsManager {
         if (urlRoom) {
             this.queueInvite(urlRoom);
             this._showJoiningOverlay();
+            this._inviteHardTimeout = setTimeout(() => {
+                if (this._invite.status === 'joining' || this._invite.status === 'pending') {
+                    console.warn('Invite: hard timeout reached (20s)');
+                    this._invite.status = 'failed';
+                    this._invite.roomId = null;
+                    this._showRoomEndedScreen('Could not connect to the room. The server may be unreachable.');
+                }
+            }, 20000);
         }
         
         this.initYouTubePlayer();
@@ -167,7 +175,7 @@ class AudioRoomsManager {
                 const joiningMsg = document.createElement('div');
                 joiningMsg.id = 'invite-joining-msg';
                 joiningMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;min-height:60vh;color:#fff;font-family:Inter,sans-serif;text-align:center;padding:20px;';
-                let html = '<div style="width:40px;height:40px;border:3px solid rgba(255,255,255,0.2);border-top-color:#a855f7;border-radius:50%;animation:spin 0.8s linear infinite;"></div>';
+                let html = '<div id="invite-spinner" style="width:40px;height:40px;border:3px solid rgba(255,255,255,0.2);border-top-color:#a855f7;border-radius:50%;animation:spin 0.8s linear infinite;"></div>';
                 if (roomLabel) {
                     html += `<div style="font-size:20px;font-weight:600;color:#d8b4fe;">Joining &ldquo;${this.sanitizeText(roomLabel)}&rdquo;</div>`;
                 } else {
@@ -176,6 +184,7 @@ class AudioRoomsManager {
                 if (hostLabel) {
                     html += `<div style="font-size:14px;color:rgba(255,255,255,0.6);">Hosted by ${this.sanitizeText(hostLabel)}</div>`;
                 }
+                html += '<div id="invite-status" style="font-size:13px;color:rgba(255,255,255,0.4);margin-top:4px;">Connecting\u2026</div>';
                 joiningMsg.innerHTML = html;
                 if (!document.getElementById('invite-spin-style')) {
                     const styleEl = document.createElement('style');
@@ -194,9 +203,16 @@ class AudioRoomsManager {
         }
     }
 
+    _updateJoiningStatus(text) {
+        const el = document.getElementById('invite-status');
+        if (el) el.textContent = text;
+    }
+
     async _init() {
         try {
+            this._updateJoiningStatus('Connecting to server\u2026');
             await this.connectToServer();
+            this._updateJoiningStatus(this.lobbySocket?.connected ? 'Connected. Joining room\u2026' : 'Connection slow, retrying\u2026');
             if (this._invite.status === 'pending') {
                 this._initComplete = true;
                 this._processInvite();
@@ -243,6 +259,7 @@ class AudioRoomsManager {
         try {
             if (!this.lobbySocket || !this.lobbySocket.connected) {
                 console.warn('Invite: socket not connected, waiting...');
+                this._updateJoiningStatus('Waiting for connection\u2026');
                 await new Promise((resolve) => {
                     const timeout = setTimeout(resolve, 8000);
                     if (this.lobbySocket) {
@@ -253,10 +270,12 @@ class AudioRoomsManager {
                     }
                 });
                 if (!this.lobbySocket?.connected) {
+                    this._updateJoiningStatus('Connection failed. Retrying\u2026');
                     throw new Error('Socket connection failed');
                 }
             }
             if (this.currentRoom) { inv.status = 'idle'; return; }
+            this._updateJoiningStatus('Sending join request\u2026');
             await this.joinRoom(inv.roomId, false, true);
         } catch (e) {
             console.error('Invite: join failed:', e);
@@ -267,6 +286,10 @@ class AudioRoomsManager {
     _failInvite(message, permanent = false) {
         const inv = this._invite;
         inv.retries++;
+        if (this._inviteHardTimeout) {
+            clearTimeout(this._inviteHardTimeout);
+            this._inviteHardTimeout = null;
+        }
         if (this.currentRoom && !this._joinConfirmed) {
             this.currentRoom = null;
             this._pendingJoinRoom = null;
@@ -2651,6 +2674,10 @@ class AudioRoomsManager {
             console.log('Room joined via signaling:', data);
             this._joinConfirmed = true;
             this._pendingJoinRoom = null;
+            if (this._inviteHardTimeout) {
+                clearTimeout(this._inviteHardTimeout);
+                this._inviteHardTimeout = null;
+            }
             const wasInviteJoin = this._invite.status === 'joining' || this._pendingJoinIsInvite;
             if (this._invite.status === 'joining') {
                 this._invite.status = 'joined';
