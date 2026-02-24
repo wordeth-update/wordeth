@@ -1,4 +1,4 @@
-const { saveRoom, deleteRoom, loadAllRooms, getClient } = require('../services/redisClient');
+const { saveRoom, deleteRoom, loadAllRooms, loadRoom, getClient } = require('../services/redisClient');
 
 let rooms = new Map();
 const connectedUsers = new Map();
@@ -127,6 +127,16 @@ function setupSignaling(io) {
             socket.userId = userId || socket.id;
             socket.userName = userName || 'Anonymous';
             socket.avatar = avatar || null;
+
+            if (!rooms.has(roomId)) {
+                const redisRoom = await loadRoom(roomId);
+                if (redisRoom) {
+                    console.log(`[Join] Room "${roomId}" restored from Redis into memory`);
+                    redisRoom.participants = new Map();
+                    redisRoom.activeVideos = new Set();
+                    rooms.set(roomId, redisRoom);
+                }
+            }
 
             if (!rooms.has(roomId)) {
                 if (!isHost) {

@@ -185,9 +185,23 @@ async function loadAllRooms() {
   }
 }
 
+async function loadRoom(roomId) {
+  const client = getClient();
+  if (!client || !isConnected) return null;
+  try {
+    const json = await client.get(roomKey(roomId));
+    if (!json) return null;
+    return deserializeRoom(json);
+  } catch (err) {
+    console.error(`[Redis] loadRoom error for ${roomId}:`, err.message);
+    return null;
+  }
+}
+
 module.exports = {
   getClient,
   saveRoom,
   deleteRoom,
   loadAllRooms,
+  loadRoom,
 };
