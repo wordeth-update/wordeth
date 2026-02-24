@@ -2074,73 +2074,24 @@ class AudioRoomsManager {
             return;
         }
         try {
-            let roomData = null;
-            if (!isInvite) {
-                roomData = await this.checkRoomLockStatus(roomId);
-                if (roomData && roomData.isLocked) {
-                    alert('This room is currently locked. The host has prevented new participants from joining.');
-                    return;
-                }
-            }
-            
-            this.isRoomHost = isHost;
-            this.isSpeaker = isHost;
-            this.isAudioMuted = false;
-            this.stageAccess = 'invite-only';
-            if (this.toggleAudioBtn) {
-                this.toggleAudioBtn.innerHTML = '<i class="fas fa-microphone"></i><span class="ctrl-label">Mic</span>';
-                this.toggleAudioBtn.classList.remove('muted');
-            }
-            this.karaokeEnabled = isHost ? false : (roomData?.karaokeEnabled || false);
-            this.videoMode = isHost ? 'off' : (roomData?.videoMode || 'off');
-            this.updateKaraokeButtonState();
-            this.updateVideoButtonState();
-            this.updateHostControls();
-
-            try {
-                const unlockCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const resumePromise = unlockCtx.state === 'suspended' ? unlockCtx.resume() : Promise.resolve();
-                const timeoutPromise = new Promise(r => setTimeout(r, 500));
-                await Promise.race([resumePromise, timeoutPromise]);
-                const buf = unlockCtx.createBuffer(1, 1, 22050);
-                const src = unlockCtx.createBufferSource();
-                src.buffer = buf;
-                src.connect(unlockCtx.destination);
-                src.start(0);
-                setTimeout(() => unlockCtx.close().catch(() => {}), 500);
-            } catch (e) {
-                console.warn('Audio unlock gesture failed:', e.message);
-            }
-            
-            if (isHost) {
-                try {
-                    await this.initializeMedia();
-                    console.log('Host mic initialized, localStream tracks:', this.localStream?.getAudioTracks().length);
-                } catch (e) {
-                    console.warn('Mic access denied, hosting without mic:', e.message);
-                }
-            }
-            
             this._pendingJoinRoom = roomId;
             this.currentRoom = roomId;
             this.roomJoinTime = Date.now();
             this._joinConfirmed = false;
+            this.isRoomHost = isHost;
+            this.isSpeaker = isHost;
+            this.isAudioMuted = false;
+            this.stageAccess = 'invite-only';
 
             const user = this.isGuest ? {} : JSON.parse(localStorage.getItem('user') || '{}');
             const userName = this.isGuest ? 'Guest' : (user.name || user.username || 'Anonymous');
-
-            if (!isInvite) {
-                this._showRoomUI(roomId, isHost);
-            }
-
-            const roomNameEl = document.getElementById('room-name');
-            const currentRoomName = roomNameEl?.textContent || this._inviteMeta?.name || '';
-            
             const guestJoin = this.isGuest;
             this._pendingJoinIsInvite = isInvite;
             this._pendingJoinIsHost = isHost;
-            console.log('joinRoom: attempting HTTP join for', roomId, 'as', isHost ? 'host' : (guestJoin ? 'guest-listener' : 'listener'));
-            
+
+            const roomNameEl = document.getElementById('room-name');
+            const currentRoomName = roomNameEl?.textContent || this._inviteMeta?.name || '';
+
             const joinPayload = {
                 roomId,
                 userId: guestJoin ? `guest_${Date.now()}` : (user._id || user.id || `anon_${Date.now()}`),
@@ -2150,72 +2101,94 @@ class AudioRoomsManager {
                 avatar: user.avatar || null
             };
 
-            let httpJoinOk = false;
+            console.log('joinRoom: attempting HTTP join for', roomId, 'as', isHost ? 'host' : (guestJoin ? 'guest-listener' : 'listener'));
+            this._updateJoiningStatus('Joining room\u2026');
+
+            let httpData;
             try {
-                this._updateJoiningStatus('Joining room\u2026');
                 const httpResp = await fetch(apiUrl('/api/rooms/join'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(joinPayload)
                 });
-                const httpData = await httpResp.json();
+                httpData = await httpResp.json();
                 console.log('joinRoom: HTTP join response:', httpData.success, httpData.message || '');
-                if (httpData.success) {
-                    httpJoinOk = true;
-                    this._joinConfirmed = true;
-                    this._pendingJoinRoom = null;
-                    if (this._inviteHardTimeout) {
-                        clearTimeout(this._inviteHardTimeout);
-                        this._inviteHardTimeout = null;
-                    }
-                    if (isInvite) {
-                        const wasInviteJoin = this._invite.status === 'joining' || this._pendingJoinIsInvite;
-                        if (this._invite.status === 'joining') this._invite.status = 'joined';
-                        if (wasInviteJoin) {
-                            this._showRoomUI(httpData.roomId || roomId, httpData.isHost || isHost);
-                            if (guestJoin) {
-                                this.addChatMessage('System', 'Welcome! You\'re listening as a guest. Sign up to chat and join the conversation.', true);
-                            } else if (httpData.isHost || isHost) {
-                                this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
-                            } else {
-                                this.addChatMessage('System', 'Welcome! You joined as a listener. Raise your hand or wait for an invite to speak.', true);
-                            }
-                            this._requestWakeLock();
-                            this._startSilentAudioKeepAlive();
-                            this._pendingJoinIsInvite = false;
-                            this._pendingJoinIsHost = false;
-                        }
-                    }
-                    if (httpData.karaokeEnabled !== undefined) this.karaokeEnabled = httpData.karaokeEnabled;
-                    if (httpData.videoMode) this.videoMode = httpData.videoMode;
-                    if (httpData.stageAccess) this.stageAccess = httpData.stageAccess;
-                    this.updateKaraokeButtonState();
-                    this.updateVideoButtonState();
-                    this.updateHostControls();
-                    if (httpData.participants) this.updateParticipantDisplay(httpData.participants);
-                } else {
-                    console.warn('joinRoom: HTTP join failed:', httpData.message);
-                    if (isInvite) {
-                        this._failInvite(httpData.message || 'This room is no longer live.', true);
-                    } else {
-                        this._restoreLobbyUI();
-                        this.showToast?.(httpData.message || 'Could not join the room.', 'fa-exclamation-circle');
-                    }
-                    return;
-                }
             } catch (httpErr) {
-                console.warn('joinRoom: HTTP join failed with error:', httpErr.message);
+                console.warn('joinRoom: HTTP join network error:', httpErr.message);
                 if (isInvite) {
                     this._failInvite('Could not connect to the server. Please check your connection and try again.');
                 } else {
+                    this.currentRoom = null;
+                    this._pendingJoinRoom = null;
                     this._restoreLobbyUI();
                     this.showToast?.('Could not connect to the server.', 'fa-exclamation-circle');
                 }
                 return;
             }
 
+            if (!httpData.success) {
+                console.warn('joinRoom: HTTP join failed:', httpData.message);
+                this.currentRoom = null;
+                this._pendingJoinRoom = null;
+                if (isInvite) {
+                    this._failInvite(httpData.message || 'This room is no longer live.', true);
+                } else {
+                    this._restoreLobbyUI();
+                    this.showToast?.(httpData.message || 'Could not join the room.', 'fa-exclamation-circle');
+                }
+                return;
+            }
+
+            this._joinConfirmed = true;
+            this._pendingJoinRoom = null;
+            if (this._inviteHardTimeout) {
+                clearTimeout(this._inviteHardTimeout);
+                this._inviteHardTimeout = null;
+            }
+
+            if (httpData.karaokeEnabled !== undefined) this.karaokeEnabled = httpData.karaokeEnabled;
+            if (httpData.videoMode) this.videoMode = httpData.videoMode;
+            if (httpData.stageAccess) this.stageAccess = httpData.stageAccess;
+            this.karaokeEnabled = isHost ? false : (this.karaokeEnabled || false);
+            this.videoMode = isHost ? 'off' : (this.videoMode || 'off');
+
+            if (this.toggleAudioBtn) {
+                this.toggleAudioBtn.innerHTML = '<i class="fas fa-microphone"></i><span class="ctrl-label">Mic</span>';
+                this.toggleAudioBtn.classList.remove('muted');
+            }
+            this.updateKaraokeButtonState();
+            this.updateVideoButtonState();
+            this.updateHostControls();
+
+            this._showRoomUI(httpData.roomId || roomId, httpData.isHost || isHost);
+            if (httpData.participants) this.updateParticipantDisplay(httpData.participants);
+
+            if (isInvite) {
+                if (this._invite.status === 'joining') this._invite.status = 'joined';
+                if (guestJoin) {
+                    this.addChatMessage('System', 'Welcome! You\'re listening as a guest. Sign up to chat and join the conversation.', true);
+                } else if (httpData.isHost || isHost) {
+                    this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
+                } else {
+                    this.addChatMessage('System', 'Welcome! You joined as a listener. Raise your hand or wait for an invite to speak.', true);
+                }
+            }
+            this._requestWakeLock();
+            this._startSilentAudioKeepAlive();
+            this._pendingJoinIsInvite = false;
+            this._pendingJoinIsHost = false;
+
+            if (isHost) {
+                try {
+                    await this.initializeMedia();
+                    console.log('Host mic initialized');
+                } catch (e) {
+                    console.warn('Mic access denied, hosting without mic:', e.message);
+                }
+            }
+
             this.connectSocket().then(() => {
-                console.log('joinRoom: socket connected, id:', this.socket?.id, 'connected:', this.socket?.connected);
+                console.log('joinRoom: socket connected, id:', this.socket?.id);
                 if (this.socket?.connected) {
                     joinPayload.userId = guestJoin ? `guest_${this.socket.id}` : (user._id || user.id || this.socket.id);
                     this.socket.emit('join-room', joinPayload, (ack) => {
@@ -2225,7 +2198,7 @@ class AudioRoomsManager {
             }).catch(e => console.warn('Background socket connect error:', e));
 
             try {
-                const agoraRole = (isHost) ? 'host' : 'audience';
+                const agoraRole = isHost ? 'host' : 'audience';
                 await this.safeJoinAgora(roomId, { forceRole: agoraRole });
             } catch (agoraErr) {
                 console.warn('joinRoom: Agora join error:', agoraErr.message);
