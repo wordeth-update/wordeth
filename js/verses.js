@@ -2158,6 +2158,43 @@ class AudioRoomsManager {
             this._pendingJoinIsInvite = isInvite;
             this._pendingJoinIsHost = isHost;
             console.log('joinRoom: emitting join-room for', roomId, 'as', isHost ? 'host' : (guestJoin ? 'guest-listener' : 'listener'), 'socketId:', this.socket?.id, 'connected:', this.socket?.connected);
+            
+            const pingOk = await new Promise((resolve) => {
+                const t = setTimeout(() => { console.warn('joinRoom: ping-check timed out (3s) - socket may be dead'); resolve(false); }, 3000);
+                try {
+                    this.socket.emit('ping-check', { ts: Date.now() }, (resp) => {
+                        clearTimeout(t);
+                        console.log('joinRoom: ping-check response:', resp);
+                        resolve(resp && resp.ok);
+                    });
+                } catch (e) {
+                    clearTimeout(t);
+                    console.warn('joinRoom: ping-check emit error:', e.message);
+                    resolve(false);
+                }
+            });
+            
+            if (!pingOk) {
+                console.warn('joinRoom: socket is dead despite connected=true, recreating...');
+                this._updateJoiningStatus('Reconnecting\u2026');
+                if (this.lobbySocket) {
+                    this.lobbySocket.removeAllListeners();
+                    this.lobbySocket.disconnect();
+                }
+                this.lobbySocket = null;
+                this.socket = null;
+                this._roomHandlersRegistered = false;
+                await this.connectSocket();
+                console.log('joinRoom: recreated socket, new id:', this.socket?.id, 'connected:', this.socket?.connected);
+                if (!this.socket?.connected) {
+                    if (isInvite) {
+                        this._failInvite('Could not establish a connection to the server.');
+                    }
+                    return;
+                }
+                this._updateJoiningStatus('Sending join request\u2026');
+            }
+            
             const joinPayload = {
                 roomId,
                 userId: guestJoin ? `guest_${this.socket.id}` : (user._id || user.id || this.socket.id),

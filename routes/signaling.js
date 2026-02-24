@@ -84,6 +84,10 @@ function setupSignaling(io) {
             }
         });
 
+        socket.on('ping-check', (data, cb) => {
+            if (typeof cb === 'function') cb({ ok: true, socketId: socket.id, ts: Date.now() });
+        });
+
         socket.on('join-room', async ({ roomId, userId, userName, isHost: requestedHost, roomName, avatar }, ackCallback) => {
           try {
             console.log(`[join-room] Received from ${socket.id}: roomId=${roomId}, userName=${userName}, isHost=${requestedHost}`);
