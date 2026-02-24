@@ -2160,6 +2160,10 @@ class AudioRoomsManager {
             this.updateVideoButtonState();
             this.updateHostControls();
 
+            if (httpData.roomName) {
+                const roomNameEl = document.getElementById('room-name');
+                if (roomNameEl) roomNameEl.textContent = httpData.roomName;
+            }
             this._showRoomUI(httpData.roomId || roomId, httpData.isHost || isHost);
             if (httpData.participants) this.updateParticipantDisplay(httpData.participants);
 
@@ -2199,7 +2203,7 @@ class AudioRoomsManager {
 
             try {
                 const agoraRole = isHost ? 'host' : 'audience';
-                await this.safeJoinAgora(roomId, { forceRole: agoraRole });
+                await this._agoraJoinGuarded(roomId, { forceRole: agoraRole });
             } catch (agoraErr) {
                 console.warn('joinRoom: Agora join error:', agoraErr.message);
             }
