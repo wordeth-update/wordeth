@@ -6,6 +6,7 @@ class AudioRoomsManager {
         this.localStream = null;
         this.agoraClient = null;
         this.agoraLocalAudioTrack = null;
+        this.agoraMusicAudioTrack = null;
         this.agoraLocalVideoTrack = null;
         this.agoraUid = null;
         this.agoraAppId = null;
@@ -1330,6 +1331,9 @@ class AudioRoomsManager {
             this.chatSection?.classList.toggle('hidden', !this.chatVisible);
         }
         this.toggleChatBtn?.classList.toggle('active', this.chatVisible);
+        if (this.chatVisible) {
+            this.toggleChatBtn?.classList.remove('chat-glow');
+        }
     }
 
     _initChatSwipeToDismiss() {
@@ -2575,6 +2579,10 @@ class AudioRoomsManager {
 
     async leaveAgoraChannel() {
         try {
+            if (this.agoraMusicAudioTrack) {
+                try { this.agoraMusicAudioTrack.close(); } catch(e) {}
+                this.agoraMusicAudioTrack = null;
+            }
             if (this.agoraLocalAudioTrack) {
                 this.agoraLocalAudioTrack.close();
                 this.agoraLocalAudioTrack = null;
@@ -2782,7 +2790,7 @@ class AudioRoomsManager {
             if (data.isHost && !this.isSpeaker && !this.isGuest) {
                 console.log('Server confirmed host status but client is listener — promoting to stage');
                 this.isSpeaker = true;
-                this.isAudioMuted = true;
+                this.isAudioMuted = false;
 
                 const selfEl = document.querySelector('[data-participant-id="self"]');
                 if (selfEl) selfEl.remove();
@@ -2897,6 +2905,9 @@ class AudioRoomsManager {
 
         sock.on('chat-message', ({ sender, message, timestamp }) => {
             this.addChatMessage(sender, message, false);
+            if (!this.chatVisible && this.toggleChatBtn) {
+                this.toggleChatBtn.classList.add('chat-glow');
+            }
         });
 
         sock.on('room-image', ({ sender, imageData }) => {
@@ -2994,7 +3005,7 @@ class AudioRoomsManager {
             this.isSpeaker = true;
             this.handRaised = false;
             this.raiseHandBtn?.classList.remove('hand-raised');
-            this.isAudioMuted = true;
+            this.isAudioMuted = false;
             this._playSfx('onStage');
 
             if (!this.localStream) {
@@ -3029,11 +3040,13 @@ class AudioRoomsManager {
             const user = JSON.parse(localStorage.getItem('user') || '{}');
             const userName = user.name || user.username || 'Anonymous';
             this._addSelfToStage(userName, user.avatar || null, false);
-            const muteIcon = this.toggleAudioBtn?.querySelector('i');
-            if (muteIcon) muteIcon.className = 'fas fa-microphone-slash';
+            if (this.toggleAudioBtn) {
+                this.toggleAudioBtn.innerHTML = '<i class="fas fa-microphone"></i><span class="ctrl-label">Mic</span>';
+                this.toggleAudioBtn.classList.remove('muted');
+            }
             this.updateStageControls();
-            this.addChatMessage('System', 'You were invited to the stage! Unmute when ready.', true);
-            this.showToast('You were invited to the stage!', 'fa-arrow-up', 4000);
+            this.addChatMessage('System', 'You\'re on stage! Your mic is live.', true);
+            this.showToast('You\'re on stage — mic is live!', 'fa-microphone', 4000);
         });
 
         sock.on('stage-request', ({ socketId, userId, userName, avatar }) => {
@@ -3425,12 +3438,8 @@ class AudioRoomsManager {
                 this.musicGainNode.connect(this.mixDestination);
                 this.musicGainNode.connect(this.audioContext.destination);
 
-                const mixedTrack = this.mixedStream?.getAudioTracks()[0];
-                if (mixedTrack) {
-                    console.log('Replacing outgoing audio with mixed track, track state:', mixedTrack.readyState, 'enabled:', mixedTrack.enabled);
-                    await this.replaceOutgoingAudioTrack(mixedTrack);
-                }
-                console.log('Music connected to audio mix, audioContext state:', this.audioContext.state);
+                await this._publishMusicTrack();
+                console.log('Music published as separate Agora track (mic untouched), audioContext state:', this.audioContext.state);
             } else {
                 console.error('Audio mix not ready — audioContext:', !!this.audioContext, 'mixDestination:', !!this.mixDestination);
                 this.addChatMessage('System', 'Could not connect music to room audio. Try again.', true);
@@ -6849,42 +6858,10 @@ class AudioRoomsManager {
             }
             
             this.mixDestination = this.audioContext.createMediaStreamDestination();
-            
-            if (!this.localStream && this.isSpeaker) {
-                try { await this.initializeMedia(); } catch(e) {
-                    console.warn('startAudioMix: could not get mic:', e.message);
-                }
-            }
-
-            if (this.localStream) {
-                const micTrack = this.localStream.getAudioTracks()[0];
-                if (micTrack) {
-                    const micStream = new MediaStream([micTrack]);
-                    this.micAudioSource = this.audioContext.createMediaStreamSource(micStream);
-                    
-                    const micGain = this.audioContext.createGain();
-                    micGain.gain.value = 1.0;
-                    this.micAudioSource.connect(micGain);
-                    micGain.connect(this.mixDestination);
-                    this.micGainNode = micGain;
-                    console.log('startAudioMix: mic connected to mix');
-                }
-            } else {
-                console.warn('No local stream — audio mix will only contain music/media');
-            }
-            
             this.mixedStream = this.mixDestination.stream;
             this.audioMixEnabled = true;
             
-            const mixedTrack = this.mixedStream.getAudioTracks()[0];
-            if (mixedTrack) {
-                console.log('startAudioMix: replacing outgoing track, track readyState:', mixedTrack.readyState, 'enabled:', mixedTrack.enabled);
-                await this.replaceOutgoingAudioTrack(mixedTrack);
-            } else {
-                console.warn('startAudioMix: no audio track in mixedStream');
-            }
-            
-            console.log('Audio mixing initialized, audioContext state:', this.audioContext.state, 'hasMic:', !!this.localStream);
+            console.log('Audio mix initialized (music-only track, mic stays independent), audioContext state:', this.audioContext.state);
             
         } catch (error) {
             console.error('Error starting audio mix:', error);
@@ -6953,6 +6930,7 @@ class AudioRoomsManager {
                 this.addChatMessage('System', 'YouTube audio sharing stopped.', true);
             };
             
+            await this._publishMusicTrack();
             this.addChatMessage('System', 'YouTube audio is now being shared with the room!', true);
             
             if (this.socket && this.currentRoom) {
@@ -6998,23 +6976,47 @@ class AudioRoomsManager {
         this.removeYouTubeFromMix();
         this.stopMusicStream();
         
-        if (this.micAudioSource) {
-            try { this.micAudioSource.disconnect(); } catch(e) {}
-            this.micAudioSource = null;
-        }
-        if (this.micGainNode) {
-            try { this.micGainNode.disconnect(); } catch(e) {}
-            this.micGainNode = null;
-        }
+        this._unpublishMusicTrack();
+
         if (this.mixDestination) {
             this.mixDestination = null;
         }
         
         this.audioMixEnabled = false;
         this.mixedStream = null;
+    }
+
+    async _publishMusicTrack() {
+        if (!this.agoraClient || this.agoraClient.connectionState !== 'CONNECTED') return;
+        if (!this.mixedStream) return;
         
-        if (this.localStream && this.localStream.getAudioTracks().length > 0) {
-            this.replaceOutgoingAudioTrack(this.localStream.getAudioTracks()[0]);
+        this._unpublishMusicTrack();
+        
+        const musicTrack = this.mixedStream.getAudioTracks()[0];
+        if (!musicTrack) {
+            console.warn('_publishMusicTrack: no audio track in mixedStream');
+            return;
+        }
+        
+        try {
+            this.agoraMusicAudioTrack = AgoraRTC.createCustomAudioTrack({ mediaStreamTrack: musicTrack });
+            await this.agoraClient.publish([this.agoraMusicAudioTrack]);
+            console.log('Agora: music track published as separate stream (mic independent)');
+        } catch (e) {
+            console.error('Error publishing music track:', e);
+        }
+    }
+
+    async _unpublishMusicTrack() {
+        if (this.agoraMusicAudioTrack && this.agoraClient) {
+            try {
+                await this.agoraClient.unpublish([this.agoraMusicAudioTrack]);
+                this.agoraMusicAudioTrack.close();
+                console.log('Agora: music track unpublished');
+            } catch (e) {
+                console.warn('Error unpublishing music track:', e);
+            }
+            this.agoraMusicAudioTrack = null;
         }
     }
     

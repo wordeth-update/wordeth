@@ -1130,6 +1130,21 @@
     background: #6c757d;
 }
 
+.control-btn.chat-glow {
+    animation: chatGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes chatGlow {
+    0%, 100% {
+        box-shadow: 0 0 6px rgba(62, 180, 137, 0.4);
+        background: rgba(62, 180, 137, 0.15);
+    }
+    50% {
+        box-shadow: 0 0 18px rgba(62, 180, 137, 0.8), 0 0 30px rgba(124, 106, 239, 0.4);
+        background: rgba(62, 180, 137, 0.3);
+    }
+}
+
 /* Modal Styles */
 .modal {
     display: none;
