@@ -1408,6 +1408,15 @@ class AudioRoomsManager {
         `;
         document.body.appendChild(modal);
 
+        modal.querySelectorAll('a[href]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const href = link.getAttribute('href');
+                modal.remove();
+                window.location.href = href;
+            });
+        });
+
         document.getElementById('guest-signup-dismiss').addEventListener('click', () => {
             modal.remove();
             if (isLeave) {
@@ -3423,7 +3432,7 @@ class AudioRoomsManager {
             console.log('Music element playing, paused:', this.musicAudioElement.paused, 'volume:', this.musicAudioElement.volume);
 
             this.musicAudioElement.addEventListener('ended', () => {
-                this.stopMusicStream();
+                this.stopAudioMix();
                 this.addChatMessage('System', `Finished playing: ${songTitle}`, true);
                 if (this.socket && this.socket.connected && this.currentRoom) {
                     this.socket.emit('music-stream-status', {
@@ -3726,6 +3735,7 @@ class AudioRoomsManager {
         }
         
         this.isSpeaker = false;
+        this.isAudioMuted = false;
         this.handRaised = false;
         this.chatVisible = true;
         this._invite = { status: 'idle', roomId: null, retries: 0, maxRetries: 3 };
@@ -6832,6 +6842,12 @@ class AudioRoomsManager {
             
             this.mixDestination = this.audioContext.createMediaStreamDestination();
             
+            if (!this.localStream && this.isSpeaker) {
+                try { await this.initializeMedia(); } catch(e) {
+                    console.warn('startAudioMix: could not get mic:', e.message);
+                }
+            }
+
             if (this.localStream) {
                 const micTrack = this.localStream.getAudioTracks()[0];
                 if (micTrack) {
@@ -6843,6 +6859,7 @@ class AudioRoomsManager {
                     this.micAudioSource.connect(micGain);
                     micGain.connect(this.mixDestination);
                     this.micGainNode = micGain;
+                    console.log('startAudioMix: mic connected to mix');
                 }
             } else {
                 console.warn('No local stream — audio mix will only contain music/media');
