@@ -4,20 +4,27 @@ let rooms = new Map();
 const connectedUsers = new Map();
 let isShuttingDown = false;
 const roomDeletionTimers = new Map();
-const ROOM_EMPTY_GRACE_PERIOD = 120000;
+const ROOM_EMPTY_GRACE_PERIOD = 10 * 60 * 1000;
 
 function scheduleRoomDeletion(roomId, reason) {
     if (roomDeletionTimers.has(roomId)) return;
-    console.log(`Room ${roomId} empty (${reason}) — will delete in ${ROOM_EMPTY_GRACE_PERIOD / 1000}s if no one rejoins`);
+    const room = rooms.get(roomId);
+    if (room) {
+        room.lastActivity = Date.now();
+        saveRoom(roomId, room);
+    }
+    console.log(`Room ${roomId} empty (${reason}) — will delete in ${ROOM_EMPTY_GRACE_PERIOD / 60000} min if no one rejoins`);
     const timer = setTimeout(() => {
         roomDeletionTimers.delete(roomId);
-        const room = rooms.get(roomId);
-        if (room && room.participants.size === 0) {
+        const r = rooms.get(roomId);
+        if (r && r.participants.size === 0) {
             rooms.delete(roomId);
             if (!isShuttingDown) {
                 deleteRoom(roomId);
             }
             console.log(`Room ${roomId} deleted after grace period (${reason})`);
+        } else if (r) {
+            console.log(`Room ${roomId} deletion skipped — ${r.participants.size} participant(s) present`);
         }
     }, ROOM_EMPTY_GRACE_PERIOD);
     roomDeletionTimers.set(roomId, timer);
@@ -28,6 +35,13 @@ function cancelRoomDeletion(roomId) {
         clearTimeout(roomDeletionTimers.get(roomId));
         roomDeletionTimers.delete(roomId);
         console.log(`Room ${roomId} deletion cancelled — someone rejoined`);
+    }
+}
+
+function touchRoom(roomId) {
+    const room = rooms.get(roomId);
+    if (room) {
+        room.lastActivity = Date.now();
     }
 }
 
@@ -174,6 +188,7 @@ function setupSignaling(io) {
             socket.avatar = avatar || null;
 
             cancelRoomDeletion(roomId);
+            touchRoom(roomId);
 
             if (!rooms.has(roomId)) {
                 const redisRoom = await loadRoom(roomId);
@@ -589,6 +604,7 @@ function setupSignaling(io) {
         socket.on('room-event', ({ roomId, event, data }) => {
             const room = rooms.get(roomId);
             if (!room) return;
+            touchRoom(roomId);
 
             switch (event) {
                 case 'room-lock':
@@ -868,6 +884,7 @@ async function joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar
 
     if (!rooms.has(roomId)) {
         if (isHost && roomName) {
+            const now = Date.now();
             rooms.set(roomId, {
                 id: roomId,
                 name: roomName,
@@ -879,7 +896,8 @@ async function joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar
                 activeVideos: new Set(),
                 isLocked: false,
                 stageAccess: 'invite-only',
-                createdAt: Date.now()
+                createdAt: now,
+                lastActivity: now
             });
             console.log(`[HTTP Join] Room created: ${roomId} "${roomName}" by ${userName}`);
         } else {
@@ -889,6 +907,7 @@ async function joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar
 
     const room = rooms.get(roomId);
     cancelRoomDeletion(roomId);
+    room.lastActivity = Date.now();
     if (room.isLocked && !isHost) {
         return { success: false, message: 'This room is currently locked.' };
     }

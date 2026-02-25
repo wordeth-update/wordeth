@@ -113,7 +113,7 @@ class AudioRoomsManager {
             this._showJoiningOverlay();
             this._inviteHardTimeout = setTimeout(async () => {
                 if (this._invite.status === 'joining' || this._invite.status === 'pending') {
-                    console.warn('Invite: hard timeout reached (45s)');
+                    console.warn('Invite: hard timeout reached (30s)');
                     const socketState = `socket: ${this.socket?.connected ? 'connected' : (this.lobbySocket?.connected ? 'lobby-connected' : 'disconnected')}, id: ${this.socket?.id || this.lobbySocket?.id || 'none'}`;
                     let debugInfo = socketState;
                     try {
@@ -128,7 +128,7 @@ class AudioRoomsManager {
                     this._invite.roomId = null;
                     this._showRoomEndedScreen('Could not connect to the room. The server may be unreachable.');
                 }
-            }, 45000);
+            }, 30000);
         }
         
         this.initYouTubePlayer();
@@ -253,7 +253,7 @@ class AudioRoomsManager {
             return;
         }
         console.log('Invite: queued room', roomId);
-        this._invite = { status: 'pending', roomId, retries: 0, maxRetries: 5 };
+        this._invite = { status: 'pending', roomId, retries: 0, maxRetries: 3 };
         if (this._initComplete && this.lobbySocket?.connected) {
             this._processInvite();
         }
