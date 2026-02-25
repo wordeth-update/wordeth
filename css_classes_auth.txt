@@ -1,0 +1,14 @@
+auth-box
+auth-container
+auth-form
+auth-subtitle
+auth-switch
+error-message
+forgot-password
+form-group
+form-hint
+name-status
+submit-btn
+terms-checkbox-label
+terms-group
+terms-text

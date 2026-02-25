@@ -1,0 +1,5 @@
+cookie-consent-accept
+cookie-consent-buttons
+cookie-consent-decline
+cookie-consent-inner
+cookie-consent-text

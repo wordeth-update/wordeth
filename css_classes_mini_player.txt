@@ -1,0 +1,8 @@
+verse-mini-player
+vmp-btn
+vmp-controls
+vmp-info
+vmp-inner
+vmp-label
+vmp-pulse
+vmp-room-name

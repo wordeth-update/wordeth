@@ -44,11 +44,11 @@
             position: relative;
             max-width: 600px;
             margin: 0 auto 2rem;
-            background: rgba(255, 255, 255, 0.95);
+            background: var(--surface-1, rgba(30, 13, 56, 0.6));
             border-radius: 50px;
             padding: 5px;
-            box-shadow: 0 8px 32px rgba(152, 251, 152, 0.3);
-            border: 2px solid var(--mint);
+            box-shadow: var(--glow-mint, 0 0 24px rgba(0,229,168,0.2));
+            border: 1px solid var(--glass-border-hi, rgba(255,255,255,0.14));
         }
 
         .lyrics-search-input {
@@ -58,13 +58,13 @@
             border: none;
             border-radius: 45px;
             background: transparent;
-            color: var(--black);
+            color: var(--white, #fff);
             outline: none;
             font-weight: 500;
         }
 
         .lyrics-search-input::placeholder {
-            color: rgba(0, 0, 0, 0.6);
+            color: rgba(255, 255, 255, 0.5);
             font-weight: 400;
         }
 
@@ -97,7 +97,7 @@
         }
 
         .lyrics-search-button i {
-            color: var(--black);
+            color: var(--black, #060409);
             font-size: 1.2rem;
         }
 
@@ -376,7 +376,7 @@
         </div>
     </div>
 
-    <main class="lyrics-container" style="background: linear-gradient(135deg, var(--purple-dark) 0%, var(--black) 100%); min-height: calc(100vh - 80px);">
+    <main class="lyrics-container">
         <!-- Hero Search Section -->
         <section class="search-hero">
             <h1>Find Lyrics to Your Favorite Songs</h1>
