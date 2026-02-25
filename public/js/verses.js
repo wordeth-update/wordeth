@@ -1067,13 +1067,53 @@ class AudioRoomsManager {
     // Modal Management
     showCreateRoomModal() {
         const token = localStorage.getItem('authToken');
+        console.log('[CreateRoom] token:', !!token, 'modal element:', !!this.createRoomModal);
         if (!token) {
-            const returnUrl = '/verses.html';
-            localStorage.setItem('wordeth_return_url', returnUrl);
-            window.location.href = `/signin.html?return=${encodeURIComponent(returnUrl)}`;
+            this._showAuthPrompt();
             return;
         }
-        this.createRoomModal?.classList.add('active');
+        if (!this.createRoomModal) {
+            this.createRoomModal = document.getElementById('create-room-modal');
+            console.log('[CreateRoom] re-queried modal:', !!this.createRoomModal);
+        }
+        if (this.createRoomModal) {
+            this.createRoomModal.classList.add('active');
+            console.log('[CreateRoom] modal active class added');
+        } else {
+            console.error('[CreateRoom] create-room-modal element not found in DOM');
+        }
+    }
+
+    _showAuthPrompt() {
+        const existing = document.getElementById('auth-prompt-modal');
+        if (existing) { existing.classList.add('active'); return; }
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.id = 'auth-prompt-modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width:400px;text-align:center;">
+                <div class="modal-header" style="justify-content:flex-end;">
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div style="padding:0 0.5rem 1.5rem;">
+                    <i class="fas fa-headphones" style="font-size:2.5rem;color:var(--mint,#00E5A8);margin-bottom:1rem;"></i>
+                    <h3 style="font-family:var(--font-display,'Syne',sans-serif);font-size:1.3rem;margin-bottom:0.5rem;">Join the Conversation</h3>
+                    <p style="color:rgba(255,255,255,0.5);font-size:0.9rem;margin-bottom:1.5rem;">Sign in or create an account to start your own audio room and connect with other music lovers.</p>
+                    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                        <a href="/signin.html?return=${encodeURIComponent('/verses.html')}" class="create-btn" style="display:inline-block;text-decoration:none;text-align:center;padding:0.75rem 1.5rem;border-radius:12px;font-weight:600;">Sign In</a>
+                        <a href="/signup.html?return=${encodeURIComponent('/verses.html')}" style="color:var(--mint,#00E5A8);text-decoration:none;font-size:0.85rem;">Don&rsquo;t have an account? <strong>Sign Up</strong></a>
+                    </div>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        modal.querySelector('.close-modal').addEventListener('click', () => {
+            modal.classList.remove('active');
+            modal.remove();
+        });
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) { modal.classList.remove('active'); modal.remove(); }
+        });
+        localStorage.setItem('wordeth_return_url', '/verses.html');
     }
 
     showTopicEditModal() {
