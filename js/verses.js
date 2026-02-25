@@ -2010,7 +2010,7 @@ class AudioRoomsManager {
             if (roomNameEl) roomNameEl.textContent = roomData.name || 'Untitled Room';
             if (currentSongEl) currentSongEl.textContent = roomData.initialSong ? `Currently discussing: "${roomData.initialSong}"` : '';
             
-            this.joinRoom(newRoom.id, true); // Pass isHost flag
+            await this.joinRoom(newRoom.id, true);
         } catch (error) {
             console.error('Error creating room:', error);
             alert('Failed to create room. Please try again.');
