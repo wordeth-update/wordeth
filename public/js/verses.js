@@ -144,6 +144,101 @@ class AudioRoomsManager {
         this._init();
     }
 
+    _el(tag, attrs, ...children) {
+        const el = document.createElement(tag);
+        if (attrs) {
+            for (const [k, v] of Object.entries(attrs)) {
+                if (k === 'className') el.className = v;
+                else if (k === 'textContent') el.textContent = v;
+                else if (k === 'cssText') el.style.cssText = v;
+                else if (k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(), v);
+                else el.setAttribute(k, v);
+            }
+        }
+        for (const child of children) {
+            if (typeof child === 'string') el.appendChild(document.createTextNode(child));
+            else if (child) el.appendChild(child);
+        }
+        return el;
+    }
+
+    _icon(cls) {
+        const i = document.createElement('i');
+        i.className = cls;
+        return i;
+    }
+
+    _text(str) {
+        return document.createTextNode(str);
+    }
+
+    _clearEl(el) {
+        if (el) el.replaceChildren();
+    }
+
+    _setBtn(el, iconClass, label) {
+        if (!el) return;
+        el.replaceChildren();
+        el.appendChild(this._icon(iconClass));
+        if (label) el.appendChild(this._text(' ' + label));
+    }
+
+    _buildAvatar(container, avatarUrl, name, initial, bgColor) {
+        if (avatarUrl) {
+            const img = document.createElement('img');
+            img.src = avatarUrl;
+            img.alt = name || '';
+            img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
+            img.addEventListener('error', () => {
+                const fallback = document.createElement('div');
+                fallback.className = 'avatar-initial';
+                fallback.style.cssText = 'width:100%;height:100%;border-radius:50%;background:' + (bgColor || 'var(--purple,#8a2be2)') + ';display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:white;';
+                fallback.textContent = initial || '?';
+                img.replaceWith(fallback);
+            });
+            container.appendChild(img);
+        } else {
+            const fallback = document.createElement('div');
+            fallback.className = 'avatar-initial';
+            fallback.style.cssText = 'width:100%;height:100%;border-radius:50%;background:' + (bgColor || 'var(--purple,#8a2be2)') + ';display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:white;';
+            fallback.textContent = initial || '?';
+            container.appendChild(fallback);
+        }
+    }
+
+    _buildListenerAvatar(container, avatarUrl, name, initial, bgColor) {
+        if (avatarUrl) {
+            const img = document.createElement('img');
+            img.src = avatarUrl;
+            img.alt = name || '';
+            img.style.cssText = 'width:40px;height:40px;border-radius:50%;object-fit:cover;';
+            img.addEventListener('error', () => {
+                const fallback = document.createElement('div');
+                fallback.className = 'avatar-initial';
+                fallback.style.cssText = 'width:40px;height:40px;border-radius:50%;background:' + (bgColor || 'var(--purple,#8a2be2)') + ';display:flex;align-items:center;justify-content:center;font-weight:bold;color:white;';
+                fallback.textContent = initial || '?';
+                img.replaceWith(fallback);
+            });
+            container.appendChild(img);
+        } else {
+            const fallback = document.createElement('div');
+            fallback.className = 'avatar-initial';
+            fallback.style.cssText = 'width:40px;height:40px;border-radius:50%;background:' + (bgColor || 'var(--purple,#8a2be2)') + ';display:flex;align-items:center;justify-content:center;font-weight:bold;color:white;';
+            fallback.textContent = initial || '?';
+            container.appendChild(fallback);
+        }
+    }
+
+    _setBtnWithSpan(el, iconClass, label) {
+        if (!el) return;
+        el.replaceChildren();
+        el.appendChild(this._icon(iconClass));
+        const span = document.createElement('span');
+        span.className = 'ctrl-label';
+        span.textContent = label;
+        el.appendChild(span);
+    }
+
     _parseRoomFromUrl() {
         const urlParams = new URLSearchParams(window.location.search);
         let roomId = urlParams.get('room');
@@ -190,17 +285,17 @@ class AudioRoomsManager {
                 const joiningMsg = document.createElement('div');
                 joiningMsg.id = 'invite-joining-msg';
                 joiningMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;min-height:60vh;color:#fff;font-family:Inter,sans-serif;text-align:center;padding:20px;';
-                let html = '<div id="invite-spinner" style="width:40px;height:40px;border:3px solid rgba(255,255,255,0.2);border-top-color:#a855f7;border-radius:50%;animation:spin 0.8s linear infinite;"></div>';
+                const spinner = this._el('div', {id: 'invite-spinner', cssText: 'width:40px;height:40px;border:3px solid rgba(255,255,255,0.2);border-top-color:#a855f7;border-radius:50%;animation:spin 0.8s linear infinite;'});
+                joiningMsg.appendChild(spinner);
                 if (roomLabel) {
-                    html += `<div style="font-size:20px;font-weight:600;color:#d8b4fe;">Joining &ldquo;${this.sanitizeText(roomLabel)}&rdquo;</div>`;
+                    joiningMsg.appendChild(this._el('div', {cssText: 'font-size:20px;font-weight:600;color:#d8b4fe;', textContent: 'Joining \u201C' + roomLabel + '\u201D'}));
                 } else {
-                    html += '<div style="font-size:18px;font-weight:500;">Joining room\u2026</div>';
+                    joiningMsg.appendChild(this._el('div', {cssText: 'font-size:18px;font-weight:500;', textContent: 'Joining room\u2026'}));
                 }
                 if (hostLabel) {
-                    html += `<div style="font-size:14px;color:rgba(255,255,255,0.6);">Hosted by ${this.sanitizeText(hostLabel)}</div>`;
+                    joiningMsg.appendChild(this._el('div', {cssText: 'font-size:14px;color:rgba(255,255,255,0.6);', textContent: 'Hosted by ' + hostLabel}));
                 }
-                html += '<div id="invite-status" style="font-size:13px;color:rgba(255,255,255,0.4);margin-top:4px;">Connecting\u2026</div>';
-                joiningMsg.innerHTML = html;
+                joiningMsg.appendChild(this._el('div', {id: 'invite-status', cssText: 'font-size:13px;color:rgba(255,255,255,0.4);margin-top:4px;', textContent: 'Connecting\u2026'}));
                 if (!document.getElementById('invite-spin-style')) {
                     const styleEl = document.createElement('style');
                     styleEl.id = 'invite-spin-style';
@@ -339,20 +434,23 @@ class AudioRoomsManager {
         const screen = document.createElement('div');
         screen.id = 'room-ended-screen';
         screen.style.cssText = 'display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;min-height:60vh;color:#fff;font-family:Inter,sans-serif;text-align:center;padding:40px 20px;';
-        let html = '<div style="font-size:48px;margin-bottom:8px;"><i class="fas fa-microphone-slash" style="color:#a855f7;"></i></div>';
+        const micIcon = this._icon('fas fa-microphone-slash');
+        micIcon.style.color = '#a855f7';
+        screen.appendChild(this._el('div', {cssText: 'font-size:48px;margin-bottom:8px;'}, micIcon));
         if (roomLabel) {
-            html += `<div style="font-size:22px;font-weight:600;color:#d8b4fe;">&ldquo;${this.sanitizeText(roomLabel)}&rdquo;</div>`;
+            screen.appendChild(this._el('div', {cssText: 'font-size:22px;font-weight:600;color:#d8b4fe;', textContent: '\u201C' + roomLabel + '\u201D'}));
         }
-        html += `<div style="font-size:18px;font-weight:500;color:rgba(255,255,255,0.8);">${this.sanitizeText(message || 'This room has ended.')}</div>`;
+        screen.appendChild(this._el('div', {cssText: 'font-size:18px;font-weight:500;color:rgba(255,255,255,0.8);', textContent: message || 'This room has ended.'}));
         if (hostLabel) {
-            html += `<div style="font-size:14px;color:rgba(255,255,255,0.5);">Was hosted by ${this.sanitizeText(hostLabel)}</div>`;
+            screen.appendChild(this._el('div', {cssText: 'font-size:14px;color:rgba(255,255,255,0.5);', textContent: 'Was hosted by ' + hostLabel}));
         }
-        html += '<a href="/verses.html" style="margin-top:16px;display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;transition:transform 0.15s;"><i class="fas fa-headphones"></i> Browse Active Rooms</a>';
+        const browseLink = this._el('a', {href: '/verses.html', cssText: 'margin-top:16px;display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;transition:transform 0.15s;'},
+            this._icon('fas fa-headphones'), ' Browse Active Rooms');
+        screen.appendChild(browseLink);
         if (this._lastJoinDebug) {
-            html += `<div style="margin-top:24px;padding:12px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;font-size:11px;color:rgba(255,255,255,0.4);font-family:monospace;word-break:break-all;max-width:90vw;text-align:left;">Debug: ${this.sanitizeText(this._lastJoinDebug)}</div>`;
+            screen.appendChild(this._el('div', {cssText: 'margin-top:24px;padding:12px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;font-size:11px;color:rgba(255,255,255,0.4);font-family:monospace;word-break:break-all;max-width:90vw;text-align:left;', textContent: 'Debug: ' + this._lastJoinDebug}));
             this._lastJoinDebug = null;
         }
-        screen.innerHTML = html;
 
         const mainEl = document.querySelector('main');
         if (mainEl) mainEl.prepend(screen);
@@ -799,23 +897,24 @@ class AudioRoomsManager {
         if (!roomsGrid) return;
 
         if (rooms.length === 0) {
-            roomsGrid.innerHTML = `
-                <div class="empty-rooms-state">
-                    <i class="fas fa-headphones"></i>
-                    <h3>No live rooms right now</h3>
-                    <p>Be the first to start a conversation — create a room and invite friends!</p>
-                </div>`;
+            const emptyState = this._el('div', {className: 'empty-rooms-state'},
+                this._icon('fas fa-headphones'),
+                this._el('h3', {textContent: 'No live rooms right now'}),
+                this._el('p', {textContent: 'Be the first to start a conversation \u2014 create a room and invite friends!'}));
+            roomsGrid.replaceChildren(emptyState);
             const friendsList = document.getElementById('friends-list');
-            if (friendsList && !friendsList.innerHTML.trim()) {
-                friendsList.innerHTML = `
-                    <div class="empty-rooms-state" style="padding: 1.5rem;">
-                        <p style="color: rgba(255,255,255,0.5); text-align: center;">No friends are in rooms right now</p>
-                    </div>`;
+            if (friendsList && !friendsList.textContent.trim()) {
+                const friendsEmpty = this._el('div', {className: 'empty-rooms-state', cssText: 'padding: 1.5rem;'},
+                    this._el('p', {cssText: 'color: rgba(255,255,255,0.5); text-align: center;', textContent: 'No friends are in rooms right now'}));
+                friendsList.replaceChildren(friendsEmpty);
             }
             return;
         }
 
-        roomsGrid.innerHTML = rooms.map(room => this.createRoomCard(room)).join('');
+        roomsGrid.replaceChildren();
+        rooms.forEach(room => {
+            roomsGrid.appendChild(this.createRoomCard(room));
+        });
 
         const statUsers = document.getElementById('stat-active-users');
         const statRooms = document.getElementById('stat-live-rooms');
@@ -828,74 +927,62 @@ class AudioRoomsManager {
 
     createRoomCard(room) {
         const participants = room.participants || [];
-        const participantAvatars = participants.slice(0, 3).map(p => {
+        const avatarEls = participants.slice(0, 3).map(p => {
             const name = p.userName || p.name || 'User';
             const initial = name.charAt(0).toUpperCase();
-            return `<div class="participant-avatar">
-                <div class="avatar-initial" style="width:40px;height:40px;border-radius:50%;background:var(--purple);display:flex;align-items:center;justify-content:center;font-weight:bold;color:white;">${initial}</div>
-            </div>`;
-        }).join('');
+            const avatarInitial = this._el('div', {className: 'avatar-initial', cssText: 'width:40px;height:40px;border-radius:50%;background:var(--purple);display:flex;align-items:center;justify-content:center;font-weight:bold;color:white;', textContent: initial});
+            return this._el('div', {className: 'participant-avatar'}, avatarInitial);
+        });
 
         const count = room.participantCount || participants.length || 0;
-        const moreParticipants = count > 3 ? 
-            `<div class="more-participants">+${count - 3}</div>` : '';
+        const participantsPreview = this._el('div', {className: 'participants-preview'}, ...avatarEls);
+        if (count > 3) {
+            participantsPreview.appendChild(this._el('div', {className: 'more-participants', textContent: '+' + (count - 3)}));
+        }
 
         const genre = room.genre || 'general';
-        const genreIcon = this.getGenreIcon(genre);
-        const roomName = room.name || `Room ${room.id.slice(-5)}`;
+        const genreIconCls = this.getGenreIconClass(genre);
+        const roomName = room.name || ('Room ' + room.id.slice(-5));
         const host = participants.find(p => p.isHost);
         const hostName = host ? (host.userName || host.name || 'Unknown') : 'Unknown';
 
         const elapsed = room.createdAt ? Math.round((Date.now() - room.createdAt) / 60000) : 0;
-        const duration = elapsed < 60 ? `${elapsed}m` : `${Math.round(elapsed / 60)}h`;
+        const duration = elapsed < 60 ? elapsed + 'm' : Math.round(elapsed / 60) + 'h';
 
-        return `
-            <div class="room-card" data-room-id="${room.id}" data-genre="${genre}">
-                <div class="room-preview">
-                    <div class="participants-preview">
-                        ${participantAvatars}
-                        ${moreParticipants}
-                    </div>
-                    <div class="room-info">
-                        <div class="room-genre">
-                            ${genreIcon}
-                            <span>${this.capitalizeFirst(genre)}</span>
-                        </div>
-                        <h3>${this.sanitizeText(roomName)}</h3>
-                        <p class="room-topic">Hosted by ${this.sanitizeText(hostName)}</p>
-                        <div class="room-stats">
-                            <span class="stat">
-                                <i class="fas fa-users"></i>
-                                ${count}
-                            </span>
-                            <span class="stat">
-                                <i class="fas fa-clock"></i>
-                                ${duration}
-                            </span>
-                            ${room.isLocked ? '<span class="stat"><i class="fas fa-lock"></i></span>' : ''}
-                        </div>
-                    </div>
-                </div>
-                <div class="room-actions">
-                    <button class="join-room-btn primary" ${room.isLocked ? 'disabled' : ''}>
-                        <i class="fas fa-play"></i>
-                        ${room.isLocked ? 'Locked' : 'Join Room'}
-                    </button>
-                </div>
-            </div>
-        `;
+        const statsDiv = this._el('div', {className: 'room-stats'},
+            this._el('span', {className: 'stat'}, this._icon('fas fa-users'), this._text(' ' + count)),
+            this._el('span', {className: 'stat'}, this._icon('fas fa-clock'), this._text(' ' + duration)));
+        if (room.isLocked) {
+            statsDiv.appendChild(this._el('span', {className: 'stat'}, this._icon('fas fa-lock')));
+        }
+
+        const roomInfo = this._el('div', {className: 'room-info'},
+            this._el('div', {className: 'room-genre'}, this._icon(genreIconCls), this._el('span', {textContent: this.capitalizeFirst(genre)})),
+            this._el('h3', {textContent: roomName}),
+            this._el('p', {className: 'room-topic', textContent: 'Hosted by ' + hostName}),
+            statsDiv);
+
+        const joinBtn = this._el('button', {className: 'join-room-btn primary'}, this._icon('fas fa-play'), this._text(room.isLocked ? ' Locked' : ' Join Room'));
+        if (room.isLocked) joinBtn.disabled = true;
+
+        const card = this._el('div', {className: 'room-card'},
+            this._el('div', {className: 'room-preview'}, participantsPreview, roomInfo),
+            this._el('div', {className: 'room-actions'}, joinBtn));
+        card.dataset.roomId = room.id;
+        card.dataset.genre = genre;
+        return card;
     }
 
-    getGenreIcon(genre) {
+    getGenreIconClass(genre) {
         const icons = {
-            'hip-hop': '<i class="fas fa-music"></i>',
-            'rock': '<i class="fas fa-guitar"></i>',
-            'pop': '<i class="fas fa-headphones"></i>',
-            'jazz': '<i class="fas fa-saxophone"></i>',
-            'electronic': '<i class="fas fa-synth"></i>',
-            'r&b': '<i class="fas fa-microphone"></i>'
+            'hip-hop': 'fas fa-music',
+            'rock': 'fas fa-guitar',
+            'pop': 'fas fa-headphones',
+            'jazz': 'fas fa-saxophone',
+            'electronic': 'fas fa-synth',
+            'r&b': 'fas fa-microphone'
         };
-        return icons[genre] || '<i class="fas fa-music"></i>';
+        return icons[genre] || 'fas fa-music';
     }
 
     capitalizeFirst(str) {
@@ -952,7 +1039,8 @@ class AudioRoomsManager {
 
         const toast = document.createElement('div');
         toast.className = 'share-toast';
-        toast.innerHTML = `<i class="fas fa-check-circle"></i> ${escapeHtml(message)}`;
+        toast.appendChild(this._icon('fas fa-check-circle'));
+        toast.appendChild(this._text(' ' + message));
         document.body.appendChild(toast);
         requestAnimationFrame(() => toast.classList.add('visible'));
         setTimeout(() => {
@@ -978,36 +1066,32 @@ class AudioRoomsManager {
         const notification = document.createElement('div');
         notification.id = 'wordeth-invite-notification';
         notification.className = 'invite-notification';
-        notification.innerHTML = `
-            <div class="invite-card">
-                <div class="invite-card-glow"></div>
-                <div class="invite-card-top">
-                    <div class="invite-live-badge">
-                        <span class="invite-live-dot"></span>
-                        LIVE NOW
-                    </div>
-                    <img src="/images/logo.png" alt="Wordeth" class="invite-logo">
-                </div>
-                <div class="invite-card-body">
-                    <div class="invite-room-name">${escapeHtml(roomName)}</div>
-                    <div class="invite-from">
-                        <div class="invite-from-avatar">${inviterInitial}</div>
-                        <div class="invite-from-text"><strong>${escapeHtml(data.inviterName)}</strong> invited you</div>
-                    </div>
-                </div>
-                <div class="invite-card-actions">
-                    <button class="invite-action-btn dismiss" id="invite-dismiss-btn">Not now</button>
-                    <button class="invite-action-btn join" id="invite-join-btn">
-                        <i class="fas fa-headphones"></i> Join
-                    </button>
-                </div>
-                <div class="invite-timer-bar"></div>
-            </div>
-        `;
+        const liveBadge = this._el('div', {className: 'invite-live-badge'},
+            this._el('span', {className: 'invite-live-dot'}), 'LIVE NOW');
+        const logo = this._el('img', {className: 'invite-logo', src: '/images/logo.png', alt: 'Wordeth'});
+        const cardTop = this._el('div', {className: 'invite-card-top'}, liveBadge, logo);
+
+        const fromStrong = this._el('strong', {textContent: data.inviterName});
+        const fromText = this._el('div', {className: 'invite-from-text'}, fromStrong, ' invited you');
+        const cardBody = this._el('div', {className: 'invite-card-body'},
+            this._el('div', {className: 'invite-room-name', textContent: roomName}),
+            this._el('div', {className: 'invite-from'},
+                this._el('div', {className: 'invite-from-avatar', textContent: inviterInitial}), fromText));
+
+        const dismissBtn = this._el('button', {className: 'invite-action-btn dismiss', textContent: 'Not now'});
+        const joinBtn = this._el('button', {className: 'invite-action-btn join'},
+            this._icon('fas fa-headphones'), ' Join');
+        const actions = this._el('div', {className: 'invite-card-actions'}, dismissBtn, joinBtn);
+
+        const card = this._el('div', {className: 'invite-card'},
+            this._el('div', {className: 'invite-card-glow'}), cardTop, cardBody, actions,
+            this._el('div', {className: 'invite-timer-bar'}));
+        notification.appendChild(card);
+
         document.body.appendChild(notification);
         requestAnimationFrame(() => notification.classList.add('visible'));
 
-        document.getElementById('invite-join-btn').addEventListener('click', () => {
+        joinBtn.addEventListener('click', () => {
             notification.remove();
             if (this.currentRoom) {
                 this.leaveRoom();
@@ -1015,7 +1099,7 @@ class AudioRoomsManager {
             this.joinRoom(data.roomId);
         });
 
-        document.getElementById('invite-dismiss-btn').addEventListener('click', () => {
+        dismissBtn.addEventListener('click', () => {
             notification.classList.remove('visible');
             setTimeout(() => notification.remove(), 400);
         });
@@ -1097,23 +1181,21 @@ class AudioRoomsManager {
         const modal = document.createElement('div');
         modal.className = 'modal active';
         modal.id = 'auth-prompt-modal';
-        modal.innerHTML = `
-            <div class="modal-content" style="max-width:400px;text-align:center;">
-                <div class="modal-header" style="justify-content:flex-end;">
-                    <button class="close-modal">&times;</button>
-                </div>
-                <div style="padding:0 0.5rem 1.5rem;">
-                    <i class="fas fa-headphones" style="font-size:2.5rem;color:var(--mint,#00E5A8);margin-bottom:1rem;"></i>
-                    <h3 style="font-family:var(--font-display,'Syne',sans-serif);font-size:1.3rem;margin-bottom:0.5rem;">Join the Conversation</h3>
-                    <p style="color:rgba(255,255,255,0.5);font-size:0.9rem;margin-bottom:1.5rem;">Sign in or create an account to start your own audio room and connect with other music lovers.</p>
-                    <div style="display:flex;flex-direction:column;gap:0.75rem;">
-                        <a href="/signin.html?return=${encodeURIComponent('/verses.html')}" class="create-btn" style="display:inline-block;text-decoration:none;text-align:center;padding:0.75rem 1.5rem;border-radius:12px;font-weight:600;">Sign In</a>
-                        <a href="/signup.html?return=${encodeURIComponent('/verses.html')}" style="color:var(--mint,#00E5A8);text-decoration:none;font-size:0.85rem;">Don&rsquo;t have an account? <strong>Sign Up</strong></a>
-                    </div>
-                </div>
-            </div>`;
+        const closeBtn = this._el('button', {className: 'close-modal', textContent: '\u00D7'});
+        const modalHeader = this._el('div', {className: 'modal-header', cssText: 'justify-content:flex-end;'}, closeBtn);
+        const headphonesIcon = this._icon('fas fa-headphones');
+        headphonesIcon.style.cssText = 'font-size:2.5rem;color:var(--mint,#00E5A8);margin-bottom:1rem;';
+        const title = this._el('h3', {cssText: 'font-family:var(--font-display,"Syne",sans-serif);font-size:1.3rem;margin-bottom:0.5rem;', textContent: 'Join the Conversation'});
+        const desc = this._el('p', {cssText: 'color:rgba(255,255,255,0.5);font-size:0.9rem;margin-bottom:1.5rem;', textContent: 'Sign in or create an account to start your own audio room and connect with other music lovers.'});
+        const signInLink = this._el('a', {className: 'create-btn', href: '/signin.html?return=' + encodeURIComponent('/verses.html'), cssText: 'display:inline-block;text-decoration:none;text-align:center;padding:0.75rem 1.5rem;border-radius:12px;font-weight:600;', textContent: 'Sign In'});
+        const signUpLink = this._el('a', {href: '/signup.html?return=' + encodeURIComponent('/verses.html'), cssText: 'color:var(--mint,#00E5A8);text-decoration:none;font-size:0.85rem;'},
+            'Don\u2019t have an account? ', this._el('strong', {textContent: 'Sign Up'}));
+        const linksWrap = this._el('div', {cssText: 'display:flex;flex-direction:column;gap:0.75rem;'}, signInLink, signUpLink);
+        const body = this._el('div', {cssText: 'padding:0 0.5rem 1.5rem;'}, headphonesIcon, title, desc, linksWrap);
+        const content = this._el('div', {className: 'modal-content', cssText: 'max-width:400px;text-align:center;'}, modalHeader, body);
+        modal.appendChild(content);
         document.body.appendChild(modal);
-        modal.querySelector('.close-modal').addEventListener('click', () => {
+        closeBtn.addEventListener('click', () => {
             modal.classList.remove('active');
             modal.remove();
         });
@@ -1160,7 +1242,7 @@ class AudioRoomsManager {
         const userSearchInput = document.getElementById('user-search-input');
         if (userSearchInput) userSearchInput.value = '';
         const searchResults = document.getElementById('search-results');
-        if (searchResults) searchResults.innerHTML = '';
+        this._clearEl(searchResults);
     }
 
     // Topic Management
@@ -1187,7 +1269,7 @@ class AudioRoomsManager {
 
         const resultsContainer = document.getElementById('search-results');
         if (resultsContainer) {
-            resultsContainer.innerHTML = '<div class="no-results"><p>Searching...</p></div>';
+            resultsContainer.replaceChildren(this._el('div', {className: 'no-results'}, this._el('p', {textContent: 'Searching...'})));
         }
 
         try {
@@ -1200,7 +1282,7 @@ class AudioRoomsManager {
         } catch (error) {
             console.error('User search error:', error);
             if (resultsContainer) {
-                resultsContainer.innerHTML = '<div class="no-results"><p>Search failed. Please try again.</p></div>';
+                resultsContainer.replaceChildren(this._el('div', {className: 'no-results'}, this._el('p', {textContent: 'Search failed. Please try again.'})));
             }
         }
     }
@@ -1211,11 +1293,11 @@ class AudioRoomsManager {
 
         const token = localStorage.getItem('authToken');
         if (!token) {
-            resultsContainer.innerHTML = '<div class="no-results"><p>Sign in to see your friends</p></div>';
+            resultsContainer.replaceChildren(this._el('div', {className: 'no-results'}, this._el('p', {textContent: 'Sign in to see your friends'})));
             return;
         }
 
-        resultsContainer.innerHTML = '<div class="no-results"><p>Loading friends...</p></div>';
+        resultsContainer.replaceChildren(this._el('div', {className: 'no-results'}, this._el('p', {textContent: 'Loading friends...'})));
 
         try {
             const res = await fetch('/api/user/friends', {
@@ -1224,14 +1306,14 @@ class AudioRoomsManager {
             const friends = await res.json();
 
             if (!friends || friends.length === 0) {
-                resultsContainer.innerHTML = '<div class="no-results"><p>No friends yet. Search for users above to invite them!</p></div>';
+                resultsContainer.replaceChildren(this._el('div', {className: 'no-results'}, this._el('p', {textContent: 'No friends yet. Search for users above to invite them!'})));
                 return;
             }
 
             this.renderSearchResults(friends, null, true);
         } catch (error) {
             console.error('Load friends error:', error);
-            resultsContainer.innerHTML = '<div class="no-results"><p>Could not load friends. Try searching instead.</p></div>';
+            resultsContainer.replaceChildren(this._el('div', {className: 'no-results'}, this._el('p', {textContent: 'Could not load friends. Try searching instead.'})));
         }
     }
 
@@ -1240,11 +1322,8 @@ class AudioRoomsManager {
         if (!resultsContainer) return;
 
         if (!users || users.length === 0) {
-            resultsContainer.innerHTML = `
-                <div class="no-results">
-                    <p>${searchQuery ? `No users found matching "${searchQuery}"` : 'No results found'}</p>
-                </div>
-            `;
+            const msg = searchQuery ? 'No users found matching \u201C' + searchQuery + '\u201D' : 'No results found';
+            resultsContainer.replaceChildren(this._el('div', {className: 'no-results'}, this._el('p', {textContent: msg})));
             return;
         }
 
@@ -1255,36 +1334,45 @@ class AudioRoomsManager {
         const roomParticipants = this.currentRoom && this.socket ? 
             Array.from(document.querySelectorAll('.participant-item')).map(el => el.dataset?.userId).filter(Boolean) : [];
 
+        resultsContainer.replaceChildren();
         if (isFriendsList) {
-            resultsContainer.innerHTML = '<div class="search-section-label">Your Friends</div>' + 
-                users.filter(u => (u._id || u.id) !== currentUserId).map(user => this.renderUserCard(user, roomParticipants)).join('');
-        } else {
-            resultsContainer.innerHTML = users.filter(u => (u._id || u.id) !== currentUserId).map(user => this.renderUserCard(user, roomParticipants)).join('');
+            resultsContainer.appendChild(this._el('div', {className: 'search-section-label', textContent: 'Your Friends'}));
         }
+        users.filter(u => (u._id || u.id) !== currentUserId).forEach(user => {
+            resultsContainer.appendChild(this.renderUserCard(user, roomParticipants));
+        });
     }
 
     renderUserCard(user, roomParticipants = []) {
         const userId = user._id || user.id;
-        const displayName = escapeHtml(user.name || user.displayName || 'User');
-        const avatar = escapeHtml(user.avatar || '');
-        const avatarHtml = avatar 
-            ? `<img src="${avatar}" alt="${displayName}" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'fas fa-user\\'></i>'">`
-            : `<i class="fas fa-user"></i>`;
+        const displayName = user.name || user.displayName || 'User';
+        const avatar = user.avatar || '';
         const isInRoom = roomParticipants.includes(userId);
-        const buttonHtml = isInRoom 
-            ? `<span class="in-room-badge">In Room</span>`
-            : `<button class="invite-btn" data-user-id="${escapeHtml(userId)}">Invite</button>`;
 
-        return `
-            <div class="search-result-item">
-                <div class="search-result-avatar">${avatarHtml}</div>
-                <div class="search-result-info">
-                    <div class="search-result-name">${displayName}</div>
-                    ${user.bio ? `<div class="search-result-id">${escapeHtml(user.bio.substring(0, 50))}</div>` : ''}
-                </div>
-                ${buttonHtml}
-            </div>
-        `;
+        const avatarDiv = this._el('div', {className: 'search-result-avatar'});
+        if (avatar) {
+            const img = this._el('img', {src: avatar, alt: displayName});
+            img.addEventListener('error', function() { this.replaceWith(document.createElement('i')).className = 'fas fa-user'; });
+            avatarDiv.appendChild(img);
+        } else {
+            avatarDiv.appendChild(this._icon('fas fa-user'));
+        }
+
+        const infoDiv = this._el('div', {className: 'search-result-info'},
+            this._el('div', {className: 'search-result-name', textContent: displayName}));
+        if (user.bio) {
+            infoDiv.appendChild(this._el('div', {className: 'search-result-id', textContent: user.bio.substring(0, 50)}));
+        }
+
+        const item = this._el('div', {className: 'search-result-item'}, avatarDiv, infoDiv);
+        if (isInRoom) {
+            item.appendChild(this._el('span', {className: 'in-room-badge', textContent: 'In Room'}));
+        } else {
+            const inviteBtn = this._el('button', {className: 'invite-btn', textContent: 'Invite'});
+            inviteBtn.dataset.userId = userId;
+            item.appendChild(inviteBtn);
+        }
+        return item;
     }
 
     inviteUser(userId) {
@@ -1443,21 +1531,18 @@ class AudioRoomsManager {
         const modal = document.createElement('div');
         modal.id = 'guest-signup-modal';
         modal.style.cssText = 'position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:20px;';
-        modal.innerHTML = `
-            <div style="background:linear-gradient(135deg,#1a1033,#2d1b4e);border:1px solid rgba(124,58,237,0.4);border-radius:16px;padding:32px 24px;max-width:380px;width:100%;text-align:center;color:#fff;font-family:Inter,sans-serif;">
-                <div style="font-size:40px;margin-bottom:16px;">${isLeave ? '🎶' : '🔒'}</div>
-                <h3 style="margin:0 0 8px;font-size:1.2rem;color:#96c5b0;">${isLeave ? 'Enjoying the Vibe?' : 'Join the Conversation'}</h3>
-                <p style="margin:0 0 24px;color:#ccc;font-size:0.95rem;line-height:1.5;">${msg}</p>
-                <div style="display:flex;flex-direction:column;gap:10px;">
-                    <a href="/signup.html?return=${encodedReturn}" style="display:block;background:#7c3aed;color:white;text-decoration:none;padding:14px 20px;border-radius:10px;font-weight:600;font-size:1rem;">Sign Up Free</a>
-                    <a href="/signin.html?return=${encodedReturn}" style="display:block;background:rgba(124,58,237,0.2);color:#a78bfa;text-decoration:none;padding:12px 20px;border-radius:10px;font-size:0.95rem;border:1px solid rgba(124,58,237,0.3);">Sign In</a>
-                    <button id="guest-signup-dismiss" style="background:none;border:none;color:#888;padding:10px;font-size:0.85rem;cursor:pointer;margin-top:4px;">${isLeave ? 'Leave without signing up' : 'Maybe later'}</button>
-                </div>
-            </div>
-        `;
+        const emojiDiv = this._el('div', {cssText: 'font-size:40px;margin-bottom:16px;', textContent: isLeave ? '\uD83C\uDFB6' : '\uD83D\uDD12'});
+        const titleEl = this._el('h3', {cssText: 'margin:0 0 8px;font-size:1.2rem;color:#96c5b0;', textContent: isLeave ? 'Enjoying the Vibe?' : 'Join the Conversation'});
+        const descEl = this._el('p', {cssText: 'margin:0 0 24px;color:#ccc;font-size:0.95rem;line-height:1.5;', textContent: msg});
+        const signupLink = this._el('a', {href: '/signup.html?return=' + encodedReturn, cssText: 'display:block;background:#7c3aed;color:white;text-decoration:none;padding:14px 20px;border-radius:10px;font-weight:600;font-size:1rem;', textContent: 'Sign Up Free'});
+        const signinLink = this._el('a', {href: '/signin.html?return=' + encodedReturn, cssText: 'display:block;background:rgba(124,58,237,0.2);color:#a78bfa;text-decoration:none;padding:12px 20px;border-radius:10px;font-size:0.95rem;border:1px solid rgba(124,58,237,0.3);', textContent: 'Sign In'});
+        const dismissBtn = this._el('button', {id: 'guest-signup-dismiss', cssText: 'background:none;border:none;color:#888;padding:10px;font-size:0.85rem;cursor:pointer;margin-top:4px;', textContent: isLeave ? 'Leave without signing up' : 'Maybe later'});
+        const linksDiv = this._el('div', {cssText: 'display:flex;flex-direction:column;gap:10px;'}, signupLink, signinLink, dismissBtn);
+        const card = this._el('div', {cssText: 'background:linear-gradient(135deg,#1a1033,#2d1b4e);border:1px solid rgba(124,58,237,0.4);border-radius:16px;padding:32px 24px;max-width:380px;width:100%;text-align:center;color:#fff;font-family:Inter,sans-serif;'}, emojiDiv, titleEl, descEl, linksDiv);
+        modal.appendChild(card);
         document.body.appendChild(modal);
 
-        modal.querySelectorAll('a[href]').forEach(link => {
+        [signupLink, signinLink].forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
                 const href = link.getAttribute('href');
@@ -1466,7 +1551,7 @@ class AudioRoomsManager {
             });
         });
 
-        document.getElementById('guest-signup-dismiss').addEventListener('click', () => {
+        dismissBtn.addEventListener('click', () => {
             modal.remove();
             if (isLeave) {
                 this.isGuest = false;
@@ -1520,13 +1605,11 @@ class AudioRoomsManager {
         
         const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         
-        messageElement.innerHTML = `
-            <div class="chat-message-header">
-                <span class="sender">${escapeHtml(sender)}</span>
-                <span class="timestamp">${timestamp}</span>
-            </div>
-            <div class="chat-message-content">${escapeHtml(message)}</div>
-        `;
+        const header = this._el('div', {className: 'chat-message-header'},
+            this._el('span', {className: 'sender', textContent: sender}),
+            this._el('span', {className: 'timestamp', textContent: timestamp}));
+        const content = this._el('div', {className: 'chat-message-content', textContent: message});
+        messageElement.append(header, content);
         
         this.chatMessagesContainer.appendChild(messageElement);
         this.chatMessagesContainer.scrollTop = this.chatMessagesContainer.scrollHeight;
@@ -1555,7 +1638,10 @@ class AudioRoomsManager {
         }
         const toast = document.createElement('div');
         toast.style.cssText = 'background:rgba(30,0,50,0.95);color:#e0d0ff;padding:10px 18px;border-radius:20px;font-size:14px;display:flex;align-items:center;gap:8px;border:1px solid rgba(138,43,226,0.4);backdrop-filter:blur(10px);opacity:0;transition:opacity 0.3s;white-space:nowrap;pointer-events:auto;';
-        toast.innerHTML = `<i class="fas ${icon}" style="color:#b388ff;"></i> ${this.escapeHtml(message)}`;
+        const toastIcon = this._icon('fas ' + icon);
+        toastIcon.style.color = '#b388ff';
+        toast.appendChild(toastIcon);
+        toast.appendChild(this._text(' ' + message));
         container.appendChild(toast);
         requestAnimationFrame(() => toast.style.opacity = '1');
         setTimeout(() => {
@@ -1608,44 +1694,61 @@ class AudioRoomsManager {
         const closeBar = document.createElement('div');
         closeBar.style.cssText = 'width:100%;max-width:700px;display:flex;justify-content:flex-end;margin-bottom:8px;flex-shrink:0;';
         const closeGuideBtn = document.createElement('button');
-        closeGuideBtn.innerHTML = '<i class="fas fa-times"></i> Close Guide';
+        this._setBtn(closeGuideBtn, 'fas fa-times', 'Close Guide');
         closeGuideBtn.style.cssText = 'background:#7c3aed;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;';
         closeGuideBtn.onclick = () => guideFrame.remove();
         closeBar.appendChild(closeGuideBtn);
         const scrollBox = document.createElement('div');
         scrollBox.style.cssText = 'width:100%;max-width:700px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;border-radius:12px;background:#1a1a2e;padding:24px 20px;color:#e0e0e0;font-family:Inter,sans-serif;line-height:1.6;';
-        scrollBox.innerHTML = `
-            <h2 style="text-align:center;font-size:1.6rem;margin:0 0 6px;color:#96c5b0;"><i class="fas fa-headphones"></i> Verses Room Guide</h2>
-            <p style="text-align:center;color:#a78bfa;margin-bottom:24px;font-size:0.95rem;">Everything you need to know about live audio rooms</p>
-            <div style="margin-bottom:20px;background:rgba(85,53,85,0.25);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:16px;">
-                <h3 style="color:#96c5b0;margin:0 0 10px;font-size:1rem;"><i class="fas fa-play-circle" style="margin-right:8px;"></i>Getting Started</h3>
-                <p style="margin:0 0 8px;"><strong>Create a Room</strong> — Tap "Create Room", give it a name, and you're the host.</p>
-                <p style="margin:0 0 8px;"><strong>Join a Room</strong> — Tap any live room card to join as a listener.</p>
-                <p style="margin:0;"><strong>Invite Friends</strong> — Use the share or invite buttons to bring others in.</p>
-            </div>
-            <div style="margin-bottom:20px;background:rgba(85,53,85,0.25);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:16px;">
-                <h3 style="color:#96c5b0;margin:0 0 10px;font-size:1rem;"><i class="fas fa-sliders-h" style="margin-right:8px;"></i>Action Bar</h3>
-                <p style="margin:0 0 8px;"><strong>MIC</strong> — Toggle your microphone on/off (speakers only).</p>
-                <p style="margin:0 0 8px;"><strong>EFFECTS</strong> — Apply voice filters like Echo, Deep, Radio, and more.</p>
-                <p style="margin:0 0 8px;"><strong>KARAOKE</strong> — Search and play songs with synced lyrics.</p>
-                <p style="margin:0 0 8px;"><strong>CAMERA</strong> — Enable video with optional AR filters.</p>
-                <p style="margin:0 0 8px;"><strong>PHOTO</strong> — Share photos in the room chat.</p>
-                <p style="margin:0;"><strong>HAND</strong> — Raise your hand to request stage access.</p>
-            </div>
-            <div style="margin-bottom:20px;background:rgba(85,53,85,0.25);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:16px;">
-                <h3 style="color:#96c5b0;margin:0 0 10px;font-size:1rem;"><i class="fas fa-crown" style="margin-right:8px;"></i>Host Controls</h3>
-                <p style="margin:0 0 8px;"><strong>Stage Access</strong> — Switch between invite-only and open stage.</p>
-                <p style="margin:0 0 8px;"><strong>Invite to Stage</strong> — Tap the 3-dot menu on a listener to promote them.</p>
-                <p style="margin:0 0 8px;"><strong>Mute All</strong> — Mute all speakers at once.</p>
-                <p style="margin:0;"><strong>Lock / Close</strong> — Lock the room or close it entirely.</p>
-            </div>
-            <div style="background:rgba(85,53,85,0.25);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:16px;">
-                <h3 style="color:#96c5b0;margin:0 0 10px;font-size:1rem;"><i class="fas fa-lightbulb" style="margin-right:8px;"></i>Tips</h3>
-                <p style="margin:0 0 8px;">Use headphones to avoid echo and feedback.</p>
-                <p style="margin:0 0 8px;">Listeners hear everything — you don't need to be on stage to enjoy.</p>
-                <p style="margin:0;">If you lose connection, just rejoin — the room stays live as long as someone is in it.</p>
-            </div>
-        `;
+        const sectionStyle = 'margin-bottom:20px;background:rgba(85,53,85,0.25);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:16px;';
+        const h3Style = 'color:#96c5b0;margin:0 0 10px;font-size:1rem;';
+        const buildSection = (iconCls, title, items, last) => {
+            const h3 = this._el('h3', {cssText: h3Style});
+            const ico = this._icon(iconCls);
+            ico.style.marginRight = '8px';
+            h3.append(ico, this._text(title));
+            const children = items.map((text, i) => {
+                const p = this._el('p', {cssText: 'margin:0' + (i < items.length - 1 ? ' 0 8px' : '') + ';'});
+                if (text.includes(' \u2014 ')) {
+                    const [bold, rest] = text.split(' \u2014 ');
+                    p.append(this._el('strong', {textContent: bold}), this._text(' \u2014 ' + rest));
+                } else {
+                    p.textContent = text;
+                }
+                return p;
+            });
+            return this._el('div', {cssText: last ? sectionStyle.replace('margin-bottom:20px;', '') : sectionStyle}, h3, ...children);
+        };
+        const guideTitle = this._el('h2', {cssText: 'text-align:center;font-size:1.6rem;margin:0 0 6px;color:#96c5b0;'});
+        guideTitle.append(this._icon('fas fa-headphones'), this._text(' Verses Room Guide'));
+        scrollBox.append(
+            guideTitle,
+            this._el('p', {cssText: 'text-align:center;color:#a78bfa;margin-bottom:24px;font-size:0.95rem;', textContent: 'Everything you need to know about live audio rooms'}),
+            buildSection('fas fa-play-circle', 'Getting Started', [
+                'Create a Room \u2014 Tap "Create Room", give it a name, and you\'re the host.',
+                'Join a Room \u2014 Tap any live room card to join as a listener.',
+                'Invite Friends \u2014 Use the share or invite buttons to bring others in.'
+            ]),
+            buildSection('fas fa-sliders-h', 'Action Bar', [
+                'MIC \u2014 Toggle your microphone on/off (speakers only).',
+                'EFFECTS \u2014 Apply voice filters like Echo, Deep, Radio, and more.',
+                'KARAOKE \u2014 Search and play songs with synced lyrics.',
+                'CAMERA \u2014 Enable video with optional AR filters.',
+                'PHOTO \u2014 Share photos in the room chat.',
+                'HAND \u2014 Raise your hand to request stage access.'
+            ]),
+            buildSection('fas fa-crown', 'Host Controls', [
+                'Stage Access \u2014 Switch between invite-only and open stage.',
+                'Invite to Stage \u2014 Tap the 3-dot menu on a listener to promote them.',
+                'Mute All \u2014 Mute all speakers at once.',
+                'Lock / Close \u2014 Lock the room or close it entirely.'
+            ]),
+            buildSection('fas fa-lightbulb', 'Tips', [
+                'Use headphones to avoid echo and feedback.',
+                'Listeners hear everything \u2014 you don\'t need to be on stage to enjoy.',
+                'If you lose connection, just rejoin \u2014 the room stays live as long as someone is in it.'
+            ], true)
+        );
         guideFrame.appendChild(closeBar);
         guideFrame.appendChild(scrollBox);
         document.body.appendChild(guideFrame);
@@ -1764,7 +1867,7 @@ class AudioRoomsManager {
 
         const closeBtn = document.createElement('button');
         closeBtn.className = 'mobile-walkthrough-close';
-        closeBtn.innerHTML = '<i class="fas fa-times"></i> Close Tour';
+        this._setBtn(closeBtn, 'fas fa-times', 'Close Tour');
         closeBtn.onclick = dismiss;
         document.body.appendChild(closeBtn);
 
@@ -1787,25 +1890,25 @@ class AudioRoomsManager {
             tooltip = document.createElement('div');
             tooltip.className = 'mobile-walkthrough-tooltip';
 
-            const progressDots = steps.map((_, i) =>
-                `<span class="walk-dot${i === idx ? ' active' : ''}"></span>`
-            ).join('');
-
-            tooltip.innerHTML = `
-                <div class="walk-tip-header">
-                    <div class="walk-tip-icon"><i class="fas ${step.icon}"></i></div>
-                    <div class="walk-tip-title">${step.title}</div>
-                    <button class="walk-tip-skip">Skip</button>
-                </div>
-                <p class="walk-tip-text">${step.text}</p>
-                <div class="walk-tip-footer">
-                    <div class="walk-dots">${progressDots}</div>
-                    <div class="walk-tip-nav">
-                        ${idx > 0 ? '<button class="walk-btn-back"><i class="fas fa-chevron-left"></i></button>' : ''}
-                        <button class="walk-btn-next">${idx === steps.length - 1 ? 'Done' : 'Next <i class="fas fa-chevron-right"></i>'}</button>
-                    </div>
-                </div>
-            `;
+            const tipHeader = this._el('div', {className: 'walk-tip-header'},
+                this._el('div', {className: 'walk-tip-icon'}, this._icon('fas ' + step.icon)),
+                this._el('div', {className: 'walk-tip-title', textContent: step.title}),
+                this._el('button', {className: 'walk-tip-skip', textContent: 'Skip'}));
+            const tipText = this._el('p', {className: 'walk-tip-text', textContent: step.text});
+            const dotsDiv = this._el('div', {className: 'walk-dots'}, ...steps.map((_, i) =>
+                this._el('span', {className: 'walk-dot' + (i === idx ? ' active' : '')})));
+            const navDiv = this._el('div', {className: 'walk-tip-nav'});
+            if (idx > 0) {
+                navDiv.appendChild(this._el('button', {className: 'walk-btn-back'}, this._icon('fas fa-chevron-left')));
+            }
+            const nextBtn = this._el('button', {className: 'walk-btn-next'});
+            if (idx === steps.length - 1) {
+                nextBtn.textContent = 'Done';
+            } else {
+                nextBtn.append(this._text('Next '), this._icon('fas fa-chevron-right'));
+            }
+            navDiv.appendChild(nextBtn);
+            tooltip.append(tipHeader, tipText, this._el('div', {className: 'walk-tip-footer'}, dotsDiv, navDiv));
 
             if (targetEl) {
                 const rect = targetEl.getBoundingClientRect();
@@ -1918,11 +2021,11 @@ class AudioRoomsManager {
                 joinStageBtn.style.display = 'none';
             } else if (this.stageAccess === 'open') {
                 joinStageBtn.style.display = '';
-                joinStageBtn.innerHTML = '<i class="fas fa-arrow-up"></i> Join Stage';
+                this._setBtn(joinStageBtn, 'fas fa-arrow-up', 'Join Stage');
                 joinStageBtn.title = 'Join the stage (open)';
             } else {
                 joinStageBtn.style.display = '';
-                joinStageBtn.innerHTML = '<i class="fas fa-hand-paper"></i> Request to Speak';
+                this._setBtn(joinStageBtn, 'fas fa-hand-paper', 'Request to Speak');
                 joinStageBtn.title = 'Ask the host to join the stage';
             }
         }
@@ -1931,10 +2034,10 @@ class AudioRoomsManager {
             if (this.isRoomHost) {
                 stageAccessToggle.style.display = '';
                 if (this.stageAccess === 'open') {
-                    stageAccessToggle.innerHTML = '<i class="fas fa-door-open"></i> Open Stage';
+                    this._setBtn(stageAccessToggle, 'fas fa-door-open', 'Open Stage');
                     stageAccessToggle.classList.add('active');
                 } else {
-                    stageAccessToggle.innerHTML = '<i class="fas fa-lock"></i> Invite Only';
+                    this._setBtn(stageAccessToggle, 'fas fa-lock', 'Invite Only');
                     stageAccessToggle.classList.remove('active');
                 }
             } else {
@@ -1961,20 +2064,32 @@ class AudioRoomsManager {
         }
         const toast = document.createElement('div');
         toast.style.cssText = 'background:rgba(30,0,50,0.95);color:#e0d0ff;padding:12px 18px;border-radius:16px;font-size:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid rgba(138,43,226,0.4);backdrop-filter:blur(10px);pointer-events:auto;';
-        toast.innerHTML = `
-            <i class="fas fa-hand-paper" style="color:#98ff98;"></i>
-            <span><strong>${this.escapeHtml(userName)}</strong> wants to speak</span>
-            <button class="approve-stage-btn" style="background:#98ff98;color:#1a1a2e;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-weight:600;font-size:0.85rem;">Approve</button>
-            <button class="deny-stage-btn" style="background:transparent;color:#aaa;border:1px solid #555;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.85rem;">Deny</button>
-        `;
-
-        toast.querySelector('.approve-stage-btn').addEventListener('click', () => {
+        const handIcon = this._icon('fas fa-hand-paper');
+        handIcon.style.color = '#98ff98';
+        toast.appendChild(handIcon);
+        const nameSpan = document.createElement('span');
+        const nameStrong = document.createElement('strong');
+        nameStrong.textContent = userName;
+        nameSpan.appendChild(nameStrong);
+        nameSpan.appendChild(this._text(' wants to speak'));
+        toast.appendChild(nameSpan);
+        const approveBtn = document.createElement('button');
+        approveBtn.className = 'approve-stage-btn';
+        approveBtn.style.cssText = 'background:#98ff98;color:#1a1a2e;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-weight:600;font-size:0.85rem;';
+        approveBtn.textContent = 'Approve';
+        approveBtn.addEventListener('click', () => {
             this.socket?.emit('promote-to-speaker', { roomId: this.currentRoom, targetSocketId: socketId });
             toast.remove();
         });
-        toast.querySelector('.deny-stage-btn').addEventListener('click', () => {
+        toast.appendChild(approveBtn);
+        const denyBtn = document.createElement('button');
+        denyBtn.className = 'deny-stage-btn';
+        denyBtn.style.cssText = 'background:transparent;color:#aaa;border:1px solid #555;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.85rem;';
+        denyBtn.textContent = 'Deny';
+        denyBtn.addEventListener('click', () => {
             toast.remove();
         });
+        toast.appendChild(denyBtn);
 
         container.appendChild(toast);
         setTimeout(() => { if (toast.parentNode) toast.remove(); }, 15000);
@@ -2005,18 +2120,16 @@ class AudioRoomsManager {
     loadReplayList() {
         const replayList = document.querySelector('.replay-list');
         if (replayList) {
-            replayList.innerHTML = this.replays.map(replay => `
-                <div class="replay-item" data-replay-id="${replay.id}">
-                    <div class="replay-thumbnail">
-                        <i class="fas fa-play"></i>
-                    </div>
-                    <div class="replay-info">
-                        <div class="replay-title">${replay.title}</div>
-                        <div class="replay-details">${replay.topic} • ${replay.date} • ${replay.participants} participants</div>
-                    </div>
-                    <div class="replay-duration">${replay.duration}</div>
-                </div>
-            `).join('');
+            replayList.replaceChildren(...this.replays.map(replay => {
+                const item = this._el('div', {className: 'replay-item'},
+                    this._el('div', {className: 'replay-thumbnail'}, this._icon('fas fa-play')),
+                    this._el('div', {className: 'replay-info'},
+                        this._el('div', {className: 'replay-title', textContent: replay.title}),
+                        this._el('div', {className: 'replay-details', textContent: replay.topic + ' \u2022 ' + replay.date + ' \u2022 ' + replay.participants + ' participants'})),
+                    this._el('div', {className: 'replay-duration', textContent: replay.duration}));
+                item.dataset.replayId = replay.id;
+                return item;
+            }));
         }
     }
 
@@ -2218,7 +2331,7 @@ class AudioRoomsManager {
             this.videoMode = isHost ? 'off' : (this.videoMode || 'off');
 
             if (this.toggleAudioBtn) {
-                this.toggleAudioBtn.innerHTML = '<i class="fas fa-microphone"></i><span class="ctrl-label">Mic</span>';
+                this._setBtnWithSpan(this.toggleAudioBtn, 'fas fa-microphone', 'Mic');
                 this.toggleAudioBtn.classList.remove('muted');
             }
             this.updateKaraokeButtonState();
@@ -2345,7 +2458,10 @@ class AudioRoomsManager {
             const banner = document.createElement('div');
             banner.id = 'agora-autoplay-banner';
             banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(138,43,226,0.95);color:#fff;text-align:center;padding:14px 20px;font-size:15px;cursor:pointer;backdrop-filter:blur(8px);';
-            banner.innerHTML = '<i class="fas fa-volume-up" style="margin-right:8px;"></i> Tap here to enable audio';
+            const bannerIcon = this._icon('fas fa-volume-up');
+            bannerIcon.style.marginRight = '8px';
+            banner.appendChild(bannerIcon);
+            banner.appendChild(this._text(' Tap here to enable audio'));
             banner.addEventListener('click', () => {
                 banner.remove();
                 this.agoraRemoteUsers.forEach(user => {
@@ -3086,7 +3202,7 @@ class AudioRoomsManager {
             const userName = user.name || user.username || 'Anonymous';
             this._addSelfToStage(userName, user.avatar || null, false);
             if (this.toggleAudioBtn) {
-                this.toggleAudioBtn.innerHTML = '<i class="fas fa-microphone"></i><span class="ctrl-label">Mic</span>';
+                this._setBtnWithSpan(this.toggleAudioBtn, 'fas fa-microphone', 'Mic');
                 this.toggleAudioBtn.classList.remove('muted');
             }
             this.updateStageControls();
@@ -3311,24 +3427,17 @@ class AudioRoomsManager {
         if (existing) existing.remove();
 
         const initial = (userName || 'A').charAt(0).toUpperCase();
-        const avatarContent = avatarUrl
-            ? `<img src="${avatarUrl}" alt="${userName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.outerHTML='<div class=\\'avatar-initial\\' style=\\'width:100%;height:100%;border-radius:50%;background:var(--mint,#98ff98);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:#1a1a2e;\\'>${initial}</div>'">`
-            : `<div class="avatar-initial" style="width:100%;height:100%;border-radius:50%;background:var(--mint,#98ff98);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:#1a1a2e;">${initial}</div>`;
         const selfAvatar = document.createElement('div');
         selfAvatar.className = 'speaker-avatar self-speaker';
         selfAvatar.setAttribute('data-participant-id', 'self');
-        selfAvatar.innerHTML = `
-            <div class="avatar-ring">
-                ${avatarContent}
-            </div>
-            <div class="speaker-info">
-                <span class="speaker-name">${userName} (You)</span>
-                <span class="speaker-role">${isHost ? 'Host' : 'Speaker'}</span>
-            </div>
-            <div class="speaker-status">
-                <i class="fas fa-microphone${this.isAudioMuted ? '-slash' : ''}"></i>
-            </div>
-        `;
+        const avatarRing = this._el('div', {className: 'avatar-ring'});
+        this._buildAvatar(avatarRing, avatarUrl, userName, initial, 'var(--mint,#98ff98)');
+        const speakerInfo = this._el('div', {className: 'speaker-info'},
+            this._el('span', {className: 'speaker-name', textContent: userName + ' (You)'}),
+            this._el('span', {className: 'speaker-role', textContent: isHost ? 'Host' : 'Speaker'}));
+        const speakerStatus = this._el('div', {className: 'speaker-status'},
+            this._icon('fas fa-microphone' + (this.isAudioMuted ? '-slash' : '')));
+        selfAvatar.append(avatarRing, speakerInfo, speakerStatus);
         stage.prepend(selfAvatar);
     }
 
@@ -3361,9 +3470,7 @@ class AudioRoomsManager {
 
         this.toggleAudioBtn?.classList.toggle('muted', this.isAudioMuted);
         if (this.toggleAudioBtn) {
-            this.toggleAudioBtn.innerHTML = this.isAudioMuted ? 
-                '<i class="fas fa-microphone-slash"></i>' : 
-                '<i class="fas fa-microphone"></i>';
+            this._setBtnWithSpan(this.toggleAudioBtn, this.isAudioMuted ? 'fas fa-microphone-slash' : 'fas fa-microphone', 'Mic');
         }
 
         if (window._verseMiniPlayer && window._verseMiniPlayer.isActive()) {
@@ -3557,20 +3664,16 @@ class AudioRoomsManager {
 
         const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-        messageElement.innerHTML = `
-            <div class="chat-message-header">
-                <span class="sender">${this.escapeHtml(sender)}</span>
-                <span class="timestamp">${timestamp}</span>
-            </div>
-            <div class="chat-audio-player">
-                <div class="chat-audio-icon"><i class="fas fa-broadcast-tower"></i></div>
-                <div class="chat-audio-meta">
-                    <span class="chat-audio-title">${this.escapeHtml(songTitle)}</span>
-                    <span class="chat-audio-artist">${this.escapeHtml(artistName)}</span>
-                </div>
-                <span class="chat-audio-play-hint"><i class="fas fa-volume-up"></i> Live</span>
-            </div>
-        `;
+        const header = this._el('div', {className: 'chat-message-header'},
+            this._el('span', {className: 'sender', textContent: sender}),
+            this._el('span', {className: 'timestamp', textContent: timestamp}));
+        const audioPlayer = this._el('div', {className: 'chat-audio-player'},
+            this._el('div', {className: 'chat-audio-icon'}, this._icon('fas fa-broadcast-tower')),
+            this._el('div', {className: 'chat-audio-meta'},
+                this._el('span', {className: 'chat-audio-title', textContent: songTitle}),
+                this._el('span', {className: 'chat-audio-artist', textContent: artistName})),
+            this._el('span', {className: 'chat-audio-play-hint'}, this._icon('fas fa-volume-up'), ' Live'));
+        messageElement.append(header, audioPlayer);
 
         this.chatMessagesContainer.appendChild(messageElement);
         this.chatMessagesContainer.scrollTop = this.chatMessagesContainer.scrollHeight;
@@ -3585,7 +3688,7 @@ class AudioRoomsManager {
         document.getElementById('shared-audio-sharer').textContent = 'Playing from your device';
 
         const playBtn = document.getElementById('audio-play-btn');
-        if (playBtn) playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        this._setBtn(playBtn, 'fas fa-pause');
         document.getElementById('audio-progress-fill').style.width = '0%';
         document.getElementById('audio-current-time').textContent = '0:00';
         document.getElementById('audio-total-time').textContent = '0:00';
@@ -3604,7 +3707,7 @@ class AudioRoomsManager {
             });
 
             this.musicAudioElement.addEventListener('ended', () => {
-                if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                this._setBtn(playBtn, 'fas fa-play');
             });
 
             if (this.musicAudioElement.duration) {
@@ -3634,10 +3737,10 @@ class AudioRoomsManager {
             if (!this.musicAudioElement) return;
             if (this.musicAudioElement.paused) {
                 this.musicAudioElement.play();
-                playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                this._setBtn(playBtn, 'fas fa-pause');
             } else {
                 this.musicAudioElement.pause();
-                playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                this._setBtn(playBtn, 'fas fa-play');
             }
         });
 
@@ -3784,7 +3887,7 @@ class AudioRoomsManager {
         const videoGridWrapper = document.getElementById('video-grid-wrapper');
         const videoGrid = document.getElementById('video-grid');
         if (videoGridWrapper) videoGridWrapper.classList.add('hidden');
-        if (videoGrid) videoGrid.innerHTML = '';
+        this._clearEl(videoGrid);
         this.updateVideoButtonState();
         
         if (this.localStream) {
@@ -3813,9 +3916,9 @@ class AudioRoomsManager {
         this.currentRoom = null;
         this.roomJoinTime = null;
         
-        if (this.chatMessagesContainer) this.chatMessagesContainer.innerHTML = '';
-        if (this.speakersStage) this.speakersStage.innerHTML = '';
-        if (this.listenersGrid) this.listenersGrid.innerHTML = '';
+        this._clearEl(this.chatMessagesContainer);
+        this._clearEl(this.speakersStage);
+        this._clearEl(this.listenersGrid);
         const roomNameEl = document.getElementById('room-name');
         if (roomNameEl) roomNameEl.textContent = '';
         const currentSongEl = document.getElementById('current-song');
@@ -3959,21 +4062,13 @@ class AudioRoomsManager {
         speakerAvatar.setAttribute('data-participant-id', participantId);
         if (userId) speakerAvatar.setAttribute('data-user-id', userId);
         speakerAvatar.style.cursor = userId ? 'pointer' : 'default';
-        const avatarContent = avatarUrl 
-            ? `<img src="${avatarUrl}" alt="${name}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.outerHTML='<div class=\\'avatar-initial\\' style=\\'width:100%;height:100%;border-radius:50%;background:var(--purple,#8a2be2);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:white;\\'>${initial}</div>'">`
-            : `<div class="avatar-initial" style="width:100%;height:100%;border-radius:50%;background:var(--purple,#8a2be2);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:white;">${initial}</div>`;
-        speakerAvatar.innerHTML = `
-            <div class="avatar-ring ${isSpeaking ? 'speaking' : ''}">
-                ${avatarContent}
-            </div>
-            <div class="speaker-info">
-                <span class="speaker-name">${name}</span>
-                <span class="speaker-role">Speaker</span>
-            </div>
-            <div class="speaker-status">
-                <i class="fas fa-microphone"></i>
-            </div>
-        `;
+        const avatarRingSpeaker = this._el('div', {className: 'avatar-ring' + (isSpeaking ? ' speaking' : '')});
+        this._buildAvatar(avatarRingSpeaker, avatarUrl, name, initial);
+        const spkInfo = this._el('div', {className: 'speaker-info'},
+            this._el('span', {className: 'speaker-name', textContent: name}),
+            this._el('span', {className: 'speaker-role', textContent: 'Speaker'}));
+        const spkStatus = this._el('div', {className: 'speaker-status'}, this._icon('fas fa-microphone'));
+        speakerAvatar.append(avatarRingSpeaker, spkInfo, spkStatus);
         
         speakerAvatar.audioStream = stream;
         
@@ -3998,10 +4093,7 @@ class AudioRoomsManager {
         listenerAvatar.setAttribute('data-participant-id', participantId);
         if (userId) listenerAvatar.setAttribute('data-user-id', userId);
         listenerAvatar.style.cursor = userId ? 'pointer' : 'default';
-        const avatarContent = avatarUrl
-            ? `<img src="${avatarUrl}" alt="${name}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" onerror="this.outerHTML='<div class=\\'avatar-initial\\' style=\\'width:40px;height:40px;border-radius:50%;background:var(--purple,#8a2be2);display:flex;align-items:center;justify-content:center;font-weight:bold;color:white;\\'>${initial}</div>'">`
-            : `<div class="avatar-initial" style="width:40px;height:40px;border-radius:50%;background:var(--purple,#8a2be2);display:flex;align-items:center;justify-content:center;font-weight:bold;color:white;">${initial}</div>`;
-        listenerAvatar.innerHTML = avatarContent;
+        this._buildListenerAvatar(listenerAvatar, avatarUrl, name, initial);
         listenerAvatar.title = name;
         
         listenerAvatar.addEventListener('click', (e) => {
@@ -4602,20 +4694,22 @@ class AudioRoomsManager {
 
         const menu = document.createElement('div');
         menu.className = 'kick-context-menu' + (isMobile ? ' kick-context-menu--mobile' : '');
-        menu.innerHTML = `
-            <div class="kick-menu-header">${name}</div>
-            ${isSpeaker ? `<button class="kick-menu-item move-to-crowd" data-action="move-to-crowd">
-                <i class="fas fa-arrow-down"></i> Move to Crowd
-            </button>` : `<button class="kick-menu-item invite-to-stage" data-action="invite-to-stage">
-                <i class="fas fa-arrow-up"></i> Invite to Stage
-            </button>`}
-            <button class="kick-menu-item remove-from-room" data-action="remove">
-                <i class="fas fa-ban"></i> Remove from Room
-            </button>
-            ${isMobile ? `<button class="kick-menu-item kick-menu-cancel">
-                <i class="fas fa-times"></i> Cancel
-            </button>` : ''}
-        `;
+        menu.appendChild(this._el('div', {className: 'kick-menu-header', textContent: name}));
+        if (isSpeaker) {
+            const moveBtn = this._el('button', {className: 'kick-menu-item move-to-crowd'}, this._icon('fas fa-arrow-down'), this._text(' Move to Crowd'));
+            moveBtn.dataset.action = 'move-to-crowd';
+            menu.appendChild(moveBtn);
+        } else {
+            const inviteBtn = this._el('button', {className: 'kick-menu-item invite-to-stage'}, this._icon('fas fa-arrow-up'), this._text(' Invite to Stage'));
+            inviteBtn.dataset.action = 'invite-to-stage';
+            menu.appendChild(inviteBtn);
+        }
+        const removeBtn = this._el('button', {className: 'kick-menu-item remove-from-room'}, this._icon('fas fa-ban'), this._text(' Remove from Room'));
+        removeBtn.dataset.action = 'remove';
+        menu.appendChild(removeBtn);
+        if (isMobile) {
+            menu.appendChild(this._el('button', {className: 'kick-menu-item kick-menu-cancel'}, this._icon('fas fa-times'), this._text(' Cancel')));
+        }
 
         const removeMenu = () => {
             menu.remove();
@@ -4866,20 +4960,17 @@ class AudioRoomsManager {
         const notification = document.createElement('div');
         notification.className = 'host-notification';
         notification.dataset.requestId = reqId;
-        notification.innerHTML = `
-            <div class="host-notif-icon"><i class="fas fa-video"></i></div>
-            <div class="host-notif-content">
-                <strong>${data.userName}</strong> wants to enable their <strong>camera</strong>
-            </div>
-            <div class="host-notif-actions">
-                <button class="notif-approve-btn" onclick="window.audioRoomsManager?.approveVideoRequest('${reqId}', '${data.requesterId}', '${data.userName}')">
-                    <i class="fas fa-check"></i> Allow
-                </button>
-                <button class="notif-deny-btn" onclick="window.audioRoomsManager?.denyVideoRequest('${reqId}', '${data.requesterId}', '${data.userName}')">
-                    <i class="fas fa-times"></i> Deny
-                </button>
-            </div>
-        `;
+        const notifIcon = this._el('div', {className: 'host-notif-icon'}, this._icon('fas fa-video'));
+        const notifContent = this._el('div', {className: 'host-notif-content'});
+        const strongName = this._el('strong', {textContent: data.userName});
+        const strongCam = this._el('strong', {textContent: 'camera'});
+        notifContent.append(strongName, this._text(' wants to enable their '), strongCam);
+        const approveBtn = this._el('button', {className: 'notif-approve-btn'}, this._icon('fas fa-check'), this._text(' Allow'));
+        approveBtn.addEventListener('click', () => this.approveVideoRequest(reqId, data.requesterId, data.userName));
+        const denyBtn = this._el('button', {className: 'notif-deny-btn'}, this._icon('fas fa-times'), this._text(' Deny'));
+        denyBtn.addEventListener('click', () => this.denyVideoRequest(reqId, data.requesterId, data.userName));
+        const notifActions = this._el('div', {className: 'host-notif-actions'}, approveBtn, denyBtn);
+        notification.append(notifIcon, notifContent, notifActions);
         container.appendChild(notification);
         setTimeout(() => notification.classList.add('visible'), 10);
         setTimeout(() => this.dismissNotification(reqId), 30000);
@@ -4922,7 +5013,7 @@ class AudioRoomsManager {
         
         if (this.activeVideoFeeds.size === 0) {
             wrapper.classList.add('hidden');
-            grid.innerHTML = '';
+            grid.replaceChildren();
             return;
         }
         
@@ -4966,7 +5057,7 @@ class AudioRoomsManager {
             const container = tile.querySelector('.video-tile-container');
             if (container) {
                 if (feed.agoraTrack && !container.dataset.agoraPlaying) {
-                    container.innerHTML = '';
+                    container.replaceChildren();
                     try {
                         feed.agoraTrack.play(container);
                         container.dataset.agoraPlaying = 'true';
@@ -4985,7 +5076,7 @@ class AudioRoomsManager {
                         videoEl.playsInline = true;
                         videoEl.muted = feed.id === 'self';
                         videoEl.style.cssText = 'width:100%;height:100%;object-fit:cover;';
-                        container.innerHTML = '';
+                        container.replaceChildren();
                         container.appendChild(videoEl);
                     }
                     if (videoEl.srcObject !== feed.stream) {
@@ -4998,7 +5089,7 @@ class AudioRoomsManager {
             if (feed.muted && !existingMuteTag) {
                 const muteTag = document.createElement('span');
                 muteTag.className = 'video-tile-muted';
-                muteTag.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+                muteTag.appendChild(this._icon('fas fa-microphone-slash'));
                 tile.appendChild(muteTag);
             } else if (!feed.muted && existingMuteTag) {
                 existingMuteTag.remove();
@@ -5100,20 +5191,15 @@ class AudioRoomsManager {
         const notification = document.createElement('div');
         notification.className = 'host-notification';
         notification.dataset.requestId = requestId;
-        notification.innerHTML = `
-            <div class="host-notif-icon"><i class="fas ${featureIcon}"></i></div>
-            <div class="host-notif-content">
-                <strong>${userName}</strong> wants to use <strong>${featureLabel}</strong>
-            </div>
-            <div class="host-notif-actions">
-                <button class="notif-approve-btn" onclick="window.audioRoomsManager?.approveRequest('${requestId}', '${feature}', '${userName}')">
-                    <i class="fas fa-check"></i> Allow
-                </button>
-                <button class="notif-deny-btn" onclick="window.audioRoomsManager?.denyRequest('${requestId}', '${feature}', '${userName}')">
-                    <i class="fas fa-times"></i> Deny
-                </button>
-            </div>
-        `;
+        const nIcon = this._el('div', {className: 'host-notif-icon'}, this._icon('fas ' + featureIcon));
+        const nContent = this._el('div', {className: 'host-notif-content'});
+        nContent.append(this._el('strong', {textContent: userName}), this._text(' wants to use '), this._el('strong', {textContent: featureLabel}));
+        const nApprove = this._el('button', {className: 'notif-approve-btn'}, this._icon('fas fa-check'), this._text(' Allow'));
+        nApprove.addEventListener('click', () => this.approveRequest(requestId, feature, userName));
+        const nDeny = this._el('button', {className: 'notif-deny-btn'}, this._icon('fas fa-times'), this._text(' Deny'));
+        nDeny.addEventListener('click', () => this.denyRequest(requestId, feature, userName));
+        const nActions = this._el('div', {className: 'host-notif-actions'}, nApprove, nDeny);
+        notification.append(nIcon, nContent, nActions);
         
         container.appendChild(notification);
         
@@ -5287,18 +5373,14 @@ class AudioRoomsManager {
         
         const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         
-        messageElement.innerHTML = `
-            <div class="chat-message-header">
-                <span class="sender">${this.escapeHtml(sender)}</span>
-                <span class="timestamp">${timestamp}</span>
-            </div>
-            <img class="shared-image-thumb" src="${imageDataUrl}" alt="Shared photo">
-        `;
-        
-        const thumb = messageElement.querySelector('.shared-image-thumb');
-        thumb?.addEventListener('click', () => {
+        const header = this._el('div', {className: 'chat-message-header'},
+            this._el('span', {className: 'sender', textContent: sender}),
+            this._el('span', {className: 'timestamp', textContent: timestamp}));
+        const thumb = this._el('img', {className: 'shared-image-thumb', src: imageDataUrl, alt: 'Shared photo'});
+        thumb.addEventListener('click', () => {
             this.showSharedImageOverlay(imageDataUrl, sender);
         });
+        messageElement.append(header, thumb);
         
         this.chatMessagesContainer.appendChild(messageElement);
         this.chatMessagesContainer.scrollTop = this.chatMessagesContainer.scrollHeight;
@@ -5310,7 +5392,9 @@ class AudioRoomsManager {
         const senderEl = document.getElementById('shared-image-sender');
         
         if (display) display.src = imageDataUrl;
-        if (senderEl) senderEl.innerHTML = `<i class="fas fa-image"></i> Photo from ${this.escapeHtml(sender)}`;
+        if (senderEl) {
+            senderEl.replaceChildren(this._icon('fas fa-image'), this._text(' Photo from ' + sender));
+        }
         overlay?.classList.remove('hidden');
     }
     
@@ -5708,7 +5792,7 @@ class AudioRoomsManager {
         
         const resultsContainer = document.getElementById('karaoke-results');
         if (resultsContainer) {
-            resultsContainer.innerHTML = '<p class="karaoke-hint">Searching...</p>';
+            resultsContainer.replaceChildren(this._el('p', {className: 'karaoke-hint', textContent: 'Searching...'}));
         }
         
         try {
@@ -5718,11 +5802,11 @@ class AudioRoomsManager {
             if (data.hits && data.hits.length > 0) {
                 this.renderKaraokeResults(data.hits.slice(0, 5));
             } else {
-                resultsContainer.innerHTML = '<p class="karaoke-hint">No songs found. Try another search.</p>';
+                resultsContainer.replaceChildren(this._el('p', {className: 'karaoke-hint', textContent: 'No songs found. Try another search.'}));
             }
         } catch (error) {
             console.error('Error searching songs:', error);
-            resultsContainer.innerHTML = '<p class="karaoke-hint">Error searching. Please try again.</p>';
+            resultsContainer.replaceChildren(this._el('p', {className: 'karaoke-hint', textContent: 'Error searching. Please try again.'}));
         }
     }
     
@@ -5730,8 +5814,7 @@ class AudioRoomsManager {
         const resultsContainer = document.getElementById('karaoke-results');
         if (!resultsContainer) return;
         
-        // Clear container
-        resultsContainer.innerHTML = '';
+        resultsContainer.replaceChildren();
         
         songs.forEach(song => {
             const item = document.createElement('div');
@@ -5757,7 +5840,7 @@ class AudioRoomsManager {
             
             const btn = document.createElement('button');
             btn.className = 'karaoke-start-btn';
-            btn.innerHTML = '<i class="fas fa-microphone"></i> Sing';
+            this._setBtn(btn, 'fas fa-microphone', 'Sing');
             btn.addEventListener('click', () => {
                 this.startKaraoke(
                     song.id,
@@ -5803,7 +5886,7 @@ class AudioRoomsManager {
         // Show loading state for lyrics
         const lyricsContainer = document.getElementById('lyrics-scroll');
         if (lyricsContainer) {
-            lyricsContainer.innerHTML = '<div class="lyrics-line active">Loading lyrics...</div>';
+            lyricsContainer.replaceChildren(this._el('div', {className: 'lyrics-line active', textContent: 'Loading lyrics...'}));
         }
         
         // Load lyrics - try API first, then LRCLIB fallback
@@ -5891,9 +5974,11 @@ class AudioRoomsManager {
         
         const lyricsContainer = document.getElementById('lyrics-scroll');
         if (lyricsContainer) {
-            lyricsContainer.innerHTML = lines.map((line, index) => 
-                `<div class="lyrics-line ${index === 0 ? 'active' : ''}" data-index="${index}">${line}</div>`
-            ).join('');
+            lyricsContainer.replaceChildren(...lines.map((line, index) => {
+                const lineEl = this._el('div', {className: 'lyrics-line' + (index === 0 ? ' active' : ''), textContent: line});
+                lineEl.dataset.index = index;
+                return lineEl;
+            }));
 
             lyricsContainer.addEventListener('dblclick', (e) => {
                 const lineEl = e.target.closest('.lyrics-line');
@@ -6010,7 +6095,7 @@ class AudioRoomsManager {
         const results = document.getElementById('karaoke-results');
         player?.classList.add('hidden');
         results?.classList.remove('hidden');
-        if (results) results.innerHTML = '<p class="karaoke-hint">Search for a different song!</p>';
+        if (results) results.replaceChildren(this._el('p', {className: 'karaoke-hint', textContent: 'Search for a different song!'}));
         const searchInput = document.getElementById('karaoke-search-input');
         if (searchInput) {
             searchInput.value = '';
@@ -6610,7 +6695,7 @@ class AudioRoomsManager {
         downloadLink.download = `${safeName}.${fileExt}`;
         downloadLink.className = 'btn-primary';
         downloadLink.style.cssText = 'text-decoration:none; display:inline-flex; align-items:center; gap:8px;';
-        downloadLink.innerHTML = '<i class="fas fa-download"></i> Download Video';
+        this._setBtn(downloadLink, 'fas fa-download', 'Download Video');
         actions.appendChild(downloadLink);
 
         const closeBtn = document.createElement('button');
@@ -6697,7 +6782,7 @@ class AudioRoomsManager {
                 if (!retryBtn) {
                     retryBtn = document.createElement('button');
                     retryBtn.className = 'yt-retry-btn';
-                    retryBtn.innerHTML = '<i class="fas fa-redo"></i> Try Another';
+                    this._setBtn(retryBtn, 'fas fa-redo', 'Try Another');
                     retryBtn.addEventListener('click', () => this.resetYouTubePlayer());
                     statusEl.appendChild(retryBtn);
                 }
@@ -6715,7 +6800,7 @@ class AudioRoomsManager {
         }
         const wrapper = document.getElementById('yt-embed-wrapper');
         const container = document.getElementById('yt-player-container');
-        if (container) container.innerHTML = '';
+        this._clearEl(container);
         if (wrapper) wrapper.style.display = 'none';
         this.currentVideoId = null;
         const urlInput = document.getElementById('yt-url-input');
@@ -6769,7 +6854,7 @@ class AudioRoomsManager {
             try { this.ytPlayer.destroy(); } catch(e) {}
             this.ytPlayer = null;
         }
-        container.innerHTML = '';
+        container.replaceChildren();
 
         const playerDiv = document.createElement('div');
         playerDiv.id = 'yt-api-player';
@@ -6848,7 +6933,7 @@ class AudioRoomsManager {
             shareBtn = document.createElement('button');
             shareBtn.id = 'yt-share-audio-btn';
             shareBtn.className = 'yt-share-audio-btn';
-            shareBtn.innerHTML = '<i class="fas fa-broadcast-tower"></i> Share Audio with Room';
+            this._setBtn(shareBtn, 'fas fa-broadcast-tower', 'Share Audio with Room');
             shareBtn.addEventListener('click', () => this.captureYouTubeAudio());
             wrapper.appendChild(shareBtn);
         }
@@ -6879,7 +6964,7 @@ class AudioRoomsManager {
         }
         const wrapper = document.getElementById('yt-embed-wrapper');
         const container = document.getElementById('yt-player-container');
-        if (container) container.innerHTML = '';
+        this._clearEl(container);
         if (wrapper) wrapper.style.display = 'none';
         const shareBtn = document.getElementById('yt-share-audio-btn');
         if (shareBtn) shareBtn.style.display = 'none';
