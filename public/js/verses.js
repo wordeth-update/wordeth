@@ -134,9 +134,13 @@ class AudioRoomsManager {
         
         this.initYouTubePlayer();
         
-        this.initializeElements();
-        this.setupEventListeners();
-        this.setupVisibilityHandler();
+        try {
+            this.initializeElements();
+            this.setupEventListeners();
+            this.setupVisibilityHandler();
+        } catch (e) {
+            console.error('[Verses] Error during element/event setup:', e);
+        }
         this._init();
     }
 
