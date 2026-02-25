@@ -14,7 +14,7 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 ### Frontend
 - **Technology**: Static HTML pages with vanilla CSS and JavaScript, prioritizing mobile responsiveness.
 - **Styling**: Uses CSS custom properties (Design System v2) for theming with a dark color scheme (black/purple/mint palette). Core tokens in `styles.css`, enhanced UI overrides in `enhanced.css` (loaded on all public-facing pages). Feature-specific CSS files (verses, pricing, lyrics, tournaments, etc.) inherit from the design system. Google Fonts (Syne + Outfit) and Font Awesome icons are utilized.
-- **Footer**: Compact modern footer across all 14 public pages — logo + inline nav groups + social icons on desktop, accordion-style collapse on mobile (JS in `main.js`). Single `.site-footer` class; old 4-column grid removed.
+- **Footer**: Compact single-line footer across all 14 public pages — logo + flat inline link groups (headings hidden, separated by `·`) + social icons on desktop; links wrap naturally on mobile. No accordion JS. Single `.site-footer` class.
 - **JS Architecture**: Page-specific JavaScript files loaded directly without a bundler, using classes for complex page managers.
 - **Persistent Mini-Player**: A floating bar appears when a user is in a Verses audio room, maintaining audio connection across page navigations.
 - **SPA Router**: Lightweight router intercepts internal link clicks only when an audio room is active, fetching and swapping page content without full reloads, excluding partner/admin pages.

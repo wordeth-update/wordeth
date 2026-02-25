@@ -150,25 +150,3 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-(function() {
-    var mq = window.matchMedia('(max-width: 768px)');
-    document.querySelectorAll('.footer-heading').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            if (!mq.matches) return;
-            var expanded = this.getAttribute('aria-expanded') === 'true';
-            this.setAttribute('aria-expanded', String(!expanded));
-            this.nextElementSibling.classList.toggle('open');
-        });
-    });
-    function syncAccordions() {
-        if (!mq.matches) {
-            document.querySelectorAll('.footer-links.open').forEach(function(el) {
-                el.classList.remove('open');
-            });
-            document.querySelectorAll('.footer-heading').forEach(function(btn) {
-                btn.setAttribute('aria-expanded', 'false');
-            });
-        }
-    }
-    mq.addEventListener('change', syncAccordions);
-})();

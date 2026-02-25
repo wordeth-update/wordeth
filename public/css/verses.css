@@ -257,6 +257,88 @@
     letter-spacing: -0.02em;
 }
 
+/* ── Trending Bar ──────────────────────────────────────────── */
+.trending-bar {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem 1.5rem;
+}
+
+.trending-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+.trending-header i {
+    color: #ff6b35;
+    font-size: 0.9rem;
+}
+.trending-header h3 {
+    font-family: var(--font-display, 'Syne', sans-serif);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.trending-scroll {
+    display: flex;
+    gap: 0.6rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+.trending-scroll::-webkit-scrollbar { display: none; }
+
+.trending-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 50px;
+    padding: 0.5rem 1rem 0.5rem 0.5rem;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.trending-item:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+}
+
+.trending-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.25rem 0.55rem;
+    border-radius: 50px;
+}
+.trending-tag.hot {
+    background: rgba(255, 107, 53, 0.15);
+    color: #ff6b35;
+}
+.trending-tag.new {
+    background: rgba(0, 229, 168, 0.12);
+    color: var(--mint, #00E5A8);
+}
+.trending-tag.viral {
+    background: rgba(139, 47, 255, 0.15);
+    color: var(--purple-vivid, #BB4FFF);
+}
+
+.trending-text {
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.7);
+    white-space: nowrap;
+}
+
 /* ── Filter Bar ─────────────────────────────────────────────── */
 .filter-bar {
     display: flex;
@@ -1690,6 +1772,10 @@
     .hero-content { align-items: center; max-width: 100%; }
     .hero-title   { font-size: 2.8rem; }
     .hero-subtitle { max-width: 100%; }
+
+    .trending-bar { padding: 0 1.25rem 1rem; }
+    .trending-scroll { gap: 0.5rem; }
+    .trending-item { padding: 0.4rem 0.75rem 0.4rem 0.4rem; }
 
     .rooms-grid {
         grid-template-columns: 1fr;
