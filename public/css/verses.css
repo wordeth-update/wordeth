@@ -1301,6 +1301,11 @@
     align-items: center;
     gap: 0.5rem;
 }
+.modal-subtitle {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.85rem;
+    margin: -0.75rem 0 1rem;
+}
 .modal-header h3 i {
     color: var(--mint, #00E5A8);
 }
