@@ -164,7 +164,8 @@ app.use('/api', (req, res, next) => {
 
 app.use((req, res, next) => {
     const ext = path.extname(req.path);
-    if (ext === '.html' || req.path === '/' || !ext) {
+    if (req.path.startsWith('/api/')) return next();
+    if (ext === '.html' || req.path === '/') {
         const filePath = path.join(__dirname, req.path === '/' ? 'index.html' : req.path);
         if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
             let html = fs.readFileSync(filePath, 'utf8');

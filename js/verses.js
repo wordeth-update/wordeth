@@ -95,7 +95,7 @@ class AudioRoomsManager {
 
         this._agoraJoinLock = null;
         this._serverReady = null;
-        this._invite = { status: 'idle', roomId: null, retries: 0, maxRetries: 3 };
+        this._invite = { status: 'idle', roomId: null, retries: 0, maxRetries: 5 };
         this._initComplete = false;
         this.isGuest = !localStorage.getItem('authToken');
         
@@ -254,7 +254,7 @@ class AudioRoomsManager {
             return;
         }
         console.log('Invite: queued room', roomId);
-        this._invite = { status: 'pending', roomId, retries: 0, maxRetries: 3 };
+        this._invite = { status: 'pending', roomId, retries: 0, maxRetries: 5 };
         if (this._initComplete && this.lobbySocket?.connected) {
             this._processInvite();
         }
@@ -353,7 +353,7 @@ class AudioRoomsManager {
         const mainEl = document.querySelector('main');
         if (mainEl) mainEl.prepend(screen);
 
-        this._invite = { status: 'idle', roomId: null, retries: 0, maxRetries: 3 };
+        this._invite = { status: 'idle', roomId: null, retries: 0, maxRetries: 5 };
         localStorage.removeItem('wordeth_pending_room');
         localStorage.removeItem('wordeth_pending_room_ts');
         if (window.location.pathname.startsWith('/room/')) {
@@ -2046,7 +2046,7 @@ class AudioRoomsManager {
         this.currentRoom = null;
         this._pendingJoinRoom = null;
         if (this._invite.status !== 'pending') {
-            this._invite = { status: 'idle', roomId: null, retries: 0, maxRetries: 3 };
+            this._invite = { status: 'idle', roomId: null, retries: 0, maxRetries: 5 };
         }
         localStorage.removeItem('wordeth_pending_room');
         localStorage.removeItem('wordeth_pending_room_ts');
@@ -3755,7 +3755,7 @@ class AudioRoomsManager {
         this.isAudioMuted = false;
         this.handRaised = false;
         this.chatVisible = true;
-        this._invite = { status: 'idle', roomId: null, retries: 0, maxRetries: 3 };
+        this._invite = { status: 'idle', roomId: null, retries: 0, maxRetries: 5 };
         
         this.audioRoom?.classList.add('hidden');
         document.body.classList.remove('in-room');
