@@ -184,62 +184,53 @@
     <script src="js/tournament-nav.js"></script>
     <script src="js/creator-dashboard.js"></script>
     <script src="js/cookie-consent.js"></script>
-    <footer>
-        <div class="footer-content">
-            <div class="footer-grid">
-                <div class="footer-brand">
-                    <div class="footer-logo">
-                        <a href="/"><img src="images/logo.png" alt="Wordeth Logo"></a>
-                    </div>
-                    <p>Your social music experience. Discover lyrics, join live audio rooms, and connect with the music community.</p>
-                    <div class="footer-social">
-                        <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
-                        <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
-                        <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#" aria-label="Spotify"><i class="fab fa-spotify"></i></a>
-                    </div>
-                </div>
-                <div class="footer-col">
-                    <h4>Explore</h4>
-                    <ul>
-                        <li><a href="/verses.html">Verses</a></li>
-                        <li><a href="/lyrics.html">Lyrics</a></li>
-                        <li><a href="/merch.html">Merch</a></li>
-                        <li><a href="/pricing.html">Pricing</a></li>
-                        <li><a href="/verses-guide.html">Verses Guide</a></li>
-                    </ul>
-                </div>
-                <div class="footer-col">
-                    <h4>Account</h4>
-                    <ul>
-                        <li><a href="/signin.html">Sign In</a></li>
-                        <li><a href="/signup.html">Sign Up</a></li>
-                        <li><a href="/profile.html">Profile</a></li>
-                        <li><a href="/subscription.html">My Plan</a></li>
-                        <li><a href="/creator-register.html">Creator Hub</a></li>
-                    </ul>
-                </div>
-                <div class="footer-col">
-                    <h4>Company</h4>
-                    <ul>
-                        <li><a href="/terms.html">Terms of Service</a></li>
-                        <li><a href="/privacy.html">Privacy Policy</a></li>
-                        <li><a href="/ad-admin.html">Advertise</a></li>
-                        <li><a href="mailto:partnerships@wordeth.com">Partnerships</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="footer-bottom-bar">
-                <p class="copyright">&copy; 2025 Wordeth. All rights reserved.</p>
-                <div class="footer-bottom-links">
-                    <a href="/terms.html">Terms</a>
-                    <a href="/privacy.html">Privacy</a>
-                    <a href="#" onclick="window.WordethConsent && window.WordethConsent.revokeConsent(); return false;">Cookie Preferences</a>
-                </div>
-            </div>
-        </div>
-    </footer>
+        <footer class="site-footer">
+          <div class="footer-inner">
+              <div class="footer-top-row">
+                  <a href="/" class="footer-logo-link"><img src="images/logo.png" alt="Wordeth"></a>
+                  <nav class="footer-nav">
+                      <div class="footer-group">
+                          <button class="footer-heading" aria-expanded="false">Explore <i class="fas fa-chevron-down"></i></button>
+                          <div class="footer-links">
+                              <a href="/verses.html">Verses</a>
+                              <a href="/lyrics.html">Lyrics</a>
+                              <a href="/merch.html">Merch</a>
+                              <a href="/pricing.html">Pricing</a>
+                          </div>
+                      </div>
+                      <div class="footer-group">
+                          <button class="footer-heading" aria-expanded="false">Account <i class="fas fa-chevron-down"></i></button>
+                          <div class="footer-links">
+                              <a href="/signin.html">Sign In</a>
+                              <a href="/signup.html">Sign Up</a>
+                              <a href="/profile.html">Profile</a>
+                              <a href="/creator-register.html">Creator Hub</a>
+                          </div>
+                      </div>
+                      <div class="footer-group">
+                          <button class="footer-heading" aria-expanded="false">Legal <i class="fas fa-chevron-down"></i></button>
+                          <div class="footer-links">
+                              <a href="/terms.html">Terms</a>
+                              <a href="/privacy.html">Privacy</a>
+                              <a href="/ad-admin.html">Advertise</a>
+                          </div>
+                      </div>
+                  </nav>
+                  <div class="footer-social">
+                      <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                      <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                      <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                      <a href="#" aria-label="Spotify"><i class="fab fa-spotify"></i></a>
+                  </div>
+              </div>
+              <div class="footer-bottom-row">
+                  <span>&copy; 2025 Wordeth</span>
+                  <a href="#" onclick="window.WordethConsent && window.WordethConsent.revokeConsent(); return false;">Cookie Preferences</a>
+              </div>
+          </div>
+      </footer>
     <script src="js/verse-mini-player.js"></script>
     <script src="js/spa-router.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
