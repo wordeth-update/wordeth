@@ -222,10 +222,31 @@ function generateRoomId() {
     return id.slice(0, 8) + '_' + id.slice(8);
 }
 
-app.post('/api/rooms/create', (req, res) => {
+app.post('/api/rooms/create', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
+    await waitForRoomsReady();
     const roomId = generateRoomId();
-    console.log(`[Rooms API] Generated room ID: ${roomId}`);
+    const { getRoomsMap } = require('./routes/signaling');
+    const { saveRoom } = require('./services/redisClient');
+    const now = Date.now();
+    const roomsMap = getRoomsMap();
+    const room = {
+        id: roomId,
+        name: req.body?.name || null,
+        hostId: null,
+        creatorUserId: null,
+        participants: new Map(),
+        karaokeEnabled: false,
+        videoMode: 'off',
+        activeVideos: new Set(),
+        isLocked: false,
+        stageAccess: 'invite-only',
+        createdAt: now,
+        lastActivity: now
+    };
+    roomsMap.set(roomId, room);
+    saveRoom(roomId, room);
+    console.log(`[Rooms API] Room pre-registered: ${roomId}`);
     res.json({ id: roomId });
 });
 

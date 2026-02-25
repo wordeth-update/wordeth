@@ -2019,7 +2019,11 @@ class AudioRoomsManager {
 
     async createRoomOnServer(roomData) {
         try {
-            const res = await fetch(apiUrl('/api/rooms/create'), { method: 'POST' });
+            const res = await fetch(apiUrl('/api/rooms/create'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: roomData.name || 'Untitled Room' })
+            });
             if (res.ok) {
                 const data = await res.json();
                 return { id: data.id, ...roomData };
