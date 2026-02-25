@@ -97,6 +97,7 @@
     showBanner: showBanner,
     revokeConsent: function() {
       localStorage.removeItem(CONSENT_KEY);
+      showBanner();
     }
   };
 

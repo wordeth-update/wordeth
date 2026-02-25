@@ -44,7 +44,7 @@ router.post('/register', [
             return res.status(400).json({ message: 'An account with this email already exists' });
         }
 
-        const existingName = await User.findOne({ name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } });
+        const existingName = await User.findOne({ name: { $regex: new RegExp(`^${name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } });
         if (existingName) {
             return res.status(400).json({ message: 'That username is already taken.' });
         }
@@ -103,7 +103,7 @@ router.post('/register', [
             metadata: { accountType, handle, displayName }
         });
 
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+        const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, {
             expiresIn: process.env.JWT_EXPIRES_IN || '7d'
         });
 

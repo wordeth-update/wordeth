@@ -10,6 +10,9 @@ const auth = async (req, res, next) => {
         
         const token = authHeader.replace('Bearer ', '');
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (!decoded.userId) {
+            throw new Error('Invalid token type');
+        }
         const user = await User.findById(decoded.userId);
 
         if (!user) {

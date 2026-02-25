@@ -1,6 +1,6 @@
 class TournamentMatch {
     constructor() {
-        this.token = localStorage.getItem('token');
+        this.token = localStorage.getItem('authToken');
         this.matchId = new URLSearchParams(window.location.search).get('id');
         this.match = null;
         this.userVote = null;

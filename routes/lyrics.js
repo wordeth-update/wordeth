@@ -443,7 +443,8 @@ router.get('/synced-lyrics', async (req, res) => {
     }
 });
 
-// Get trending/chart songs
+const trendingCache = { data: null, timestamp: 0, ttl: 15 * 60 * 1000 };
+
 router.get('/trending', async (req, res) => {
     try {
         if (!MUSIXMATCH_API_KEY) {
@@ -451,6 +452,11 @@ router.get('/trending', async (req, res) => {
         }
 
         const { country = 'us' } = req.query;
+        const cacheKey = country.toLowerCase();
+
+        if (trendingCache.data && trendingCache.key === cacheKey && (Date.now() - trendingCache.timestamp) < trendingCache.ttl) {
+            return res.json({ hits: trendingCache.data });
+        }
 
         const response = await axios.get(`${MUSIXMATCH_BASE_URL}/chart.tracks.get`, {
             params: {
@@ -472,7 +478,6 @@ router.get('/trending', async (req, res) => {
                             item.track.album_coverart_350x350 || 
                             item.track.album_coverart_100x100;
 
-                // Fetch Deezer artwork if needed
                 if (!image || image.includes('nocover')) {
                     const deezerArt = await fetchDeezerArtwork(item.track.artist_name, item.track.track_name);
                     if (deezerArt) {
@@ -492,6 +497,10 @@ router.get('/trending', async (req, res) => {
                     genres: item.track.primary_genres?.music_genre_list?.map(g => g.music_genre.music_genre_name) || []
                 };
             }));
+
+            trendingCache.data = hits;
+            trendingCache.key = cacheKey;
+            trendingCache.timestamp = Date.now();
 
             return res.json({ hits });
         }

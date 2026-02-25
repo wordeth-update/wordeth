@@ -1,3 +1,8 @@
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
 class TournamentAdmin {
     constructor() {
         this.token = localStorage.getItem('authToken');
@@ -92,8 +97,8 @@ class TournamentAdmin {
             }
             body.innerHTML = this.seasons.map(s => `
                 <tr>
-                    <td>${s.name}</td>
-                    <td><span class="round-status ${s.status}">${s.status}</span></td>
+                    <td>${escapeHtml(s.name)}</td>
+                    <td><span class="round-status ${escapeHtml(s.status)}">${escapeHtml(s.status)}</span></td>
                     <td>${new Date(s.startAt).toLocaleDateString()} - ${new Date(s.endAt).toLocaleDateString()}</td>
                     <td>
                         <button class="admin-action-btn" onclick="admin.editSeason('${s._id}')"><i class="fas fa-edit"></i></button>
@@ -162,7 +167,7 @@ class TournamentAdmin {
 
     populateSeasonSelect() {
         const sel = document.getElementById('roundSeason');
-        sel.innerHTML = this.seasons.map(s => `<option value="${s._id}">${s.name}</option>`).join('');
+        sel.innerHTML = this.seasons.map(s => `<option value="${escapeHtml(s._id)}">${escapeHtml(s.name)}</option>`).join('');
     }
 
     async saveRound() {
@@ -214,10 +219,10 @@ class TournamentAdmin {
             }
             body.innerHTML = allRounds.map(r => `
                 <tr>
-                    <td>${r.name}</td>
-                    <td>${r._seasonName}</td>
-                    <td>${r.theme}</td>
-                    <td><span class="round-status ${r.status}">${r.status}</span></td>
+                    <td>${escapeHtml(r.name)}</td>
+                    <td>${escapeHtml(r._seasonName)}</td>
+                    <td>${escapeHtml(r.theme)}</td>
+                    <td><span class="round-status ${escapeHtml(r.status)}">${escapeHtml(r.status)}</span></td>
                     <td>
                         <button class="admin-action-btn" onclick="admin.updateRoundStatus('${r._id}', 'submissions_open')" title="Open Submissions"><i class="fas fa-door-open"></i></button>
                         <button class="admin-action-btn" onclick="admin.seedRound('${r._id}')" title="Seed Matches"><i class="fas fa-random"></i></button>
@@ -281,11 +286,11 @@ class TournamentAdmin {
 
             body.innerHTML = data.data.map(s => `
                 <tr>
-                    <td>${s.artistUserId?.name || 'Unknown'}</td>
-                    <td>${s.title}</td>
-                    <td><span class="match-submission-type ${s.submissionType}">${s.submissionType}</span></td>
-                    <td>${s.roundId?.name || '—'}</td>
-                    <td><span class="round-status ${s.status}">${s.status}</span></td>
+                    <td>${escapeHtml(s.artistUserId?.name || 'Unknown')}</td>
+                    <td>${escapeHtml(s.title)}</td>
+                    <td><span class="match-submission-type ${escapeHtml(s.submissionType)}">${escapeHtml(s.submissionType)}</span></td>
+                    <td>${escapeHtml(s.roundId?.name || '—')}</td>
+                    <td><span class="round-status ${escapeHtml(s.status)}">${escapeHtml(s.status)}</span></td>
                     <td>
                         ${s.status === 'pending' ? `
                             <button class="admin-action-btn success" onclick="admin.moderateSubmission('${s._id}', 'approved')"><i class="fas fa-check"></i></button>
@@ -347,7 +352,7 @@ class TournamentAdmin {
                         <tbody>${d.topArtists.map((a, i) => `
                             <tr>
                                 <td>${i + 1}</td>
-                                <td>${a.userId?.name || 'Unknown'}</td>
+                                <td>${escapeHtml(a.userId?.name || 'Unknown')}</td>
                                 <td style="color:var(--mint);font-weight:700;">${a.points}</td>
                                 <td>${a.wins}-${a.losses}</td>
                             </tr>
@@ -370,8 +375,8 @@ class TournamentAdmin {
             }
             body.innerHTML = data.data.map(s => `
                 <tr>
-                    <td>${s.name}</td>
-                    <td>${s.category}</td>
+                    <td>${escapeHtml(s.name)}</td>
+                    <td>${escapeHtml(s.category)}</td>
                     <td>${s.isActive ? '<span style="color:#2ecc71;">Active</span>' : '<span style="color:#e74c3c;">Inactive</span>'}</td>
                     <td>
                         <button class="admin-action-btn" onclick="admin.toggleSponsor('${s._id}', ${!s.isActive})">${s.isActive ? 'Deactivate' : 'Activate'}</button>

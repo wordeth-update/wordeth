@@ -162,7 +162,11 @@ function generateSales(label, labelDoc, count) {
         const unitPrice = randomElement(priceMap[productCat.type] || [19.99]);
         const quantity = Math.random() > 0.8 ? Math.floor(randomBetween(2, 5)) : 1;
         const totalAmount = +(unitPrice * quantity).toFixed(2);
-        const revenueShare = +(totalAmount * label.revenueShare).toFixed(2);
+        const payoutRate = label.revenueShare;
+        const platformFeeRate = +(1 - payoutRate).toFixed(2);
+        const payoutAmount = +(totalAmount * payoutRate).toFixed(2);
+        const platformFeeAmount = +(totalAmount * platformFeeRate).toFixed(2);
+        const revenueShare = payoutAmount;
 
         const skuPrefix = productCat.type.substring(0, 3).toUpperCase();
         const artistCode = artist.slug.substring(0, 3).toUpperCase();
@@ -170,6 +174,8 @@ function generateSales(label, labelDoc, count) {
 
         sales.push({
             orderId: `WRD-${Date.now().toString(36).toUpperCase()}-${String(i).padStart(4, '0')}`,
+            sellerType: 'label',
+            sellerId: labelDoc._id,
             labelId: labelDoc._id,
             artistName: artist.name,
             artistSlug: artist.slug,
@@ -182,7 +188,12 @@ function generateSales(label, labelDoc, count) {
             quantity,
             unitPrice,
             totalAmount,
+            payoutRate,
+            payoutAmount,
+            platformFeeRate,
+            platformFeeAmount,
             revenueShare,
+            source: 'manual',
             geo: {
                 ...geo,
                 lat: geo.lat + randomBetween(-0.5, 0.5),

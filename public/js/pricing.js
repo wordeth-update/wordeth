@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadUserSubscription() {
-        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+        const token = localStorage.getItem('authToken');
         if (!token) return;
 
         try {
@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
             priceHTML = `<span class="price-amount">Custom</span>`;
         } else {
             const displayPrice = billingCycle === 'yearly' ? Math.round(price / 12) : price;
-            priceHTML = `<span class="price-amount">$${displayPrice}</span><span class="price-period">/${billingCycle === 'yearly' ? 'mo' : 'mo'}</span>`;
+            priceHTML = `<span class="price-amount">$${displayPrice}</span><span class="price-period">/${billingCycle === 'yearly' ? 'yr' : 'mo'}</span>`;
             if (billingCycle === 'yearly' && price > 0) {
                 priceHTML += `<div class="price-yearly-note">$${price} billed yearly</div>`;
             }
@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handleSubscribe(planSlug, cycle) {
-        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+        const token = localStorage.getItem('authToken');
         if (!token) {
             window.location.href = '/signin.html?redirect=' + encodeURIComponent('/pricing.html');
             return;

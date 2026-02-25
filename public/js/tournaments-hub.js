@@ -1,6 +1,6 @@
 class TournamentsHub {
     constructor() {
-        this.token = localStorage.getItem('token');
+        this.token = localStorage.getItem('authToken');
         this.currentSeason = null;
         this.init();
     }

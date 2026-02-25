@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { RtcTokenBuilder, RtcRole } = require('agora-token');
+const auth = require('../middleware/auth');
 
 const APP_ID = process.env.AGORA_APP_ID;
 const APP_CERTIFICATE = process.env.AGORA_APP_CERTIFICATE;
@@ -8,7 +9,7 @@ const APP_CERTIFICATE = process.env.AGORA_APP_CERTIFICATE;
 const TOKEN_EXPIRY_SECONDS = 86400;
 const PRIVILEGE_EXPIRY_SECONDS = 86400;
 
-router.post('/token', (req, res) => {
+router.post('/token', auth, (req, res) => {
   try {
     const { channelName, uid, role } = req.body;
 
@@ -52,7 +53,7 @@ router.post('/token', (req, res) => {
   }
 });
 
-router.get('/test', (req, res) => {
+router.get('/test', auth, (req, res) => {
   try {
     if (!APP_ID || !APP_CERTIFICATE) {
       return res.json({

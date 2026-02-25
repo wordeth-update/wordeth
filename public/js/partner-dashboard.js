@@ -1,3 +1,8 @@
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
 class PartnerDashboard {
     constructor() {
         this.API_BASE = window.location.origin;
@@ -228,7 +233,7 @@ class PartnerDashboard {
             </tr></thead>
             <tbody>
                 ${artists.map(a => `<tr>
-                    <td class="clickable" data-artist="${a._id}">${a.artistName}</td>
+                    <td class="clickable" data-artist="${escapeHtml(a._id)}">${escapeHtml(a.artistName)}</td>
                     <td class="revenue">${this.formatCurrency(a.revenue)}</td>
                     <td>${this.formatCurrency(a.revenueShare)}</td>
                     <td>${this.formatNumber(a.orders)}</td>
@@ -251,14 +256,14 @@ class PartnerDashboard {
             <tbody>
                 ${sales.map(s => `<tr>
                     <td class="muted">${new Date(s.saleDate).toLocaleDateString()}</td>
-                    <td class="muted">${s.orderId.substring(0, 12)}...</td>
-                    <td>${s.artistName}</td>
-                    <td>${s.productName}</td>
-                    <td>${s.songTitle || '-'}</td>
+                    <td class="muted">${escapeHtml(s.orderId.substring(0, 12))}...</td>
+                    <td>${escapeHtml(s.artistName)}</td>
+                    <td>${escapeHtml(s.productName)}</td>
+                    <td>${escapeHtml(s.songTitle || '-')}</td>
                     <td>${s.quantity}</td>
                     <td class="revenue">${this.formatCurrency(s.totalAmount)}</td>
                     <td>${this.formatCurrency(s.revenueShare)}</td>
-                    <td class="muted">${s.geo?.city || ''}, ${s.geo?.country || ''}</td>
+                    <td class="muted">${escapeHtml(s.geo?.city || '')}, ${escapeHtml(s.geo?.country || '')}</td>
                 </tr>`).join('')}
             </tbody>
         </table>`;
@@ -382,12 +387,12 @@ class PartnerDashboard {
             </tr></thead>
             <tbody>
                 ${songs.map(s => `<tr>
-                    <td><i class="fas fa-music" style="color:#96C5B0;margin-right:6px;"></i>${s._id}</td>
-                    <td class="muted">${s.albumTitle || '-'}</td>
+                    <td><i class="fas fa-music" style="color:#96C5B0;margin-right:6px;"></i>${escapeHtml(s._id)}</td>
+                    <td class="muted">${escapeHtml(s.albumTitle || '-')}</td>
                     <td class="lyrics-snippets">${s.lyricsSnippets && s.lyricsSnippets.length
-                        ? s.lyricsSnippets.map(l => `<span class="lyric-tag">"${l}"</span>`).join('')
+                        ? s.lyricsSnippets.map(l => `<span class="lyric-tag">"${escapeHtml(l)}"</span>`).join('')
                         : '<span class="muted">—</span>'}</td>
-                    <td>${s.productTypes ? s.productTypes.map(t => `<span class="product-tag">${t}</span>`).join('') : '-'}</td>
+                    <td>${s.productTypes ? s.productTypes.map(t => `<span class="product-tag">${escapeHtml(t)}</span>`).join('') : '-'}</td>
                     <td class="revenue">${this.formatCurrency(s.revenue)}</td>
                     <td>${this.formatNumber(s.units)}</td>
                     <td>${s.skuCount}</td>
@@ -477,10 +482,10 @@ class PartnerDashboard {
             </tr></thead>
             <tbody>
                 ${skus.map(s => `<tr>
-                    <td class="muted">${s._id}</td>
-                    <td>${s.productName}</td>
-                    <td>${s.productType}</td>
-                    <td>${s.songTitle || '-'}</td>
+                    <td class="muted">${escapeHtml(s._id)}</td>
+                    <td>${escapeHtml(s.productName)}</td>
+                    <td>${escapeHtml(s.productType)}</td>
+                    <td>${escapeHtml(s.songTitle || '-')}</td>
                     <td class="revenue">${this.formatCurrency(s.revenue)}</td>
                     <td>${this.formatNumber(s.units)}</td>
                 </tr>`).join('')}
@@ -496,7 +501,7 @@ class PartnerDashboard {
             </tr></thead>
             <tbody>
                 ${geo.map(g => `<tr>
-                    <td>${g._id.country} (${g._id.countryCode})</td>
+                    <td>${escapeHtml(g._id.country)} (${escapeHtml(g._id.countryCode)})</td>
                     <td class="revenue">${this.formatCurrency(g.revenue)}</td>
                     <td>${this.formatNumber(g.orders)}</td>
                     <td>${this.formatNumber(g.units)}</td>
@@ -687,7 +692,7 @@ async function loadSharedDashboard(token) {
             const artistTableHtml = `<table class="data-table">
                 <thead><tr><th>Artist</th><th>Revenue</th><th>Orders</th></tr></thead>
                 <tbody>${d.artistBreakdown.map(a => `<tr>
-                    <td>${a.artistName}</td>
+                    <td>${escapeHtml(a.artistName)}</td>
                     <td class="revenue">${formatCurrency(a.revenue)}</td>
                     <td>${formatNumber(a.orders)}</td>
                 </tr>`).join('')}</tbody>
@@ -699,10 +704,10 @@ async function loadSharedDashboard(token) {
             const skuHtml = `<table class="data-table">
                 <thead><tr><th>SKU</th><th>Product</th><th>Artist</th><th>Song</th><th>Revenue</th><th>Units</th></tr></thead>
                 <tbody>${d.skuBreakdown.map(s => `<tr>
-                    <td class="muted">${s._id}</td>
-                    <td>${s.productName}</td>
-                    <td>${s.artistName}</td>
-                    <td>${s.songTitle || '-'}</td>
+                    <td class="muted">${escapeHtml(s._id)}</td>
+                    <td>${escapeHtml(s.productName)}</td>
+                    <td>${escapeHtml(s.artistName)}</td>
+                    <td>${escapeHtml(s.songTitle || '-')}</td>
                     <td class="revenue">${formatCurrency(s.revenue)}</td>
                     <td>${formatNumber(s.units)}</td>
                 </tr>`).join('')}</tbody>

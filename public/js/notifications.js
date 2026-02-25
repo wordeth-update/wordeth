@@ -1,4 +1,6 @@
 (function() {
+    if (window._wordethNotifSocket && window._wordethNotifSocket.connected) return;
+
     const token = localStorage.getItem('authToken');
     if (!token) return;
 
@@ -20,11 +22,17 @@
         reconnectionDelay: 2000
     });
 
+    window._wordethNotifSocket = notifSocket;
+
     notifSocket.on('connect', () => {
         notifSocket.emit('register-user', {
             userId: user._id,
             userName: user.name || 'User'
         });
+    });
+
+    window.addEventListener('beforeunload', () => {
+        if (notifSocket) notifSocket.disconnect();
     });
 
     notifSocket.on('room-invite', (data) => {

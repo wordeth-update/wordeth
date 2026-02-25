@@ -132,6 +132,9 @@ userSchema.methods.getPublicProfile = function() {
     const userObject = this.toObject();
     delete userObject.password;
     delete userObject.socialId;
+    delete userObject.email;
+    delete userObject.searchHistory;
+    delete userObject.__v;
     return userObject;
 };
 

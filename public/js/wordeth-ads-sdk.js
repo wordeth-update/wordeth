@@ -405,14 +405,13 @@ class WordethAds {
      * Get cookie consent status
      */
     getCookieConsent() {
-        return localStorage.getItem('wordeth_cookie_consent') === 'true';
+        try {
+            const consent = JSON.parse(localStorage.getItem('wordeth_cookie_consent') || '{}');
+            return consent.accepted === true;
+        } catch { return false; }
     }
     
-    /**
-     * Set cookie consent
-     */
     setCookieConsent(consent) {
-        localStorage.setItem('wordeth_cookie_consent', consent.toString());
         this.cookieConsent = consent;
     }
     

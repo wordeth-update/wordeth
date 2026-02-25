@@ -51,7 +51,7 @@ router.get('/check-name', async (req, res) => {
         if (!name || name.trim().length < 2) {
             return res.json({ available: false });
         }
-        const existing = await User.findOne({ name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } });
+        const existing = await User.findOne({ name: { $regex: new RegExp(`^${name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } });
         res.json({ available: !existing });
     } catch (error) {
         res.status(500).json({ available: false });
@@ -103,7 +103,7 @@ router.put('/profile', auth, async (req, res) => {
                 return res.status(400).json({ message: 'Name must be 50 characters or fewer' });
             }
             const existing = await User.findOne({
-                name: { $regex: new RegExp(`^${trimmed}$`, 'i') },
+                name: { $regex: new RegExp(`^${trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
                 _id: { $ne: req.user._id }
             });
             if (existing) {
@@ -169,7 +169,11 @@ router.get('/history', auth, async (req, res) => {
 router.post('/history', auth, async (req, res) => {
     try {
         const { songTitle, artist } = req.body;
+        if (!songTitle || typeof songTitle !== 'string' || songTitle.length > 200) {
+            return res.status(400).json({ message: 'Invalid songTitle' });
+        }
         req.user.searchHistory.unshift({ songTitle, artist });
+        req.user.searchHistory = req.user.searchHistory.slice(0, 100);
         await req.user.save();
         res.json(req.user.searchHistory);
     } catch (error) {
@@ -182,8 +186,10 @@ router.get('/friends', auth, async (req, res) => {
     try {
         await req.user.populate('following');
         const friends = req.user.following.map(friend => ({
-            ...friend.getPublicProfile(),
-            mutualSongs: Math.floor(Math.random() * 50) // Placeholder for actual mutual songs logic
+            _id: friend._id,
+            name: friend.name,
+            bio: friend.bio || '',
+            avatar: friend.avatar || ''
         }));
         res.json(friends);
     } catch (error) {
@@ -249,29 +255,9 @@ router.post('/merch', auth, upload.single('image'), async (req, res) => {
     }
 });
 
-function authenticateAdmin(req, res, next) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Authentication required' });
-    }
-    const token = authHeader.split(' ')[1];
-    try {
-        const jwtSecret = process.env.JWT_SECRET;
-        if (!jwtSecret) {
-            return res.status(500).json({ error: 'Server configuration error' });
-        }
-        const decoded = jwt.verify(token, jwtSecret);
-        if (decoded.role !== 'admin') {
-            return res.status(403).json({ error: 'Admin access required' });
-        }
-        req.adminId = decoded.advertiserId;
-        next();
-    } catch (error) {
-        return res.status(401).json({ error: 'Invalid or expired token' });
-    }
-}
+const { requireRole } = require('../middleware/rbac');
 
-router.post('/admin/flush', authenticateAdmin, async (req, res) => {
+router.post('/admin/flush', auth, requireRole('ADMIN'), async (req, res) => {
     try {
         const { email } = req.body;
         if (!email) {

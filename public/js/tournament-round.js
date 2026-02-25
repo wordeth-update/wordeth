@@ -1,6 +1,6 @@
 class TournamentRound {
     constructor() {
-        this.token = localStorage.getItem('token');
+        this.token = localStorage.getItem('authToken');
         this.roundId = new URLSearchParams(window.location.search).get('id');
         this.round = null;
         this.user = null;
@@ -82,8 +82,8 @@ class TournamentRound {
             const typeA = m.submissionA?.submissionType || 'original';
             const typeB = m.submissionB?.submissionType || 'original';
             const isComplete = m.status === 'completed';
-            const winnerIsA = isComplete && m.winnerSubmissionId === m.submissionA?._id;
-            const winnerIsB = isComplete && m.winnerSubmissionId === m.submissionB?._id;
+            const winnerIsA = isComplete && m.winnerSubmissionId?.toString() === m.submissionA?._id?.toString();
+            const winnerIsB = isComplete && m.winnerSubmissionId?.toString() === m.submissionB?._id?.toString();
 
             return `
             <a href="tournament-match.html?id=${m._id}" class="match-card ${isComplete ? 'completed' : ''}">

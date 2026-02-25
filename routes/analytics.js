@@ -5,27 +5,10 @@ const UsageEvent = require('../models/UsageEvent');
 const Advertiser = require('../models/Advertiser');
 const archiver = require('../services/archiver');
 
-function authenticateAdmin(req, res, next) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Authentication required' });
-    }
-    const token = authHeader.split(' ')[1];
-    try {
-        const jwtSecret = process.env.JWT_SECRET;
-        if (!jwtSecret) {
-            return res.status(500).json({ error: 'Server configuration error' });
-        }
-        const decoded = jwt.verify(token, jwtSecret);
-        if (decoded.role !== 'admin') {
-            return res.status(403).json({ error: 'Admin access required' });
-        }
-        req.adminId = decoded.advertiserId;
-        next();
-    } catch (error) {
-        return res.status(401).json({ error: 'Invalid or expired token' });
-    }
-}
+const auth = require('../middleware/auth');
+const { requireRole } = require('../middleware/rbac');
+
+const authenticateAdmin = [auth, requireRole('ADMIN')];
 
 const USAGE_TIERS = {
     low: { min: 1, max: 3, label: 'Low' },
@@ -78,7 +61,7 @@ router.post('/track', (req, res) => {
         return res.status(400).json({ error: 'eventType and segment required' });
     }
 
-    const allowedSegments = ['lyrics', 'community', 'merch', 'auth', 'general'];
+    const allowedSegments = ['lyrics', 'community', 'merch', 'auth', 'general', 'verses', 'tournament'];
     if (!allowedSegments.includes(segment)) {
         return res.status(400).json({ error: 'Invalid segment' });
     }

@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    const token = localStorage.getItem('authToken');
     if (!token) {
         window.location.href = '/signin.html?redirect=' + encodeURIComponent('/subscription.html');
         return;
@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         ]);
 
         if (subRes.status === 401) {
-            localStorage.removeItem('token');
+            localStorage.removeItem('authToken');
             localStorage.removeItem('authToken');
             window.location.href = '/signin.html?redirect=' + encodeURIComponent('/subscription.html');
             return;
@@ -248,7 +248,7 @@ function renderAvailablePlans(allPlans, currentPlan, accountType, subscription) 
 }
 
 async function handleSwitch(planSlug) {
-    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    const token = localStorage.getItem('authToken');
     if (!token) return;
 
     const btn = document.querySelector(`[data-slug="${planSlug}"]`);
@@ -300,7 +300,7 @@ function setupCancelModal() {
     });
 
     confirmBtn.addEventListener('click', async () => {
-        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+        const token = localStorage.getItem('authToken');
         confirmBtn.disabled = true;
         confirmBtn.textContent = 'Canceling...';
 

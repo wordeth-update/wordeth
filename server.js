@@ -21,7 +21,7 @@ let ogBrowserLaunching = null;
 
 (async () => {
     try {
-        const logoPath = path.join(__dirname, 'images', 'logo.png');
+        const logoPath = path.join(__dirname, 'public', 'images', 'logo.png');
         if (fs.existsSync(logoPath)) {
             const buf = fs.readFileSync(logoPath);
             ogLogoBase64 = buf.toString('base64');
@@ -104,6 +104,20 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { message: 'Too many attempts. Please try again in 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: true,
+    keyGenerator: (req) => {
+        return req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+    }
+});
+app.use('/api/auth/signin', authLimiter);
+app.use('/api/auth/signup', authLimiter);
+
 // Connect to MongoDB
 let mongoUri;
 if (process.env.MONGODB_USERNAME && process.env.MONGODB_PASSWORD) {
@@ -142,9 +156,21 @@ if (mongoUri && mongoUri !== 'mongodb://localhost:27017/wordeth') {
     }
 }
 
-// CORS configuration
+const allowedOrigins = [
+    'https://wordeth.com',
+    'https://www.wordeth.com',
+    process.env.CLIENT_URL,
+    process.env.CORS_ORIGIN
+].filter(Boolean);
+
 app.use(cors({
-    origin: true,
+    origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+            return callback(null, true);
+        }
+        return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true
 }));
 
@@ -166,7 +192,7 @@ app.use((req, res, next) => {
     const ext = path.extname(req.path);
     if (req.path.startsWith('/api/')) return next();
     if (ext === '.html' || req.path === '/') {
-        const filePath = path.join(__dirname, req.path === '/' ? 'index.html' : req.path);
+        const filePath = path.join(__dirname, 'public', req.path === '/' ? 'index.html' : req.path);
         if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
             let html = fs.readFileSync(filePath, 'utf8');
             html = html.replace(/(\.(js|css))\?v=\d+/g, `$1?v=${BUILD_ID}`);
@@ -181,7 +207,7 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use(express.static(path.join(__dirname), {
+app.use(express.static(path.join(__dirname, 'public'), {
     setHeaders: (res, filePath) => {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         res.setHeader('CDN-Cache-Control', 'no-store');
@@ -734,29 +760,15 @@ function escapeHtml(str) {
     return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-// Serve frontend files in production
-if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.join(__dirname), {
-        setHeaders: (res, filePath) => {
-            if (filePath.endsWith('.js') || filePath.endsWith('.css')) {
-                res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-                res.setHeader('CDN-Cache-Control', 'no-store');
-                res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
-            } else if (filePath.endsWith('.html')) {
-                res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-                res.setHeader('CDN-Cache-Control', 'no-store');
-                res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
-            }
-        }
-    }));
-    
-    app.get('*', (req, res) => {
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-        res.setHeader('CDN-Cache-Control', 'no-store');
-        res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
-        res.sendFile(path.join(__dirname, 'index.html'));
-    });
-}
+app.get('*', (req, res) => {
+    if (req.path.includes('.')) {
+        return res.status(404).send('Not found');
+    }
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('CDN-Cache-Control', 'no-store');
+    res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -774,7 +786,7 @@ app.use('*', (req, res) => {
 });
 
 // Start server (only if not in test mode and not being imported)
-if (process.env.NODE_ENV !== 'test' && !module.parent) {
+if (process.env.NODE_ENV !== 'test' && require.main === module) {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);

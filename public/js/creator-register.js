@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken');
     if (token) {
         const userData = localStorage.getItem('user');
         if (userData) {
@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data.message || data.errors?.[0]?.msg || 'Registration failed');
             }
 
-            localStorage.setItem('token', data.token);
+            localStorage.setItem('authToken', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
             window.location.href = '/creator-dashboard.html';
         } catch (err) {

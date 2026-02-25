@@ -2439,9 +2439,10 @@ class AudioRoomsManager {
             }
 
             console.log('Agora: requesting token for channel', roomId);
+            const authToken = localStorage.getItem('authToken');
             const resp = await fetch(apiUrl('/api/agora/token'), {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}) },
                 body: JSON.stringify({
                     channelName: roomId,
                     uid: 0,

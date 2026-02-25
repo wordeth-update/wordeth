@@ -27,7 +27,7 @@ router.post('/signup', [
             return res.status(400).json({ message: 'User already exists with this email' });
         }
 
-        const existingName = await User.findOne({ name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } });
+        const existingName = await User.findOne({ name: { $regex: new RegExp(`^${name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } });
         if (existingName) {
             return res.status(400).json({ message: 'That name is already taken. Please choose a different one.' });
         }
@@ -40,7 +40,7 @@ router.post('/signup', [
         });
         await user.save();
 
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { 
+        const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { 
             expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
         });
         
@@ -69,7 +69,7 @@ router.post('/signin', [
             return res.status(401).json({ message: 'Invalid email or password' });
         }
 
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { 
+        const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { 
             expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
         });
         res.json({ token, user: user.getPublicProfile() });

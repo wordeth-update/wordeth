@@ -6,7 +6,7 @@ function requireRole(...roles) {
             return res.status(401).json({ message: 'Authentication required' });
         }
         const userRole = req.user.role || 'USER_FAN';
-        if (roles.includes('ADMIN') && userRole === 'ADMIN') return next();
+        if (userRole === 'ADMIN') return next();
         if (!roles.includes(userRole)) {
             return res.status(403).json({ message: 'Insufficient permissions' });
         }

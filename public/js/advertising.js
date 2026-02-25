@@ -303,14 +303,13 @@ class WordethAds {
             userId: this.userProfile.id || 'anonymous'
         };
         
-        // Send to analytics
+        if (!this.getCookieConsent()) return;
         fetch(apiUrl('/api/ads/impression'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(impressionData)
         }).catch(console.error);
         
-        // Store locally
         this.storeAdInteraction('impression', impressionData);
     }
     
@@ -324,14 +323,13 @@ class WordethAds {
             userId: this.userProfile.id || 'anonymous'
         };
         
-        // Send to analytics
+        if (!this.getCookieConsent()) return;
         fetch(apiUrl('/api/ads/click'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(clickData)
         }).catch(console.error);
         
-        // Store locally
         this.storeAdInteraction('click', clickData);
     }
     
@@ -404,12 +402,13 @@ class WordethAds {
     
     // Get cookie consent status
     getCookieConsent() {
-        return localStorage.getItem('cookie_consent') === 'true';
+        try {
+            const consent = JSON.parse(localStorage.getItem('wordeth_cookie_consent') || '{}');
+            return consent.accepted === true;
+        } catch { return false; }
     }
     
-    // Set cookie consent
     setCookieConsent(consent) {
-        localStorage.setItem('cookie_consent', consent.toString());
         this.cookieConsent = consent;
     }
 }
