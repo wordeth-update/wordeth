@@ -1,4 +1,7 @@
-// DOM Elements
+if (typeof apiUrl === 'undefined') {
+    window.apiUrl = function(path) { return path; };
+}
+
 const signinForm = document.getElementById('signin-form');
 const signupForm = document.getElementById('signup-form');
 

@@ -14,6 +14,7 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 ### Frontend
 - **Technology**: Static HTML pages with vanilla CSS and JavaScript, prioritizing mobile responsiveness.
 - **Styling**: Uses CSS custom properties (Design System v2) for theming with a dark color scheme (black/purple/mint palette). Core tokens in `styles.css`, enhanced UI overrides in `enhanced.css` (loaded on all public-facing pages). Feature-specific CSS files (verses, pricing, lyrics, tournaments, etc.) inherit from the design system. Google Fonts (Syne + Outfit) and Font Awesome icons are utilized.
+- **Footer**: Compact modern footer across all 14 public pages — logo + inline nav groups + social icons on desktop, accordion-style collapse on mobile (JS in `main.js`). Single `.site-footer` class; old 4-column grid removed.
 - **JS Architecture**: Page-specific JavaScript files loaded directly without a bundler, using classes for complex page managers.
 - **Persistent Mini-Player**: A floating bar appears when a user is in a Verses audio room, maintaining audio connection across page navigations.
 - **SPA Router**: Lightweight router intercepts internal link clicks only when an audio room is active, fetching and swapping page content without full reloads, excluding partner/admin pages.
@@ -57,7 +58,8 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Nav Visibility**: Tournament navigation link visibility can be toggled by admins via a feature flag stored in site settings.
 
 ### Key Features Architecture
-- **Verses (Audio Rooms)**: Uses Agora RTC SFU for scalable audio/video via Agora Web SDK, with Socket.io for room management. Supports server-side token generation, Web Audio API for filters, and dynamic role switching (listener/host). Includes listener-first stage access with promotion paths and multi-person video grid.
+- **Verses (Audio Rooms)**: Uses Agora RTC SFU for scalable audio/video via Agora Web SDK, with Socket.io for room management. Supports server-side token generation, Web Audio API for filters, and dynamic role switching (listener/host). Includes listener-first stage access with promotion paths and multi-person video grid. Full room UI CSS in `verses.css` covering: modals (create room, music share, add users, replay), room controls toolbar, chat section, host controls panel, shared audio player overlay, and responsive mobile layout.
+- **Auth UX**: `auth.css` handles autofill styling (-webkit-autofill overrides for dark theme), rounded inputs (12px), and focus glow states. `auth.js` includes `apiUrl` fallback safety.
 - **Lyrics**: Server-side search integrating with Musixmatch API and fallback sources. Lyrics page has its own search container with dark-themed inline styles.
 - **Advertising**: Contextual keyword-based ads with a self-serve portal, admin approval, and tracking.
 - **Trending Topics**: Displays conversation starters on the Verses page to encourage discussion.
