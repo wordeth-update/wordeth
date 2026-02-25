@@ -543,7 +543,8 @@ router.get('/dashboard/ledger', partnerAuth, async (req, res) => {
 
         const match = {
             eventType: { $in: ['gmv_order', 'platform_fee_recorded'] },
-            'metadata.sellerType': 'label'
+            'metadata.sellerType': 'label',
+            'metadata.sellerId': req.label._id.toString()
         };
 
         if (startDate || endDate) {

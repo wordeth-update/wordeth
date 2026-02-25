@@ -319,9 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function escHtml(str) {
-        const d = document.createElement('div');
-        d.textContent = str;
-        return d.innerHTML;
+        return window.escapeHtml(str);
     }
 
     function showToast(message, isError = false) {

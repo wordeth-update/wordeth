@@ -596,9 +596,7 @@ class AdAdmin {
     }
 
     escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        return window.escapeHtml(text);
     }
 
     logout() {

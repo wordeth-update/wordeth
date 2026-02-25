@@ -92,29 +92,32 @@ adSchema.methods.matchesKeywords = function(searchTerms) {
 };
 
 adSchema.statics.findMatchingAds = async function(searchTerm, placement = null) {
-    const query = { status: 'active' };
+    const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+    if (!searchWords.length) return [];
+
+    const query = {
+        status: 'active',
+        keywords: { $in: searchWords }
+    };
     if (placement) {
         query.placement = placement;
     }
-    
+
     const ads = await this.find(query).populate('advertiserId', 'companyName');
-    const searchLower = searchTerm.toLowerCase();
-    
+
     const scoredAds = ads.map(ad => {
         let score = 0;
         ad.keywords.forEach(keyword => {
-            if (searchLower.includes(keyword)) {
-                score += 1;
-            }
+            if (searchWords.includes(keyword)) score += 1;
         });
         return { ad, score };
-    }).filter(item => item.score > 0);
-    
+    });
+
     scoredAds.sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
         return b.ad.pricing.cpm - a.ad.pricing.cpm;
     });
-    
+
     return scoredAds.map(item => item.ad);
 };
 

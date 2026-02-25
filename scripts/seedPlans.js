@@ -8,6 +8,7 @@ const plans = [
         slug: 'fan-free',
         category: 'fan',
         tier: 0,
+        active: true,
         priceMonthly: 0,
         priceYearly: 0,
         description: 'Basic access to Wordeth',
@@ -29,6 +30,7 @@ const plans = [
         slug: 'fan-plus',
         category: 'fan',
         tier: 1,
+        active: true,
         priceMonthly: 3.99,
         priceYearly: 39,
         description: 'Enhanced fan experience',
@@ -51,6 +53,7 @@ const plans = [
         slug: 'fan-creator',
         category: 'fan',
         tier: 2,
+        active: true,
         priceMonthly: 7.99,
         priceYearly: 79,
         description: 'Full creative toolkit',
@@ -75,6 +78,7 @@ const plans = [
         slug: 'designer-free',
         category: 'designer',
         tier: 0,
+        active: true,
         priceMonthly: 0,
         priceYearly: 0,
         description: 'Start creating and earning',
@@ -102,6 +106,7 @@ const plans = [
         slug: 'designer-starter',
         category: 'designer',
         tier: 1,
+        active: true,
         priceMonthly: 15,
         priceYearly: 0,
         description: 'Grow your design business',
@@ -123,6 +128,7 @@ const plans = [
         slug: 'designer-pro',
         category: 'designer',
         tier: 2,
+        active: true,
         priceMonthly: 35,
         priceYearly: 0,
         description: 'Professional design studio',
@@ -144,6 +150,7 @@ const plans = [
         slug: 'designer-studio',
         category: 'designer',
         tier: 3,
+        active: true,
         priceMonthly: 75,
         priceYearly: 0,
         description: 'Full studio experience',
@@ -168,6 +175,7 @@ const plans = [
         slug: 'artist-starter',
         category: 'artist',
         tier: 1,
+        active: true,
         priceMonthly: 49,
         priceYearly: 0,
         description: 'Launch your artist presence',
@@ -190,6 +198,7 @@ const plans = [
         slug: 'artist-growth',
         category: 'artist',
         tier: 2,
+        active: true,
         priceMonthly: 99,
         priceYearly: 0,
         description: 'Expand your reach',
@@ -212,6 +221,7 @@ const plans = [
         slug: 'artist-pro',
         category: 'artist',
         tier: 3,
+        active: true,
         priceMonthly: 199,
         priceYearly: 0,
         description: 'Maximum artist tools',
@@ -237,6 +247,7 @@ const plans = [
         slug: 'label-boutique',
         category: 'label',
         tier: 1,
+        active: true,
         priceMonthly: 499,
         priceYearly: 0,
         description: 'For small labels (up to 5 artists)',
@@ -257,6 +268,7 @@ const plans = [
         slug: 'label-mid',
         category: 'label',
         tier: 2,
+        active: true,
         priceMonthly: 1250,
         priceYearly: 0,
         description: 'For growing labels (up to 15 artists)',
@@ -279,6 +291,7 @@ const plans = [
         slug: 'label-enterprise',
         category: 'label',
         tier: 3,
+        active: true,
         priceMonthly: 3000,
         priceYearly: 0,
         isCustomPricing: true,
@@ -299,6 +312,11 @@ const plans = [
 ];
 
 async function seedPlans() {
+    if (process.env.NODE_ENV === 'production') {
+        console.error('Seed scripts should not run in production. Set NODE_ENV to development or remove the guard.');
+        process.exit(1);
+    }
+
     let mongoUri;
     if (process.env.MONGODB_USERNAME && process.env.MONGODB_PASSWORD) {
         mongoUri = `mongodb+srv://${process.env.MONGODB_USERNAME}:${encodeURIComponent(process.env.MONGODB_PASSWORD)}@wrdthcluster.3kkpz37.mongodb.net/wordeth?retryWrites=true&w=majority&appName=WrdthCluster`;

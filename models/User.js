@@ -134,6 +134,8 @@ userSchema.methods.getPublicProfile = function() {
     delete userObject.socialId;
     delete userObject.email;
     delete userObject.searchHistory;
+    delete userObject.entitlementOverrides;
+    delete userObject.subscriptionId;
     delete userObject.__v;
     return userObject;
 };

@@ -673,12 +673,6 @@ function formatNum(n) {
     return String(n);
 }
 
-function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str || '';
-    return div.innerHTML;
-}
-
 function emptyState(msg) {
     return `<div class="empty-state"><i class="fas fa-chart-bar"></i><p>${msg}</p></div>`;
 }

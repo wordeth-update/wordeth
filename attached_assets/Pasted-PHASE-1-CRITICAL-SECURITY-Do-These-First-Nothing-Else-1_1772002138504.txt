@@ -1,0 +1,160 @@
+PHASE 1 — CRITICAL SECURITY (Do These First, Nothing Else)
+1.1 — Fix Static File Serving Exposing Server Source Code
+File: server.js
+Problem: express.static is currently pointed at __dirname (the project root). This means any visitor can request https://wordeth.com/server.js, /routes/auth.js, /models/User.js, or .env over HTTP.
+Fix:
+
+Create a public/ directory at the project root.
+Move all HTML files, the js/ folder, css/ folder, assets/ folder, and images/ folder into public/.
+Change the static middleware from:
+
+js   app.use(express.static(__dirname))
+to:
+js   app.use(express.static(path.join(__dirname, 'public')))
+
+There are TWO express.static registrations in server.js — one early and one inside a production block around line 739. Remove the early one. Keep only the production block one (updated to public/).
+Update build-mobile.js in scripts/ — change the source paths so it copies from public/ instead of the root when building the mobile www/ folder.
+
+Test:
+
+Start the server. Try to fetch http://localhost:3000/server.js — should return 404.
+Try http://localhost:3000/routes/auth.js — should return 404.
+Try http://localhost:3000/index.html — should load the homepage normally.
+Try http://localhost:3000/js/main.js — should serve the file normally.
+
+
+1.2 — Tighten CORS to Specific Origins
+File: server.js
+Problem: app.use(cors({ origin: true, credentials: true })) allows any website to make credentialed cross-origin requests to your API. This is a CSRF vector.
+Fix:
+jsconst allowedOrigins = [
+    'https://wordeth.com',
+    'https://www.wordeth.com',
+    process.env.CLIENT_URL,
+    process.env.CORS_ORIGIN
+].filter(Boolean);
+
+app.use(cors({
+    origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, server-to-server)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+            return callback(null, true);
+        }
+        return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true
+}));
+Test:
+
+In development, all origins should work (NODE_ENV=development).
+Verify that the CLIENT_URL env var is set to the correct domain in .env.
+
+
+1.3 — Add Role to JWT Payload
+File: routes/auth.js and routes/creator.js
+Problem: JWTs are signed with only { userId }. Multiple places in the codebase check decoded.role from the token. This means admin-only endpoints (/api/user/admin/flush, /api/analytics/admin/*) are permanently broken for the main user auth system. Any authenticateAdmin check on decoded.role !== 'admin' will always block access.
+Fix — routes/auth.js:
+Change both JWT sign calls (signup and signin) from:
+jsconst token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { ... })
+to:
+jsconst token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { ... })
+Fix — routes/creator.js:
+Same change — the registration endpoint also signs a JWT. Update it to include role.
+Fix — middleware/auth.js:
+Add explicit check that the token is a user token (not an advertiser or partner token):
+jsconst decoded = jwt.verify(token, process.env.JWT_SECRET);
+if (!decoded.userId) {
+    throw new Error('Invalid token type');
+}
+Test:
+
+Sign up a new user — decode the returned token and confirm role field is present.
+Sign in as existing user — confirm role is in the token.
+Admin endpoints should now be reachable using a user token with role: 'ADMIN'.
+
+
+1.4 — Add Strict Rate Limiting to Auth Endpoints
+File: server.js or wherever rate limiting is configured.
+Problem: The global rate limiter (100 req / 15 min) is not strict enough to prevent brute-forcing passwords on /api/auth/signin.
+Fix: Install express-rate-limit if not already present. Add a strict limiter specifically for auth:
+jsconst authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10,
+    message: { message: 'Too many attempts. Please try again in 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: true // Only count failures
+});
+
+app.use('/api/auth/signin', authLimiter);
+app.use('/api/auth/signup', authLimiter);
+Test:
+
+Make 11 POST requests to /api/auth/signin with wrong credentials. The 11th should return 429.
+A successful login should not count toward the limit (skipSuccessfulRequests: true).
+
+
+1.5 — Add Agora Token Authentication
+File: routes/agora.js
+Problem: POST /api/agora/token has no authentication. Anyone on the internet can generate valid Agora tokens for any channel name, giving them access to private audio rooms.
+Fix:
+
+Import the auth middleware at the top of routes/agora.js.
+Add auth to the /token route:
+
+js   router.post('/token', auth, (req, res) => { ... })
+
+Remove or gate the /test endpoint behind admin auth — it exposes that your Agora credentials are valid:
+
+js   router.get('/test', auth, requireRole('ADMIN'), (req, res) => { ... })
+Or remove it entirely.
+Test:
+
+POST /api/agora/token without a token in the Authorization header should return 401.
+POST /api/agora/token with a valid user JWT should return a token.
+
+
+1.6 — Fix XSS in innerHTML Throughout Frontend
+Files: js/tournament-admin.js, js/partner-dashboard.js, and any other frontend file using .innerHTML with data from the API.
+Problem: Season names, artist names, city names from the database are injected directly into .innerHTML. An admin creating a season named <script>alert(1)</script> executes that script in the admin panel.
+Fix: Add a shared escape function to a utility file (e.g., js/utils.js or inline at the top of affected files):
+jsfunction escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+Then replace every instance of direct injection like:
+jselement.innerHTML = `<div>${data.seasonName}</div>`
+with:
+jselement.innerHTML = `<div>${escapeHtml(data.seasonName)}</div>`
+Audit every .innerHTML assignment in tournament-admin.js and partner-dashboard.js for all user-supplied strings including: season name, round name, artist name, submission title, city, country, company name, ad title.
+Test:
+
+In the admin panel, create a season with name <img src=x onerror=alert(1)>. Navigate to the seasons list. The browser should display the literal tag text, not execute the script.
+
+
+1.7 — Fix RegEx Injection (ReDoS Vulnerability)
+Files: routes/auth.js, routes/creator.js, routes/user.js
+Problem: Name uniqueness checks build MongoDB regex queries by directly inserting user input:
+jsUser.findOne({ name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } })
+A user registering with name = '(.*)+@(.*)+@(.*)+@(.*)' can cause catastrophic backtracking.
+Fix: Escape the name before inserting it into the regex. Add this helper:
+jsfunction escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+Then use it in all four locations where this pattern appears:
+jsUser.findOne({ name: { $regex: new RegExp(`^${escapeRegex(name.trim())}$`, 'i') } })
+Locations to fix:
+
+routes/auth.js — signup
+routes/creator.js — creator register
+routes/user.js — /check-name and /profile PUT
+
+Test:
+
+Attempt to register with a name containing regex special characters like (test.*)+. It should either work as a literal name match or fail gracefully, not hang.

@@ -945,7 +945,7 @@ class AudioRoomsManager {
 
         const toast = document.createElement('div');
         toast.className = 'share-toast';
-        toast.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+        toast.innerHTML = `<i class="fas fa-check-circle"></i> ${escapeHtml(message)}`;
         document.body.appendChild(toast);
         requestAnimationFrame(() => toast.classList.add('visible'));
         setTimeout(() => {
@@ -964,11 +964,6 @@ class AudioRoomsManager {
         const existing = document.getElementById('wordeth-invite-notification');
         if (existing) existing.remove();
 
-        const escapeHtml = (str) => {
-            const div = document.createElement('div');
-            div.textContent = str || '';
-            return div.innerHTML;
-        };
 
         const inviterInitial = (data.inviterName || 'U').charAt(0).toUpperCase();
         const roomName = data.roomName || 'a Verse';
@@ -1223,22 +1218,22 @@ class AudioRoomsManager {
 
     renderUserCard(user, roomParticipants = []) {
         const userId = user._id || user.id;
-        const displayName = user.name || user.displayName || 'User';
-        const avatar = user.avatar || '';
+        const displayName = escapeHtml(user.name || user.displayName || 'User');
+        const avatar = escapeHtml(user.avatar || '');
         const avatarHtml = avatar 
             ? `<img src="${avatar}" alt="${displayName}" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'fas fa-user\\'></i>'">`
             : `<i class="fas fa-user"></i>`;
         const isInRoom = roomParticipants.includes(userId);
         const buttonHtml = isInRoom 
             ? `<span class="in-room-badge">In Room</span>`
-            : `<button class="invite-btn" data-user-id="${userId}">Invite</button>`;
+            : `<button class="invite-btn" data-user-id="${escapeHtml(userId)}">Invite</button>`;
 
         return `
             <div class="search-result-item">
                 <div class="search-result-avatar">${avatarHtml}</div>
                 <div class="search-result-info">
                     <div class="search-result-name">${displayName}</div>
-                    ${user.bio ? `<div class="search-result-id">${user.bio.substring(0, 50)}</div>` : ''}
+                    ${user.bio ? `<div class="search-result-id">${escapeHtml(user.bio.substring(0, 50))}</div>` : ''}
                 </div>
                 ${buttonHtml}
             </div>
@@ -1480,10 +1475,10 @@ class AudioRoomsManager {
         
         messageElement.innerHTML = `
             <div class="chat-message-header">
-                <span class="sender">${sender}</span>
+                <span class="sender">${escapeHtml(sender)}</span>
                 <span class="timestamp">${timestamp}</span>
             </div>
-            <div class="chat-message-content">${this.escapeHtml(message)}</div>
+            <div class="chat-message-content">${escapeHtml(message)}</div>
         `;
         
         this.chatMessagesContainer.appendChild(messageElement);
@@ -1491,9 +1486,7 @@ class AudioRoomsManager {
     }
 
     escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        return window.escapeHtml(text);
     }
 
     _playSfx(name) {
@@ -5735,10 +5728,7 @@ class AudioRoomsManager {
     }
     
     sanitizeText(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.textContent;
+        return escapeHtml(text);
     }
     
     escapeQuotes(str) {

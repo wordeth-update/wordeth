@@ -144,16 +144,60 @@ router.post('/avatar', auth, (req, res) => {
             if (!req.file) {
                 return res.status(400).json({ message: 'No file uploaded' });
             }
-            const base64 = req.file.buffer.toString('base64');
-            const dataUrl = `data:${req.file.mimetype};base64,${base64}`;
-            req.user.avatar = dataUrl;
+            const { Client } = require('@replit/object-storage');
+            const objClient = new Client();
+            const ext = req.file.mimetype.split('/')[1] || 'png';
+            const objectName = `avatars/${req.user._id}.${ext}`;
+            const result = await objClient.uploadFromBytes(objectName, req.file.buffer);
+            if (!result.ok) {
+                console.error('Object storage upload failed:', result.error);
+                return res.status(500).json({ message: 'Error uploading avatar' });
+            }
+            const avatarUrl = `/api/user/avatar/${req.user._id}`;
+            req.user.avatar = objectName;
             await req.user.save();
-            res.json({ avatarUrl: dataUrl });
+            res.json({ avatarUrl });
         } catch (error) {
             console.error('Avatar upload error:', error);
             res.status(500).json({ message: 'Error uploading avatar' });
         }
     });
+});
+
+router.get('/avatar/:userId', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.userId).select('avatar');
+        if (!user || !user.avatar) {
+            return res.redirect('/assets/default-avatar.png');
+        }
+        if (user.avatar.startsWith('data:')) {
+            const matches = user.avatar.match(/^data:(.+);base64,(.+)$/);
+            if (matches) {
+                const buffer = Buffer.from(matches[2], 'base64');
+                res.set('Content-Type', matches[1]);
+                res.set('Cache-Control', 'public, max-age=86400');
+                return res.send(buffer);
+            }
+            return res.redirect('/assets/default-avatar.png');
+        }
+        if (user.avatar.startsWith('avatars/')) {
+            const { Client } = require('@replit/object-storage');
+            const objClient = new Client();
+            const result = await objClient.downloadAsBytes(user.avatar);
+            if (!result.ok) {
+                return res.redirect('/assets/default-avatar.png');
+            }
+            const ext = user.avatar.split('.').pop();
+            const mimeMap = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp' };
+            res.set('Content-Type', mimeMap[ext] || 'image/png');
+            res.set('Cache-Control', 'public, max-age=86400');
+            return res.send(Buffer.from(result.value));
+        }
+        return res.redirect(user.avatar);
+    } catch (error) {
+        console.error('Avatar fetch error:', error);
+        res.redirect('/assets/default-avatar.png');
+    }
 });
 
 // Get search history

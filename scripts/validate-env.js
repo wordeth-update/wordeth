@@ -15,12 +15,9 @@ const requiredVars = {
   ],
   production: [
     'JWT_SECRET',
-    'MONGODB_URI_PROD',
-    'MUSIXMATCH_API_KEY',
-    'SESSION_SECRET',
-    'PRODUCTION_URL',
-    'CLIENT_URL',
-    'CORS_ORIGIN'
+    'MONGODB_USERNAME',
+    'MONGODB_PASSWORD',
+    'MUSIXMATCH_API_KEY'
   ],
   test: [
     'JWT_SECRET'

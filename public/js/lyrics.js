@@ -139,13 +139,6 @@ function hideResults() {
     noResults.style.display = 'none';
 }
 
-// HTML escaping function
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
 // Modal functionality using Genius API
 async function showLyricsModal(songId) {
     showLoading();

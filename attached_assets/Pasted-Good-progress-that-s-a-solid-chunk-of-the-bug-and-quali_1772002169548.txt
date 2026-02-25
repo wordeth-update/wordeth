@@ -1,0 +1,36 @@
+Good progress — that's a solid chunk of the bug and quality-of-life fixes. But the most critical items are still outstanding. Here's an honest accounting:
+Phase 1 (Critical Security) — nothing done yet. These are the highest-priority items in the entire prompt and none of them appear in your summary:
+
+1.1 Static files served from project root — server.js, routes/, models/, .env still publicly accessible via HTTP
+1.2 CORS allows all origins — any site can make credentialed requests
+1.3 JWT missing role in payload — admin endpoints still broken
+1.4 No strict rate limiting on /signin — still brute-forceable
+1.5 Agora /token unauthenticated — anyone can join any room
+1.6 XSS via .innerHTML in tournament-admin and partner-dashboard
+1.7 ReDoS via unescaped regex in name uniqueness checks
+
+Phase 2 — partially done. Still outstanding:
+
+2.1 localStorage token key inconsistency (token vs authToken) — creator dashboard still broken for new signups
+2.3 SPA router logic inversion — still causing full page reloads
+2.8 module.parent deprecation
+
+Phase 3 — partially done. Still outstanding:
+
+3.1 Avatars stored as base64 in MongoDB — still the biggest performance issue
+3.3 Ad matching still doing in-memory filter instead of MongoDB query
+
+Phase 4–6 — not started:
+
+4.1 Consolidate authenticateAdmin copies
+4.3 Catch-all route breaking individual HTML pages
+4.4 Partner ledger filter returning empty
+4.5 Seed scripts production guard
+4.6 validate-env.js wrong variable name
+5.1 getPublicProfile still leaking subscription/entitlement data (email was removed but subscriptionId, entitlementOverrides, revenueShare still exposed)
+5.3 seedPlans missing active: true
+6.2 Search autocomplete never inserted into DOM
+6.3 build-mobile.js silent failure
+6.4 deploy.sh uses npm audit fix --force
+
+The immediate priority is Phase 1. The app should not go to production with the static file serving issue — that one alone means your server-side source code, database credentials path, and all route logic is readable by anyone with a browser. 

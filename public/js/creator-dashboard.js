@@ -148,14 +148,14 @@ function renderSocialLinks(links) {
 
     grid.innerHTML = entries.map(([key, url]) => {
         const href = url.startsWith('http') ? url : `https://${url}`;
-        return `<a href="${href}" target="_blank" class="social-link-chip"><i class="${icons[key] || 'fas fa-link'}"></i> ${key}</a>`;
+        return `<a href="${escapeHtml(href)}" target="_blank" class="social-link-chip"><i class="${icons[key] || 'fas fa-link'}"></i> ${escapeHtml(key)}</a>`;
     }).join('');
 }
 
 function renderGenres(genres) {
     const el = document.getElementById('genreDisplay');
     if (!genres || genres.length === 0) return;
-    el.innerHTML = genres.map(g => `<span class="genre-tag">${g}</span>`).join('');
+    el.innerHTML = genres.map(g => `<span class="genre-tag">${escapeHtml(g)}</span>`).join('');
 }
 
 function renderEntitlements(entitlements) {

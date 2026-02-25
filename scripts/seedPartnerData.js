@@ -1,4 +1,10 @@
 require('dotenv').config();
+
+if (process.env.NODE_ENV === 'production') {
+    console.error('Seed scripts should not run in production. Set NODE_ENV to development or remove the guard.');
+    process.exit(1);
+}
+
 const mongoose = require('mongoose');
 const Label = require('../models/Label');
 const PartnerUser = require('../models/PartnerUser');

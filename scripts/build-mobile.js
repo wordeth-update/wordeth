@@ -39,15 +39,24 @@ function copyDir(src, dest) {
 console.log('Building mobile frontend into www/ ...');
 cleanDir(WWW);
 
+const PUBLIC = path.join(ROOT, 'public');
+
 for (const file of FRONTEND_FILES) {
-    const src = path.join(ROOT, file);
+    const src = path.join(PUBLIC, file);
     if (fs.existsSync(src)) {
         fs.copyFileSync(src, path.join(WWW, file));
+    } else {
+        console.warn(`Warning: ${file} not found in public/`);
     }
 }
 
 for (const dir of FRONTEND_DIRS) {
-    copyDir(path.join(ROOT, dir), path.join(WWW, dir));
+    const src = path.join(PUBLIC, dir);
+    if (fs.existsSync(src)) {
+        copyDir(src, path.join(WWW, dir));
+    } else {
+        console.warn(`Warning: ${dir}/ not found in public/`);
+    }
 }
 
 const API_BASE = process.env.WORDETH_API_URL || 'https://www.wordeth.com';

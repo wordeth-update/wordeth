@@ -28,7 +28,7 @@ fi
 # Step 2: Security audit
 echo ""
 echo "🔒 Step 2: Running security audit..."
-npm audit fix --force || echo -e "${YELLOW}⚠️  Some vulnerabilities may remain${NC}"
+npm audit --production || echo -e "${YELLOW}⚠️  Some vulnerabilities found — review before deploying${NC}"
 
 # Step 3: Install dependencies
 echo ""

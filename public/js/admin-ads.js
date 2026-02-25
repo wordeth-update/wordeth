@@ -164,8 +164,8 @@ class AdminAds {
                     </div>
                 </div>
                 
-                <div class="ad-title">${ad.title}</div>
-                <div class="ad-description">${ad.description}</div>
+                <div class="ad-title">${escapeHtml(ad.title)}</div>
+                <div class="ad-description">${escapeHtml(ad.description)}</div>
                 
                 <div class="ad-metrics">
                     <div class="metric">
@@ -274,7 +274,7 @@ class AdminAds {
         
         performanceGrid.innerHTML = ads.map(([adId, ad]) => `
             <div class="ad-card">
-                <div class="ad-title">${ad.title}</div>
+                <div class="ad-title">${escapeHtml(ad.title)}</div>
                 <div class="ad-metrics">
                     <div class="metric">
                         <div class="metric-value">${ad.impressions.toLocaleString()}</div>
