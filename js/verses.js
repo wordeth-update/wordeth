@@ -113,7 +113,7 @@ class AudioRoomsManager {
             this._showJoiningOverlay();
             this._inviteHardTimeout = setTimeout(async () => {
                 if (this._invite.status === 'joining' || this._invite.status === 'pending') {
-                    console.warn('Invite: hard timeout reached (25s)');
+                    console.warn('Invite: hard timeout reached (45s)');
                     const socketState = `socket: ${this.socket?.connected ? 'connected' : (this.lobbySocket?.connected ? 'lobby-connected' : 'disconnected')}, id: ${this.socket?.id || this.lobbySocket?.id || 'none'}`;
                     let debugInfo = socketState;
                     try {
@@ -128,7 +128,7 @@ class AudioRoomsManager {
                     this._invite.roomId = null;
                     this._showRoomEndedScreen('Could not connect to the room. The server may be unreachable.');
                 }
-            }, 25000);
+            }, 45000);
         }
         
         this.initYouTubePlayer();
@@ -253,7 +253,7 @@ class AudioRoomsManager {
             return;
         }
         console.log('Invite: queued room', roomId);
-        this._invite = { status: 'pending', roomId, retries: 0, maxRetries: 3 };
+        this._invite = { status: 'pending', roomId, retries: 0, maxRetries: 5 };
         if (this._initComplete && this.lobbySocket?.connected) {
             this._processInvite();
         }
@@ -287,12 +287,15 @@ class AudioRoomsManager {
             this.currentRoom = null;
             this._pendingJoinRoom = null;
         }
-        const isPermanent = permanent ||
-            (message && (message.includes('no longer live') || message.includes('expired') || message.includes('not found')));
+        const hardPermanent = permanent && !message?.includes('no longer live');
+        const isPermanent = hardPermanent ||
+            (message && (message.includes('expired') || message.includes('not found')));
         if (!isPermanent && inv.retries < inv.maxRetries) {
-            console.log('Invite: retrying in 1s, attempt', inv.retries + 1);
+            const delay = Math.min(1000 * Math.pow(2, inv.retries - 1), 4000);
+            console.log(`Invite: retrying in ${delay}ms, attempt ${inv.retries + 1} of ${inv.maxRetries}`);
+            this._updateJoiningStatus(`Connecting to room\u2026 (attempt ${inv.retries + 1})`);
             inv.status = 'pending';
-            setTimeout(() => this._processInvite(), 1000);
+            setTimeout(() => this._processInvite(), delay);
         } else {
             console.warn('Invite: giving up -', isPermanent ? 'room gone' : `max retries (${inv.retries})`);
             inv.status = 'failed';
@@ -2115,10 +2118,15 @@ class AudioRoomsManager {
 
             let httpData;
             try {
-                const httpResp = await fetch(apiUrl('/api/rooms/join'), {
+                const httpResp = await fetch(apiUrl(`/api/rooms/join?_t=${Date.now()}`), {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(joinPayload)
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache, no-store',
+                        'Pragma': 'no-cache'
+                    },
+                    body: JSON.stringify(joinPayload),
+                    cache: 'no-store'
                 });
                 httpData = await httpResp.json();
                 console.log('joinRoom: HTTP join response:', httpData.success, httpData.message || '');

@@ -209,7 +209,11 @@ app.post('/api/rooms/create', (req, res) => {
 });
 
 app.post('/api/rooms/join', async (req, res) => {
-    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    res.setHeader('CDN-Cache-Control', 'no-store');
+    res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     const { roomId, userId, userName, isHost, roomName, avatar } = req.body;
     console.log(`[Rooms API] HTTP join request: roomId=${roomId}, userName=${userName}, isHost=${isHost}`);
     try {

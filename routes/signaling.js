@@ -49,6 +49,16 @@ function setupSignaling(io) {
             roomsReady = true;
         });
 
+    setInterval(() => {
+        if (rooms.size === 0) return;
+        let saved = 0;
+        for (const [roomId, room] of rooms.entries()) {
+            saveRoom(roomId, room);
+            saved++;
+        }
+        if (saved > 0) console.log(`[Heartbeat] Refreshed ${saved} room(s) in Redis`);
+    }, 5 * 60 * 1000);
+
     io.on('connection', (socket) => {
         console.log(`Socket connected: ${socket.id}`);
 
