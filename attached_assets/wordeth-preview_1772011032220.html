@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wordeth Design Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root {
+  --black: #060409;
+  --white: #ffffff;
+  --mint: #00E5A8;
+  --mint-deep: #00A87D;
+  --purple-deep: #0D0118;
+  --purple-dark: #1E0D38;
+  --purple-mid: #2D1B69;
+  --purple-accent: #8B2FFF;
+  --purple-vivid: #BB4FFF;
+  --purple-light: #D4A8FF;
+  --hot-pink: #FF2D78;
+  --electric-blue: #00C8FF;
+  --neon-gold: #FFE500;
+  --glass: rgba(255,255,255,0.04);
+  --glass-border: rgba(255,255,255,0.08);
+  --glow-mint: 0 0 24px rgba(0,229,168,0.45);
+  --glow-purple: 0 0 24px rgba(139,47,255,0.45);
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'Outfit', sans-serif;
+  --ease-bounce: cubic-bezier(0.34,1.56,0.64,1);
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-body);
+  background: var(--black);
+  color: var(--white);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+body::before {
+  content:'';
+  position:fixed;
+  top:0; left:0; right:0;
+  height:100vh;
+  background:
+    radial-gradient(ellipse 80% 40% at 20% 10%, rgba(139,47,255,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 30% at 80% 5%, rgba(0,229,168,0.05) 0%, transparent 50%);
+  pointer-events:none;
+  z-index:0;
+}
+
+/* ── Section labels ── */
+.section-label {
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.2);
+  padding: 2rem 2rem 0.5rem;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+.section-label:first-child { border-top: none; }
+
+/* ══════════════════════════════════════
+   NAV
+══════════════════════════════════════ */
+nav {
+  background: rgba(6,4,9,0.92);
+  backdrop-filter: blur(20px);
+  padding: 0.9rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  border-bottom: 1px solid rgba(0,229,168,0.1);
+  box-shadow: 0 4px 32px rgba(0,0,0,0.6);
+  position: relative;
+  z-index: 10;
+}
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--mint) 0%, var(--purple-vivid) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.04em;
+}
+.nav-links {
+  display: flex;
+  gap: 1.75rem;
+  flex: 1;
+}
+.nav-links a {
+  color: rgba(255,255,255,0.6);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 500;
+  position: relative;
+}
+.nav-links a.active { color: var(--mint); }
+.nav-links a.active::after {
+  content:'';
+  position:absolute;
+  bottom:-18px; left:0;
+  width:100%; height:2px;
+  background: linear-gradient(90deg, var(--mint), var(--purple-accent));
+  border-radius:2px;
+  box-shadow: 0 0 8px rgba(0,229,168,0.6);
+}
+.search-bar {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 50px;
+  padding: 0.42rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 220px;
+  color: rgba(255,255,255,0.4);
+  font-size: 0.82rem;
+  font-family: var(--font-body);
+}
+.nav-btn {
+  background: linear-gradient(135deg, var(--purple-accent), var(--mint));
+  color: var(--black);
+  border: none;
+  padding: 0.52rem 1.2rem;
+  border-radius: 50px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(139,47,255,0.35);
+  white-space: nowrap;
+}
+
+/* ══════════════════════════════════════
+   HERO
+══════════════════════════════════════ */
+.hero {
+  position: relative;
+  min-height: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+}
+.hero-bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 0%, rgba(139,47,255,0.35) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 80% 80%, rgba(0,229,168,0.15) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 30% at 10% 80%, rgba(255,45,120,0.1) 0%, transparent 50%),
+    #060409;
+  animation: aurora 12s ease-in-out infinite;
+}
+@keyframes aurora {
+  0%,100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 680px;
+  padding: 3rem 2rem;
+  animation: slideUp 0.7s ease both;
+}
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(24px); }
+  to { opacity:1; transform:translateY(0); }
+}
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(0,229,168,0.1);
+  border: 1px solid rgba(0,229,168,0.3);
+  color: var(--mint);
+  padding: 0.38rem 1.1rem;
+  border-radius: 50px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 1.75rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  box-shadow: 0 0 16px rgba(0,229,168,0.15);
+}
+.eyebrow-dot {
+  width: 6px; height: 6px;
+  background: var(--mint);
+  border-radius: 50%;
+  animation: blink 2s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: 4rem;
+  font-weight: 800;
+  line-height: 1.0;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, #fff 10%, var(--mint) 55%, var(--purple-vivid) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 1.25rem;
+}
+.hero p {
+  font-size: 1.1rem;
+  color: rgba(255,255,255,0.55);
+  margin-bottom: 2.25rem;
+  line-height: 1.65;
+}
+.hero-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, var(--mint), var(--purple-accent));
+  color: var(--black);
+  text-decoration: none;
+  padding: 0.9rem 2.4rem;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: 0.97rem;
+  font-family: var(--font-body);
+  box-shadow: 0 8px 30px rgba(0,229,168,0.3);
+  transition: all 0.3s var(--ease-bounce);
+  cursor: pointer;
+  border: none;
+}
+.hero-cta:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 16px 50px rgba(0,229,168,0.5), var(--glow-mint);
+}
+
+/* ══════════════════════════════════════
+   ROOM CARDS
+══════════════════════════════════════ */
+.cards-wrap {
+  padding: 2rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  position: relative;
+  z-index: 1;
+}
+.room-card {
+  background: linear-gradient(135deg, rgba(139,47,255,0.14) 0%, rgba(6,4,9,0.75) 50%, rgba(0,229,168,0.06) 100%);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 22px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.35s ease;
+  position: relative;
+  overflow: hidden;
+}
+.room-card::before {
+  content:'';
+  position:absolute; top:0; left:0; right:0;
+  height:2px;
+  background: linear-gradient(90deg, var(--mint), var(--purple-accent), var(--hot-pink));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s ease;
+}
+.room-card:hover::before { transform: scaleX(1); }
+.room-card:hover {
+  transform: translateY(-8px);
+  border-color: rgba(0,229,168,0.2);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,229,168,0.12);
+}
+.room-card.featured {
+  background: linear-gradient(135deg, rgba(0,229,168,0.12) 0%, rgba(139,47,255,0.15) 50%, rgba(6,4,9,0.7) 100%);
+  border-color: rgba(0,229,168,0.2);
+}
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  background: linear-gradient(135deg, #FF2D78, #FF6B35);
+  color: white;
+  padding: 0.3rem 0.75rem;
+  border-radius: 50px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 14px rgba(255,45,120,0.4);
+  margin-bottom: 1rem;
+}
+.live-dot-badge {
+  width: 5px; height: 5px;
+  background: white;
+  border-radius: 50%;
+  animation: blink 1.4s ease-in-out infinite;
+}
+.avatars {
+  display: flex;
+  margin-bottom: 1rem;
+}
+.av {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(0,229,168,0.25);
+  margin-right: -8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: white;
+  font-family: var(--font-display);
+}
+.av-1 { background: linear-gradient(135deg,#8B2FFF,#2D1B69); z-index:4; }
+.av-2 { background: linear-gradient(135deg,#FF2D78,#8B2FFF); z-index:3; }
+.av-3 { background: linear-gradient(135deg,#00E5A8,#00A87D); z-index:2; color: #060409; }
+.av-more {
+  background: rgba(255,255,255,0.1);
+  border: 2.5px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.7);
+  z-index:1;
+  font-size: 0.72rem;
+  margin-left: 10px;
+}
+.speaking-dot {
+  position: absolute;
+  bottom: -2px; right: -2px;
+  width: 11px; height: 11px;
+  background: var(--mint);
+  border-radius: 50%;
+  border: 2px solid #0D0118;
+  box-shadow: 0 0 6px rgba(0,229,168,0.7);
+  animation: blink 1.2s ease-in-out infinite;
+}
+.av-wrap { position: relative; }
+.room-genre {
+  font-size: 0.72rem;
+  color: var(--mint);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 0.4rem;
+  text-shadow: 0 0 8px rgba(0,229,168,0.35);
+}
+.room-title {
+  font-family: var(--font-display);
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.4rem;
+  line-height: 1.2;
+}
+.room-sub {
+  color: rgba(255,255,255,0.5);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin-bottom: 1rem;
+}
+.room-stats {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 0.28rem 0.65rem;
+  border-radius: 50px;
+}
+.pill i { color: var(--mint); font-size: 0.65rem; }
+.join-btn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--mint), var(--purple-accent));
+  color: var(--black);
+  border: none;
+  padding: 0.75rem;
+  border-radius: 50px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0,229,168,0.25);
+  transition: all 0.3s var(--ease-bounce);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+.join-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 35px rgba(0,229,168,0.45);
+}
+
+/* ══════════════════════════════════════
+   LYRICS SEARCH RESULTS
+══════════════════════════════════════ */
+.lyrics-grid {
+  padding: 2rem;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.1rem;
+  position: relative;
+  z-index: 1;
+}
+.lyric-card {
+  background: linear-gradient(135deg, rgba(139,47,255,0.1) 0%, rgba(6,4,9,0.8) 50%, rgba(0,229,168,0.06) 100%);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 18px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.35s ease;
+  display: flex;
+  flex-direction: column;
+}
+.lyric-card:hover {
+  transform: translateY(-8px);
+  border-color: rgba(0,229,168,0.25);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,229,168,0.15);
+}
+.lyric-art {
+  height: 140px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+}
+.lyric-art::after {
+  content:'';
+  position:absolute; inset:0;
+  background: linear-gradient(to top, rgba(6,4,9,0.8) 0%, transparent 50%);
+}
+.art-1 { background: linear-gradient(135deg, #1a0038, #8B2FFF, #00E5A8); }
+.art-2 { background: linear-gradient(135deg, #0a0020, #FF2D78, #8B2FFF); }
+.art-3 { background: linear-gradient(135deg, #001a0d, #00A87D, #2D1B69); }
+.art-4 { background: linear-gradient(135deg, #1a0a00, #FF6B35, #FF2D78); }
+.lyric-body { padding: 1rem; flex: 1; display: flex; flex-direction: column; }
+.lyric-artist {
+  color: var(--mint);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.25rem;
+  text-shadow: 0 0 8px rgba(0,229,168,0.3);
+}
+.lyric-title {
+  font-family: var(--font-display);
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.25rem;
+  line-height: 1.2;
+}
+.lyric-album {
+  color: rgba(255,255,255,0.38);
+  font-size: 0.75rem;
+  font-style: italic;
+  margin-bottom: 1rem;
+}
+.view-btn {
+  margin-top: auto;
+  background: linear-gradient(135deg, var(--mint), var(--purple-accent));
+  color: var(--black);
+  border: none;
+  padding: 0.6rem;
+  border-radius: 0 0 18px 18px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.78rem;
+  cursor: pointer;
+  width: 100%;
+  letter-spacing: 0.02em;
+  box-shadow: 0 -4px 16px rgba(0,229,168,0.12);
+}
+
+/* ══════════════════════════════════════
+   PRICING
+══════════════════════════════════════ */
+.pricing-wrap {
+  padding: 2rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  position: relative;
+  z-index: 1;
+}
+.price-card {
+  background: rgba(255,255,255,0.03);
+  border: 1.5px solid rgba(255,255,255,0.07);
+  border-radius: 22px;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+.price-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(0,229,168,0.2);
+  box-shadow: 0 16px 50px rgba(0,0,0,0.4), 0 0 40px rgba(0,229,168,0.04);
+}
+.price-card.featured-card {
+  border-color: rgba(0,229,168,0.3);
+  background: linear-gradient(to bottom, rgba(0,229,168,0.07) 0%, rgba(139,47,255,0.06) 100%);
+  box-shadow: 0 0 40px rgba(0,229,168,0.08), 0 0 0 1px rgba(0,229,168,0.2);
+}
+.popular-pill {
+  position: absolute;
+  top: -1px; right: 22px;
+  background: linear-gradient(135deg, var(--mint), #00A87D);
+  color: #060409;
+  padding: 0.22rem 0.9rem;
+  border-radius: 0 0 10px 10px;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(0,229,168,0.3);
+}
+.plan-name {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.25rem;
+  letter-spacing: -0.02em;
+}
+.plan-desc {
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 1.25rem;
+}
+.plan-price {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: var(--mint);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  text-shadow: 0 0 20px rgba(0,229,168,0.25);
+}
+.plan-price span {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.35);
+  font-weight: 400;
+}
+.price-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.06);
+  margin: 1.25rem 0;
+}
+.feature-list {
+  list-style: none;
+  flex: 1;
+  margin-bottom: 1.5rem;
+}
+.feature-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.38rem 0;
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.55);
+}
+.feature-list li i {
+  color: var(--mint);
+  font-size: 0.62rem;
+  filter: drop-shadow(0 0 3px rgba(0,229,168,0.5));
+  flex-shrink: 0;
+}
+.feature-list li.dim { color: rgba(255,255,255,0.25); }
+.feature-list li.dim i { color: rgba(255,255,255,0.15); filter: none; }
+.plan-cta {
+  width: 100%;
+  padding: 0.78rem;
+  border-radius: 14px;
+  border: none;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.3s var(--ease-bounce);
+}
+.cta-primary {
+  background: linear-gradient(135deg, var(--mint) 0%, #00A87D 100%);
+  color: #060409;
+  box-shadow: 0 6px 20px rgba(0,229,168,0.3);
+}
+.cta-primary:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 12px 35px rgba(0,229,168,0.5);
+}
+.cta-secondary {
+  background: rgba(139,47,255,0.12);
+  color: var(--purple-vivid);
+  border: 1.5px solid rgba(139,47,255,0.2);
+}
+.cta-secondary:hover {
+  background: rgba(139,47,255,0.22);
+  transform: translateY(-2px);
+}
+.cta-current {
+  background: rgba(0,229,168,0.08);
+  color: var(--mint);
+  border: 1.5px solid rgba(0,229,168,0.2);
+  opacity: 0.8;
+}
+
+/* ══════════════════════════════════════
+   TOURNAMENT HERO
+══════════════════════════════════════ */
+.tournament-hero {
+  margin: 2rem;
+  position: relative;
+  padding: 3rem 2.5rem;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(0,229,168,0.15);
+  box-shadow: 0 0 60px rgba(139,47,255,0.12), inset 0 1px 0 rgba(255,255,255,0.06);
+  z-index: 1;
+}
+.th-bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 15% 50%, rgba(139,47,255,0.3) 0%, transparent 50%),
+    radial-gradient(circle at 85% 30%, rgba(0,229,168,0.15) 0%, transparent 45%),
+    linear-gradient(145deg, #1E0D38 0%, #0A0115 60%, #0D1F1A 100%);
+}
+.th-shimmer {
+  position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(0,229,168,0.04) 50%, transparent 60%);
+  animation: shimmer 3s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.th-content { position: relative; z-index: 1; }
+.th-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(0,229,168,0.1);
+  border: 1px solid rgba(0,229,168,0.3);
+  color: var(--mint);
+  padding: 0.35rem 1rem;
+  border-radius: 50px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 0 16px rgba(0,229,168,0.12);
+}
+.th-badge-dot {
+  width: 5px; height: 5px;
+  background: var(--mint);
+  border-radius: 50%;
+  animation: blink 1.4s ease-in-out infinite;
+}
+.th-title {
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, #fff 20%, var(--mint) 60%, var(--purple-vivid) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.0;
+  margin-bottom: 0.6rem;
+}
+.th-sub {
+  color: rgba(255,255,255,0.55);
+  font-size: 1rem;
+  max-width: 520px;
+  line-height: 1.55;
+  margin-bottom: 1.75rem;
+}
+.th-meta {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+.th-meta span {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255,255,255,0.5);
+  font-size: 0.85rem;
+}
+.th-meta span i { color: var(--mint); font-size: 0.75rem; }
+.th-actions { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; }
+.btn-hot {
+  background: linear-gradient(135deg, var(--hot-pink), var(--purple-accent));
+  color: white;
+  border: none;
+  padding: 0.8rem 1.75rem;
+  border-radius: 50px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 6px 24px rgba(255,45,120,0.3);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.btn-ghost {
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.7);
+  border: 1.5px solid rgba(255,255,255,0.1);
+  padding: 0.8rem 1.4rem;
+  border-radius: 50px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* ══════════════════════════════════════
+   LEADERBOARD PREVIEW
+══════════════════════════════════════ */
+.lb-wrap {
+  margin: 0 2rem 2rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  position: relative;
+  z-index: 1;
+}
+.lb-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 18px;
+  overflow: hidden;
+}
+.lb-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.lb-header i { color: var(--mint); font-size: 0.85rem; }
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.2s;
+}
+.lb-row:hover { background: rgba(0,229,168,0.03); }
+.lb-rank {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.9rem;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.r1 { color: #FFE500; text-shadow: 0 0 12px rgba(255,229,0,0.5); }
+.r2 { color: #C0C0C0; }
+.r3 { color: #CD7F32; }
+.lb-av {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 2px solid rgba(0,229,168,0.2);
+  flex-shrink: 0;
+}
+.lb-name {
+  flex: 1;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+}
+.lb-votes {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--mint);
+  text-shadow: 0 0 8px rgba(0,229,168,0.3);
+}
+
+/* ══════════════════════════════════════
+   FEATURES STRIP
+══════════════════════════════════════ */
+.strip {
+  background: rgba(255,255,255,0.025);
+  border-top: 1px solid rgba(0,229,168,0.08);
+  border-bottom: 1px solid rgba(0,229,168,0.08);
+  padding: 1.25rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+}
+.strip-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.55);
+  white-space: nowrap;
+}
+.strip-item i { color: var(--mint); font-size: 0.85rem; filter: drop-shadow(0 0 4px rgba(0,229,168,0.5)); }
+.strip-sep { width:1px; height:16px; background: rgba(0,229,168,0.15); }
+
+/* ══════════════════════════════════════
+   FOOTER NOTE
+══════════════════════════════════════ */
+.footer-note {
+  text-align: center;
+  padding: 2rem;
+  color: rgba(255,255,255,0.2);
+  font-size: 0.78rem;
+  font-family: var(--font-body);
+  border-top: 1px solid rgba(255,255,255,0.05);
+  position: relative;
+  z-index: 1;
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <div class="nav-logo">wordeth</div>
+  <div class="nav-links">
+    <a href="#" class="active">Rooms</a>
+    <a href="#">Lyrics</a>
+    <a href="#">Merch</a>
+    <a href="#">Verses</a>
+    <a href="#">Articles</a>
+  </div>
+  <div class="search-bar">
+    <i class="fa fa-search" style="font-size:0.75rem;"></i>
+    Search songs, artists...
+  </div>
+  <button class="nav-btn">Sign In</button>
+</nav>
+
+<!-- ── HERO ── -->
+<div class="section-label">Homepage Hero</div>
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-content">
+    <div class="eyebrow">
+      <span class="eyebrow-dot"></span>
+      Music. Community. Culture.
+    </div>
+    <h1>Where music<br>lives out loud</h1>
+    <p>Search lyrics, vibe in live audio rooms, battle in verses tournaments, and wear the music you love.</p>
+    <button class="hero-cta">
+      <i class="fa fa-headphones"></i>
+      Explore Wordeth
+    </button>
+  </div>
+</section>
+
+<!-- ── FEATURES STRIP ── -->
+<div class="strip">
+  <div class="strip-item"><i class="fa fa-microphone"></i> Live audio rooms</div>
+  <div class="strip-sep"></div>
+  <div class="strip-item"><i class="fa fa-music"></i> 50M+ lyrics</div>
+  <div class="strip-sep"></div>
+  <div class="strip-item"><i class="fa fa-trophy"></i> Verses tournaments</div>
+  <div class="strip-sep"></div>
+  <div class="strip-item"><i class="fa fa-tshirt"></i> Custom merch</div>
+  <div class="strip-sep"></div>
+  <div class="strip-item"><i class="fa fa-users"></i> 200K+ fans</div>
+</div>
+
+<!-- ── AUDIO ROOMS ── -->
+<div class="section-label">Audio Rooms — Verses Page</div>
+<div class="cards-wrap">
+
+  <!-- Card 1 — Featured Live -->
+  <div class="room-card featured">
+    <div class="live-badge"><span class="live-dot-badge"></span> Live Now</div>
+    <div class="avatars">
+      <div class="av-wrap"><div class="av av-1">J</div><div class="speaking-dot"></div></div>
+      <div class="av av-2">K</div>
+      <div class="av av-3">A</div>
+      <div class="av av-more">+8</div>
+    </div>
+    <div class="room-genre"><i class="fa fa-fire"></i> Hip Hop</div>
+    <div class="room-title">Kendrick vs Drake — Who Really Won?</div>
+    <div class="room-sub">Breaking down every diss track line by line. No cap, no bias.</div>
+    <div class="room-stats">
+      <div class="pill"><i class="fa fa-users"></i> 11 listening</div>
+      <div class="pill"><i class="fa fa-clock"></i> 42 min</div>
+    </div>
+    <button class="join-btn"><i class="fa fa-headphones"></i> Join Room</button>
+  </div>
+
+  <!-- Card 2 -->
+  <div class="room-card">
+    <div class="avatars">
+      <div class="av av-3" style="background:linear-gradient(135deg,#BB4FFF,#8B2FFF);">M</div>
+      <div class="av av-1" style="background:linear-gradient(135deg,#FF6B35,#FF2D78);">T</div>
+      <div class="av-more">+3</div>
+    </div>
+    <div class="room-genre"><i class="fa fa-star"></i> R&B / Soul</div>
+    <div class="room-title">SZA SOS Deep Dive</div>
+    <div class="room-sub">Track by track analysis — what's the hidden meaning in ctrl?</div>
+    <div class="room-stats">
+      <div class="pill"><i class="fa fa-users"></i> 5 listening</div>
+      <div class="pill"><i class="fa fa-clock"></i> 18 min</div>
+    </div>
+    <button class="join-btn"><i class="fa fa-headphones"></i> Join Room</button>
+  </div>
+
+  <!-- Card 3 -->
+  <div class="room-card">
+    <div class="avatars">
+      <div class="av av-2" style="background:linear-gradient(135deg,#00E5A8,#2D1B69);">D</div>
+      <div class="av av-1">R</div>
+      <div class="av-more">+12</div>
+    </div>
+    <div class="room-genre"><i class="fa fa-bolt"></i> Rap Battle</div>
+    <div class="room-title">Open Freestyle Friday</div>
+    <div class="room-sub">Step up if you got bars. Host picks the beat, you bring the heat.</div>
+    <div class="room-stats">
+      <div class="pill"><i class="fa fa-users"></i> 14 listening</div>
+      <div class="pill"><i class="fa fa-microphone"></i> Open mic</div>
+    </div>
+    <button class="join-btn"><i class="fa fa-headphones"></i> Join Room</button>
+  </div>
+
+</div>
+
+<!-- ── LYRICS RESULTS ── -->
+<div class="section-label">Lyrics Search Results</div>
+<div class="lyrics-grid">
+
+  <div class="lyric-card">
+    <div class="lyric-art art-1">🎤</div>
+    <div class="lyric-body">
+      <div class="lyric-artist">Kendrick Lamar</div>
+      <div class="lyric-title">Not Like Us</div>
+      <div class="lyric-album">GNX — 2024</div>
+    </div>
+    <button class="view-btn">View Lyrics →</button>
+  </div>
+
+  <div class="lyric-card">
+    <div class="lyric-art art-2">💜</div>
+    <div class="lyric-body">
+      <div class="lyric-artist">SZA</div>
+      <div class="lyric-title">Kill Bill</div>
+      <div class="lyric-album">SOS — 2022</div>
+    </div>
+    <button class="view-btn">View Lyrics →</button>
+  </div>
+
+  <div class="lyric-card">
+    <div class="lyric-art art-3">🌿</div>
+    <div class="lyric-body">
+      <div class="lyric-artist">J. Cole</div>
+      <div class="lyric-title">Love Yourz</div>
+      <div class="lyric-album">2014 FHD</div>
+    </div>
+    <button class="view-btn">View Lyrics →</button>
+  </div>
+
+  <div class="lyric-card">
+    <div class="lyric-art art-4">🔥</div>
+    <div class="lyric-body">
+      <div class="lyric-artist">Drake</div>
+      <div class="lyric-title">God's Plan</div>
+      <div class="lyric-album">Scorpion — 2018</div>
+    </div>
+    <button class="view-btn">View Lyrics →</button>
+  </div>
+
+</div>
+
+<!-- ── TOURNAMENT HERO ── -->
+<div class="section-label">Verses Tournament Page</div>
+<div class="tournament-hero">
+  <div class="th-bg"></div>
+  <div class="th-shimmer"></div>
+  <div class="th-content">
+    <div class="th-badge"><span class="th-badge-dot"></span> Season 3 — Active Now</div>
+    <div class="th-title">Verses Championship</div>
+    <div class="th-sub">Submit your best bars, earn votes from the community, climb the leaderboard. The hottest lyricists compete for recognition and rewards.</div>
+    <div class="th-actions">
+      <button class="btn-hot"><i class="fa fa-pen"></i> Submit Your Verse</button>
+      <button class="btn-ghost"><i class="fa fa-trophy"></i> View Leaderboard</button>
+    </div>
+    <div class="th-meta">
+      <span><i class="fa fa-users"></i> 847 participants</span>
+      <span><i class="fa fa-vote-yea"></i> 12,440 votes cast</span>
+      <span><i class="fa fa-clock"></i> 6 days remaining</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── LEADERBOARD ── -->
+<div class="lb-wrap">
+  <div class="lb-card">
+    <div class="lb-header"><i class="fa fa-trophy"></i> Top Verses This Round</div>
+    <div class="lb-row">
+      <div class="lb-rank r1">1</div>
+      <div class="lb-av" style="background:linear-gradient(135deg,#8B2FFF,#2D1B69);">A</div>
+      <div class="lb-name">@ayyy_bars</div>
+      <div class="lb-votes">2,841 votes</div>
+    </div>
+    <div class="lb-row">
+      <div class="lb-rank r2">2</div>
+      <div class="lb-av" style="background:linear-gradient(135deg,#FF2D78,#8B2FFF);">K</div>
+      <div class="lb-name">@kayo_writes</div>
+      <div class="lb-votes">2,299 votes</div>
+    </div>
+    <div class="lb-row">
+      <div class="lb-rank r3">3</div>
+      <div class="lb-av" style="background:linear-gradient(135deg,#00E5A8,#2D1B69);">M</div>
+      <div class="lb-name">@mikebarz</div>
+      <div class="lb-votes">1,988 votes</div>
+    </div>
+    <div class="lb-row">
+      <div class="lb-rank" style="color:rgba(255,255,255,0.3)">4</div>
+      <div class="lb-av" style="background:linear-gradient(135deg,#FF6B35,#FF2D78);">J</div>
+      <div class="lb-name">@just_rhymes</div>
+      <div class="lb-votes">1,451 votes</div>
+    </div>
+  </div>
+
+  <div class="lb-card">
+    <div class="lb-header"><i class="fa fa-calendar"></i> Active Rounds</div>
+    <div class="lb-row" style="cursor:pointer;">
+      <div class="lb-av" style="background:linear-gradient(135deg,#00E5A8,#00A87D);color:#060409;font-size:0.7rem;font-weight:800;border-color:rgba(0,229,168,0.4);">R4</div>
+      <div style="flex:1">
+        <div style="font-size:0.88rem;font-weight:600;color:rgba(255,255,255,0.85);">Finals — Best of Summer</div>
+        <div style="font-size:0.75rem;color:rgba(255,255,255,0.38);margin-top:2px;">Closes in 6 days</div>
+      </div>
+      <div style="color:var(--mint);font-size:0.78rem;font-weight:700;">LIVE</div>
+    </div>
+    <div class="lb-row" style="cursor:pointer;">
+      <div class="lb-av" style="background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);font-size:0.7rem;font-weight:800;">R3</div>
+      <div style="flex:1">
+        <div style="font-size:0.88rem;font-weight:600;color:rgba(255,255,255,0.85);">Semifinals</div>
+        <div style="font-size:0.75rem;color:rgba(255,255,255,0.38);margin-top:2px;">Ended 3 days ago</div>
+      </div>
+      <div style="color:rgba(255,255,255,0.3);font-size:0.78rem;">ENDED</div>
+    </div>
+    <div class="lb-row" style="cursor:pointer;">
+      <div class="lb-av" style="background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);font-size:0.7rem;font-weight:800;">R2</div>
+      <div style="flex:1">
+        <div style="font-size:0.88rem;font-weight:600;color:rgba(255,255,255,0.85);">Quarterfinals</div>
+        <div style="font-size:0.75rem;color:rgba(255,255,255,0.38);margin-top:2px;">Ended 10 days ago</div>
+      </div>
+      <div style="color:rgba(255,255,255,0.3);font-size:0.78rem;">ENDED</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PRICING ── -->
+<div class="section-label">Pricing Page — Fan Tier</div>
+<div class="pricing-wrap">
+
+  <!-- Free -->
+  <div class="price-card">
+    <div class="plan-name">Free</div>
+    <div class="plan-desc">Basic access to Wordeth</div>
+    <div class="plan-price">$0<span> /mo</span></div>
+    <div class="price-divider"></div>
+    <ul class="feature-list">
+      <li><i class="fa fa-check"></i> Lyric search (with ads)</li>
+      <li><i class="fa fa-check"></i> Limited audio rooms</li>
+      <li><i class="fa fa-check"></i> Browse merch packs</li>
+      <li class="dim"><i class="fa fa-times"></i> Save designs</li>
+      <li class="dim"><i class="fa fa-times"></i> Paid designer packs</li>
+    </ul>
+    <button class="plan-cta cta-secondary">Get Started Free</button>
+  </div>
+
+  <!-- Fan+ — Featured -->
+  <div class="price-card featured-card">
+    <div class="popular-pill">Popular</div>
+    <div class="plan-name">Fan+</div>
+    <div class="plan-desc">Enhanced fan experience</div>
+    <div class="plan-price">$3.99<span> /mo</span></div>
+    <div class="price-divider"></div>
+    <ul class="feature-list">
+      <li><i class="fa fa-check"></i> Reduced ads</li>
+      <li><i class="fa fa-check"></i> Save designs</li>
+      <li><i class="fa fa-check"></i> Basic customization</li>
+      <li><i class="fa fa-check"></i> Design history</li>
+      <li class="dim"><i class="fa fa-times"></i> Paid packs</li>
+    </ul>
+    <button class="plan-cta cta-primary">Upgrade to Fan+</button>
+  </div>
+
+  <!-- Creator -->
+  <div class="price-card">
+    <div class="plan-name">Creator</div>
+    <div class="plan-desc">Full creative toolkit</div>
+    <div class="plan-price">$7.99<span> /mo</span></div>
+    <div class="price-divider"></div>
+    <ul class="feature-list">
+      <li><i class="fa fa-check"></i> No ads ever</li>
+      <li><i class="fa fa-check"></i> Full design tools</li>
+      <li><i class="fa fa-check"></i> 5GB storage</li>
+      <li><i class="fa fa-check"></i> Paid designer packs</li>
+      <li><i class="fa fa-check"></i> Priority audio rooms</li>
+    </ul>
+    <button class="plan-cta cta-secondary">Go Creator</button>
+  </div>
+
+</div>
+
+<div class="footer-note">
+  Wordeth Design System v2 — Syne + Outfit · Electric Mint #00E5A8 · Deep Violet #8B2FFF
+</div>
+
+</body>
+</html>
