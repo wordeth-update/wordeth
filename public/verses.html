@@ -407,358 +407,357 @@
             </div>
             <img id="shared-image-display" src="" alt="Shared image">
         </div>
-
-        <!-- Music Share Modal -->
-        <div class="modal" id="music-share-modal">
-            <div class="modal-content" style="max-width:450px;">
-                <div class="modal-header">
-                    <h3><i class="fas fa-music"></i> Play Music for Room</h3>
-                    <button class="close-modal">&times;</button>
-                </div>
-                <div class="music-share-body">
-                    <p style="color:var(--text-secondary);margin-bottom:15px;">Pick a song from your device. It plays locally and streams live to the room — no uploading needed.</p>
-                    <div class="music-upload-area" id="music-pick-area">
-                        <i class="fas fa-headphones" style="font-size:2.5rem;color:var(--purple);margin-bottom:10px;"></i>
-                        <p>Drag & drop an audio file here</p>
-                        <span style="color:var(--text-secondary);font-size:0.85rem;">or click to browse</span>
-                        <span style="color:var(--text-secondary);font-size:0.75rem;margin-top:5px;">MP3, WAV, M4A, AAC, OGG, FLAC</span>
-                        <input type="file" id="music-file-input" accept=".mp3,.wav,.m4a,.aac,.ogg,.flac,.wma,.opus" style="display:none;">
-                    </div>
-                    <div class="music-upload-details hidden" id="music-file-details">
-                        <div class="music-file-info">
-                            <i class="fas fa-file-audio" style="font-size:1.5rem;color:var(--purple);"></i>
-                            <div class="music-file-meta">
-                                <span class="music-file-name" id="music-file-name"></span>
-                                <span class="music-file-size" id="music-file-size"></span>
-                            </div>
-                        </div>
-                        <div class="form-group" style="margin-top:12px;">
-                            <label for="music-song-title">Song Title</label>
-                            <input type="text" id="music-song-title" placeholder="Enter song title">
-                        </div>
-                        <div class="form-group">
-                            <label for="music-artist-name">Artist</label>
-                            <input type="text" id="music-artist-name" placeholder="Enter artist name">
-                        </div>
-                        <button class="btn-primary" id="music-share-submit" style="width:100%;margin-top:10px;">
-                            <i class="fas fa-play"></i> Play for Room
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Shared Audio Player Overlay -->
-        <div class="shared-audio-overlay hidden" id="shared-audio-overlay">
-            <div class="shared-audio-content">
-                <button class="shared-audio-close" id="shared-audio-close"><i class="fas fa-times"></i></button>
-                <div class="shared-audio-art">
-                    <i class="fas fa-music"></i>
-                </div>
-                <div class="shared-audio-info">
-                    <h3 id="shared-audio-title">Untitled Track</h3>
-                    <p id="shared-audio-artist">Unknown Artist</p>
-                    <p id="shared-audio-sharer" style="color:var(--text-secondary);font-size:0.8rem;"></p>
-                </div>
-                <div class="shared-audio-controls">
-                    <div class="audio-progress-container" id="audio-progress-container">
-                        <span id="audio-current-time">0:00</span>
-                        <div class="audio-progress-bar" id="audio-progress-bar">
-                            <div class="audio-progress-fill" id="audio-progress-fill"></div>
-                        </div>
-                        <span id="audio-total-time">0:00</span>
-                    </div>
-                    <div class="audio-playback-controls">
-                        <button class="audio-control-btn" id="audio-rewind-btn"><i class="fas fa-backward"></i></button>
-                        <button class="audio-control-btn play-btn" id="audio-play-btn"><i class="fas fa-play"></i></button>
-                        <button class="audio-control-btn" id="audio-forward-btn"><i class="fas fa-forward"></i></button>
-                        <input type="range" class="audio-volume" id="audio-volume" min="0" max="1" step="0.05" value="0.8">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Room Creation Modal -->
-        <div class="modal" id="create-room-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Create New Room</h3>
-                    <button class="close-modal">&times;</button>
-                </div>
-                <form id="create-room-form">
-                    <div class="form-group">
-                        <label for="room-name-input">Room Name</label>
-                        <input type="text" id="room-name-input" name="room-name-input" placeholder="Enter room name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="room-genre">Genre</label>
-                        <select id="room-genre" name="room-genre" required>
-                            <option value="">Select genre</option>
-                            <option value="hip-hop">Hip-Hop</option>
-                            <option value="rock">Rock</option>
-                            <option value="pop">Pop</option>
-                            <option value="jazz">Jazz</option>
-                            <option value="electronic">Electronic</option>
-                            <option value="r&b">R&B</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="initial-song">Starting Song (Optional)</label>
-                        <input type="text" id="initial-song" name="initial-song" placeholder="Song title by Artist">
-                    </div>
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="private-room" name="private-room">
-                            Make room private (friends only)
-                        </label>
-                    </div>
-                    <div class="modal-actions">
-                        <button type="button" class="cancel-btn">Cancel</button>
-                        <button type="submit" class="create-btn">Create Room</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Enhanced Add Users Modal with Phone Number Support -->
-        <div class="modal" id="add-users-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Add Users to Room</h3>
-                    <button class="close-modal">&times;</button>
-                </div>
-                <div class="user-search">
-                    <input type="text" id="user-search-input" placeholder="Search for users by name...">
-                    <button id="search-users">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </div>
-                <div class="search-results" id="search-results">
-                    <!-- Search results will appear here -->
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="cancel-btn close-modal">Close</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Replay Modal -->
-        <div class="modal" id="replay-modal">
-            <div class="modal-content replay-content">
-                <div class="modal-header">
-                    <h3>Room Replays</h3>
-                    <button class="close-modal">&times;</button>
-                </div>
-                <div class="replay-list">
-                    <!-- Replay items will be populated here -->
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="cancel-btn close-modal">Close</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Topic Edit Modal -->
-        <div class="modal" id="topic-edit-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Edit Topic</h3>
-                    <button class="close-modal">&times;</button>
-                </div>
-                <form id="topic-edit-form">
-                    <div class="form-group">
-                        <label for="topic-input">Discussion Topic</label>
-                        <input type="text" id="topic-input" placeholder="What song are you discussing?" required>
-                    </div>
-                    <div class="modal-actions">
-                        <button type="button" class="cancel-btn close-modal">Cancel</button>
-                        <button type="submit" class="create-btn">Update Topic</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Audio Filters Modal -->
-        <div class="modal" id="audio-filters-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3><i class="fas fa-magic"></i> Voice Effects</h3>
-                    <button class="close-modal">&times;</button>
-                </div>
-                <p class="modal-subtitle">Transform your voice with fun audio effects!</p>
-                <div class="audio-filters-grid">
-                    <button class="filter-option active" data-filter="normal">
-                        <div class="filter-icon"><i class="fas fa-user"></i></div>
-                        <span class="filter-name">Normal</span>
-                        <span class="filter-desc">Your natural voice</span>
-                    </button>
-                    <button class="filter-option" data-filter="helium">
-                        <div class="filter-icon"><i class="fas fa-wind"></i></div>
-                        <span class="filter-name">Helium</span>
-                        <span class="filter-desc">High-pitched & squeaky</span>
-                    </button>
-                    <button class="filter-option" data-filter="alien">
-                        <div class="filter-icon"><i class="fas fa-robot"></i></div>
-                        <span class="filter-name">Alien</span>
-                        <span class="filter-desc">Robotic & otherworldly</span>
-                    </button>
-                    <button class="filter-option" data-filter="deep">
-                        <div class="filter-icon"><i class="fas fa-mountain"></i></div>
-                        <span class="filter-name">Deep</span>
-                        <span class="filter-desc">Low & powerful</span>
-                    </button>
-                    <button class="filter-option" data-filter="echo">
-                        <div class="filter-icon"><i class="fas fa-wave-square"></i></div>
-                        <span class="filter-name">Echo</span>
-                        <span class="filter-desc">Reverberating sound</span>
-                    </button>
-                    <button class="filter-option" data-filter="radio">
-                        <div class="filter-icon"><i class="fas fa-broadcast-tower"></i></div>
-                        <span class="filter-name">Radio</span>
-                        <span class="filter-desc">Old-school broadcast</span>
-                    </button>
-                </div>
-                <div class="current-filter-display">
-                    <span>Active Effect:</span>
-                    <span id="current-filter-name" class="filter-badge">Normal</span>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="cancel-btn close-modal">Close</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Karaoke Modal -->
-        <div class="modal karaoke-modal" id="karaoke-modal">
-            <div class="modal-content karaoke-content">
-                <div class="modal-header">
-                    <h3><i class="fas fa-compact-disc spinning"></i> Karaoke Mode</h3>
-                    <button class="close-modal">&times;</button>
-                </div>
-                <div class="karaoke-search">
-                    <input type="text" id="karaoke-search-input" placeholder="Search for a song...">
-                    <button id="karaoke-search-btn">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </div>
-                <div class="karaoke-results" id="karaoke-results">
-                    <p class="karaoke-hint">Search for a song to start your karaoke performance!</p>
-                </div>
-                <div class="karaoke-player hidden" id="karaoke-player">
-                    <div class="karaoke-now-playing">
-                        <img src="" alt="Album art" id="karaoke-album-art">
-                        <div class="karaoke-song-info">
-                            <h4 id="karaoke-song-title">Song Title</h4>
-                            <p id="karaoke-song-artist">Artist Name</p>
-                        </div>
-                    </div>
-                    
-                    <!-- Karaoke Video Camera Section -->
-                    <div class="karaoke-video-section">
-                        <div class="karaoke-video-container" id="karaoke-video-container">
-                            <video id="karaoke-video" autoplay playsinline muted></video>
-                            <div class="video-placeholder" id="video-placeholder">
-                                <i class="fas fa-video-slash"></i>
-                                <span>Camera off</span>
-                            </div>
-                        </div>
-                        <div class="karaoke-video-controls">
-                            <button class="video-control-btn" id="karaoke-camera-toggle" title="Toggle camera">
-                                <i class="fas fa-video"></i>
-                            </button>
-                            <div class="video-filter-selector">
-                                <button class="video-filter-btn active" data-filter="none" title="No filter">
-                                    <i class="fas fa-ban"></i>
-                                </button>
-                                <button class="video-filter-btn" data-filter="hue-rotate" title="Psychedelic">
-                                    <i class="fas fa-palette"></i>
-                                </button>
-                            </div>
-                            <div class="ar-filter-selector">
-                                <span class="ar-filter-label">AR</span>
-                                <button class="ar-filter-btn" data-ar-filter="ar-hiphop" title="Hip Hop">
-                                    <i class="fas fa-glasses"></i>
-                                </button>
-                                <button class="ar-filter-btn" data-ar-filter="ar-rock" title="Rock">
-                                    <i class="fas fa-skull"></i>
-                                </button>
-                                <button class="ar-filter-btn" data-ar-filter="ar-pop" title="Pop">
-                                    <i class="fas fa-star"></i>
-                                </button>
-                                <button class="ar-filter-btn" data-ar-filter="ar-edm" title="EDM">
-                                    <i class="fas fa-bolt"></i>
-                                </button>
-                                <button class="ar-filter-btn" data-ar-filter="ar-jazz" title="Jazz">
-                                    <i class="fas fa-mask"></i>
-                                </button>
-                                <button class="ar-filter-btn" data-ar-filter="ar-skimask" title="Ski Mask">
-                                    <i class="fas fa-head-side-mask"></i>
-                                </button>
-                            </div>
-                            
-                        </div>
-                    </div>
-                    
-                    <!-- YouTube Embed Section -->
-                    <div class="karaoke-audio-container">
-                        <div class="yt-embed-input-row" id="yt-embed-input-row">
-                            <input type="text" id="yt-url-input" placeholder="Paste a YouTube link here...">
-                            <button id="yt-embed-btn" title="Load video">
-                                <i class="fab fa-youtube"></i>
-                            </button>
-                        </div>
-                        <div class="yt-embed-wrapper" id="yt-embed-wrapper" style="display:none;">
-                            <div id="yt-player-container"></div>
-                            <button class="yt-embed-close" id="yt-embed-close" title="Close video">&times;</button>
-                        </div>
-                        <div class="audio-status" id="audio-status">
-                            <i class="fas fa-music"></i> <span>Search a song or paste a YouTube link</span>
-                        </div>
-                    </div>
-                    <div class="karaoke-lyrics-container" id="karaoke-lyrics-container">
-                        <div class="lyrics-scroll" id="lyrics-scroll">
-                            <!-- Lyrics will be loaded here -->
-                        </div>
-                    </div>
-                    <div class="karaoke-controls">
-                        <button class="karaoke-control-btn" id="karaoke-restart" title="Restart">
-                            <i class="fas fa-redo"></i>
-                        </button>
-                        <button class="karaoke-control-btn" id="karaoke-slower" title="Slower">
-                            <i class="fas fa-minus"></i>
-                        </button>
-                        <button class="karaoke-control-btn primary" id="karaoke-play-pause">
-                            <i class="fas fa-play"></i>
-                        </button>
-                        <button class="karaoke-control-btn" id="karaoke-faster" title="Faster">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                        <button class="karaoke-control-btn" id="karaoke-stop" title="Stop">
-                            <i class="fas fa-stop"></i>
-                        </button>
-                        <button class="karaoke-control-btn" id="karaoke-new-song" title="Try another song">
-                            <i class="fas fa-random"></i>
-                        </button>
-                        <button class="karaoke-control-btn record-btn" id="karaoke-record-btn" title="Record Performance">
-                            <i class="fas fa-circle"></i>
-                            <span class="recording-timer" id="recording-timer" style="display:none;"></span>
-                        </button>
-                    </div>
-                    <div class="karaoke-speed-display" id="karaoke-speed-display">
-                        Speed: <span id="speed-value">1.0x</span>
-                        <div class="mic-energy-bar" id="mic-energy-bar">
-                            <div class="mic-energy-fill" id="mic-energy-indicator"></div>
-                        </div>
-                    </div>
-                    <div class="karaoke-progress">
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="karaoke-progress-fill"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </main>
+
+    <!-- Modals (outside audio-room so they render when room is hidden) -->
+
+    <!-- Music Share Modal -->
+    <div class="modal" id="music-share-modal">
+        <div class="modal-content" style="max-width:450px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-music"></i> Play Music for Room</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="music-share-body">
+                <p style="color:var(--text-secondary);margin-bottom:15px;">Pick a song from your device. It plays locally and streams live to the room — no uploading needed.</p>
+                <div class="music-upload-area" id="music-pick-area">
+                    <i class="fas fa-headphones" style="font-size:2.5rem;color:var(--purple);margin-bottom:10px;"></i>
+                    <p>Drag & drop an audio file here</p>
+                    <span style="color:var(--text-secondary);font-size:0.85rem;">or click to browse</span>
+                    <span style="color:var(--text-secondary);font-size:0.75rem;margin-top:5px;">MP3, WAV, M4A, AAC, OGG, FLAC</span>
+                    <input type="file" id="music-file-input" accept=".mp3,.wav,.m4a,.aac,.ogg,.flac,.wma,.opus" style="display:none;">
+                </div>
+                <div class="music-upload-details hidden" id="music-file-details">
+                    <div class="music-file-info">
+                        <i class="fas fa-file-audio" style="font-size:1.5rem;color:var(--purple);"></i>
+                        <div class="music-file-meta">
+                            <span class="music-file-name" id="music-file-name"></span>
+                            <span class="music-file-size" id="music-file-size"></span>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top:12px;">
+                        <label for="music-song-title">Song Title</label>
+                        <input type="text" id="music-song-title" placeholder="Enter song title">
+                    </div>
+                    <div class="form-group">
+                        <label for="music-artist-name">Artist</label>
+                        <input type="text" id="music-artist-name" placeholder="Enter artist name">
+                    </div>
+                    <button class="btn-primary" id="music-share-submit" style="width:100%;margin-top:10px;">
+                        <i class="fas fa-play"></i> Play for Room
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shared Audio Player Overlay -->
+    <div class="shared-audio-overlay hidden" id="shared-audio-overlay">
+        <div class="shared-audio-content">
+            <button class="shared-audio-close" id="shared-audio-close"><i class="fas fa-times"></i></button>
+            <div class="shared-audio-art">
+                <i class="fas fa-music"></i>
+            </div>
+            <div class="shared-audio-info">
+                <h3 id="shared-audio-title">Untitled Track</h3>
+                <p id="shared-audio-artist">Unknown Artist</p>
+                <p id="shared-audio-sharer" style="color:var(--text-secondary);font-size:0.8rem;"></p>
+            </div>
+            <div class="shared-audio-controls">
+                <div class="audio-progress-container" id="audio-progress-container">
+                    <span id="audio-current-time">0:00</span>
+                    <div class="audio-progress-bar" id="audio-progress-bar">
+                        <div class="audio-progress-fill" id="audio-progress-fill"></div>
+                    </div>
+                    <span id="audio-total-time">0:00</span>
+                </div>
+                <div class="audio-playback-controls">
+                    <button class="audio-control-btn" id="audio-rewind-btn"><i class="fas fa-backward"></i></button>
+                    <button class="audio-control-btn play-btn" id="audio-play-btn"><i class="fas fa-play"></i></button>
+                    <button class="audio-control-btn" id="audio-forward-btn"><i class="fas fa-forward"></i></button>
+                    <input type="range" class="audio-volume" id="audio-volume" min="0" max="1" step="0.05" value="0.8">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Room Creation Modal -->
+    <div class="modal" id="create-room-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Room</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="create-room-form">
+                <div class="form-group">
+                    <label for="room-name-input">Room Name</label>
+                    <input type="text" id="room-name-input" name="room-name-input" placeholder="Enter room name" required>
+                </div>
+                <div class="form-group">
+                    <label for="room-genre">Genre</label>
+                    <select id="room-genre" name="room-genre" required>
+                        <option value="">Select genre</option>
+                        <option value="hip-hop">Hip-Hop</option>
+                        <option value="rock">Rock</option>
+                        <option value="pop">Pop</option>
+                        <option value="jazz">Jazz</option>
+                        <option value="electronic">Electronic</option>
+                        <option value="r&b">R&B</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="initial-song">Starting Song (Optional)</label>
+                    <input type="text" id="initial-song" name="initial-song" placeholder="Song title by Artist">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="private-room" name="private-room">
+                        Make room private (friends only)
+                    </label>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn">Cancel</button>
+                    <button type="submit" class="create-btn">Create Room</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Enhanced Add Users Modal with Phone Number Support -->
+    <div class="modal" id="add-users-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Users to Room</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="user-search">
+                <input type="text" id="user-search-input" placeholder="Search for users by name...">
+                <button id="search-users">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <div class="search-results" id="search-results">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="cancel-btn close-modal">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Replay Modal -->
+    <div class="modal" id="replay-modal">
+        <div class="modal-content replay-content">
+            <div class="modal-header">
+                <h3>Room Replays</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="replay-list">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="cancel-btn close-modal">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Topic Edit Modal -->
+    <div class="modal" id="topic-edit-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Topic</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="topic-edit-form">
+                <div class="form-group">
+                    <label for="topic-input">Discussion Topic</label>
+                    <input type="text" id="topic-input" placeholder="What song are you discussing?" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn close-modal">Cancel</button>
+                    <button type="submit" class="create-btn">Update Topic</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Audio Filters Modal -->
+    <div class="modal" id="audio-filters-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-magic"></i> Voice Effects</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <p class="modal-subtitle">Transform your voice with fun audio effects!</p>
+            <div class="audio-filters-grid">
+                <button class="filter-option active" data-filter="normal">
+                    <div class="filter-icon"><i class="fas fa-user"></i></div>
+                    <span class="filter-name">Normal</span>
+                    <span class="filter-desc">Your natural voice</span>
+                </button>
+                <button class="filter-option" data-filter="helium">
+                    <div class="filter-icon"><i class="fas fa-wind"></i></div>
+                    <span class="filter-name">Helium</span>
+                    <span class="filter-desc">High-pitched & squeaky</span>
+                </button>
+                <button class="filter-option" data-filter="alien">
+                    <div class="filter-icon"><i class="fas fa-robot"></i></div>
+                    <span class="filter-name">Alien</span>
+                    <span class="filter-desc">Robotic & otherworldly</span>
+                </button>
+                <button class="filter-option" data-filter="deep">
+                    <div class="filter-icon"><i class="fas fa-mountain"></i></div>
+                    <span class="filter-name">Deep</span>
+                    <span class="filter-desc">Low & powerful</span>
+                </button>
+                <button class="filter-option" data-filter="echo">
+                    <div class="filter-icon"><i class="fas fa-wave-square"></i></div>
+                    <span class="filter-name">Echo</span>
+                    <span class="filter-desc">Reverberating sound</span>
+                </button>
+                <button class="filter-option" data-filter="radio">
+                    <div class="filter-icon"><i class="fas fa-broadcast-tower"></i></div>
+                    <span class="filter-name">Radio</span>
+                    <span class="filter-desc">Old-school broadcast</span>
+                </button>
+            </div>
+            <div class="current-filter-display">
+                <span>Active Effect:</span>
+                <span id="current-filter-name" class="filter-badge">Normal</span>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="cancel-btn close-modal">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Karaoke Modal -->
+    <div class="modal karaoke-modal" id="karaoke-modal">
+        <div class="modal-content karaoke-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-compact-disc spinning"></i> Karaoke Mode</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="karaoke-search">
+                <input type="text" id="karaoke-search-input" placeholder="Search for a song...">
+                <button id="karaoke-search-btn">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <div class="karaoke-results" id="karaoke-results">
+                <p class="karaoke-hint">Search for a song to start your karaoke performance!</p>
+            </div>
+            <div class="karaoke-player hidden" id="karaoke-player">
+                <div class="karaoke-now-playing">
+                    <img src="" alt="Album art" id="karaoke-album-art">
+                    <div class="karaoke-song-info">
+                        <h4 id="karaoke-song-title">Song Title</h4>
+                        <p id="karaoke-song-artist">Artist Name</p>
+                    </div>
+                </div>
+                
+                <!-- Karaoke Video Camera Section -->
+                <div class="karaoke-video-section">
+                    <div class="karaoke-video-container" id="karaoke-video-container">
+                        <video id="karaoke-video" autoplay playsinline muted></video>
+                        <div class="video-placeholder" id="video-placeholder">
+                            <i class="fas fa-video-slash"></i>
+                            <span>Camera off</span>
+                        </div>
+                    </div>
+                    <div class="karaoke-video-controls">
+                        <button class="video-control-btn" id="karaoke-camera-toggle" title="Toggle camera">
+                            <i class="fas fa-video"></i>
+                        </button>
+                        <div class="video-filter-selector">
+                            <button class="video-filter-btn active" data-filter="none" title="No filter">
+                                <i class="fas fa-ban"></i>
+                            </button>
+                            <button class="video-filter-btn" data-filter="hue-rotate" title="Psychedelic">
+                                <i class="fas fa-palette"></i>
+                            </button>
+                        </div>
+                        <div class="ar-filter-selector">
+                            <span class="ar-filter-label">AR</span>
+                            <button class="ar-filter-btn" data-ar-filter="ar-hiphop" title="Hip Hop">
+                                <i class="fas fa-glasses"></i>
+                            </button>
+                            <button class="ar-filter-btn" data-ar-filter="ar-rock" title="Rock">
+                                <i class="fas fa-skull"></i>
+                            </button>
+                            <button class="ar-filter-btn" data-ar-filter="ar-pop" title="Pop">
+                                <i class="fas fa-star"></i>
+                            </button>
+                            <button class="ar-filter-btn" data-ar-filter="ar-edm" title="EDM">
+                                <i class="fas fa-bolt"></i>
+                            </button>
+                            <button class="ar-filter-btn" data-ar-filter="ar-jazz" title="Jazz">
+                                <i class="fas fa-mask"></i>
+                            </button>
+                            <button class="ar-filter-btn" data-ar-filter="ar-skimask" title="Ski Mask">
+                                <i class="fas fa-head-side-mask"></i>
+                            </button>
+                        </div>
+                        
+                    </div>
+                </div>
+                
+                <!-- YouTube Embed Section -->
+                <div class="karaoke-audio-container">
+                    <div class="yt-embed-input-row" id="yt-embed-input-row">
+                        <input type="text" id="yt-url-input" placeholder="Paste a YouTube link here...">
+                        <button id="yt-embed-btn" title="Load video">
+                            <i class="fab fa-youtube"></i>
+                        </button>
+                    </div>
+                    <div class="yt-embed-wrapper" id="yt-embed-wrapper" style="display:none;">
+                        <div id="yt-player-container"></div>
+                        <button class="yt-embed-close" id="yt-embed-close" title="Close video">&times;</button>
+                    </div>
+                    <div class="audio-status" id="audio-status">
+                        <i class="fas fa-music"></i> <span>Search a song or paste a YouTube link</span>
+                    </div>
+                </div>
+                <div class="karaoke-lyrics-container" id="karaoke-lyrics-container">
+                    <div class="lyrics-scroll" id="lyrics-scroll">
+                    </div>
+                </div>
+                <div class="karaoke-controls">
+                    <button class="karaoke-control-btn" id="karaoke-restart" title="Restart">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                    <button class="karaoke-control-btn" id="karaoke-slower" title="Slower">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <button class="karaoke-control-btn primary" id="karaoke-play-pause">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <button class="karaoke-control-btn" id="karaoke-faster" title="Faster">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <button class="karaoke-control-btn" id="karaoke-stop" title="Stop">
+                        <i class="fas fa-stop"></i>
+                    </button>
+                    <button class="karaoke-control-btn" id="karaoke-new-song" title="Try another song">
+                        <i class="fas fa-random"></i>
+                    </button>
+                    <button class="karaoke-control-btn record-btn" id="karaoke-record-btn" title="Record Performance">
+                        <i class="fas fa-circle"></i>
+                        <span class="recording-timer" id="recording-timer" style="display:none;"></span>
+                    </button>
+                </div>
+                <div class="karaoke-speed-display" id="karaoke-speed-display">
+                    Speed: <span id="speed-value">1.0x</span>
+                    <div class="mic-energy-bar" id="mic-energy-bar">
+                        <div class="mic-energy-fill" id="mic-energy-indicator"></div>
+                    </div>
+                </div>
+                <div class="karaoke-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="karaoke-progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="user-profile-modal" id="user-profile-modal" style="display:none;">
         <div class="user-profile-modal-content">
