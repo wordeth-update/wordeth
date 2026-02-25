@@ -10,7 +10,7 @@ const rateLimit = require('express-rate-limit');
 const fs = require('fs');
 const crypto = require('crypto');
 const puppeteer = require('puppeteer');
-const { setupSignaling, getActiveRooms, setShuttingDown, joinRoomHTTP } = require('./routes/signaling');
+const { setupSignaling, getActiveRooms, setShuttingDown, joinRoomHTTP, waitForRoomsReady } = require('./routes/signaling');
 
 const BUILD_ID = Date.now().toString(36);
 console.log(`Build ID: ${BUILD_ID}`);
@@ -255,6 +255,7 @@ app.get('/api/rooms/active', async (req, res) => {
     res.setHeader('CDN-Cache-Control', 'no-store');
     res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
     res.setHeader('Pragma', 'no-cache');
+    await waitForRoomsReady();
     let rooms = getActiveRooms();
     if (rooms.length === 0) {
         try {

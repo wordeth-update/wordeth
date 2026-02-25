@@ -49,8 +49,23 @@ async function initRooms() {
     getClient();
     const restored = await loadAllRooms();
     if (restored.size > 0) {
+        const now = Date.now();
+        const MAX_EMPTY_AGE = 60 * 60 * 1000;
+        for (const [roomId, room] of restored.entries()) {
+            room.participants = new Map();
+            room.activeVideos = new Set();
+            room.hostId = null;
+            const age = now - (room.lastActivity || room.createdAt || now);
+            if (age > MAX_EMPTY_AGE) {
+                restored.delete(roomId);
+                deleteRoom(roomId);
+                console.log(`[Signaling] Pruned stale room ${roomId} (inactive ${Math.round(age / 60000)} min)`);
+                continue;
+            }
+            scheduleRoomDeletion(roomId, 'restored-empty');
+        }
         rooms = restored;
-        console.log(`[Signaling] ${restored.size} room(s) restored from Redis`);
+        console.log(`[Signaling] ${restored.size} room(s) restored from Redis (participants cleared, deletion timers set)`);
     }
 }
 
@@ -62,6 +77,7 @@ function setupSignaling(io) {
             console.error('[Signaling] Room restore failed:', err.message);
             roomsReady = true;
         });
+    setRoomsReadyPromise(roomsReadyPromise);
 
     setInterval(() => {
         if (rooms.size === 0) return;
@@ -860,7 +876,16 @@ function setShuttingDown() {
     console.log('[Signaling] Shutdown flag set — rooms will be preserved in Redis');
 }
 
+let _roomsReadyPromise = null;
+
+function setRoomsReadyPromise(p) { _roomsReadyPromise = p; }
+
+async function waitForRoomsReady() {
+    if (_roomsReadyPromise) await _roomsReadyPromise;
+}
+
 async function joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar }) {
+    await waitForRoomsReady();
     if (!roomId) return { success: false, message: 'Missing roomId' };
 
     console.log(`[HTTP Join] Looking for room ${roomId} — in-memory: ${rooms.has(roomId)}, total rooms: ${rooms.size}`);
@@ -932,4 +957,4 @@ function getRoomsMap() {
     return rooms;
 }
 
-module.exports = { setupSignaling, getActiveRooms, setShuttingDown, joinRoomHTTP, getRoomsMap };
+module.exports = { setupSignaling, getActiveRooms, setShuttingDown, joinRoomHTTP, getRoomsMap, waitForRoomsReady };
