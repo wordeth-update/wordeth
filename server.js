@@ -12,6 +12,9 @@ const crypto = require('crypto');
 const puppeteer = require('puppeteer');
 const { setupSignaling, getActiveRooms, setShuttingDown, joinRoomHTTP } = require('./routes/signaling');
 
+const BUILD_ID = Date.now().toString(36);
+console.log(`Build ID: ${BUILD_ID}`);
+
 let ogLogoBase64 = '';
 let ogBrowser = null;
 let ogBrowserLaunching = null;
@@ -159,7 +162,24 @@ app.use('/api', (req, res, next) => {
     next();
 });
 
-// Serve static files with cache control (Cloudflare-compatible)
+app.use((req, res, next) => {
+    const ext = path.extname(req.path);
+    if (ext === '.html' || req.path === '/' || !ext) {
+        const filePath = path.join(__dirname, req.path === '/' ? 'index.html' : req.path);
+        if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+            let html = fs.readFileSync(filePath, 'utf8');
+            html = html.replace(/(\.(js|css))\?v=\d+/g, `$1?v=${BUILD_ID}`);
+            res.setHeader('Content-Type', 'text/html');
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('CDN-Cache-Control', 'no-store');
+            res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
+            res.setHeader('Pragma', 'no-cache');
+            return res.send(html);
+        }
+    }
+    next();
+});
+
 app.use(express.static(path.join(__dirname), {
     setHeaders: (res, filePath) => {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
