@@ -48,15 +48,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const mobileAuthSection = document.querySelector('.mobile-menu-auth');
         if (mobileAuthSection) {
-            mobileAuthSection.innerHTML = `
-                <a href="/profile.html" class="mobile-signin-btn mobile-profile-link">
-                    <i class="fas fa-user"></i>
-                    <span>My Profile</span>
-                </a>
-                <a href="/subscription.html" class="mobile-sub-link" style="display:block;text-align:center;padding:0.5rem;color:rgba(255,255,255,0.6);text-decoration:none;font-size:0.9rem;">My Plan</a>
-                <a href="#" class="mobile-signout-link" style="display:block;text-align:center;padding:0.5rem;color:rgba(255,255,255,0.4);text-decoration:none;font-size:0.85rem;">Sign Out</a>
-            `;
-            mobileAuthSection.querySelector('.mobile-signout-link').addEventListener('click', handleSignOut);
+            mobileAuthSection.replaceChildren();
+            const profileLink = document.createElement('a');
+            profileLink.href = '/profile.html';
+            profileLink.className = 'mobile-signin-btn mobile-profile-link';
+            const profileIcon = document.createElement('i');
+            profileIcon.className = 'fas fa-user';
+            const profileSpan = document.createElement('span');
+            profileSpan.textContent = 'My Profile';
+            profileLink.append(profileIcon, profileSpan);
+
+            const subLink = document.createElement('a');
+            subLink.href = '/subscription.html';
+            subLink.className = 'mobile-sub-link';
+            subLink.textContent = 'My Plan';
+
+            const signoutLink = document.createElement('a');
+            signoutLink.href = '#';
+            signoutLink.className = 'mobile-signout-link';
+            signoutLink.textContent = 'Sign Out';
+            signoutLink.addEventListener('click', handleSignOut);
+
+            mobileAuthSection.append(profileLink, subLink, signoutLink);
         }
     }
 
