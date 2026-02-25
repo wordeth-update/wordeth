@@ -531,6 +531,9 @@ class AudioRoomsManager {
         // Action buttons
         this.addUsersBtn?.addEventListener('click', () => this.showAddUsersModal());
         this.replayBtn?.addEventListener('click', () => this.showReplayModal());
+        document.getElementById('room-guide-btn')?.addEventListener('click', () => {
+            window.open('verses-guide.html', '_blank');
+        });
         
         document.getElementById('share-room-btn')?.addEventListener('click', () => this.shareRoom());
         document.getElementById('share-room-mobile-btn')?.addEventListener('click', () => this.shareRoom());

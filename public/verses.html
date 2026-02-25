@@ -110,7 +110,7 @@
                         </div>
                     </div>
                     <div class="hero-actions">
-                        <button class="create-room-btn" id="create-room" onclick="if(window.audioRoomsManager){window.audioRoomsManager.showCreateRoomModal()}else{document.getElementById('create-room-modal')?.classList.add('active')}">
+                        <button class="create-room-btn" id="create-room">
                             <i class="fas fa-plus"></i>
                             Create New Room
                         </button>
@@ -245,7 +245,7 @@
                         <i class="fas fa-history"></i>
                         Replay
                     </button>
-                    <button class="action-btn room-guide-link" title="Learn how Verses rooms work" onclick="window.open('verses-guide.html', '_blank'); return false;">
+                    <button class="action-btn room-guide-link" title="Learn how Verses rooms work" id="room-guide-btn">
                         <i class="fas fa-question-circle"></i>
                         Guide
                     </button>
