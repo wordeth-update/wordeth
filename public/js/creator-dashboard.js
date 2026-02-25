@@ -69,7 +69,7 @@ function renderDashboard(data) {
 
     const avatarEl = document.getElementById('creatorAvatar');
     if (profile.avatar && !profile.avatar.includes('default-avatar')) {
-        avatarEl.innerHTML = `<img src="${profile.avatar}" alt="Avatar">`;
+        avatarEl.innerHTML = `<img src="${escapeHtml(profile.avatar)}" alt="Avatar">`;
     } else {
         avatarEl.textContent = (profile.displayName || 'W').charAt(0).toUpperCase();
     }

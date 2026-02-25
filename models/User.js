@@ -127,17 +127,30 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
     return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Get public profile
 userSchema.methods.getPublicProfile = function() {
-    const userObject = this.toObject();
-    delete userObject.password;
-    delete userObject.socialId;
-    delete userObject.email;
-    delete userObject.searchHistory;
-    delete userObject.entitlementOverrides;
-    delete userObject.subscriptionId;
-    delete userObject.__v;
-    return userObject;
+    return {
+        _id: this._id,
+        name: this.name,
+        email: this.email,
+        bio: this.bio || '',
+        avatar: this.avatar || '',
+        accountType: this.accountType || 'fan',
+        role: this.role,
+        createdAt: this.createdAt,
+        creatorProfile: this.creatorProfile ? {
+            displayName: this.creatorProfile.displayName,
+            handle: this.creatorProfile.handle,
+            genres: this.creatorProfile.genres,
+            socialLinks: this.creatorProfile.socialLinks
+        } : null
+    };
+};
+
+userSchema.methods.getSensitiveProfile = function() {
+    const obj = this.toObject();
+    delete obj.password;
+    delete obj.__v;
+    return obj;
 };
 
 module.exports = mongoose.model('User', userSchema); 

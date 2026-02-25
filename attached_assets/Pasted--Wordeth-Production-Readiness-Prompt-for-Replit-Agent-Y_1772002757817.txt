@@ -1,0 +1,1062 @@
+# Wordeth — Production Readiness Prompt for Replit Agent
+
+You are working on the **Wordeth** codebase — a music lyrics platform with audio rooms, tournaments, merch, advertising, and multi-tier subscriptions. The stack is Node.js/Express, MongoDB, vanilla HTML/CSS/JS, Socket.IO, Agora WebRTC, and Puppeteer for OG images.
+
+Your job is to work through every issue below **methodically, in order, one at a time**. After completing each section, confirm what was changed and run the test steps provided. Do not skip ahead. Do not batch unrelated fixes together. Each section is a discrete unit of work.
+
+---
+
+## PHASE 1 — CRITICAL SECURITY (Do These First, Nothing Else)
+
+### 1.1 — Fix Static File Serving Exposing Server Source Code
+
+**File:** `server.js`
+
+**Problem:** `express.static` is currently pointed at `__dirname` (the project root). This means any visitor can request `https://wordeth.com/server.js`, `/routes/auth.js`, `/models/User.js`, or `.env` over HTTP.
+
+**Fix:**
+1. Create a `public/` directory at the project root.
+2. Move all HTML files, the `js/` folder, `css/` folder, `assets/` folder, and `images/` folder into `public/`.
+3. Change the static middleware from:
+   ```js
+   app.use(express.static(__dirname))
+   ```
+   to:
+   ```js
+   app.use(express.static(path.join(__dirname, 'public')))
+   ```
+4. There are TWO `express.static` registrations in `server.js` — one early and one inside a production block around line 739. Remove the early one. Keep only the production block one (updated to `public/`).
+5. Update `build-mobile.js` in `scripts/` — change the source paths so it copies from `public/` instead of the root when building the mobile `www/` folder.
+
+**Test:**
+- Start the server. Try to fetch `http://localhost:3000/server.js` — should return 404.
+- Try `http://localhost:3000/routes/auth.js` — should return 404.
+- Try `http://localhost:3000/index.html` — should load the homepage normally.
+- Try `http://localhost:3000/js/main.js` — should serve the file normally.
+
+---
+
+### 1.2 — Tighten CORS to Specific Origins
+
+**File:** `server.js`
+
+**Problem:** `app.use(cors({ origin: true, credentials: true }))` allows any website to make credentialed cross-origin requests to your API. This is a CSRF vector.
+
+**Fix:**
+```js
+const allowedOrigins = [
+    'https://wordeth.com',
+    'https://www.wordeth.com',
+    process.env.CLIENT_URL,
+    process.env.CORS_ORIGIN
+].filter(Boolean);
+
+app.use(cors({
+    origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, server-to-server)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+            return callback(null, true);
+        }
+        return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true
+}));
+```
+
+**Test:**
+- In development, all origins should work (NODE_ENV=development).
+- Verify that the `CLIENT_URL` env var is set to the correct domain in `.env`.
+
+---
+
+### 1.3 — Add Role to JWT Payload
+
+**File:** `routes/auth.js` and `routes/creator.js`
+
+**Problem:** JWTs are signed with only `{ userId }`. Multiple places in the codebase check `decoded.role` from the token. This means admin-only endpoints (`/api/user/admin/flush`, `/api/analytics/admin/*`) are permanently broken for the main user auth system. Any `authenticateAdmin` check on `decoded.role !== 'admin'` will always block access.
+
+**Fix — routes/auth.js:**
+Change both JWT sign calls (signup and signin) from:
+```js
+const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { ... })
+```
+to:
+```js
+const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { ... })
+```
+
+**Fix — routes/creator.js:**
+Same change — the registration endpoint also signs a JWT. Update it to include `role`.
+
+**Fix — middleware/auth.js:**
+Add explicit check that the token is a user token (not an advertiser or partner token):
+```js
+const decoded = jwt.verify(token, process.env.JWT_SECRET);
+if (!decoded.userId) {
+    throw new Error('Invalid token type');
+}
+```
+
+**Test:**
+- Sign up a new user — decode the returned token and confirm `role` field is present.
+- Sign in as existing user — confirm `role` is in the token.
+- Admin endpoints should now be reachable using a user token with `role: 'ADMIN'`.
+
+---
+
+### 1.4 — Add Strict Rate Limiting to Auth Endpoints
+
+**File:** `server.js` or wherever rate limiting is configured.
+
+**Problem:** The global rate limiter (100 req / 15 min) is not strict enough to prevent brute-forcing passwords on `/api/auth/signin`.
+
+**Fix:** Install `express-rate-limit` if not already present. Add a strict limiter specifically for auth:
+```js
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10,
+    message: { message: 'Too many attempts. Please try again in 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: true // Only count failures
+});
+
+app.use('/api/auth/signin', authLimiter);
+app.use('/api/auth/signup', authLimiter);
+```
+
+**Test:**
+- Make 11 POST requests to `/api/auth/signin` with wrong credentials. The 11th should return 429.
+- A successful login should not count toward the limit (`skipSuccessfulRequests: true`).
+
+---
+
+### 1.5 — Add Agora Token Authentication
+
+**File:** `routes/agora.js`
+
+**Problem:** `POST /api/agora/token` has no authentication. Anyone on the internet can generate valid Agora tokens for any channel name, giving them access to private audio rooms.
+
+**Fix:**
+1. Import the `auth` middleware at the top of `routes/agora.js`.
+2. Add `auth` to the `/token` route:
+   ```js
+   router.post('/token', auth, (req, res) => { ... })
+   ```
+3. Remove or gate the `/test` endpoint behind admin auth — it exposes that your Agora credentials are valid:
+   ```js
+   router.get('/test', auth, requireRole('ADMIN'), (req, res) => { ... })
+   ```
+   Or remove it entirely.
+
+**Test:**
+- `POST /api/agora/token` without a token in the Authorization header should return 401.
+- `POST /api/agora/token` with a valid user JWT should return a token.
+
+---
+
+### 1.6 — Fix XSS in innerHTML Throughout Frontend
+
+**Files:** `js/tournament-admin.js`, `js/partner-dashboard.js`, and any other frontend file using `.innerHTML` with data from the API.
+
+**Problem:** Season names, artist names, city names from the database are injected directly into `.innerHTML`. An admin creating a season named `<script>alert(1)</script>` executes that script in the admin panel.
+
+**Fix:** Add a shared escape function to a utility file (e.g., `js/utils.js` or inline at the top of affected files):
+```js
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+```
+
+Then replace every instance of direct injection like:
+```js
+element.innerHTML = `<div>${data.seasonName}</div>`
+```
+with:
+```js
+element.innerHTML = `<div>${escapeHtml(data.seasonName)}</div>`
+```
+
+Audit **every `.innerHTML` assignment** in `tournament-admin.js` and `partner-dashboard.js` for all user-supplied strings including: season name, round name, artist name, submission title, city, country, company name, ad title.
+
+**Test:**
+- In the admin panel, create a season with name `<img src=x onerror=alert(1)>`. Navigate to the seasons list. The browser should display the literal tag text, not execute the script.
+
+---
+
+### 1.7 — Fix RegEx Injection (ReDoS Vulnerability)
+
+**Files:** `routes/auth.js`, `routes/creator.js`, `routes/user.js`
+
+**Problem:** Name uniqueness checks build MongoDB regex queries by directly inserting user input:
+```js
+User.findOne({ name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } })
+```
+A user registering with `name = '(.*)+@(.*)+@(.*)+@(.*)'` can cause catastrophic backtracking.
+
+**Fix:** Escape the name before inserting it into the regex. Add this helper:
+```js
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+```
+Then use it in all four locations where this pattern appears:
+```js
+User.findOne({ name: { $regex: new RegExp(`^${escapeRegex(name.trim())}$`, 'i') } })
+```
+
+Locations to fix:
+- `routes/auth.js` — signup
+- `routes/creator.js` — creator register
+- `routes/user.js` — `/check-name` and `/profile` PUT
+
+**Test:**
+- Attempt to register with a name containing regex special characters like `(test.*)+`. It should either work as a literal name match or fail gracefully, not hang.
+
+---
+
+## PHASE 2 — ACTIVE BUGS (Things That Are Broken Right Now)
+
+### 2.1 — Fix localStorage Token Key Inconsistency
+
+**Problem:** The main auth stores the token as `authToken` but most feature pages look for `token`. Users who register or sign in cannot access creator dashboard, tournament pages, pricing, or partner flows because the wrong key is checked.
+
+**Audit every JS file for localStorage token access.** The definitive list from the codebase:
+- `js/auth.js` — stores as `authToken` ✓ (this is the source of truth)
+- `js/creator-dashboard.js` — reads `token` ✗ WRONG
+- `js/tournament-round.js` — reads `token` ✗ WRONG
+- `js/tournament-admin.js` — reads `token` ✗ WRONG
+- `js/pricing.js` — reads `token || authToken` (partial fix)
+- `js/subscription.js` — reads `token || authToken` (partial fix)
+
+**Fix:** Standardize everything to `authToken`. Find every `localStorage.getItem('token')` and `localStorage.setItem('token', ...)` across all JS files and change them to `authToken`. Do NOT change `localStorage.getItem('authToken')` calls — those are already correct.
+
+After changing, also update the Authorization header construction:
+```js
+// OLD - wrong in some files
+headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+// NEW - correct everywhere
+headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+```
+
+**Test:**
+- Register a new account.
+- Navigate directly to `/creator-dashboard.html` — should load the dashboard, not redirect to registration.
+- Navigate to `/pricing.html` — should show the user's current plan, not the logged-out state.
+- Navigate to a tournament round page — should load without auth errors.
+
+---
+
+### 2.2 — Fix Cookie Consent Key Mismatch
+
+**Files:** `js/advertising.js`, `js/cookie-consent.js`, `js/wordeth-ads-sdk.js`
+
+**Problem:** Three different keys and formats are used for the same consent flag. Ads are tracked regardless of user consent, which is a GDPR/CCPA violation.
+
+**Audit the current state:**
+- `js/cookie-consent.js` — stores: `localStorage.setItem('wordeth_cookie_consent', JSON.stringify({...}))`
+- `js/advertising.js` — reads: `localStorage.getItem('cookie_consent')` ← WRONG key
+- `js/wordeth-ads-sdk.js` — reads: `localStorage.getItem('wordeth_cookie_consent') === 'true'` ← wrong comparison (it's JSON, not a string)
+
+**Fix:**
+1. In `js/advertising.js`, change the consent check to use `window.WordethConsent.hasConsented()` if that method is available, or read `wordeth_cookie_consent` and parse the JSON.
+2. In `js/wordeth-ads-sdk.js`, fix the comparison:
+   ```js
+   // WRONG
+   localStorage.getItem('wordeth_cookie_consent') === 'true'
+   // RIGHT
+   (() => {
+       try {
+           const consent = JSON.parse(localStorage.getItem('wordeth_cookie_consent') || '{}');
+           return consent.analytics === true || consent.all === true;
+       } catch { return false; }
+   })()
+   ```
+3. In `js/advertising.js`, wrap `storeAdInteraction` and any tracking calls in a consent check:
+   ```js
+   if (!this.hasConsent()) return;
+   ```
+
+**Test:**
+- Clear localStorage. Load a page with ads. The cookie consent banner should appear.
+- Decline cookies. Verify that ad impression/click tracking calls are NOT made (check Network tab).
+- Accept cookies. Verify that tracking calls ARE made.
+
+---
+
+### 2.3 — Fix SPA Router Logic Inversion
+
+**File:** `js/spa-router.js`
+
+**Problem:** The router logic is inverted. It currently intercepts links only when the user IS in a room, doing nothing (returning early) when NOT in a room — causing full page reloads during normal navigation.
+
+**Find the code that looks like:**
+```js
+if (!this._isUserInRoom()) {
+    return; // currently exits without navigating
+}
+e.preventDefault();
+this.navigate(path);
+```
+
+**Fix — invert the logic:**
+```js
+e.preventDefault();
+if (this._isUserInRoom()) {
+    // Special handling when in room — warn user before leaving
+    this._confirmLeaveRoom(() => this.navigate(path));
+} else {
+    this.navigate(path);
+}
+```
+If there is no `_confirmLeaveRoom` method, add a simple confirmation:
+```js
+if (this._isUserInRoom()) {
+    if (!confirm('Leaving this page will disconnect you from the audio room. Continue?')) {
+        return;
+    }
+}
+e.preventDefault();
+this.navigate(path);
+```
+
+**Test:**
+- While NOT in an audio room, click navigation links — pages should load without full page reload (no flash/scroll-to-top between navigations).
+- While IN an audio room, clicking a link should show a warning/confirmation before leaving.
+
+---
+
+### 2.4 — Fix Subscription `isActive` Method vs Property
+
+**Files:** `routes/subscriptions.js`, `routes/creator.js`, `js/subscription.js`
+
+**Problem:** The `Subscription` model has `isActive()` as an **instance method**, not a plain property. The backend already correctly calls `subscription.isActive()` in the routes (good), and returns `isActive: subscription.isActive()` as a plain boolean in the JSON response. The bug is on the frontend: `js/subscription.js` may be checking `subscription.isActive` as if it were a property.
+
+**Audit `js/subscription.js`:**
+Find any code that accesses `subscription.isActive` without parentheses and change it to check the boolean the API returns:
+```js
+// The API now returns isActive as a boolean in the payload
+// Check it as a property on the parsed response object
+if (data.subscription && data.subscription.isActive === true) {
+    // show active subscription UI
+}
+```
+Do NOT call `.isActive()` on the frontend — the method doesn't exist on a plain JSON object. Only the server-side Mongoose document has that method.
+
+**Test:**
+- Navigate to the subscription/pricing page as a user with an active subscription.
+- The page should show their current plan details, not the "no subscription" state.
+
+---
+
+### 2.5 — Fix Tournament Winner Crown Comparison
+
+**File:** `js/tournament-round.js`
+
+**Problem:** Winner crown detection never works because ObjectId comparison is done without `.toString()`:
+```js
+m.winnerSubmissionId === m.submissionA?._id  // always false — objects never strictly equal
+```
+
+**Fix:** Find this comparison and add `.toString()` on both sides:
+```js
+m.winnerSubmissionId?.toString() === m.submissionA?._id?.toString()
+```
+Apply the same fix anywhere else submission IDs are compared with `===`.
+
+**Test:**
+- Open a completed tournament match where a winner has been declared.
+- The winner's entry should display a crown/winner indicator.
+
+---
+
+### 2.6 — Fix Pricing Page Yearly Display Bug
+
+**File:** `js/pricing.js`
+
+**Problem:** The billing cycle label has a copy-paste error:
+```js
+`/${billingCycle === 'yearly' ? 'mo' : 'mo'}`
+```
+Both branches say `/mo`. Yearly billing should show something different.
+
+**Fix:**
+```js
+`/${billingCycle === 'yearly' ? 'yr' : 'mo'}`
+```
+Or if monthly price is already divided by 12 when yearly is selected, show `/mo (billed annually)` for the yearly case. Check the surrounding pricing display logic and make it consistent.
+
+**Test:**
+- Toggle the yearly/monthly switch on the pricing page. The period label should change between `/mo` and `/yr`.
+
+---
+
+### 2.7 — Fix `authenticateAdmin` in user.js Using Wrong Token System
+
+**File:** `routes/user.js`
+
+**Problem:** The `authenticateAdmin` function in `user.js` is a local copy that checks `decoded.role !== 'admin'`. This conflicts with the main user system's role values (`'ADMIN'` uppercase). After fix 1.3 adds `role` to the JWT, the check needs to match the correct role value.
+
+**Fix:** The local `authenticateAdmin` function should be replaced entirely with the shared `auth` middleware plus `requireRole('ADMIN')` from `middleware/rbac.js`:
+```js
+// Remove the local authenticateAdmin function entirely
+// Change:
+router.post('/admin/flush', authenticateAdmin, async (req, res) => {
+// To:
+router.post('/admin/flush', auth, requireRole('ADMIN'), async (req, res) => {
+```
+Add the missing imports at the top:
+```js
+const { requireRole } = require('../middleware/rbac');
+```
+
+Apply the same pattern in `routes/analytics.js` — remove the duplicated `authenticateAdmin` function there too and replace with `auth, requireRole('ADMIN')`.
+
+**Test:**
+- Attempt to call `POST /api/user/admin/flush` with a regular user JWT — should return 403.
+- Attempt with a JWT that has `role: 'ADMIN'` — should work.
+
+---
+
+### 2.8 — Fix `module.parent` Deprecation
+
+**File:** `server.js`
+
+**Problem:** `module.parent` was removed in Node.js 14+. If it's used to conditionally start the server (common pattern for testing), this will silently break.
+
+**Fix:** Find `module.parent` in `server.js` and replace with:
+```js
+// OLD
+if (!module.parent) { app.listen(...) }
+// NEW
+if (require.main === module) { app.listen(...) }
+```
+
+**Test:**
+- Server starts without deprecation warnings.
+- `require('./server')` from a test file should not start the HTTP server.
+
+---
+
+### 2.9 — Fix Analytics `/track` Missing Segments
+
+**File:** `routes/analytics.js`
+
+**Problem:** The allowed segments array is `['lyrics', 'community', 'merch', 'auth', 'general']`. Any tracking event sent with segment `verses` or `tournament` is rejected with a 400 error. These two segments are the core of the product.
+
+**Fix:** Add missing segments to both the route and the `UsageEvent` model:
+
+In `routes/analytics.js`:
+```js
+const allowedSegments = ['lyrics', 'community', 'merch', 'auth', 'general', 'verses', 'tournament'];
+```
+
+In `models/UsageEvent.js`, find the `segment` field enum and add `'verses'` and `'tournament'` to it.
+
+**Test:**
+- POST to `/api/analytics/track` with `{ eventType: 'room_join', segment: 'verses', consentGiven: true }` — should return `{ success: true }`.
+- POST with segment `'tournament'` — same.
+
+---
+
+### 2.10 — Fix `MerchSale` Missing `payoutRate` Field in Seed and Creator Route
+
+**Files:** `routes/creator.js`, `scripts/seedPartnerData.js`
+
+**Problem:** The `recordSale` service computes `payoutAmount` server-side (good), but check that `seedPartnerData.js` correctly populates `payoutRate` on each sale document — currently it sets `revenueShare` (as a dollar amount) but may not set `payoutRate` (as the rate used). Verify the MerchSale model has a `payoutRate` field and that seeded data populates it.
+
+**Fix:** In `seedPartnerData.js`, add `payoutRate: label.revenueShare` to each sale object generated. This ensures the payout rate is stored alongside the computed amount for auditability.
+
+**Test:**
+- Run `node scripts/seedPartnerData.js` against a dev database.
+- Query a MerchSale document — it should have `payoutRate`, `payoutAmount`, `platformFeeAmount`, and `totalAmount` all populated.
+
+---
+
+### 2.11 — Fix Notification Socket Accumulation
+
+**File:** `js/notifications.js`
+
+**Problem:** A new socket connection is created every time a non-verses page loads with no cleanup. After browsing several pages, there are multiple dead socket connections accumulating.
+
+**Fix:** Store the socket instance as a module-level variable and only create it once. Disconnect on page unload:
+```js
+let notifSocket = null;
+
+function initNotifications() {
+    if (notifSocket && notifSocket.connected) return; // already connected
+    notifSocket = io('/notifications', { ... });
+    // ... setup event handlers
+}
+
+window.addEventListener('beforeunload', () => {
+    if (notifSocket) notifSocket.disconnect();
+});
+```
+
+**Test:**
+- Navigate between 5 pages in the SPA.
+- In the browser devtools Network tab, there should be only 1 WebSocket connection to the notifications namespace, not 5.
+
+---
+
+## PHASE 3 — PERFORMANCE ISSUES
+
+### 3.1 — Move Avatars from MongoDB to Object Storage
+
+**Files:** `routes/user.js`
+
+**Problem:** User avatars are stored as base64 data URLs inside MongoDB documents. A 5MB image becomes ~6.7MB of text stored in the database. Every query that touches the user document loads this. This is the single biggest performance issue in the app.
+
+**Fix:**
+1. Add the Replit Object Storage client (already used in `routes/partner.js`):
+   ```js
+   const { Client } = require('@replit/object-storage');
+   const storage = new Client();
+   ```
+
+2. In the `POST /avatar` handler, instead of converting to base64 and storing in `req.user.avatar`:
+   ```js
+   const objectPath = `avatars/${req.user._id}/${Date.now()}.${extension}`;
+   await storage.uploadFromBytes(objectPath, req.file.buffer);
+   const avatarUrl = await storage.getSignedDownloadUrl(objectPath);
+   req.user.avatar = avatarUrl; // Store the URL, not the base64
+   await req.user.save();
+   res.json({ avatarUrl });
+   ```
+
+3. When deleting an account (`DELETE /account`), also delete the avatar from object storage if a path is stored.
+
+**Migration note:** Existing users with base64 avatars will still work — their `avatar` field just contains a data URL which browsers can render. New uploads will use object storage. No migration script needed for the existing data, though one can be written separately.
+
+**Test:**
+- Upload a 2MB avatar image. Check the user document in MongoDB — `avatar` field should be a URL starting with `https://`, not `data:image`.
+- The avatar should display correctly in the UI.
+- User document size should be under 10KB.
+
+---
+
+### 3.2 — Cap Search History Array
+
+**File:** `routes/user.js` — `POST /history` handler
+
+**Problem:** Search history is never trimmed. Power users can accumulate thousands of entries bloating the user document.
+
+**Fix:** After `unshift`-ing the new entry, slice to 100:
+```js
+req.user.searchHistory.unshift({ songTitle, artist, timestamp: new Date() });
+req.user.searchHistory = req.user.searchHistory.slice(0, 100);
+await req.user.save();
+```
+
+Also add validation to the POST body:
+```js
+const { songTitle, artist } = req.body;
+if (!songTitle || typeof songTitle !== 'string' || songTitle.length > 200) {
+    return res.status(400).json({ message: 'Invalid songTitle' });
+}
+```
+
+**Test:**
+- Add 105 history entries via the API.
+- Fetch `/api/user/history` — should return exactly 100 entries, the most recent 100.
+
+---
+
+### 3.3 — Fix Ad Matching to Use MongoDB Query Instead of In-Memory Filter
+
+**File:** `models/Ad.js` — `findMatchingAds` static method
+
+**Problem:** If `findMatchingAds` loads all active ads into memory and then filters by keyword in JavaScript, it's a full collection scan on every lyrics search.
+
+**Audit `Ad.findMatchingAds` implementation.** If it loads all ads first:
+
+**Fix:**
+```js
+Ad.statics.findMatchingAds = async function(searchQuery, placement) {
+    const searchTerms = searchQuery.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+    return this.find({
+        status: 'active',
+        placement,
+        $or: [
+            { keywords: { $in: searchTerms } },
+            { keywords: { $size: 0 } } // ads with no keywords match everything
+        ]
+    }).limit(5);
+};
+```
+Add an index on `keywords` in the Ad model if not present:
+```js
+AdSchema.index({ keywords: 1, status: 1, placement: 1 });
+```
+
+**Test:**
+- The `/api/ads/match?q=drake` endpoint should respond in under 100ms with a properly configured index.
+- Check MongoDB query explain — should use the keywords index, not a collection scan.
+
+---
+
+### 3.4 — Cache Trending Results
+
+**File:** `routes/lyrics.js` — `/trending` endpoint
+
+**Problem:** Every trending page load fires up to 20 simultaneous Deezer artwork requests. The trending charts don't change more than once per day.
+
+**Fix:** Add a simple in-memory cache with a 10-minute TTL:
+```js
+const trendingCache = { data: null, fetchedAt: 0, ttl: 10 * 60 * 1000 };
+
+router.get('/trending', async (req, res) => {
+    const now = Date.now();
+    if (trendingCache.data && now - trendingCache.fetchedAt < trendingCache.ttl) {
+        return res.json(trendingCache.data);
+    }
+    // ... existing fetch logic ...
+    trendingCache.data = result;
+    trendingCache.fetchedAt = now;
+    res.json(result);
+});
+```
+
+**Test:**
+- Hit `/api/lyrics/trending` twice within 10 minutes.
+- Second response should be near-instant (< 5ms).
+- Check server logs — Deezer API should only be called once per 10-minute window.
+
+---
+
+## PHASE 4 — ARCHITECTURE FIXES
+
+### 4.1 — Consolidate the Four Copies of `authenticateAdmin`
+
+**Files:** `routes/user.js`, `routes/analytics.js`, `routes/ads.js`, and possibly others.
+
+**Problem:** The `authenticateAdmin` function is copy-pasted into at least 3 route files. Each copy checks slightly different things. Changes to auth logic must be made in 4 places.
+
+**Fix:**
+1. Create `middleware/adminAuth.js`:
+   ```js
+   const jwt = require('jsonwebtoken');
+   
+   module.exports = function adminAuth(req, res, next) {
+       const authHeader = req.headers.authorization;
+       if (!authHeader?.startsWith('Bearer ')) {
+           return res.status(401).json({ error: 'Authentication required' });
+       }
+       const token = authHeader.split(' ')[1];
+       try {
+           const decoded = jwt.verify(token, process.env.JWT_SECRET);
+           // Support both user tokens (role: 'ADMIN') and advertiser tokens (role: 'admin')
+           if (decoded.role !== 'ADMIN' && decoded.role !== 'admin') {
+               return res.status(403).json({ error: 'Admin access required' });
+           }
+           req.adminId = decoded.userId || decoded.advertiserId;
+           req.adminRole = decoded.role;
+           next();
+       } catch {
+           return res.status(401).json({ error: 'Invalid or expired token' });
+       }
+   };
+   ```
+2. Remove the local `authenticateAdmin` function from `routes/user.js`, `routes/analytics.js`.
+3. Import and use the shared middleware instead.
+
+**Test:**
+- Admin routes should work identically as before.
+- No regressions on `/api/analytics/admin/summary` or `/api/user/admin/flush`.
+
+---
+
+### 4.2 — Fix RBAC `requireRole` Bypassing Issue
+
+**File:** `middleware/rbac.js`
+
+**Problem:** The ADMIN bypass only works if 'ADMIN' is explicitly in the roles argument:
+```js
+if (roles.includes('ADMIN') && userRole === 'ADMIN') return next();
+if (!roles.includes(userRole)) return res.status(403)...
+```
+Calling `requireRole('LABEL_ADMIN')` on a route will lock out a superadmin.
+
+**Fix:** Make the ADMIN bypass unconditional:
+```js
+module.exports.requireRole = function(...roles) {
+    return (req, res, next) => {
+        if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
+        if (req.user.role === 'ADMIN') return next(); // Superadmin bypasses all role checks
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({ message: 'Insufficient permissions' });
+        }
+        next();
+    };
+};
+```
+
+**Test:**
+- A user with `role: 'ADMIN'` should be able to access any endpoint protected by `requireRole('LABEL_ADMIN')`, `requireRole('ARTIST')`, etc.
+- A user with `role: 'ARTIST'` should NOT be able to access `requireRole('LABEL_ADMIN')`.
+
+---
+
+### 4.3 — Fix Catch-All Route Breaking Individual HTML Pages
+
+**File:** `server.js`
+
+**Problem:** The wildcard catch-all `app.get('*', (req, res) => res.sendFile('index.html'))` intercepts requests for `verses.html`, `profile.html`, `creator-dashboard.html`, etc., returning `index.html` instead.
+
+**Fix:** Change the catch-all to only serve `index.html` for routes that are NOT file requests:
+```js
+app.get('*', (req, res) => {
+    // Only catch non-file navigation requests
+    if (req.path.includes('.')) {
+        return res.status(404).send('Not found');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+```
+Or remove the catch-all entirely if the SPA router handles navigation client-side (which it should after fix 2.3).
+
+**Test:**
+- `GET /verses.html` should serve the verses page, not `index.html`.
+- `GET /some-nonexistent-route` should either 404 or serve `index.html` (depending on whether you want SPA fallback).
+
+---
+
+### 4.4 — Fix Partner Ledger Filter
+
+**File:** `routes/partner.js` — `GET /dashboard/ledger`
+
+**Problem:** The ledger query filters by `'metadata.sellerType': 'label'` but `EventsLedger` events in `routes/subscriptions.js` don't include a `sellerType` field in their metadata. The partner ledger always returns empty.
+
+**Fix:** Either:
+- Add `sellerType: 'label'` to EventsLedger entries when they're created in the partner/label context, **or**
+- Change the ledger query to filter by `actorId: req.label._id` (the label's ID) instead of relying on metadata:
+  ```js
+  const match = {
+      eventType: { $in: ['gmv_order', 'platform_fee_recorded'] },
+      actorId: req.label._id
+  };
+  ```
+
+Choose whichever approach is consistent with how label-specific events are recorded.
+
+**Test:**
+- Record a test sale via the creator route for a label-associated artist.
+- Check `GET /api/partner/dashboard/ledger` — the sale event should appear.
+
+---
+
+### 4.5 — Add Guard to Seed Scripts Against Production
+
+**Files:** `scripts/seedPartnerData.js`, `scripts/seedPlans.js`
+
+**Problem:** These scripts run `deleteMany` without checking NODE_ENV. If accidentally run against production, all plan/partner/sale data is destroyed with no confirmation.
+
+**Fix:** Add to the top of both seed scripts, before the database connection:
+```js
+if (process.env.NODE_ENV === 'production') {
+    console.error('❌ Refusing to run seed script in production environment.');
+    console.error('   If this is intentional, temporarily set NODE_ENV=seed and re-run.');
+    process.exit(1);
+}
+```
+Also add a console warning about hardcoded passwords in `seedPartnerData.js`:
+```js
+console.warn('⚠️  WARNING: Seed data uses insecure passwords (partner123). Do not use in staging environments connected to production infrastructure.');
+```
+
+**Test:**
+- Set `NODE_ENV=production` and try to run `node scripts/seedPartnerData.js` — should exit immediately with an error message.
+
+---
+
+### 4.6 — Fix `validate-env.js` Wrong Production Variable Name
+
+**File:** `scripts/validate-env.js`
+
+**Problem:** The production required variables list includes `MONGODB_URI_PROD`, but the application reads `MONGODB_URI` (or the username/password pair). The validator fails in production even when the database is correctly configured.
+
+**Fix:** Change `MONGODB_URI_PROD` to `MONGODB_URI` in the production requirements list:
+```js
+production: [
+    'JWT_SECRET',
+    'MONGODB_URI',  // was MONGODB_URI_PROD
+    'MUSIXMATCH_API_KEY',
+    'SESSION_SECRET',
+    'PRODUCTION_URL',
+    'CLIENT_URL',
+    'CORS_ORIGIN'
+],
+```
+
+**Test:**
+- Run `NODE_ENV=production npm run validate-env` with a properly configured `.env`.
+- Should pass without errors about `MONGODB_URI_PROD`.
+
+---
+
+## PHASE 5 — DATA & MODEL FIXES
+
+### 5.1 — Fix `getPublicProfile()` Leaking Sensitive User Data
+
+**File:** `models/User.js`
+
+**Problem:** `getPublicProfile()` returns the entire user object minus password. This means endpoints like `GET /api/auth/verify` (called on every page load) and `GET /api/user/profile` return `role`, `subscriptionId`, `entitlementOverrides`, `creatorProfile.revenueShare`, `labelId`, `termsVersion`, `searchHistory`, `customMerch`, `following`, `followers`, and the full `creatorProfile` object to the client.
+
+**Fix — replace the current implementation with a whitelist approach:**
+```js
+UserSchema.methods.getPublicProfile = function() {
+    return {
+        _id: this._id,
+        name: this.name,
+        email: this.email, // Only for the user's own profile calls
+        bio: this.bio || '',
+        avatar: this.avatar || '',
+        accountType: this.accountType || 'fan',
+        role: this.role,
+        createdAt: this.createdAt,
+        creatorProfile: this.creatorProfile ? {
+            displayName: this.creatorProfile.displayName,
+            handle: this.creatorProfile.handle,
+            genres: this.creatorProfile.genres,
+            socialLinks: this.creatorProfile.socialLinks
+            // Do NOT include: revenueShare, storageUsedBytes, totalEarnings
+        } : null
+    };
+};
+```
+
+Then add a separate `getSensitiveProfile()` method for internal use (like the dashboard endpoint) that includes subscription info, entitlements, etc. Update `routes/subscriptions.js` and `routes/creator.js` dashboard endpoints to call `getSensitiveProfile()` instead.
+
+**Test:**
+- Log in and decode what `/api/auth/verify` returns.
+- It should NOT contain `searchHistory`, `customMerch`, `revenueShare`, `entitlementOverrides`, or `following`/`followers` arrays.
+- It SHOULD contain `name`, `email`, `bio`, `avatar`, `accountType`, `role`, `createdAt`.
+
+---
+
+### 5.2 — Remove Fake Random Data from API Response
+
+**File:** `routes/user.js` — `GET /friends` handler
+
+**Problem:** 
+```js
+mutualSongs: Math.floor(Math.random() * 50)
+```
+This returns a random number between 0-49 that changes on every request. Users see their friend's "mutual songs" count jumping around randomly.
+
+**Fix:** Remove the field entirely until it's properly implemented:
+```js
+const friends = req.user.following.map(friend => ({
+    _id: friend._id,
+    name: friend.name,
+    bio: friend.bio || '',
+    avatar: friend.avatar || '',
+    // mutualSongs removed — not yet implemented
+}));
+```
+
+**Test:**
+- Call `GET /api/user/friends` twice in a row.
+- Neither response should contain `mutualSongs`. Both responses should be identical for the same data.
+
+---
+
+### 5.3 — Fix seedPlans.js Missing `active` Field
+
+**File:** `scripts/seedPlans.js`
+
+**Problem:** None of the plan objects set `active: true`. If the Plan model's default for `active` is `false`, all seeded plans are invisible to the app (`Plan.find({ active: true })` returns nothing).
+
+**Fix:** Add `active: true` to every plan object in the plans array. Since there are ~14 plans, add it once to each.
+
+Also fix the obvious pricing error: `designer-starter`, `designer-pro`, `designer-studio`, `artist-starter`, `artist-growth`, `artist-pro`, `label-boutique`, `label-mid`, `label-enterprise` all have `priceYearly: 0`. This makes yearly billing "free." Either add correct yearly prices (typically ~20% discount from 12 months of monthly price) or set `priceYearly: null` and handle `null` in the UI to mean "monthly only."
+
+**Test:**
+- Run `node scripts/seedPlans.js` against a dev database.
+- Query `Plan.find({ active: true })` — should return all 14 plans.
+- Navigate to the pricing page — all plan tiers should display correctly.
+
+---
+
+## PHASE 6 — FRONTEND UX FIXES
+
+### 6.1 — Add "Manage Cookie Preferences" Link
+
+**File:** `js/cookie-consent.js` and your footer HTML
+
+**Problem:** The consent banner shows once. There is no way for a user to change their mind later, which is legally required under GDPR and CCPA.
+
+**Fix:**
+1. In `js/cookie-consent.js`, expose a `revokeConsent()` method on the global `WordethConsent` object that clears the stored preference and re-shows the banner.
+2. Add a "Cookie Preferences" link to the site footer in your HTML template(s) that calls this:
+   ```html
+   <a href="#" onclick="window.WordethConsent && window.WordethConsent.revokeConsent(); return false;">
+     Cookie Preferences
+   </a>
+   ```
+
+**Test:**
+- Accept cookies. Navigate to the footer. Click "Cookie Preferences." The cookie consent banner should reappear.
+
+---
+
+### 6.2 — Fix Search Autocomplete Never Appearing
+
+**File:** `js/main.js`
+
+**Problem:** Search results are built but the container is never appended to the DOM, so autocomplete suggestions never appear.
+
+**Audit the search autocomplete code in `js/main.js`.** Find where the results container is populated but check if `document.body.appendChild(resultsContainer)` or equivalent is present. If missing:
+
+**Fix:** After building the results container, append it to the correct parent element (the search form, input container, or `document.body`):
+```js
+const resultsContainer = document.createElement('div');
+resultsContainer.className = 'search-autocomplete';
+// ... populate with results ...
+searchInput.parentElement.appendChild(resultsContainer); // or wherever it should go
+```
+
+**Test:**
+- Type 3+ characters in the main search bar.
+- A dropdown of song suggestions should appear below the input.
+
+---
+
+### 6.3 — Fix `build-mobile.js` Silent API URL Replacement Failure
+
+**File:** `scripts/build-mobile.js`
+
+**Problem:** If `config.js` format changes, the string replacement silently fails and the mobile app defaults to making API calls to relative URLs (which fail in Capacitor).
+
+**Fix:**
+```js
+const newContent = configContent.replace(
+    "window.WORDETH_API_BASE || ''",
+    `window.WORDETH_API_BASE || '${API_BASE}'`
+);
+if (newContent === configContent) {
+    console.error('⚠️  WARNING: API URL replacement did not match. Check js/config.js format.');
+    console.error('   Mobile app will use empty base URL — API calls will fail.');
+    process.exit(1);
+}
+fs.writeFileSync(configPath, newContent);
+```
+
+Also add the existence check before reading:
+```js
+if (!fs.existsSync(configPath)) {
+    console.error(`❌ config.js not found at ${configPath}. Did the build copy js/ correctly?`);
+    process.exit(1);
+}
+```
+
+**Test:**
+- Run `node scripts/build-mobile.js`. Should complete without warnings.
+- Temporarily break the string in `config.js` and re-run — should exit with error.
+
+---
+
+### 6.4 — Fix deploy.sh npm audit --force
+
+**File:** `scripts/deploy.sh`
+
+**Problem:** `npm audit fix --force` can upgrade dependencies to breaking major versions silently, which has caused production outages industry-wide.
+
+**Fix:**
+```bash
+# OLD
+npm audit fix --force || echo "⚠️  Some vulnerabilities may remain"
+# NEW
+if ! npm audit fix; then
+    echo -e "${YELLOW}⚠️  Some vulnerabilities require manual review. Run 'npm audit' for details.${NC}"
+    echo -e "${YELLOW}   If vulnerabilities are acceptable, continue deployment manually.${NC}"
+    # Don't exit — let operator decide
+fi
+```
+
+Also harden the test step — tests failing should block deployment:
+```bash
+# OLD
+npm test || echo "⚠️  Some tests failed - continuing anyway"
+# NEW  
+if ! npm test; then
+    echo -e "${RED}❌ Tests failed. Aborting deployment.${NC}"
+    echo "   Fix tests or use --skip-tests flag if this is intentional."
+    exit 1
+fi
+```
+
+---
+
+## PHASE 7 — FINAL VALIDATION & TESTING
+
+After completing all phases above, run a full integration checklist:
+
+### 7.1 — Security Smoke Tests
+```
+[ ] GET /server.js → 404
+[ ] GET /routes/auth.js → 404
+[ ] GET /.env → 404
+[ ] POST /api/auth/signin with 11 wrong credentials → 11th returns 429
+[ ] POST /api/agora/token without auth → 401
+[ ] POST /api/agora/token with valid JWT → returns token
+[ ] Sign up → token returned contains 'role' field
+[ ] CORS: request from evil.com with credentials → rejected
+```
+
+### 7.2 — Auth & Token Flow
+```
+[ ] Sign up new account
+[ ] Token stored as 'authToken' in localStorage
+[ ] Navigate to /creator-dashboard.html → loads correctly (not redirect to signup)
+[ ] Navigate to /pricing.html → shows logged-in state
+[ ] Navigate to a tournament round page → no auth errors
+[ ] /api/auth/verify returns profile WITHOUT searchHistory, customMerch, revenueShare
+```
+
+### 7.3 — Core Feature Tests
+```
+[ ] Search for a song → autocomplete suggestions appear
+[ ] Click a song → lyrics page loads
+[ ] Cookie banner appears on first visit
+[ ] Decline cookies → no ad tracking events in Network tab
+[ ] Accept cookies → ad impression tracking fires in Network tab
+[ ] Toggle yearly/monthly on pricing page → label changes between /mo and /yr
+[ ] Partner dashboard ledger shows entries (not empty)
+[ ] Tournament match page: completed match shows winner crown
+```
+
+### 7.4 — Performance Checks
+```
+[ ] Upload avatar → MongoDB user document size < 10KB (avatar is URL, not base64)
+[ ] Add 105 history entries → /api/user/history returns exactly 100
+[ ] Hit /api/lyrics/trending twice → second response < 10ms
+[ ] /api/ads/match?q=drake → explain() shows index use, not collscan
+```
+
+### 7.5 — Script Safety
+```
+[ ] NODE_ENV=production node scripts/seedPartnerData.js → exits with error
+[ ] NODE_ENV=production node scripts/seedPlans.js → exits with error  
+[ ] NODE_ENV=development npm run validate-env → passes without MONGODB_URI_PROD error
+```
+
+---
+
+## NOTES FOR REPLIT AGENT
+
+- Work through phases **in order**. Phase 1 items are security vulnerabilities that must ship before any new features.
+- After each numbered fix, confirm what files were changed.
+- If you encounter a fix that conflicts with something else or would break a feature, flag it before making the change.
+- For the localStorage token fix (2.1), do a **codebase-wide search** for `localStorage.getItem('token')` and `localStorage.setItem('token'` — don't rely on the file list above being exhaustive.
+- For the innerHTML XSS fix (1.6), do a **codebase-wide search** for `.innerHTML =` in all JS files under `js/` and audit each one for user-supplied data.
+- The `escapeHtml` and `escapeRegex` helper functions should be in a shared utility file (`js/utils.js`) referenced by multiple files, not copy-pasted into each.
+- When in doubt on a fix, prefer the more conservative/defensive approach.

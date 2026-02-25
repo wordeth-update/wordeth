@@ -121,4 +121,6 @@ adSchema.statics.findMatchingAds = async function(searchTerm, placement = null) 
     return scoredAds.map(item => item.ad);
 };
 
+adSchema.index({ keywords: 1, status: 1, placement: 1 });
+
 module.exports = mongoose.model('Ad', adSchema);

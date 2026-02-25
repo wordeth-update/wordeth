@@ -64,11 +64,26 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Usage Analytics**: Event tracking middleware logs API usage for admin dashboards.
 - **Label Partner Dashboard**: Provides partners with revenue overviews, artist breakdowns, sales heatmaps (Leaflet.js), and shareable dashboards with granular permissions.
 
-### Production Readiness
-- **XSS Hardening**: All user-generated content is sanitized using `escapeHtml()` before DOM insertion.
-- **Public Profile**: `getPublicProfile()` strips sensitive user information.
+### Production Readiness (6-Phase Audit — All Complete)
+- **Static File Security**: `express.static` serves only from `public/` — server source, routes, models, and `.env` are inaccessible.
+- **CORS**: Whitelisted origins only; development mode is permissive, production rejects unknown origins.
+- **JWT Auth**: Tokens include `role` field; `middleware/auth.js` validates `userId` is present.
+- **Rate Limiting**: Auth endpoints (`/api/auth/signin`, `/signup`) limited to 10 attempts per 15 min with `skipSuccessfulRequests`.
+- **Agora Auth**: `POST /api/agora/token` requires user JWT; `GET /api/agora/test` requires ADMIN role.
+- **XSS Hardening**: Shared `escapeHtml()` in `public/js/utils.js` (loaded before all scripts). Applied across all innerHTML injections with user data: tournament-admin, partner-dashboard, partner-upload, creator-dashboard, verses, ad-admin, admin-usage, main search.
+- **ReDoS Prevention**: Regex special chars escaped in all username lookups via inline `.replace()`.
+- **Public Profile**: `getPublicProfile()` uses a whitelist approach — returns only `_id, name, email, bio, avatar, accountType, role, createdAt, creatorProfile` (filtered). `getSensitiveProfile()` available for dashboard endpoints.
+- **RBAC**: `requireRole()` unconditionally passes `ADMIN` through. No duplicate `authenticateAdmin` functions.
+- **Cookie Consent**: Unified key `wordeth_cookie_consent` across all files; ad tracking gated by consent. "Cookie Preferences" link in all footers.
+- **SPA Router**: Intercepts navigation for all SPA pages; confirms before leaving audio rooms.
+- **Avatars**: New uploads go to Replit Object Storage; served via `/api/user/avatar/:userId`.
+- **Performance**: Search history capped at 100; ad matching uses MongoDB `$in` with compound index; trending songs cached 15min.
+- **Seed Scripts**: Production guard on both; all 13 plans have `active: true` and correct yearly pricing.
+- **Search Autocomplete**: Results container properly appended to DOM with CSS styling.
+- **Deploy Script**: Uses `npm audit --production` (report-only); test failures block deployment.
+- **Mobile Build**: Sources from `public/`; API URL replacement failure exits with error.
 
 ## External Dependencies
 
-- **NPM Packages**: express, mongoose, bcryptjs, jsonwebtoken, cors, helmet, express-rate-limit, express-validator, dotenv, axios, multer, @aws-sdk/client-s3, puppeteer, agora-access-token.
-- **External APIs & Services**: Musixmatch API, LRCLIB/Lyrics.ovh (lyrics sources), YouTube, MongoDB, AWS S3, InkSoft (merchandise store integration), Google Fonts, Font Awesome, Agora RTC.
+- **NPM Packages**: express, mongoose, bcryptjs, jsonwebtoken, cors, helmet, express-rate-limit, express-validator, dotenv, axios, multer, @replit/object-storage, puppeteer, agora-access-token.
+- **External APIs & Services**: Musixmatch API, LRCLIB/Lyrics.ovh (lyrics sources), YouTube, MongoDB, Replit Object Storage (avatars), InkSoft (merchandise store integration), Google Fonts, Font Awesome, Agora RTC.

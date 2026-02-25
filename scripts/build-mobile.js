@@ -61,12 +61,21 @@ for (const dir of FRONTEND_DIRS) {
 
 const API_BASE = process.env.WORDETH_API_URL || 'https://www.wordeth.com';
 const configPath = path.join(WWW, 'js', 'config.js');
-let configContent = fs.readFileSync(configPath, 'utf8');
-configContent = configContent.replace(
+if (!fs.existsSync(configPath)) {
+    console.error(`config.js not found at ${configPath}. Did the build copy js/ correctly?`);
+    process.exit(1);
+}
+const configContent = fs.readFileSync(configPath, 'utf8');
+const newContent = configContent.replace(
     "window.WORDETH_API_BASE || ''",
     `window.WORDETH_API_BASE || '${API_BASE}'`
 );
-fs.writeFileSync(configPath, configContent);
+if (newContent === configContent) {
+    console.error('WARNING: API URL replacement did not match. Check js/config.js format.');
+    console.error('   Mobile app will use empty base URL — API calls will fail.');
+    process.exit(1);
+}
+fs.writeFileSync(configPath, newContent);
 
 console.log(`Frontend built to www/`);
 console.log(`API base URL set to: ${API_BASE}`);

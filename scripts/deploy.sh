@@ -38,7 +38,11 @@ npm ci --production
 # Step 4: Run tests
 echo ""
 echo "🧪 Step 4: Running tests..."
-npm test || echo -e "${YELLOW}⚠️  Some tests failed - continuing anyway${NC}"
+if ! npm test; then
+    echo -e "${RED}❌ Tests failed. Aborting deployment.${NC}"
+    echo "   Fix tests or use --skip-tests flag if this is intentional."
+    exit 1
+fi
 
 # Step 5: Check deployment method
 echo ""

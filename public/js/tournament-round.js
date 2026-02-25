@@ -43,7 +43,7 @@ class TournamentRound {
 
             document.title = `${round.name} - Verses Tournament - Wordeth`;
             document.getElementById('roundName').textContent = round.name;
-            document.getElementById('roundTheme').innerHTML = `<i class="fas fa-palette"></i> Theme: ${round.theme}`;
+            document.getElementById('roundTheme').innerHTML = `<i class="fas fa-palette"></i> Theme: ${escapeHtml(round.theme)}`;
             document.getElementById('breadcrumbSeason').textContent = round.seasonId?.name || 'Season';
             document.getElementById('breadcrumbRound').textContent = round.name;
 

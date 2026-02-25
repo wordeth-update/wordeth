@@ -574,7 +574,7 @@ class PartnerDashboard {
         if (data && data.success && data.data.length) {
             scopeSelect.innerHTML += '<option value="artist">Specific Artist</option>';
             data.data.forEach(a => {
-                artistSelect.innerHTML += `<option value="${a.slug}">${a.name}</option>`;
+                artistSelect.innerHTML += `<option value="${escapeHtml(a.slug)}">${escapeHtml(a.name)}</option>`;
             });
         }
     }

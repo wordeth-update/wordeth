@@ -35,20 +35,44 @@ if (searchInput) {
             const query = e.target.value;
             if (query.length < 3) return;
 
+            const existing = searchInput.parentElement.querySelector('.search-results');
+            if (existing) existing.remove();
+
             const searchResults = document.createElement('div');
             searchResults.classList.add('search-results');
             searchResults.innerHTML = '<div class="loading"></div>';
+            searchInput.parentElement.style.position = 'relative';
+            searchInput.parentElement.appendChild(searchResults);
             
             const results = await searchLyrics(query);
+            if (!results || !results.length) {
+                searchResults.remove();
+                return;
+            }
             searchResults.innerHTML = results.map(track => `
-                <div class="search-result" data-track-id="${track.track.track_id}">
-                    <h4>${track.track.track_name}</h4>
-                    <p>${track.track.artist_name}</p>
+                <div class="search-result" data-track-id="${escapeHtml(String(track.track.track_id))}">
+                    <h4>${escapeHtml(track.track.track_name)}</h4>
+                    <p>${escapeHtml(track.track.artist_name)}</p>
                 </div>
             `).join('');
+
+            searchResults.querySelectorAll('.search-result').forEach(el => {
+                el.addEventListener('click', () => {
+                    const name = el.querySelector('h4').textContent;
+                    const artist = el.querySelector('p').textContent;
+                    window.location.href = `/lyrics.html?q=${encodeURIComponent(name + ' ' + artist)}`;
+                });
+            });
         }, 300);
     });
 }
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-container')) {
+        const sr = document.querySelector('.search-container .search-results');
+        if (sr) sr.remove();
+    }
+});
 
 // Page Transitions
 function navigateTo(url) {

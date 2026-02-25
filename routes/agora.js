@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { RtcTokenBuilder, RtcRole } = require('agora-token');
 const auth = require('../middleware/auth');
+const { requireRole } = require('../middleware/rbac');
 
 const APP_ID = process.env.AGORA_APP_ID;
 const APP_CERTIFICATE = process.env.AGORA_APP_CERTIFICATE;
@@ -53,7 +54,7 @@ router.post('/token', auth, (req, res) => {
   }
 });
 
-router.get('/test', auth, (req, res) => {
+router.get('/test', auth, requireRole('ADMIN'), (req, res) => {
   try {
     if (!APP_ID || !APP_CERTIFICATE) {
       return res.json({

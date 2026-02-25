@@ -516,7 +516,7 @@ function renderTierUsers(topUsersPerTier) {
         html += `<h4 style="color:${tierColors[tier]};margin:1rem 0 0.5rem;text-transform:capitalize;">${tier} Tier</h4>`;
         html += users.map(u => `
             <div class="event-list-item">
-                <span class="event-name" style="font-size:0.8rem;">${u.userId || 'Anonymous'}</span>
+                <span class="event-name" style="font-size:0.8rem;">${escapeHtml(u.userId || 'Anonymous')}</span>
                 <span class="event-count">${u.eventCount} events</span>
             </div>
         `).join('');

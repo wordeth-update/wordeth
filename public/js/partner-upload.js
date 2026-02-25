@@ -131,7 +131,7 @@ class PartnerUpload {
         const statusEl = document.getElementById('rosterUploadStatus');
         statusEl.style.display = 'block';
         statusEl.className = 'upload-status uploading';
-        statusEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Uploading ${file.name}...`;
+        statusEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Uploading ${escapeHtml(file.name)}...`;
 
         const formData = new FormData();
         formData.append('csvFile', file);
@@ -152,30 +152,30 @@ class PartnerUpload {
                 }
 
                 statusEl.className = 'upload-status success';
-                statusEl.innerHTML = `<i class="fas fa-check-circle"></i> ${data.message} &mdash; ${details}`;
+                statusEl.innerHTML = `<i class="fas fa-check-circle"></i> ${escapeHtml(data.message)} &mdash; ${escapeHtml(details)}`;
 
                 if (data.data.artists && data.data.artists.length) {
                     let artistList = '<div class="added-artists"><strong>New artists added:</strong><ul>';
                     data.data.artists.forEach(a => {
-                        artistList += `<li><strong>${a.name}</strong> ${a.genre ? '(' + a.genre + ')' : ''} <span class="artist-id-display">ID: ${a.artistId}</span></li>`;
+                        artistList += `<li><strong>${escapeHtml(a.name)}</strong> ${a.genre ? '(' + escapeHtml(a.genre) + ')' : ''} <span class="artist-id-display">ID: ${escapeHtml(a.artistId)}</span></li>`;
                     });
                     artistList += '</ul></div>';
                     statusEl.innerHTML += artistList;
                 }
 
                 if (data.data.errors && data.data.errors.length) {
-                    statusEl.innerHTML += `<div class="error-details"><strong>Warnings:</strong><ul>${data.data.errors.map(e => `<li>${e}</li>`).join('')}</ul></div>`;
+                    statusEl.innerHTML += `<div class="error-details"><strong>Warnings:</strong><ul>${data.data.errors.map(e => `<li>${escapeHtml(e)}</li>`).join('')}</ul></div>`;
                 }
             } else {
                 statusEl.className = 'upload-status error';
-                statusEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${data.message || 'Upload failed'}`;
+                statusEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${escapeHtml(data.message || 'Upload failed')}`;
                 if (data.expected) {
-                    statusEl.innerHTML += `<div class="error-details"><strong>Expected columns:</strong> ${data.expected.join(', ')}</div>`;
+                    statusEl.innerHTML += `<div class="error-details"><strong>Expected columns:</strong> ${escapeHtml(data.expected.join(', '))}</div>`;
                 }
             }
         } catch (err) {
             statusEl.className = 'upload-status error';
-            statusEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> Network error: ${err.message}`;
+            statusEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> Network error: ${escapeHtml(err.message)}`;
         }
     }
 
@@ -189,7 +189,7 @@ class PartnerUpload {
         const statusEl = document.getElementById('artworkUploadStatus');
         statusEl.style.display = 'block';
         statusEl.className = 'upload-status uploading';
-        statusEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Uploading ${file.name}...`;
+        statusEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Uploading ${escapeHtml(file.name)}...`;
 
         const formData = new FormData();
         formData.append('artworkFile', file);
@@ -206,15 +206,15 @@ class PartnerUpload {
 
             if (res.ok && data.success) {
                 statusEl.className = 'upload-status success';
-                statusEl.innerHTML = `<i class="fas fa-check-circle"></i> ${data.message}`;
+                statusEl.innerHTML = `<i class="fas fa-check-circle"></i> ${escapeHtml(data.message)}`;
                 this.loadArtistArtwork(artistSlug);
             } else {
                 statusEl.className = 'upload-status error';
-                statusEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${data.message || 'Upload failed'}`;
+                statusEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${escapeHtml(data.message || 'Upload failed')}`;
             }
         } catch (err) {
             statusEl.className = 'upload-status error';
-            statusEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> Network error: ${err.message}`;
+            statusEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> Network error: ${escapeHtml(err.message)}`;
         }
     }
 
@@ -229,7 +229,7 @@ class PartnerUpload {
             const data = await res.json();
 
             if (data.success && data.data.artwork.length) {
-                gallery.innerHTML = `<h4>${data.data.artistName}'s Artwork (${data.data.artwork.length})</h4>`;
+                gallery.innerHTML = `<h4>${escapeHtml(data.data.artistName)}'s Artwork (${data.data.artwork.length})</h4>`;
                 const grid = document.createElement('div');
                 grid.className = 'artwork-grid';
 
@@ -243,13 +243,13 @@ class PartnerUpload {
 
                     card.innerHTML = `
                         <div class="artwork-preview">
-                            ${isImage ? `<img src="${art.url}" alt="${art.filename}" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-file-image\\'></i>'">` : `<i class="fas fa-file-${art.format === 'pdf' ? 'pdf' : 'alt'}"></i>`}
+                            ${isImage ? `<img src="${escapeHtml(art.url)}" alt="${escapeHtml(art.filename)}" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-file-image\\'></i>'">` : `<i class="fas fa-file-${art.format === 'pdf' ? 'pdf' : 'alt'}"></i>`}
                         </div>
                         <div class="artwork-info">
-                            <span class="artwork-filename" title="${art.filename}">${art.filename}</span>
-                            <span class="artwork-meta">${art.format.toUpperCase()} &middot; ${sizeStr}</span>
+                            <span class="artwork-filename" title="${escapeHtml(art.filename)}">${escapeHtml(art.filename)}</span>
+                            <span class="artwork-meta">${escapeHtml(art.format.toUpperCase())} &middot; ${sizeStr}</span>
                         </div>
-                        <button class="artwork-delete" data-artwork-id="${art._id}" data-artist-slug="${artistSlug}" title="Delete">
+                        <button class="artwork-delete" data-artwork-id="${escapeHtml(art._id)}" data-artist-slug="${escapeHtml(artistSlug)}" title="Delete">
                             <i class="fas fa-trash-alt"></i>
                         </button>
                     `;

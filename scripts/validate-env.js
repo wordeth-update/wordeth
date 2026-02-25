@@ -70,7 +70,7 @@ function validateVariable(name) {
   }
 
   // Validate MongoDB URI
-  if (name === 'MONGODB_URI_PROD' && !value.startsWith('mongodb')) {
+  if (name === 'MONGODB_URI' && !value.startsWith('mongodb')) {
     return { valid: false, error: 'Invalid MongoDB URI format' };
   }
 

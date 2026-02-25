@@ -70,18 +70,17 @@ class SpaRouter {
       if (EXCLUDED_PAGES.includes(cleanPath)) return;
       if (!this._isSpaPage(cleanPath)) return;
 
-      if (!this._isUserInRoom()) {
-        return;
-      }
-
       e.preventDefault();
+      if (this._isUserInRoom()) {
+        if (!confirm('Leaving this page will disconnect you from the audio room. Continue?')) {
+          return;
+        }
+      }
       this.navigate(path);
     });
 
     window.addEventListener('popstate', () => {
-      if (this._isUserInRoom()) {
-        this._loadPage(window.location.pathname + window.location.search, false);
-      }
+      this._loadPage(window.location.pathname + window.location.search, false);
     });
   }
 
