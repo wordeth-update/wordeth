@@ -201,10 +201,13 @@
             <div class="room-header">
                 <div class="room-title">
                     <h2 id="room-name" class="editable-title"></h2>
-                    <div class="topic-container">
-                        <p id="current-song" class="editable-topic"></p>
+                    <div class="topic-line">
                         <button class="edit-topic-btn" id="edit-topic">
                             <i class="fas fa-edit"></i>
+                        </button>
+                        <p id="current-song" class="editable-topic"></p>
+                        <button class="host-panel-toggle" id="host-panel-toggle">
+                            <i class="fas fa-sliders-h"></i> Host Controls
                         </button>
                     </div>
                 </div>
@@ -250,9 +253,6 @@
                         Guide
                     </button>
                 </div>
-                <button class="host-panel-toggle" id="host-panel-toggle">
-                    <i class="fas fa-sliders-h"></i> Host Controls
-                </button>
                 <div class="host-controls-panel hidden" id="host-controls-panel">
                     <div class="host-panel-grid">
                         <button class="host-panel-btn" data-mirrors="video-toggle-btn">

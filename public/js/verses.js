@@ -1604,13 +1604,15 @@ class AudioRoomsManager {
     addChatMessage(sender, message, isSystem = false) {
         if (!this.chatMessagesContainer) return;
 
+        const displaySender = (sender === 'System' && isSystem) ? 'WrdyBot' : sender;
+
         const messageElement = document.createElement('div');
         messageElement.className = `chat-message ${sender === 'You' ? 'own' : ''} ${isSystem ? 'system' : ''}`;
         
         const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         
         const header = this._el('div', {className: 'chat-message-header'},
-            this._el('span', {className: 'sender', textContent: sender}),
+            this._el('span', {className: 'sender', textContent: displaySender}),
             this._el('span', {className: 'timestamp', textContent: timestamp}));
         const content = this._el('div', {className: 'chat-message-content', textContent: message});
         messageElement.append(header, content);
@@ -1960,28 +1962,32 @@ class AudioRoomsManager {
                 const spaceAbove = highlightTop;
                 const minTipHeight = 140;
 
+                const safeTop = 60;
+                const safeBottom = 80;
+
                 if (step.position === 'center') {
                     tooltip.style.top = '50%';
                     tooltip.style.transform = 'translateY(-50%)';
                     tooltip.style.maxHeight = '40vh';
                 } else if (step.position === 'above' || (rect.top > window.innerHeight * 0.45 && spaceAbove > minTipHeight)) {
-                    const tipTop = Math.max(60, highlightTop - gap - 200);
+                    const tipTop = Math.max(safeTop, highlightTop - gap - 200);
                     tooltip.style.top = tipTop + 'px';
                     tooltip.style.maxHeight = Math.max(highlightTop - gap - tipTop, minTipHeight) + 'px';
                     tooltip.classList.add('arrow-below');
                 } else {
-                    const tipTop = highlightBottom + gap;
-                    const maxH = Math.max(window.innerHeight - tipTop - 80, minTipHeight);
-                    tooltip.style.top = tipTop + 'px';
+                    const tipTop = Math.min(highlightBottom + gap, window.innerHeight - minTipHeight - safeBottom);
+                    const maxH = Math.max(window.innerHeight - tipTop - safeBottom, minTipHeight);
+                    tooltip.style.top = Math.max(safeTop, tipTop) + 'px';
                     tooltip.style.maxHeight = maxH + 'px';
                     tooltip.classList.add('arrow-above');
                 }
                 tooltip.style.left = '16px';
                 tooltip.style.right = '16px';
             } else {
-                tooltip.style.bottom = '100px';
+                tooltip.style.top = '50%';
                 tooltip.style.left = '16px';
                 tooltip.style.right = '16px';
+                tooltip.style.transform = 'translateY(-50%)';
             }
 
             document.body.appendChild(tooltip);
@@ -3182,6 +3188,8 @@ class AudioRoomsManager {
 
         sock.on('participant-joined', async (data) => {
             console.log('Participant joined:', data.userName, 'isSpeaker:', data.isSpeaker);
+            const alreadyHere = document.querySelector(`[data-participant-id="${data.socketId}"]`);
+            if (alreadyHere) return;
             this.addChatMessage('System', `${data.userName} joined the room.`, true);
             this._playJoinSound();
             this.updateParticipantDisplay(data.participants);
