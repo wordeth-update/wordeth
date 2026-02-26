@@ -143,13 +143,13 @@ if (mongoUri && mongoUri !== 'mongodb://localhost:27017/wordeth') {
     mongoose.connect(mongoUri, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
-        serverSelectionTimeoutMS: process.env.NODE_ENV === 'test' ? 2000 : 5000, // Faster timeout for tests
+        serverSelectionTimeoutMS: process.env.NODE_ENV === 'test' ? 2000 : 5000,
+        maxPoolSize: 3,
+        minPoolSize: 1,
     })
     .then(() => {
         if (process.env.NODE_ENV !== 'test') {
             console.log('✅ Connected to MongoDB Atlas');
-            const { startGlobalPoller } = require('./services/inkSoftService');
-            startGlobalPoller();
         }
     })
     .catch(err => {
@@ -347,37 +347,7 @@ app.get('/api/rooms/active', async (req, res) => {
     res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
     res.setHeader('Pragma', 'no-cache');
     await waitForRoomsReady();
-    let rooms = getActiveRooms();
-    if (rooms.length === 0) {
-        try {
-            const { loadAllRooms } = require('./services/redisClient');
-            const redisRooms = await loadAllRooms();
-            if (redisRooms.size > 0) {
-                const redisList = [];
-                redisRooms.forEach((room, roomId) => {
-                    redisList.push({
-                        id: roomId,
-                        name: room.name || null,
-                        participantCount: room.participants ? room.participants.size : 0,
-                        participants: room.participants ? Array.from(room.participants.values()).map(p => ({
-                            userId: p.userId,
-                            userName: p.userName,
-                            isHost: p.isHost,
-                            avatar: p.avatar || null
-                        })) : [],
-                        isLocked: room.isLocked,
-                        karaokeEnabled: room.karaokeEnabled,
-                        videoMode: room.videoMode || 'off',
-                        createdAt: room.createdAt
-                    });
-                });
-                rooms = redisList;
-                console.log(`[Rooms API] Fell back to Redis: ${rooms.length} room(s)`);
-            }
-        } catch (err) {
-            console.error('[Rooms API] Redis fallback error:', err.message);
-        }
-    }
+    const rooms = getActiveRooms();
     console.log(`[Rooms API] Active rooms: ${rooms.length} rooms`);
     res.json(rooms);
 });

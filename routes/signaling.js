@@ -49,23 +49,24 @@ async function initRooms() {
     getClient();
     const restored = await loadAllRooms();
     if (restored.size > 0) {
+        let kept = 0;
         const now = Date.now();
-        const MAX_EMPTY_AGE = 60 * 60 * 1000;
+        const MAX_RESTORE_AGE = 5 * 60 * 1000;
         for (const [roomId, room] of restored.entries()) {
             room.participants = new Map();
             room.activeVideos = new Set();
             room.hostId = null;
             const age = now - (room.lastActivity || room.createdAt || now);
-            if (age > MAX_EMPTY_AGE) {
-                restored.delete(roomId);
+            if (age > MAX_RESTORE_AGE) {
                 deleteRoom(roomId);
-                console.log(`[Signaling] Pruned stale room ${roomId} (inactive ${Math.round(age / 60000)} min)`);
+                console.log(`[Signaling] Cleaned stale room ${roomId} (${Math.round(age / 60000)} min old)`);
                 continue;
             }
+            rooms.set(roomId, room);
             scheduleRoomDeletion(roomId, 'restored-empty');
+            kept++;
         }
-        rooms = restored;
-        console.log(`[Signaling] ${restored.size} room(s) restored from Redis (participants cleared, deletion timers set)`);
+        if (kept > 0) console.log(`[Signaling] ${kept} recent room(s) restored from Redis`);
     }
 }
 
