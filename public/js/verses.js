@@ -2172,16 +2172,93 @@ class AudioRoomsManager {
         try {
             const newRoom = await this.createRoomOnServer(roomData);
             console.log('[CreateRoom] Room created with id:', newRoom.id);
+
+            if (submitBtn) submitBtn.textContent = 'Joining…';
+
             this.isRoomHost = true;
-            
             const roomNameEl = document.getElementById('room-name');
             const currentSongEl = document.getElementById('current-song');
             if (roomNameEl) roomNameEl.textContent = roomData.name || 'Untitled Room';
             if (currentSongEl) currentSongEl.textContent = roomData.initialSong ? `Currently discussing: "${roomData.initialSong}"` : '';
-            
+
+            const user = this.isGuest ? {} : JSON.parse(localStorage.getItem('user') || '{}');
+            const userName = this.isGuest ? 'Guest' : (user.name || user.username || 'Anonymous');
+            const joinPayload = {
+                roomId: newRoom.id,
+                userId: user._id || user.id || `anon_${Date.now()}`,
+                userName,
+                isHost: true,
+                roomName: roomData.name || 'Untitled Room',
+                avatar: user.avatar || null
+            };
+
+            const httpResp = await fetch(apiUrl(`/api/rooms/join?_t=${Date.now()}`), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' },
+                body: JSON.stringify(joinPayload),
+                cache: 'no-store'
+            });
+            const httpData = await httpResp.json();
+            console.log('[CreateRoom] Join response:', httpData.success, httpData.message || '');
+
+            if (!httpData.success) {
+                throw new Error(httpData.message || 'Could not join the newly created room.');
+            }
+
+            this.currentRoom = newRoom.id;
+            this.roomJoinTime = Date.now();
+            this._joinConfirmed = true;
+            this.isSpeaker = true;
+            this.isAudioMuted = false;
+            this.stageAccess = httpData.stageAccess || 'invite-only';
+            this.karaokeEnabled = false;
+            this.videoMode = 'off';
+
             this.hideAllModals();
-            await this.joinRoom(newRoom.id, true);
-            console.log('[CreateRoom] Successfully joined room');
+
+            if (this.toggleAudioBtn) {
+                this._setBtnWithSpan(this.toggleAudioBtn, 'fas fa-microphone', 'Mic');
+                this.toggleAudioBtn.classList.remove('muted');
+            }
+            this.updateKaraokeButtonState();
+            this.updateVideoButtonState();
+            this.updateHostControls();
+            this._showRoomUI(newRoom.id, true);
+
+            this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
+            this._requestWakeLock();
+            this._startSilentAudioKeepAlive();
+
+            try {
+                await this.initializeMedia();
+                console.log('[CreateRoom] Host mic initialized');
+            } catch (e) {
+                console.warn('[CreateRoom] Mic access denied, hosting without mic:', e.message);
+            }
+
+            this.connectSocket().then(() => {
+                if (this.socket?.connected) {
+                    this.socket.emit('join-room', joinPayload, (ack) => {
+                        console.log('[CreateRoom] socket join-room ack:', ack?.success);
+                    });
+                }
+            }).catch(e => console.warn('[CreateRoom] Socket connect error:', e));
+
+            try {
+                await this._agoraJoinGuarded(newRoom.id, { forceRole: 'host' });
+            } catch (agoraErr) {
+                console.warn('[CreateRoom] Agora join error:', agoraErr.message);
+            }
+
+            window.history.replaceState({ room: newRoom.id }, '', `/verses.html?room=${encodeURIComponent(newRoom.id)}`);
+
+            fetch(apiUrl('/api/analytics/track'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ eventType: 'verse_create', segment: 'community', metadata: { roomId: newRoom.id, page: 'verses' } })
+            }).catch(() => {});
+
+            console.log('[CreateRoom] Room fully joined and visible');
         } catch (error) {
             console.error('[CreateRoom] Error:', error);
             alert('Failed to create room: ' + (error.message || 'Please try again.'));
