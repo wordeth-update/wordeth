@@ -2192,7 +2192,7 @@ class AudioRoomsManager {
                 avatar: user.avatar || null
             };
 
-            const httpResp = await fetch(apiUrl(`/api/rooms/join?_t=${Date.now()}`), {
+            const httpResp = await this._fetchWithTimeout(apiUrl(`/api/rooms/join?_t=${Date.now()}`), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' },
                 body: JSON.stringify(joinPayload),
@@ -2261,7 +2261,10 @@ class AudioRoomsManager {
             console.log('[CreateRoom] Room fully joined and visible');
         } catch (error) {
             console.error('[CreateRoom] Error:', error);
-            alert('Failed to create room: ' + (error.message || 'Please try again.'));
+            const msg = error.name === 'AbortError'
+                ? 'Server took too long to respond. Please try again.'
+                : (error.message || 'Please try again.');
+            alert('Failed to create room: ' + msg);
         } finally {
             if (submitBtn) {
                 submitBtn.disabled = false;
@@ -2270,8 +2273,15 @@ class AudioRoomsManager {
         }
     }
 
+    _fetchWithTimeout(url, options, timeoutMs = 10000) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        return fetch(url, { ...options, signal: controller.signal })
+            .finally(() => clearTimeout(timer));
+    }
+
     async createRoomOnServer(roomData) {
-        const res = await fetch(apiUrl('/api/rooms/create'), {
+        const res = await this._fetchWithTimeout(apiUrl('/api/rooms/create'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: roomData.name || 'Untitled Room' })

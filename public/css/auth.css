@@ -110,8 +110,8 @@
 }
 
 .submit-btn {
-    background: linear-gradient(135deg, var(--mint), var(--purple-accent));
-    color: #060409;
+    background: #fff;
+    color: #000;
     border: none;
     padding: 1rem;
     border-radius: 50px;
@@ -119,13 +119,12 @@
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .submit-btn:hover {
-    background: linear-gradient(135deg, var(--mint), var(--purple-accent));
     transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 12px 35px rgba(0,229,168,0.45);
+    box-shadow: 0 12px 35px rgba(255, 255, 255, 0.25);
 }
 
 .submit-btn:disabled {
