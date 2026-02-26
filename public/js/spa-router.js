@@ -213,15 +213,21 @@ class SpaRouter {
   }
 
   _loadPageScripts(doc) {
-    const skipScripts = ['config.js', 'main.js', 'nav-auth.js', 'cookie-consent.js',
+    const alwaysSkip = ['config.js', 'main.js', 'nav-auth.js', 'cookie-consent.js',
       'socket.io.js', 'notifications.js', 'spa-router.js', 'verse-mini-player.js',
-      'verses.js', 'ar-filters.js', 'native-screen-capture.js'];
+      'ar-filters.js', 'native-screen-capture.js'];
 
     const scripts = doc.querySelectorAll('script[src]');
     scripts.forEach(s => {
       const src = s.getAttribute('src');
       if (!src) return;
-      if (skipScripts.some(skip => src.includes(skip))) return;
+      if (alwaysSkip.some(skip => src.includes(skip))) return;
+
+      if (src.includes('verses.js')) {
+        if (window.audioRoomsManager && !window.audioRoomsManager._detached) return;
+        const existing = document.querySelector(`script[src*="verses.js"]`);
+        if (existing) existing.remove();
+      }
 
       const existing = document.querySelector(`script[src*="${src.split('/').pop().split('?')[0]}"]`);
       if (existing) existing.remove();
@@ -236,7 +242,6 @@ class SpaRouter {
     inlineScripts.forEach(s => {
       const text = s.textContent;
       if (!text.trim()) return;
-      if (text.includes('DOMContentLoaded') && text.includes('AudioRoomsManager')) return;
       const script = document.createElement('script');
       script.textContent = text;
       document.body.appendChild(script);

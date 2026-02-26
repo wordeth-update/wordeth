@@ -7358,13 +7358,23 @@ class AudioRoomsManager {
 }
 
 // Initialize audio rooms manager when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
+function _initAudioRoomsManager() {
     if (window.audioRoomsManager && window.audioRoomsManager._detached) {
         window.audioRoomsManager.reattachToDOM();
         return;
     }
     if (window.audioRoomsManager) return;
-    const audioRoomsManager = new AudioRoomsManager();
-    window.audioRoomsManager = audioRoomsManager;
-});
+    try {
+        const audioRoomsManager = new AudioRoomsManager();
+        window.audioRoomsManager = audioRoomsManager;
+    } catch (e) {
+        console.error('[Verses] Failed to create AudioRoomsManager:', e);
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _initAudioRoomsManager);
+} else {
+    _initAudioRoomsManager();
+}
 
