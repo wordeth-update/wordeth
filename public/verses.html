@@ -907,5 +907,29 @@
 
     <script src="js/verse-mini-player.js"></script>
     <script src="js/spa-router.js"></script>
+    <script>
+    (function() {
+        var btn = document.getElementById('create-room');
+        if (btn && !btn._hasFallback) {
+            btn._hasFallback = true;
+            btn.addEventListener('click', function() {
+                var mgr = window.audioRoomsManager;
+                if (mgr && typeof mgr.showCreateRoomModal === 'function') {
+                    mgr.showCreateRoomModal();
+                } else {
+                    var modal = document.getElementById('create-room-modal');
+                    if (modal) {
+                        var token = localStorage.getItem('authToken');
+                        if (!token) {
+                            window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname);
+                        } else {
+                            modal.classList.add('active');
+                        }
+                    }
+                }
+            });
+        }
+    })();
+    </script>
 </body>
 </html> 

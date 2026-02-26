@@ -9,7 +9,21 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const fs = require('fs');
 const crypto = require('crypto');
-const puppeteer = require('puppeteer');
+let puppeteer = null;
+
+process.on('uncaughtException', (err) => {
+    console.error('[FATAL] Uncaught exception:', err.message, err.stack);
+    setTimeout(() => process.exit(1), 1000);
+});
+process.on('unhandledRejection', (reason) => {
+    console.error('[FATAL] Unhandled rejection:', reason);
+});
+process.on('exit', (code) => {
+    console.error('[EXIT] Process exiting with code:', code);
+});
+['SIGHUP', 'SIGUSR1', 'SIGUSR2', 'SIGPIPE'].forEach(sig => {
+    process.on(sig, () => console.error('[SIGNAL]', sig, 'received'));
+});
 const { setupSignaling, getActiveRooms, setShuttingDown, joinRoomHTTP, waitForRoomsReady } = require('./routes/signaling');
 
 const BUILD_ID = Date.now().toString(36);
@@ -18,6 +32,7 @@ console.log(`Build ID: ${BUILD_ID}`);
 let ogLogoBase64 = '';
 let ogBrowser = null;
 let ogBrowserLaunching = null;
+let ogBrowserCloseTimer = null;
 
 (async () => {
     try {
@@ -30,12 +45,7 @@ let ogBrowserLaunching = null;
     } catch(e) {
         console.warn('Failed to cache OG logo:', e.message);
     }
-    try {
-        await ensureOgBrowser();
-        console.log('Puppeteer browser pre-launched for OG image generation');
-    } catch(e) {
-        console.warn('Puppeteer pre-launch failed (will retry on first request):', e.message);
-    }
+    console.log('Puppeteer browser available on-demand for OG image generation');
 })();
 
 // Import routes
@@ -491,15 +501,29 @@ async function ensureOgBrowser() {
                 if (sysChromium) launchOpts.executablePath = sysChromium;
             } catch(e) {}
         }
+        if (!puppeteer) puppeteer = require('puppeteer');
         ogBrowser = await puppeteer.launch(launchOpts);
         console.log('Puppeteer browser (re)launched');
+        scheduleOgBrowserClose();
         return ogBrowser;
     })().finally(() => { ogBrowserLaunching = null; });
     return ogBrowserLaunching;
 }
 
+function scheduleOgBrowserClose() {
+    if (ogBrowserCloseTimer) clearTimeout(ogBrowserCloseTimer);
+    ogBrowserCloseTimer = setTimeout(async () => {
+        if (ogBrowser) {
+            try { await ogBrowser.close(); } catch(e) {}
+            ogBrowser = null;
+            console.log('Puppeteer browser closed (idle timeout)');
+        }
+    }, 60000);
+}
+
 app.get('/og-image/:roomId', ogCrawlerHeaders, async (req, res) => {
     try {
+        if (ogBrowserCloseTimer) clearTimeout(ogBrowserCloseTimer);
         const browser = await ensureOgBrowser();
 
         const roomId = req.params.roomId;
@@ -747,6 +771,8 @@ body {
     } catch (err) {
         console.error('OG image generation error:', err);
         res.status(500).send('Image generation failed');
+    } finally {
+        scheduleOgBrowserClose();
     }
 });
 

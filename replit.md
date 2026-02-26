@@ -17,7 +17,7 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Footer**: Compact single-line footer across all 14 public pages — logo + flat inline link groups (headings hidden, separated by `·`) + social icons on desktop; links wrap naturally on mobile. No accordion JS. Single `.site-footer` class.
 - **JS Architecture**: Page-specific JavaScript files loaded directly without a bundler, using classes for complex page managers.
 - **Persistent Mini-Player**: A floating bar appears when a user is in a Verses audio room, maintaining audio connection across page navigations.
-- **SPA Router**: Lightweight router intercepts internal link clicks only when an audio room is active, fetching and swapping page content without full reloads, excluding partner/admin pages.
+- **SPA Router**: Lightweight router intercepts internal link clicks, fetching and swapping page content without full reloads, excluding partner/admin pages. Auto-closes mobile menu on navigation.
 
 ### Backend
 - **Technology**: Node.js with Express.js for HTTP and Socket.io for real-time WebSockets.
@@ -25,6 +25,7 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **WebSocket Signaling**: Manages room state, Agora UID mapping, room events (chat, karaoke, screen share), and real-time invites.
 - **Agora Token Server**: Generates RTC tokens server-side for secure audio/video communication.
 - **Middleware**: Includes JWT authentication, partner authentication, and automatic usage event tracking.
+- **Puppeteer (OG Images)**: Lazy-loaded on-demand for `/og-image/:roomId` endpoint. Browser auto-closes after 60s idle to conserve memory. Idle timer resets on each request.
 - **Security**: Implements Helmet for CSP, express-rate-limit, CORS, and trust proxies.
 
 ### Database

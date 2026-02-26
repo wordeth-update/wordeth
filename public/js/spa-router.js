@@ -76,6 +76,13 @@ class SpaRouter {
           return;
         }
       }
+      const mobileMenu = document.getElementById('mobileMenu');
+      const menuToggle = document.getElementById('menuToggle');
+      if (mobileMenu?.classList.contains('active')) {
+        mobileMenu.classList.remove('active');
+        menuToggle?.classList.remove('active');
+        document.body.classList.remove('menu-open');
+      }
       this.navigate(path);
     });
 
