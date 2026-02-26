@@ -1877,12 +1877,29 @@ class AudioRoomsManager {
 
         overlay.addEventListener('click', dismiss);
 
+        let elevatedEl = null;
+        let elevatedPrev = null;
+
+        const restoreElevated = () => {
+            if (elevatedEl) {
+                elevatedEl.style.zIndex = elevatedPrev?.z || '';
+                elevatedEl.style.position = elevatedPrev?.pos || '';
+                elevatedEl = null;
+                elevatedPrev = null;
+            }
+        };
+
+        const oldDismiss = dismiss;
+        dismiss = () => { restoreElevated(); oldDismiss(); };
+
         const showStep = (idx) => {
+            restoreElevated();
             if (highlight) highlight.remove();
             if (tooltip) tooltip.remove();
 
             if (idx >= steps.length) {
                 overlay.remove();
+                closeBtn.remove();
                 localStorage.setItem(storageKey, '1');
                 return;
             }
@@ -1915,16 +1932,26 @@ class AudioRoomsManager {
             tooltip.append(tipHeader, tipText, this._el('div', {className: 'walk-tip-footer'}, dotsDiv, navDiv));
 
             if (targetEl) {
+                const liftTarget = targetEl.closest('.room-controls, .host-controls-panel, .room-header, .audio-section, .room-main');
+                if (liftTarget) {
+                    elevatedPrev = { z: liftTarget.style.zIndex, pos: liftTarget.style.position };
+                    elevatedEl = liftTarget;
+                    liftTarget.style.zIndex = '10004';
+                    if (!getComputedStyle(liftTarget).position || getComputedStyle(liftTarget).position === 'static') {
+                        liftTarget.style.position = 'relative';
+                    }
+                }
+
                 const rect = targetEl.getBoundingClientRect();
                 highlight = document.createElement('div');
                 highlight.className = 'mobile-walkthrough-highlight';
-                highlight.style.top = (rect.top - 4) + 'px';
-                highlight.style.left = (rect.left - 4) + 'px';
-                highlight.style.width = (rect.width + 8) + 'px';
-                highlight.style.height = (rect.height + 8) + 'px';
+                highlight.style.top = (rect.top - 6) + 'px';
+                highlight.style.left = (rect.left - 6) + 'px';
+                highlight.style.width = (rect.width + 12) + 'px';
+                highlight.style.height = (rect.height + 12) + 'px';
                 document.body.appendChild(highlight);
 
-                const gap = 24;
+                const gap = 16;
                 const pad = 8;
                 const highlightBottom = rect.bottom + pad;
                 const highlightTop = rect.top - pad;
