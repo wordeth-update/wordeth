@@ -1160,7 +1160,9 @@ class AudioRoomsManager {
         const token = localStorage.getItem('authToken');
         console.log('[CreateRoom] token:', !!token, 'modal element:', !!this.createRoomModal);
         if (!token) {
+            console.log('[CreateRoom] No token — showing auth prompt');
             this._showAuthPrompt();
+            console.log('[CreateRoom] Auth prompt should now be visible');
             return;
         }
         if (!this.createRoomModal) {
@@ -1176,11 +1178,13 @@ class AudioRoomsManager {
     }
 
     _showAuthPrompt() {
+        console.log('[AuthPrompt] Creating auth prompt modal');
         const existing = document.getElementById('auth-prompt-modal');
-        if (existing) { existing.classList.add('active'); return; }
+        if (existing) { existing.classList.add('active'); console.log('[AuthPrompt] Reusing existing modal'); return; }
         const modal = document.createElement('div');
         modal.className = 'modal active';
         modal.id = 'auth-prompt-modal';
+        modal.style.zIndex = '10001';
         const closeBtn = this._el('button', {className: 'close-modal', textContent: '\u00D7'});
         const modalHeader = this._el('div', {className: 'modal-header', cssText: 'justify-content:flex-end;'}, closeBtn);
         const headphonesIcon = this._icon('fas fa-headphones');

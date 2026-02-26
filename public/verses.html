@@ -910,25 +910,37 @@
     <script>
     (function() {
         var btn = document.getElementById('create-room');
-        if (btn && !btn._hasFallback) {
-            btn._hasFallback = true;
-            btn.addEventListener('click', function() {
-                var mgr = window.audioRoomsManager;
-                if (mgr && typeof mgr.showCreateRoomModal === 'function') {
+        if (!btn) { console.error('[Fallback] create-room button NOT found'); return; }
+        console.log('[Fallback] create-room button found, attaching handler');
+        btn.addEventListener('click', function() {
+            console.log('[Fallback] Button clicked!');
+            console.log('[Fallback] audioRoomsManager:', !!window.audioRoomsManager);
+            var mgr = window.audioRoomsManager;
+            if (mgr && typeof mgr.showCreateRoomModal === 'function') {
+                console.log('[Fallback] Delegating to mgr.showCreateRoomModal()');
+                try {
                     mgr.showCreateRoomModal();
+                } catch(e) {
+                    console.error('[Fallback] showCreateRoomModal threw:', e);
+                    alert('Error opening room modal: ' + e.message);
+                }
+            } else {
+                console.log('[Fallback] No manager, using direct fallback');
+                var token = localStorage.getItem('authToken');
+                if (!token) {
+                    console.log('[Fallback] No token, redirecting to sign in');
+                    window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname);
                 } else {
                     var modal = document.getElementById('create-room-modal');
+                    console.log('[Fallback] Token found, modal element:', !!modal);
                     if (modal) {
-                        var token = localStorage.getItem('authToken');
-                        if (!token) {
-                            window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname);
-                        } else {
-                            modal.classList.add('active');
-                        }
+                        modal.classList.add('active');
+                    } else {
+                        alert('Create room modal not found in page');
                     }
                 }
-            });
-        }
+            }
+        });
     })();
     </script>
 </body>
