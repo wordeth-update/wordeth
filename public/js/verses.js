@@ -2147,7 +2147,17 @@ class AudioRoomsManager {
 
     // Room Management
     async createRoom() {
-        if (!this.createRoomForm) return;
+        if (!this.createRoomForm) {
+            console.error('[CreateRoom] No form element found');
+            return;
+        }
+
+        const submitBtn = this.createRoomForm.querySelector('button[type="submit"]');
+        const origText = submitBtn?.textContent;
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating…';
+        }
 
         const formData = new FormData(this.createRoomForm);
         const roomData = {
@@ -2157,41 +2167,45 @@ class AudioRoomsManager {
             isPrivate: formData.get('private-room') === 'on'
         };
 
+        console.log('[CreateRoom] Creating room:', roomData.name);
+
         try {
             const newRoom = await this.createRoomOnServer(roomData);
-            this.hideAllModals();
-            this.isRoomHost = true; // Mark as host since we created the room
+            console.log('[CreateRoom] Room created with id:', newRoom.id);
+            this.isRoomHost = true;
             
             const roomNameEl = document.getElementById('room-name');
             const currentSongEl = document.getElementById('current-song');
             if (roomNameEl) roomNameEl.textContent = roomData.name || 'Untitled Room';
             if (currentSongEl) currentSongEl.textContent = roomData.initialSong ? `Currently discussing: "${roomData.initialSong}"` : '';
             
+            this.hideAllModals();
             await this.joinRoom(newRoom.id, true);
+            console.log('[CreateRoom] Successfully joined room');
         } catch (error) {
-            console.error('Error creating room:', error);
-            alert('Failed to create room. Please try again.');
+            console.error('[CreateRoom] Error:', error);
+            alert('Failed to create room: ' + (error.message || 'Please try again.'));
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = origText || 'Create Room';
+            }
         }
     }
 
     async createRoomOnServer(roomData) {
-        try {
-            const res = await fetch(apiUrl('/api/rooms/create'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: roomData.name || 'Untitled Room' })
-            });
-            if (res.ok) {
-                const data = await res.json();
-                return { id: data.id, ...roomData };
-            }
-        } catch (e) {
-            console.warn('Server room ID generation failed, using local fallback:', e.message);
+        const res = await fetch(apiUrl('/api/rooms/create'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: roomData.name || 'Untitled Room' })
+        });
+        if (!res.ok) {
+            const errText = await res.text().catch(() => 'Unknown error');
+            throw new Error(`Server returned ${res.status}: ${errText}`);
         }
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        let id = '';
-        for (let i = 0; i < 18; i++) id += chars[Math.floor(Math.random() * chars.length)];
-        return { id: id.slice(0, 8) + '_' + id.slice(8), ...roomData };
+        const data = await res.json();
+        console.log('[CreateRoom] Server assigned room id:', data.id);
+        return { id: data.id, ...roomData };
     }
 
     _restoreLobbyUI() {
