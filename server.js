@@ -284,6 +284,42 @@ app.post('/api/rooms/create', async (req, res) => {
     res.json({ id: roomId });
 });
 
+app.post('/api/rooms/create-and-join', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    await waitForRoomsReady();
+    const roomId = generateRoomId();
+    const { getRoomsMap } = require('./routes/signaling');
+    const { saveRoom } = require('./services/redisClient');
+    const now = Date.now();
+    const roomsMap = getRoomsMap();
+    const { name, userId, userName, avatar } = req.body;
+    const room = {
+        id: roomId,
+        name: name || null,
+        hostId: userId || null,
+        creatorUserId: userId || null,
+        participants: new Map(),
+        karaokeEnabled: false,
+        videoMode: 'off',
+        activeVideos: new Set(),
+        isLocked: false,
+        stageAccess: 'invite-only',
+        createdAt: now,
+        lastActivity: now
+    };
+    roomsMap.set(roomId, room);
+    try {
+        const joinResult = await joinRoomHTTP({ roomId, userId, userName, isHost: true, roomName: name, avatar });
+        saveRoom(roomId, room);
+        console.log(`[Rooms API] Room created+joined in one step: ${roomId}`);
+        res.json({ id: roomId, joined: true, ...joinResult });
+    } catch (err) {
+        roomsMap.delete(roomId);
+        console.error(`[Rooms API] Create+join error for ${roomId}, room cleaned up:`, err.message);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 app.post('/api/rooms/join', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     res.setHeader('CDN-Cache-Control', 'no-store');

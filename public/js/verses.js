@@ -2194,13 +2194,50 @@ class AudioRoomsManager {
             isPrivate: formData.get('private-room') === 'on'
         };
 
+        const user = this.isGuest ? {} : JSON.parse(localStorage.getItem('user') || '{}');
+        const userName = this.isGuest ? 'Guest' : (user.name || user.username || 'Anonymous');
+        const userId = user._id || user.id || `anon_${Date.now()}`;
+
         console.log('[CreateRoom] Creating room:', roomData.name);
 
         try {
-            const newRoom = await this.createRoomOnServer(roomData);
-            console.log('[CreateRoom] Room created with id:', newRoom.id);
+            const maxAttempts = 3;
+            let httpData = null;
+            let roomId = null;
 
-            if (submitBtn) submitBtn.textContent = 'Joining…';
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                if (submitBtn) submitBtn.textContent = attempt > 1 ? `Retrying (${attempt}/${maxAttempts})…` : 'Creating…';
+                console.log(`[CreateRoom] Attempt ${attempt}/${maxAttempts}`);
+                try {
+                    const resp = await this._fetchWithTimeout(apiUrl('/api/rooms/create-and-join'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store' },
+                        body: JSON.stringify({
+                            name: roomData.name || 'Untitled Room',
+                            userId,
+                            userName,
+                            avatar: user.avatar || null
+                        }),
+                        cache: 'no-store'
+                    }, 15000);
+                    httpData = await resp.json();
+                    roomId = httpData.id;
+                    if (httpData.success) break;
+                    console.warn(`[CreateRoom] Attempt ${attempt} server said:`, httpData.message);
+                } catch (e) {
+                    console.warn(`[CreateRoom] Attempt ${attempt} failed:`, e.message);
+                    if (attempt >= maxAttempts) throw e;
+                }
+                if (attempt < maxAttempts) {
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+            }
+
+            if (!httpData?.success || !roomId) {
+                throw new Error(httpData?.message || 'Could not create room after multiple attempts.');
+            }
+
+            console.log('[CreateRoom] Room created+joined with id:', roomId);
 
             this.isRoomHost = true;
             const roomNameEl = document.getElementById('room-name');
@@ -2208,31 +2245,7 @@ class AudioRoomsManager {
             if (roomNameEl) roomNameEl.textContent = roomData.name || 'Untitled Room';
             if (currentSongEl) currentSongEl.textContent = roomData.initialSong ? `Currently discussing: "${roomData.initialSong}"` : '';
 
-            const user = this.isGuest ? {} : JSON.parse(localStorage.getItem('user') || '{}');
-            const userName = this.isGuest ? 'Guest' : (user.name || user.username || 'Anonymous');
-            const joinPayload = {
-                roomId: newRoom.id,
-                userId: user._id || user.id || `anon_${Date.now()}`,
-                userName,
-                isHost: true,
-                roomName: roomData.name || 'Untitled Room',
-                avatar: user.avatar || null
-            };
-
-            const httpResp = await this._fetchWithTimeout(apiUrl(`/api/rooms/join?_t=${Date.now()}`), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' },
-                body: JSON.stringify(joinPayload),
-                cache: 'no-store'
-            });
-            const httpData = await httpResp.json();
-            console.log('[CreateRoom] Join response:', httpData.success, httpData.message || '');
-
-            if (!httpData.success) {
-                throw new Error(httpData.message || 'Could not join the newly created room.');
-            }
-
-            this.currentRoom = newRoom.id;
+            this.currentRoom = roomId;
             this.roomJoinTime = Date.now();
             this._joinConfirmed = true;
             this.isSpeaker = true;
@@ -2250,7 +2263,7 @@ class AudioRoomsManager {
             this.updateKaraokeButtonState();
             this.updateVideoButtonState();
             this.updateHostControls();
-            this._showRoomUI(newRoom.id, true);
+            this._showRoomUI(roomId, true);
 
             this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
             this._requestWakeLock();
@@ -2263,6 +2276,7 @@ class AudioRoomsManager {
                 console.warn('[CreateRoom] Mic access denied, hosting without mic:', e.message);
             }
 
+            const joinPayload = { roomId, userId, userName, isHost: true, roomName: roomData.name || 'Untitled Room', avatar: user.avatar || null };
             this.connectSocket().then(() => {
                 if (this.socket?.connected) {
                     this.socket.emit('join-room', joinPayload, (ack) => {
@@ -2272,17 +2286,17 @@ class AudioRoomsManager {
             }).catch(e => console.warn('[CreateRoom] Socket connect error:', e));
 
             try {
-                await this._agoraJoinGuarded(newRoom.id, { forceRole: 'host' });
+                await this._agoraJoinGuarded(roomId, { forceRole: 'host' });
             } catch (agoraErr) {
                 console.warn('[CreateRoom] Agora join error:', agoraErr.message);
             }
 
-            window.history.replaceState({ room: newRoom.id }, '', `/verses.html?room=${encodeURIComponent(newRoom.id)}`);
+            window.history.replaceState({ room: roomId }, '', `/verses.html?room=${encodeURIComponent(roomId)}`);
 
             fetch(apiUrl('/api/analytics/track'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ eventType: 'verse_create', segment: 'community', metadata: { roomId: newRoom.id, page: 'verses' } })
+                body: JSON.stringify({ eventType: 'verse_create', segment: 'community', metadata: { roomId, page: 'verses' } })
             }).catch(() => {});
 
             console.log('[CreateRoom] Room fully joined and visible');
