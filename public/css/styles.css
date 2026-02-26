@@ -289,8 +289,8 @@ h2 {
 .nav-signin-btn {
     display: inline-block;
     text-decoration: none;
-    background: linear-gradient(135deg, var(--purple-accent) 0%, var(--mint) 100%);
-    color: var(--black);
+    background: #fff;
+    color: #000;
     border: none;
     padding: 0.55rem 1.25rem;
     border-radius: 50px;
@@ -306,7 +306,7 @@ h2 {
 
 .nav-signin-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(139, 47, 255, 0.5), var(--glow-mint);
+    box-shadow: 0 8px 28px rgba(255, 255, 255, 0.25);
 }
 
 /* ── Main ───────────────────────────────────────────────────── */
@@ -426,8 +426,8 @@ main > section:not(.hero-minimal):not(.features-strip):not(.explore-cards) {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    background: #fff;
-    color: #000;
+    background: linear-gradient(135deg, var(--mint) 0%, var(--purple-accent) 100%);
+    color: var(--black);
     text-decoration: none;
     padding: 0.9rem 2.6rem;
     border-radius: 50px;
@@ -435,13 +435,13 @@ main > section:not(.hero-minimal):not(.features-strip):not(.explore-cards) {
     font-family: var(--font-body);
     font-size: 1rem;
     transition: all 0.3s var(--ease-bounce);
-    box-shadow: 0 8px 30px rgba(255, 255, 255, 0.15), 0 0 0 0 rgba(255, 255, 255, 0);
+    box-shadow: 0 8px 30px rgba(0, 229, 168, 0.3), 0 0 0 0 rgba(0, 229, 168, 0);
     letter-spacing: 0.01em;
 }
 
 .hero-cta:hover {
     transform: translateY(-4px) scale(1.02);
-    box-shadow: 0 16px 50px rgba(255, 255, 255, 0.25), 0 0 30px rgba(255, 255, 255, 0.1);
+    box-shadow: 0 16px 50px rgba(0, 229, 168, 0.5), var(--glow-mint);
 }
 
 /* ── Features Strip ─────────────────────────────────────────── */
