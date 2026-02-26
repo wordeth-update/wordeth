@@ -2166,8 +2166,7 @@ body.in-room {
     position: fixed;
     inset: 0;
     z-index: 10003;
-    background: rgba(6, 4, 9, 0.75);
-    backdrop-filter: blur(4px);
+    background: rgba(6, 4, 9, 0.85);
 }
 
 .mobile-walkthrough-close {

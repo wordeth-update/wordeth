@@ -1878,7 +1878,7 @@ class AudioRoomsManager {
         closeBtn.onclick = dismiss;
         document.body.appendChild(closeBtn);
 
-        overlay.addEventListener('click', dismiss);
+        setTimeout(() => overlay.addEventListener('click', dismiss), 300);
 
         let elevatedEl = null;
         let elevatedPrev = null;
@@ -1913,6 +1913,7 @@ class AudioRoomsManager {
 
             tooltip = document.createElement('div');
             tooltip.className = 'mobile-walkthrough-tooltip';
+            tooltip.style.cssText = 'position:fixed;z-index:10005;background:linear-gradient(145deg,rgba(45,20,80,0.98),rgba(25,8,50,0.99));border:2px solid rgba(139,47,255,0.6);border-radius:16px;padding:1rem 1.1rem;box-shadow:0 16px 50px rgba(0,0,0,0.7),0 0 30px rgba(139,47,255,0.25);color:#fff;';
 
             const tipHeader = this._el('div', {className: 'walk-tip-header'},
                 this._el('div', {className: 'walk-tip-icon'}, this._icon('fas ' + step.icon)),
@@ -1991,6 +1992,18 @@ class AudioRoomsManager {
             }
 
             document.body.appendChild(tooltip);
+
+            requestAnimationFrame(() => {
+                const tipRect = tooltip.getBoundingClientRect();
+                if (tipRect.bottom > window.innerHeight) {
+                    tooltip.style.top = Math.max(60, window.innerHeight - tipRect.height - 80) + 'px';
+                    tooltip.style.transform = '';
+                }
+                if (tipRect.top < 50) {
+                    tooltip.style.top = '60px';
+                    tooltip.style.transform = '';
+                }
+            });
 
             tooltip.querySelector('.walk-tip-skip').onclick = dismiss;
             tooltip.querySelector('.walk-btn-next').onclick = () => {
@@ -2273,7 +2286,7 @@ class AudioRoomsManager {
             this._showRoomUI(roomId, true);
 
             this._welcomeShown = true;
-            this._agoraJoinedViaCreate = true;
+            this._agoraJoinHandled = true;
             this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
             this._requestWakeLock();
             this._startSilentAudioKeepAlive();
@@ -2296,8 +2309,10 @@ class AudioRoomsManager {
 
             try {
                 await this._agoraJoinGuarded(roomId, { forceRole: 'host' });
+                console.log('[CreateRoom] Agora join succeeded');
             } catch (agoraErr) {
                 console.warn('[CreateRoom] Agora join error:', agoraErr.message);
+                this._agoraJoinHandled = false;
             }
 
             window.history.replaceState({ room: roomId }, '', `/verses.html?room=${encodeURIComponent(roomId)}`);
@@ -2505,6 +2520,7 @@ class AudioRoomsManager {
             }
 
             this._welcomeShown = true;
+            this._agoraJoinHandled = true;
             if (guestJoin) {
                 this.addChatMessage('System', 'Welcome! You\'re listening as a guest. Sign up to chat and join the conversation.', true);
             } else if (httpData.isHost || isHost) {
@@ -2540,8 +2556,10 @@ class AudioRoomsManager {
             try {
                 const agoraRole = isHost ? 'host' : 'audience';
                 await this._agoraJoinGuarded(roomId, { forceRole: agoraRole });
+                console.log('joinRoom: Agora join succeeded as', agoraRole);
             } catch (agoraErr) {
                 console.warn('joinRoom: Agora join error:', agoraErr.message);
+                this._agoraJoinHandled = false;
             }
 
             fetch(apiUrl('/api/analytics/track'), {
@@ -3153,18 +3171,16 @@ class AudioRoomsManager {
                 }
             }
 
-            const alreadyConnected = this.agoraClient && this.agoraClient.connectionState === 'CONNECTED';
-            if (this._agoraJoinedViaCreate && !wasRedirected && alreadyConnected) {
-                console.log('Agora: skipping duplicate join — already connected via createRoom');
-                this._agoraJoinedViaCreate = false;
+            if (this._agoraJoinHandled) {
+                console.log('Agora: skipping room-joined join — already handled by createRoom/joinRoom');
             } else {
-                this._agoraJoinedViaCreate = false;
                 try {
                     if (wasRedirected && this.agoraClient && this.agoraClient.connectionState !== 'DISCONNECTED') {
                         await this._agoraLeaveGuarded();
                     }
-                    if (alreadyConnected && !wasRedirected) {
-                        console.log('Agora: already connected, skipping rejoin');
+                    const connState = this.agoraClient?.connectionState;
+                    if (connState === 'CONNECTED' || connState === 'CONNECTING') {
+                        console.log('Agora: already', connState, '— skipping rejoin');
                     } else {
                         await this._agoraJoinGuarded(confirmedRoom, { forceRole: this.isSpeaker ? 'host' : 'audience' });
                         console.log('Agora: joined after room-joined confirmation, room:', confirmedRoom);
@@ -4005,7 +4021,7 @@ class AudioRoomsManager {
         this._detached = false;
         this._savedRoomName = null;
         this._welcomeShown = false;
-        this._agoraJoinedViaCreate = false;
+        this._agoraJoinHandled = false;
         this._releaseWakeLock();
         this._stopSilentAudioKeepAlive();
         this.resetAudioFilter();
