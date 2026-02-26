@@ -806,6 +806,7 @@ app.use((err, req, res, next) => {
 
 // 404 handler
 app.use('*', (req, res) => {
+    console.log(`[404] ${req.method} ${req.originalUrl}`);
     res.status(404).json({ message: 'Route not found' });
 });
 
