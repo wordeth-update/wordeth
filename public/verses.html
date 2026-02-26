@@ -862,7 +862,7 @@
               </div>
           </div>
       </footer>
-    <div class="welcome-guide-overlay" id="welcome-guide-overlay">
+    <div class="welcome-guide-overlay" id="welcome-guide-overlay" style="display:none">
         <div class="welcome-guide-modal">
             <div class="welcome-guide-header">
                 <h2><i class="fas fa-headphones"></i> Welcome to Your First Verse!</h2>
@@ -934,11 +934,31 @@
                 e.stopPropagation();
                 var mgr = window.audioRoomsManager;
                 if (mgr && typeof mgr.createRoom === 'function') {
-                    mgr.createRoom();
+                    try {
+                        var result = mgr.createRoom();
+                        if (result && typeof result.catch === 'function') {
+                            result.catch(function(err) {
+                                console.error('[Fallback] createRoom error:', err);
+                                alert('Failed to create room. Please try again.');
+                            });
+                        }
+                    } catch(err) {
+                        console.error('[Fallback] createRoom threw:', err);
+                        alert('Failed to create room. Please try again.');
+                    }
+                } else {
+                    alert('Room system is still loading. Please wait a moment and try again.');
                 }
                 return false;
             });
         }
+
+        document.querySelectorAll('#create-room-modal .close-modal, #create-room-modal .cancel-btn').forEach(function(el) {
+            el.addEventListener('click', function() {
+                var modal = document.getElementById('create-room-modal');
+                if (modal) modal.classList.remove('active');
+            });
+        });
     })();
     </script>
 </body>

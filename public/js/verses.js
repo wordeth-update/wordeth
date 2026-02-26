@@ -1665,6 +1665,7 @@ class AudioRoomsManager {
         } else {
             const overlay = document.getElementById('welcome-guide-overlay');
             if (!overlay) return;
+            overlay.style.display = '';
             overlay.classList.add('active');
             const closeBtn = document.getElementById('welcome-guide-close');
             if (closeBtn) {
