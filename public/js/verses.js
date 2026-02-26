@@ -2272,6 +2272,8 @@ class AudioRoomsManager {
             this.updateHostControls();
             this._showRoomUI(roomId, true);
 
+            this._welcomeShown = true;
+            this._agoraJoinedViaCreate = true;
             this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
             this._requestWakeLock();
             this._startSilentAudioKeepAlive();
@@ -2500,14 +2502,17 @@ class AudioRoomsManager {
 
             if (isInvite) {
                 if (this._invite.status === 'joining') this._invite.status = 'joined';
-                if (guestJoin) {
-                    this.addChatMessage('System', 'Welcome! You\'re listening as a guest. Sign up to chat and join the conversation.', true);
-                } else if (httpData.isHost || isHost) {
-                    this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
-                } else {
-                    this.addChatMessage('System', 'Welcome! You joined as a listener. Raise your hand or wait for an invite to speak.', true);
-                }
             }
+
+            this._welcomeShown = true;
+            if (guestJoin) {
+                this.addChatMessage('System', 'Welcome! You\'re listening as a guest. Sign up to chat and join the conversation.', true);
+            } else if (httpData.isHost || isHost) {
+                this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
+            } else {
+                this.addChatMessage('System', 'Welcome! You joined as a listener. Raise your hand or wait for an invite to speak.', true);
+            }
+
             this._requestWakeLock();
             this._startSilentAudioKeepAlive();
             this._pendingJoinIsInvite = false;
@@ -2537,18 +2542,6 @@ class AudioRoomsManager {
                 await this._agoraJoinGuarded(roomId, { forceRole: agoraRole });
             } catch (agoraErr) {
                 console.warn('joinRoom: Agora join error:', agoraErr.message);
-            }
-            
-            if (!isInvite) {
-                if (guestJoin) {
-                    this.addChatMessage('System', 'Welcome! You\'re listening as a guest. Sign up to chat and join the conversation.', true);
-                } else if (isHost) {
-                    this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
-                } else {
-                    this.addChatMessage('System', 'Welcome! You joined as a listener. Raise your hand or wait for an invite to speak.', true);
-                }
-                this._requestWakeLock();
-                this._startSilentAudioKeepAlive();
             }
 
             fetch(apiUrl('/api/analytics/track'), {
@@ -3073,13 +3066,16 @@ class AudioRoomsManager {
                     this.isSpeaker = true;
                 }
                 this._showRoomUI(data.roomId || this.currentRoom, isHost);
-                const guestJoin = this.isGuest;
-                if (guestJoin) {
-                    this.addChatMessage('System', 'Welcome! You\'re listening as a guest. Sign up to chat and join the conversation.', true);
-                } else if (isHost) {
-                    this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
-                } else {
-                    this.addChatMessage('System', 'Welcome! You joined as a listener. Raise your hand or wait for an invite to speak.', true);
+                if (!this._welcomeShown) {
+                    const guestJoin = this.isGuest;
+                    if (guestJoin) {
+                        this.addChatMessage('System', 'Welcome! You\'re listening as a guest. Sign up to chat and join the conversation.', true);
+                    } else if (isHost) {
+                        this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
+                    } else {
+                        this.addChatMessage('System', 'Welcome! You joined as a listener. Raise your hand or wait for an invite to speak.', true);
+                    }
+                    this._welcomeShown = true;
                 }
                 this._requestWakeLock();
                 this._startSilentAudioKeepAlive();
@@ -3157,15 +3153,26 @@ class AudioRoomsManager {
                 }
             }
 
-            try {
-                if (wasRedirected && this.agoraClient && this.agoraClient.connectionState !== 'DISCONNECTED') {
-                    await this._agoraLeaveGuarded();
+            const alreadyConnected = this.agoraClient && this.agoraClient.connectionState === 'CONNECTED';
+            if (this._agoraJoinedViaCreate && !wasRedirected && alreadyConnected) {
+                console.log('Agora: skipping duplicate join — already connected via createRoom');
+                this._agoraJoinedViaCreate = false;
+            } else {
+                this._agoraJoinedViaCreate = false;
+                try {
+                    if (wasRedirected && this.agoraClient && this.agoraClient.connectionState !== 'DISCONNECTED') {
+                        await this._agoraLeaveGuarded();
+                    }
+                    if (alreadyConnected && !wasRedirected) {
+                        console.log('Agora: already connected, skipping rejoin');
+                    } else {
+                        await this._agoraJoinGuarded(confirmedRoom, { forceRole: this.isSpeaker ? 'host' : 'audience' });
+                        console.log('Agora: joined after room-joined confirmation, room:', confirmedRoom);
+                    }
+                } catch (e) {
+                    console.error('Agora join after room-joined failed:', e);
+                    this.addChatMessage('System', 'Audio connection failed. Try refreshing the page.', true);
                 }
-                await this._agoraJoinGuarded(confirmedRoom, { forceRole: this.isSpeaker ? 'host' : 'audience' });
-                console.log('Agora: joined after room-joined confirmation, room:', confirmedRoom);
-            } catch (e) {
-                console.error('Agora join after room-joined failed:', e);
-                this.addChatMessage('System', 'Audio connection failed. Try refreshing the page.', true);
             }
 
             this.updateStageControls();
@@ -3997,6 +4004,8 @@ class AudioRoomsManager {
         }
         this._detached = false;
         this._savedRoomName = null;
+        this._welcomeShown = false;
+        this._agoraJoinedViaCreate = false;
         this._releaseWakeLock();
         this._stopSilentAudioKeepAlive();
         this.resetAudioFilter();

@@ -2200,11 +2200,11 @@ body.in-room {
 .mobile-walkthrough-tooltip {
     position: fixed;
     z-index: 10005;
-    background: linear-gradient(145deg, rgba(30, 13, 56, 0.97) 0%, rgba(13, 1, 24, 0.99) 100%);
-    border: 1px solid rgba(139, 47, 255, 0.3);
+    background: linear-gradient(145deg, rgba(45, 20, 80, 0.98) 0%, rgba(25, 8, 50, 0.99) 100%);
+    border: 2px solid rgba(139, 47, 255, 0.6);
     border-radius: 16px;
     padding: 1rem 1.1rem;
-    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.6), 0 0 40px rgba(139, 47, 255, 0.1);
+    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.7), 0 0 30px rgba(139, 47, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08);
     overflow-y: auto;
 }
 
