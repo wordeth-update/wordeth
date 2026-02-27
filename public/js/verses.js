@@ -2294,7 +2294,6 @@ class AudioRoomsManager {
             this.updateVideoButtonState();
             this.updateHostControls();
             this._showRoomUI(roomId, true);
-            this._playSfx('enterRoom');
 
             this._welcomeShown = true;
             this._agoraJoinHandled = true;
