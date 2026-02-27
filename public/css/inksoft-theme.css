@@ -24,6 +24,36 @@
 =======================================*/
 
 
+/* ====== MDC THEME VARIABLES (root-level override) ====== */
+
+:root,
+body,
+html {
+  --mat-menu-container-color: #0D0118;
+  --mat-menu-item-label-text-color: #ffffff;
+  --mat-menu-item-icon-color: rgba(255, 255, 255, 0.6);
+  --mat-menu-item-hover-state-layer-color: rgba(0, 229, 168, 0.15);
+  --mat-menu-item-focus-state-layer-color: rgba(0, 229, 168, 0.1);
+  --mat-menu-item-label-text-size: 14px;
+  --mat-option-label-text-color: #ffffff;
+  --mat-option-selected-state-label-text-color: #00E5A8;
+  --mat-select-panel-background-color: #0D0118;
+  --mat-select-enabled-trigger-text-color: #ffffff;
+  --mat-select-placeholder-text-color: rgba(255, 255, 255, 0.5);
+  --mat-select-enabled-arrow-color: #00E5A8;
+  --mdc-menu-container-color: #0D0118;
+  --mdc-theme-surface: #0D0118;
+  --mdc-theme-on-surface: #ffffff;
+  --mdc-theme-text-primary-on-background: #ffffff;
+  --mdc-theme-text-secondary-on-background: rgba(255, 255, 255, 0.7);
+  --mdc-list-list-item-label-text-color: #ffffff;
+  --mdc-list-list-item-hover-label-text-color: #00E5A8;
+  --mdc-list-list-item-hover-state-layer-color: rgba(0, 229, 168, 0.15);
+  --mdc-filled-text-field-input-text-color: #ffffff;
+  --mdc-outlined-text-field-input-text-color: #ffffff;
+}
+
+
 /* ====== GLOBAL BACKGROUNDS ====== */
 
 #body {
