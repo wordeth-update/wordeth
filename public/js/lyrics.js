@@ -154,7 +154,10 @@ async function showLyricsModal(songId) {
 
         modalSongTitle.textContent = title;
         modalSongArtist.textContent = artist;
-        modalSongImage.src = songInfo.image || songInfo.album_image || '/images/logo.png';
+        const hasValidImg = songInfo.image && !songInfo.image.includes('nocover') && !songInfo.image.includes('placeholder');
+        modalSongImage.classList.remove('fallback-logo');
+        modalSongImage.src = hasValidImg ? songInfo.image : '/images/logo.png';
+        if (!hasValidImg) modalSongImage.classList.add('fallback-logo');
         modalSongImage.onerror = function() { this.onerror=null; this.src='/images/logo.png'; this.classList.add('fallback-logo'); };
         modalSongAlbum.textContent = songInfo.album || 'Album not available';
         modalSongRelease.textContent = songInfo.release_date || 'Release date not available';
@@ -474,8 +477,8 @@ function handleTextSelection() {
         const modalRect = modalContent ? modalContent.getBoundingClientRect() : { left: 0, top: 0 };
         const scrollTop = modalContent ? modalContent.scrollTop : 0;
 
-        const tooltipLeft = lastRect.right - modalRect.left;
-        const tooltipTop = lastRect.top - modalRect.top + scrollTop - 10;
+        const tooltipLeft = Math.min(lastRect.right - modalRect.left + 8, modalRect.width - 140);
+        const tooltipTop = lastRect.bottom - modalRect.top + scrollTop + 8;
 
         merchTooltip.style.left = tooltipLeft + 'px';
         merchTooltip.style.top = tooltipTop + 'px';

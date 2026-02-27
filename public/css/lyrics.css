@@ -178,18 +178,42 @@
     box-shadow: 0 8px 20px rgba(0,229,168,0.45);
 }
 
-/* Loading state */
 .loading {
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 3rem;
-    color: var(--mint);
-    font-size: 1.2rem;
-    font-weight: 600;
 }
 
-.loading i {
-    margin-right: 0.5rem;
-    font-size: 1.5rem;
+.loading-spinner-wrap {
+    width: 140px;
+    height: 140px;
+}
+
+.loading-ring {
+    width: 100%;
+    height: 100%;
+    animation: spin 6s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-ring .spinner-arc {
+    animation: spinner-dash 1.2s ease-in-out infinite;
+    transform-origin: center;
+}
+
+@keyframes spinner-dash {
+    0% { stroke-dasharray: 10 166; stroke-dashoffset: 0; }
+    50% { stroke-dasharray: 80 96; stroke-dashoffset: -30; }
+    100% { stroke-dasharray: 10 166; stroke-dashoffset: -176; }
+}
+
+.arc-text {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
 }
 
 /* No results state */
@@ -240,9 +264,8 @@
 }
 
 .modal-header {
-    padding: 2rem 2rem 1rem;
+    padding: 1rem 2rem 1rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    position: relative;
 }
 
 .modal-header h2 {
@@ -259,14 +282,15 @@
 }
 
 .close-modal {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    background: rgba(255, 255, 255, 0.1);
+    position: sticky;
+    top: 0;
+    float: right;
+    margin: 0.75rem 0.75rem 0 0;
+    background: rgba(255, 255, 255, 0.15);
     border: none;
     color: var(--white);
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     cursor: pointer;
     font-size: 1.5rem;
@@ -274,6 +298,8 @@
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
+    z-index: 10;
+    flex-shrink: 0;
 }
 
 .close-modal:hover {
@@ -298,6 +324,12 @@
     object-fit: cover;
     border-radius: 12px;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.song-info-modal img.fallback-logo {
+    object-fit: contain;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #1E0D38 0%, #060409 100%);
 }
 
 .song-details p {
@@ -360,6 +392,10 @@
 .start-discussion-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(0,229,168,0.45);
+}
+
+a.merch-cta-btn {
+    text-decoration: none;
 }
 
 /* Responsive design */

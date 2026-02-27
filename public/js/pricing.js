@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+(function() {
     const plansContainer = document.getElementById('plansContainer');
     const billingToggle = document.getElementById('billingToggle');
     const monthlyLabel = document.getElementById('monthlyLabel');
@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveBadge = document.getElementById('saveBadge');
     const categoryDesc = document.getElementById('categoryDescription');
     const categoryTabs = document.querySelectorAll('.cat-tab');
+
+    if (!plansContainer) return;
 
     let allPlans = [];
     let currentCategory = 'fan';
@@ -226,5 +228,4 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 4000);
     }
-
-});
+})();

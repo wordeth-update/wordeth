@@ -596,8 +596,8 @@
     <script src="js/config.js"></script>
     <script src="js/nav-auth.js"></script>
     <script>
-        // Sample artist data (replace with API/database later)
-        const artists = [
+    (function() {
+        var artists = [
             { id: 1, name: 'Drake', type: 'music', image: 'https://placehold.co/400x400/5F0E82/ffffff?text=Drake', badge: 'Featured', designId: null },
             { id: 2, name: 'Kendrick Lamar', type: 'music', image: 'https://placehold.co/400x400/96C5B0/333333?text=Kendrick', badge: 'Featured', designId: null },
             { id: 3, name: 'Tyler, The Creator', type: 'music', image: 'https://placehold.co/400x400/E74C3C/ffffff?text=Tyler', badge: 'Hot', designId: null },
@@ -612,7 +612,7 @@
             { id: 12, name: 'Dreamville', type: 'label', image: 'https://placehold.co/400x400/27AE60/ffffff?text=Dreamville', designId: null },
         ];
 
-        let inksoftLoaded = false;
+        var inksoftLoaded = false;
 
         function createArtistCard(artist) {
             const card = document.createElement('div');
@@ -819,10 +819,10 @@
             document.body.appendChild(scriptElement);
         }
 
-        // Initialize
         populateGrids();
         checkForLyrics();
         loadQuickDesigner();
+    })();
     </script>
     <script src="js/cookie-consent.js"></script>
     <script data-cfasync="false" src="/socket.io/socket.io.js"></script>
