@@ -220,46 +220,21 @@ div.cdk-overlay-container {
   color: rgba(255, 255, 255, 0.87) !important;
 }
 
-div.cdk-overlay-container div,
-div.cdk-overlay-container span,
-div.cdk-overlay-container a,
-div.cdk-overlay-container button,
-div.cdk-overlay-container li,
-div.cdk-overlay-container ul,
-div.cdk-overlay-container p,
-div.cdk-overlay-container label,
-div.cdk-overlay-container input {
-  color: rgba(255, 255, 255, 0.87) !important;
-}
-
+/* Force dark bg on overlay panels */
 div.cdk-overlay-container .cdk-overlay-pane div,
 div.cdk-overlay-container .cdk-overlay-pane > div,
 div.cdk-overlay-container [id^="cdk-overlay-"] > div,
-div.cdk-overlay-container [id^="cdk-overlay-"] div {
-  background: #0D0118 !important;
-  background-color: #0D0118 !important;
-}
-
+div.cdk-overlay-container [id^="cdk-overlay-"] div,
 div.cdk-overlay-connected-position-bounding-box .cdk-overlay-pane > div,
 div.cdk-overlay-connected-position-bounding-box .cdk-overlay-pane div,
-div.cdk-overlay-connected-position-bounding-box div div {
-  background: #0D0118 !important;
-  background-color: #0D0118 !important;
-  color: rgba(255, 255, 255, 0.87) !important;
-}
-
+div.cdk-overlay-connected-position-bounding-box div div,
 .cdk-overlay-pane > *,
 .cdk-overlay-pane > div,
 .cdk-overlay-pane > div > *,
 .cdk-overlay-pane > div > div,
 .cdk-overlay-pane > div > div > *,
 .cdk-overlay-pane > div > div > div,
-.cdk-overlay-pane > div > div > div > * {
-  background: #0D0118 !important;
-  background-color: #0D0118 !important;
-  color: rgba(255, 255, 255, 0.87) !important;
-}
-
+.cdk-overlay-pane > div > div > div > *,
 .mat-menu-panel,
 .mat-menu-content,
 .mat-select-panel,
@@ -276,64 +251,91 @@ div[role="menu"],
 div[role="listbox"] {
   background: #0D0118 !important;
   background-color: #0D0118 !important;
-  border: 1px solid rgba(0, 229, 168, 0.2) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
+  border-color: rgba(0, 229, 168, 0.2) !important;
 }
 
+/* Force WHITE text on every element inside overlays */
+div.cdk-overlay-container,
+div.cdk-overlay-container *,
+.cdk-overlay-pane,
+.cdk-overlay-pane *,
+div.cdk-overlay-connected-position-bounding-box,
+div.cdk-overlay-connected-position-bounding-box *,
+.mat-menu-panel *,
+.mat-menu-content *,
+.mat-select-panel *,
+.mat-autocomplete-panel *,
+[class*="menu-panel"] *,
+[class*="dropdown-panel"] *,
+[class*="dropdown-menu"] *,
+[class*="select-panel"] *,
+[class*="overlay-panel"] *,
 .mat-option,
-[class*="option"],
-[class*="menu-item"],
-[class*="dropdown-item"],
+.mat-option *,
 .mat-menu-item,
+.mat-menu-item *,
+[class*="option"],
+[class*="option"] *,
+[class*="menu-item"],
+[class*="menu-item"] *,
+[class*="dropdown-item"],
+[class*="dropdown-item"] *,
 li[role="option"],
+li[role="option"] *,
 li[role="menuitem"],
+li[role="menuitem"] *,
 button[role="menuitem"],
-a[role="menuitem"] {
-  background: transparent !important;
-  background-color: transparent !important;
-  color: rgba(255, 255, 255, 0.87) !important;
+button[role="menuitem"] *,
+a[role="menuitem"],
+a[role="menuitem"] * {
+  color: #ffffff !important;
 }
 
+/* Hover state for menu items */
 .mat-option:hover,
 .mat-option.mat-active,
+.mat-menu-item:hover,
 [class*="option"]:hover,
 [class*="menu-item"]:hover,
 [class*="dropdown-item"]:hover,
-.mat-menu-item:hover,
 li[role="option"]:hover,
 li[role="menuitem"]:hover,
 button[role="menuitem"]:hover,
 a[role="menuitem"]:hover {
-  background: rgba(0, 229, 168, 0.12) !important;
-  background-color: rgba(0, 229, 168, 0.12) !important;
+  background: rgba(0, 229, 168, 0.15) !important;
+  background-color: rgba(0, 229, 168, 0.15) !important;
+}
+
+.mat-option:hover *,
+.mat-menu-item:hover *,
+[class*="option"]:hover *,
+[class*="menu-item"]:hover *,
+[class*="dropdown-item"]:hover * {
   color: #00E5A8 !important;
 }
 
+/* Selected state */
 .mat-option.mat-selected,
+.mat-option.mat-selected *,
 [class*="option"][class*="selected"],
-[class*="option"][class*="active"],
-li[role="option"][aria-selected="true"] {
+[class*="option"][class*="selected"] *,
+li[role="option"][aria-selected="true"],
+li[role="option"][aria-selected="true"] * {
   color: #00E5A8 !important;
-  background: rgba(0, 229, 168, 0.08) !important;
 }
 
-.mat-option .mat-option-text,
-[class*="option-text"],
-[class*="menu-item"] span,
-[class*="dropdown-item"] span {
-  color: rgba(255, 255, 255, 0.87) !important;
-}
-
+/* Submenu arrows */
 .mat-menu-submenu-icon,
 [class*="submenu-icon"],
-[class*="arrow-icon"] {
-  color: rgba(255, 255, 255, 0.5) !important;
+[class*="arrow-icon"],
+[class*="caret"] {
+  color: rgba(255, 255, 255, 0.6) !important;
 }
 
-/* Backdrop should remain transparent/translucent, not dark */
+/* Backdrop should remain transparent, not dark */
 .cdk-overlay-backdrop,
-div.cdk-overlay-container .cdk-overlay-backdrop {
+div.cdk-overlay-container .cdk-overlay-backdrop,
+.cdk-overlay-transparent-backdrop {
   background: transparent !important;
   background-color: transparent !important;
 }
