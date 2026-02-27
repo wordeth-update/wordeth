@@ -254,82 +254,124 @@ div[role="listbox"] {
   border-color: rgba(0, 229, 168, 0.2) !important;
 }
 
-/* Force WHITE text on every element inside overlays */
-div.cdk-overlay-container,
-div.cdk-overlay-container *,
-.cdk-overlay-pane,
-.cdk-overlay-pane *,
-div.cdk-overlay-connected-position-bounding-box,
-div.cdk-overlay-connected-position-bounding-box *,
-.mat-menu-panel *,
-.mat-menu-content *,
-.mat-select-panel *,
-.mat-autocomplete-panel *,
-[class*="menu-panel"] *,
-[class*="dropdown-panel"] *,
-[class*="dropdown-menu"] *,
-[class*="select-panel"] *,
-[class*="overlay-panel"] *,
-.mat-option,
-.mat-option *,
-.mat-menu-item,
-.mat-menu-item *,
-[class*="option"],
-[class*="option"] *,
-[class*="menu-item"],
-[class*="menu-item"] *,
-[class*="dropdown-item"],
-[class*="dropdown-item"] *,
-li[role="option"],
-li[role="option"] *,
-li[role="menuitem"],
-li[role="menuitem"] *,
-button[role="menuitem"],
-button[role="menuitem"] *,
-a[role="menuitem"],
-a[role="menuitem"] * {
-  color: #ffffff !important;
+/* === MDC (Material Design Components) Menu — InkSoft's actual classes === */
+
+.mat-mdc-menu-panel,
+div.mat-mdc-menu-panel,
+div[role="menu"].mat-mdc-menu-panel {
+  background: #0D0118 !important;
+  background-color: #0D0118 !important;
+  border: 1px solid rgba(0, 229, 168, 0.2) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
 }
 
-/* Hover state for menu items */
-.mat-option:hover,
-.mat-option.mat-active,
-.mat-menu-item:hover,
-[class*="option"]:hover,
-[class*="menu-item"]:hover,
-[class*="dropdown-item"]:hover,
-li[role="option"]:hover,
-li[role="menuitem"]:hover,
-button[role="menuitem"]:hover,
-a[role="menuitem"]:hover {
+.mat-mdc-menu-content,
+div.mat-mdc-menu-content {
+  background: #0D0118 !important;
+  background-color: #0D0118 !important;
+}
+
+.mat-mdc-menu-item,
+button.mat-mdc-menu-item {
+  color: #ffffff !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.mat-mdc-menu-item:hover,
+button.mat-mdc-menu-item:hover {
   background: rgba(0, 229, 168, 0.15) !important;
   background-color: rgba(0, 229, 168, 0.15) !important;
 }
 
-.mat-option:hover *,
-.mat-menu-item:hover *,
-[class*="option"]:hover *,
-[class*="menu-item"]:hover *,
-[class*="dropdown-item"]:hover * {
+.mat-mdc-menu-item:hover .mat-mdc-menu-item-text,
+.mat-mdc-menu-item:hover span {
   color: #00E5A8 !important;
 }
 
-/* Selected state */
-.mat-option.mat-selected,
-.mat-option.mat-selected *,
-[class*="option"][class*="selected"],
-[class*="option"][class*="selected"] *,
-li[role="option"][aria-selected="true"],
-li[role="option"][aria-selected="true"] * {
-  color: #00E5A8 !important;
+.mat-mdc-menu-item-text,
+span.mat-mdc-menu-item-text {
+  color: #ffffff !important;
 }
 
-/* Submenu arrows */
-.mat-menu-submenu-icon,
-[class*="submenu-icon"],
-[class*="arrow-icon"],
-[class*="caret"] {
+.mat-mdc-menu-ripple,
+.mat-mdc-menu-item .mat-ripple,
+.mat-mdc-menu-item .mat-mdc-menu-ripple {
+  background: transparent !important;
+}
+
+.mat-mdc-menu-submenu-icon,
+.mat-mdc-menu-item .mat-icon {
   color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* === MDC Select / Option — in case they use these too === */
+
+.mat-mdc-select-panel,
+.mat-mdc-option,
+.mat-mdc-select-value-text,
+.mat-mdc-select-placeholder {
+  color: #ffffff !important;
+}
+
+.mat-mdc-option {
+  background: transparent !important;
+}
+
+.mat-mdc-option:hover {
+  background: rgba(0, 229, 168, 0.15) !important;
+}
+
+.mat-mdc-option.mdc-list-item--selected,
+.mat-mdc-option.mat-mdc-option-active {
+  color: #00E5A8 !important;
+  background: rgba(0, 229, 168, 0.08) !important;
+}
+
+/* === Legacy mat-menu fallback (keep for other InkSoft pages) === */
+
+.mat-menu-panel,
+.mat-menu-content {
+  background: #0D0118 !important;
+  background-color: #0D0118 !important;
+}
+
+.mat-menu-item,
+button.mat-menu-item {
+  color: #ffffff !important;
+}
+
+.mat-menu-item:hover {
+  background: rgba(0, 229, 168, 0.15) !important;
+}
+
+.mat-option,
+.mat-option .mat-option-text {
+  color: #ffffff !important;
+}
+
+.mat-option:hover {
+  background: rgba(0, 229, 168, 0.15) !important;
+}
+
+/* Force white on ALL overlay text */
+div.cdk-overlay-container span,
+div.cdk-overlay-container button,
+div.cdk-overlay-container a,
+div.cdk-overlay-container div[role="menu"] span,
+div.cdk-overlay-container div[role="menu"] button,
+.cdk-overlay-pane span,
+.cdk-overlay-pane button {
+  color: #ffffff !important;
+}
+
+/* Hover inside overlays */
+div.cdk-overlay-container button:hover,
+div.cdk-overlay-container button:hover span,
+.cdk-overlay-pane button:hover,
+.cdk-overlay-pane button:hover span {
+  color: #00E5A8 !important;
 }
 
 /* Backdrop should remain transparent, not dark */
@@ -346,7 +388,7 @@ div.cdk-overlay-container .cdk-overlay-dark-backdrop {
   background-color: rgba(6, 4, 9, 0.6) !important;
 }
 
-/* --- END NUCLEAR --- */
+/* --- END OVERLAY THEMING --- */
 
 #body .ds-select-product-container .filter-group,
 #body .ds-select-product-container .category-filter-bar,
