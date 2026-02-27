@@ -212,13 +212,39 @@
 }
 
 /* --- NUCLEAR: Force dark on ALL overlays, dropdowns, popups --- */
+/* The cdk-overlay-container sits outside #body at the document root.
+   InkSoft's Angular components render dropdown menus here.
+   We target every level of nesting and use !important on all props. */
 
-.cdk-overlay-container,
-.cdk-overlay-container *,
-.cdk-overlay-pane,
-.cdk-overlay-pane *,
-.cdk-overlay-connected-position-bounding-box,
-.cdk-overlay-connected-position-bounding-box * {
+div.cdk-overlay-container {
+  color: rgba(255, 255, 255, 0.87) !important;
+}
+
+div.cdk-overlay-container div,
+div.cdk-overlay-container span,
+div.cdk-overlay-container a,
+div.cdk-overlay-container button,
+div.cdk-overlay-container li,
+div.cdk-overlay-container ul,
+div.cdk-overlay-container p,
+div.cdk-overlay-container label,
+div.cdk-overlay-container input {
+  color: rgba(255, 255, 255, 0.87) !important;
+}
+
+div.cdk-overlay-container .cdk-overlay-pane div,
+div.cdk-overlay-container .cdk-overlay-pane > div,
+div.cdk-overlay-container [id^="cdk-overlay-"] > div,
+div.cdk-overlay-container [id^="cdk-overlay-"] div {
+  background: #0D0118 !important;
+  background-color: #0D0118 !important;
+}
+
+div.cdk-overlay-connected-position-bounding-box .cdk-overlay-pane > div,
+div.cdk-overlay-connected-position-bounding-box .cdk-overlay-pane div,
+div.cdk-overlay-connected-position-bounding-box div div {
+  background: #0D0118 !important;
+  background-color: #0D0118 !important;
   color: rgba(255, 255, 255, 0.87) !important;
 }
 
@@ -227,44 +253,32 @@
 .cdk-overlay-pane > div > *,
 .cdk-overlay-pane > div > div,
 .cdk-overlay-pane > div > div > *,
-.cdk-overlay-container > *,
-.cdk-overlay-container > div > *,
+.cdk-overlay-pane > div > div > div,
+.cdk-overlay-pane > div > div > div > * {
+  background: #0D0118 !important;
+  background-color: #0D0118 !important;
+  color: rgba(255, 255, 255, 0.87) !important;
+}
+
 .mat-menu-panel,
 .mat-menu-content,
 .mat-select-panel,
 .mat-autocomplete-panel,
-.mat-dialog-container,
-.mat-bottom-sheet-container,
-.mat-snack-bar-container,
-.mat-tooltip,
 [class*="menu-panel"],
 [class*="dropdown-panel"],
 [class*="dropdown-menu"],
 [class*="select-panel"],
 [class*="overlay-panel"],
-[class*="popover"],
-[class*="popup"],
-[class*="flyout"],
 .dropdown-menu,
-.popover,
 ul[role="menu"],
 ul[role="listbox"],
 div[role="menu"],
-div[role="listbox"],
-div[role="dialog"] {
+div[role="listbox"] {
   background: #0D0118 !important;
   background-color: #0D0118 !important;
-  border-color: rgba(0, 229, 168, 0.2) !important;
-}
-
-.cdk-overlay-pane > div,
-.cdk-overlay-pane [class*="panel"],
-.cdk-overlay-pane [class*="menu"],
-.cdk-overlay-pane [class*="dropdown"],
-.cdk-overlay-pane [class*="list"],
-.cdk-overlay-pane [class*="select"] {
-  background: #0D0118 !important;
-  background-color: #0D0118 !important;
+  border: 1px solid rgba(0, 229, 168, 0.2) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
 }
 
 .mat-option,
@@ -315,6 +329,19 @@ li[role="option"][aria-selected="true"] {
 [class*="submenu-icon"],
 [class*="arrow-icon"] {
   color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Backdrop should remain transparent/translucent, not dark */
+.cdk-overlay-backdrop,
+div.cdk-overlay-container .cdk-overlay-backdrop {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.cdk-overlay-dark-backdrop,
+div.cdk-overlay-container .cdk-overlay-dark-backdrop {
+  background: rgba(6, 4, 9, 0.6) !important;
+  background-color: rgba(6, 4, 9, 0.6) !important;
 }
 
 /* --- END NUCLEAR --- */
