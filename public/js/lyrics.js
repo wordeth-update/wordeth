@@ -1,4 +1,5 @@
-let searchInput, searchBtn, resultsSection, resultsTitle, resultsSubtitle,
+(function() {
+var searchInput, searchBtn, resultsSection, resultsTitle, resultsSubtitle,
     resultsGrid, loading, noResults, lyricsModal, modalOverlay, closeModal, popularTags,
     modalSongTitle, modalSongArtist, modalSongImage, modalSongAlbum, modalSongRelease,
     modalLyricsText, modalSidebarAd, modalBottomAd;
@@ -26,32 +27,27 @@ function resolveDOM() {
     modalBottomAd = null;
 }
 
-// Search state
-let searchTimeout;
-let currentSearchResults = [];
+var searchTimeout;
+var currentSearchResults = [];
 
-// Real-time search functionality
 function setupRealTimeSearch() {
     searchInput.addEventListener('input', (e) => {
         clearTimeout(searchTimeout);
         const query = e.target.value.trim();
-        
+
         if (query.length < 2) {
             hideResults();
             return;
         }
-        
-        // Show loading immediately
+
         showLoading();
-        
-        // Debounce the search
+
         searchTimeout = setTimeout(() => {
             performSearch(query);
         }, 300);
     });
 }
 
-// Search functionality using Genius API
 async function performSearch(query) {
     if (!query.trim()) {
         hideResults();
@@ -59,24 +55,19 @@ async function performSearch(query) {
     }
 
     try {
-        console.log('Searching for:', query);
         const response = await fetch(apiUrl(`/api/lyrics/search?q=${encodeURIComponent(query)}`));
-        console.log('Search response status:', response.status);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
-        console.log('Search results:', data);
-        
+
         hideLoading();
-        
+
         if (data.hits && data.hits.length > 0) {
             currentSearchResults = data.hits;
             showResults(data.hits, query);
-            
-            // Fetch and display keyword-matched ads
             fetchMatchingAds(query);
         } else {
             showNoResults();
@@ -101,13 +92,12 @@ function hideLoading() {
 function showResults(results, query) {
     resultsTitle.textContent = `Search Results for "${query}"`;
     resultsSubtitle.textContent = `Found ${results.length} song${results.length !== 1 ? 's' : ''} matching your search`;
-    
+
     resultsGrid.innerHTML = results.map(song => {
-        // Check for missing, null, or placeholder images
         const hasValidImage = song.image && !song.image.includes('nocover') && !song.image.includes('placeholder');
         const imageUrl = hasValidImage ? song.image : '/images/logo.png';
         const fallbackClass = hasValidImage ? '' : 'fallback-logo';
-        
+
         return `
         <div class="result-card" data-song-id="${song.id}">
             <div class="result-image">
@@ -127,7 +117,7 @@ function showResults(results, query) {
             </button>
         </div>`;
     }).join('');
-    
+
     resultsSection.style.display = 'block';
     noResults.style.display = 'none';
 }
@@ -143,52 +133,43 @@ function hideResults() {
     noResults.style.display = 'none';
 }
 
-// Modal functionality using Genius API
 async function showLyricsModal(songId) {
     showLoading();
-    
-    // Get song info from search results
+
     const songInfo = currentSearchResults.find(s => s.id === songId) || {};
-    
+
     try {
-        console.log('Fetching lyrics for song ID:', songId);
         const response = await fetch(apiUrl(`/api/lyrics/lyrics/${songId}`));
-        console.log('Lyrics response status:', response.status);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const lyricsData = await response.json();
-        console.log('Lyrics data:', lyricsData);
-        
+
         hideLoading();
-        
-        // Use song info from search results, lyrics from API
+
         const title = songInfo.title || 'Unknown Title';
         const artist = songInfo.artist || 'Unknown Artist';
-        
+
         modalSongTitle.textContent = title;
         modalSongArtist.textContent = artist;
         modalSongImage.src = songInfo.image || songInfo.album_image || '/images/logo.png';
         modalSongImage.onerror = function() { this.onerror=null; this.src='/images/logo.png'; this.classList.add('fallback-logo'); };
         modalSongAlbum.textContent = songInfo.album || 'Album not available';
         modalSongRelease.textContent = songInfo.release_date || 'Release date not available';
-        
-        // Properly format lyrics with HTML encoding
+
         const formattedLyrics = formatLyricsForDisplay(lyricsData.lyrics);
         modalLyricsText.innerHTML = formattedLyrics;
 
         lyricsModal.style.display = 'block';
         document.body.style.overflow = 'hidden';
-        
-        // Fetch and display modal ads based on song title/artist
+
         fetchModalAds(title, artist);
     } catch (error) {
         console.error('Error fetching lyrics:', error);
         hideLoading();
-        
-        // Show error in modal
+
         modalSongTitle.textContent = 'Error Loading Lyrics';
         modalSongArtist.textContent = 'Please try again';
         modalSongImage.src = '/images/logo.png';
@@ -201,31 +182,24 @@ async function showLyricsModal(songId) {
     }
 }
 
-// Enhanced lyrics formatting without HTML codes
 function formatLyricsForDisplay(lyrics) {
     if (!lyrics) return '<p class="lyrics-paragraph">No lyrics available</p>';
-    
-    // Split lyrics into paragraphs and format naturally
+
     const paragraphs = lyrics.split('\n\n').filter(p => p.trim());
-    
+
     return paragraphs.map(paragraph => {
-        // Clean up the paragraph and handle apostrophes naturally
         const cleanParagraph = paragraph
             .replace(/\n/g, '<br>')
             .trim();
-        
+
         return `<p class="lyrics-paragraph">${cleanParagraph}</p>`;
     }).join('');
 }
 
-// Ad targeting analysis based on lyrics search
 function analyzeSearchForAds(searchTerm, songData = null) {
     const adTargets = [];
-    
-    // Convert search to lowercase for analysis
     const searchLower = searchTerm.toLowerCase();
-    
-    // Brand/Product Keywords
+
     const brandKeywords = {
         'ice cream': ['ice cream shop', 'dessert', 'frozen treat', 'sweet treat'],
         'car': ['automotive', 'vehicle', 'transportation', 'driving'],
@@ -238,8 +212,7 @@ function analyzeSearchForAds(searchTerm, songData = null) {
         'party': ['entertainment', 'nightlife', 'events', 'celebration'],
         'work': ['job', 'career', 'professional', 'business']
     };
-    
-    // Analyze search term for brand opportunities
+
     for (const [keyword, relatedTerms] of Object.entries(brandKeywords)) {
         if (searchLower.includes(keyword) || relatedTerms.some(term => searchLower.includes(term))) {
             adTargets.push({
@@ -250,10 +223,8 @@ function analyzeSearchForAds(searchTerm, songData = null) {
             });
         }
     }
-    
-    // Analyze song data if available
+
     if (songData) {
-        // Artist-based targeting
         if (songData.artist) {
             adTargets.push({
                 category: 'artist_merch',
@@ -263,8 +234,6 @@ function analyzeSearchForAds(searchTerm, songData = null) {
                 searchTerm: searchTerm
             });
         }
-        
-        // Genre-based targeting
         if (songData.genre) {
             adTargets.push({
                 category: 'genre_specific',
@@ -275,8 +244,7 @@ function analyzeSearchForAds(searchTerm, songData = null) {
             });
         }
     }
-    
-    // Emotional/contextual targeting
+
     const emotionalKeywords = {
         'sad': ['mental health', 'therapy', 'wellness'],
         'happy': ['celebration', 'events', 'entertainment'],
@@ -284,7 +252,7 @@ function analyzeSearchForAds(searchTerm, songData = null) {
         'romantic': ['dating', 'jewelry', 'flowers'],
         'nostalgic': ['vintage', 'retro', 'collectibles']
     };
-    
+
     for (const [emotion, relatedTerms] of Object.entries(emotionalKeywords)) {
         if (searchLower.includes(emotion) || relatedTerms.some(term => searchLower.includes(term))) {
             adTargets.push({
@@ -296,7 +264,7 @@ function analyzeSearchForAds(searchTerm, songData = null) {
             });
         }
     }
-    
+
     return adTargets;
 }
 
@@ -309,16 +277,13 @@ function setupEventListeners() {
     resolveDOM();
     modalSidebarAd = document.getElementById('modal-sidebar-ad');
     modalBottomAd = document.getElementById('modal-bottom-ad');
-    
-    // Real-time search
+
     setupRealTimeSearch();
 
-    // Search button (for immediate search)
     searchBtn.addEventListener('click', () => {
         performSearch(searchInput.value);
     });
 
-    // Enter key for immediate search
     searchInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             clearTimeout(searchTimeout);
@@ -326,7 +291,6 @@ function setupEventListeners() {
         }
     });
 
-    // Popular tags
     popularTags.forEach(tag => {
         tag.addEventListener('click', () => {
             const searchTerm = tag.getAttribute('data-search');
@@ -335,7 +299,6 @@ function setupEventListeners() {
         });
     });
 
-    // Results grid click
     resultsGrid.addEventListener('click', (e) => {
         if (e.target.closest('.view-lyrics-btn')) {
             const songId = parseInt(e.target.closest('.view-lyrics-btn').getAttribute('data-song-id'));
@@ -343,38 +306,27 @@ function setupEventListeners() {
         }
     });
 
-    // Close modal
     closeModal.addEventListener('click', hideLyricsModal);
     modalOverlay.addEventListener('click', hideLyricsModal);
 
-    // Escape key to close modal
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && lyricsModal.style.display === 'block') {
             hideLyricsModal();
         }
     });
-
-    // Clear search when clicking outside results
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.lyrics-search-container') && 
-            !e.target.closest('.results-section') && 
-            !e.target.closest('.lyrics-modal')) {
-            // Don't hide results immediately, but could add logic here if needed
-        }
-    });
 }
 
-// Ad System Integration
-const headerAdContainer = document.getElementById('header-ad');
-const footerAdContainer = document.getElementById('footer-ad');
+var headerAdContainer, footerAdContainer;
 
 async function fetchMatchingAds(searchQuery) {
+    headerAdContainer = document.getElementById('header-ad');
+    footerAdContainer = document.getElementById('footer-ad');
     try {
         const response = await fetch(apiUrl(`/api/ads/match?q=${encodeURIComponent(searchQuery)}`));
         if (!response.ok) return;
-        
+
         const data = await response.json();
-        
+
         if (data.ads) {
             displayAd(headerAdContainer, data.ads.header);
             displayAd(footerAdContainer, data.ads.footer);
@@ -386,12 +338,12 @@ async function fetchMatchingAds(searchQuery) {
 
 function displayAd(container, ad) {
     if (!container) return;
-    
+
     if (!ad) {
         container.classList.add('hidden');
         return;
     }
-    
+
     const adId = ad.id;
     container.innerHTML = `
         <span class="lyrics-ad-label">Ad</span>
@@ -399,12 +351,12 @@ function displayAd(container, ad) {
             <img src="${escapeHtml(ad.imageUrl)}" alt="${escapeHtml(ad.title)}" onerror="this.parentElement.parentElement.classList.add('hidden')">
         </a>
     `;
-    
+
     const link = container.querySelector('a');
     if (link) {
         link.addEventListener('click', () => trackAdClick(adId));
     }
-    
+
     container.classList.remove('hidden');
     trackAdImpression(adId);
 }
@@ -431,16 +383,16 @@ function hideModalAds() {
 
 async function fetchModalAds(title, artist) {
     hideModalAds();
-    
+
     try {
         const query = `${title} ${artist}`.trim();
         if (!query) return;
-        
+
         const response = await fetch(apiUrl(`/api/ads/match-modal?q=${encodeURIComponent(query)}`));
         if (!response.ok) return;
-        
+
         const data = await response.json();
-        
+
         if (data.ads && data.ads.sidebar) {
             displayModalAd(modalSidebarAd, data.ads.sidebar);
         }
@@ -448,13 +400,12 @@ async function fetchModalAds(title, artist) {
             displayModalAd(modalBottomAd, data.ads.bottom);
         }
     } catch (error) {
-        // Silently skip ad loading on error
     }
 }
 
 function displayModalAd(container, ad) {
     if (!container || !ad) return;
-    
+
     const adId = ad.id;
     container.innerHTML = `
         <span class="lyrics-ad-label">Ad</span>
@@ -462,37 +413,36 @@ function displayModalAd(container, ad) {
             <img src="${escapeHtml(ad.imageUrl)}" alt="${escapeHtml(ad.title)}" onerror="this.parentElement.parentElement.classList.add('hidden')">
         </a>
     `;
-    
+
     const link = container.querySelector('a');
     if (link) {
         link.addEventListener('click', () => trackAdClick(adId));
     }
-    
+
     container.classList.remove('hidden');
     trackAdImpression(adId);
 }
 
-// Lyrics-to-Merch: Floating tooltip near highlighted text
-let selectedLyricsText = '';
-let currentSongTitle = '';
-let currentArtist = '';
+var selectedLyricsText = '';
+var currentSongTitle = '';
+var currentArtist = '';
 
 function setupLyricsSelection() {
     const lyricsTextEl = document.getElementById('modal-lyrics-text');
     const makeMerchBtn = document.getElementById('makeMerchBtn');
     const merchTooltip = document.getElementById('merchTooltip');
-    
+
     if (!lyricsTextEl || !makeMerchBtn || !merchTooltip) return;
-    
+
     lyricsTextEl.addEventListener('mouseup', handleTextSelection);
     lyricsTextEl.addEventListener('touchend', handleTextSelection);
-    
+
     document.addEventListener('mousedown', (e) => {
         if (!merchTooltip.contains(e.target)) {
             hideTooltip();
         }
     });
-    
+
     makeMerchBtn.addEventListener('click', () => {
         if (selectedLyricsText) {
             const params = new URLSearchParams({
@@ -509,24 +459,24 @@ function handleTextSelection() {
     const selection = window.getSelection();
     const selectedText = selection.toString().trim();
     const merchTooltip = document.getElementById('merchTooltip');
-    
+
     if (!merchTooltip) return;
-    
+
     if (selectedText && selectedText.length > 0) {
         selectedLyricsText = selectedText;
         currentSongTitle = document.getElementById('modal-song-title').textContent || '';
         currentArtist = document.getElementById('modal-song-artist').textContent || '';
-        
+
         const range = selection.getRangeAt(0);
         const rects = range.getClientRects();
         const lastRect = rects[rects.length - 1];
         const modalContent = document.querySelector('.modal-content');
         const modalRect = modalContent ? modalContent.getBoundingClientRect() : { left: 0, top: 0 };
         const scrollTop = modalContent ? modalContent.scrollTop : 0;
-        
+
         const tooltipLeft = lastRect.right - modalRect.left;
         const tooltipTop = lastRect.top - modalRect.top + scrollTop - 10;
-        
+
         merchTooltip.style.left = tooltipLeft + 'px';
         merchTooltip.style.top = tooltipTop + 'px';
         merchTooltip.classList.add('visible');
@@ -551,4 +501,5 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initLyrics);
 } else {
     initLyrics();
-} 
+}
+})();

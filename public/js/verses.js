@@ -1861,11 +1861,11 @@ class AudioRoomsManager {
 
         if (this.isRoomHost && !isGuest) {
             steps.splice(1, 0, {
-                target: '#host-controls-panel, #host-panel-toggle',
+                target: '#host-panel-toggle, #host-controls-panel',
                 title: 'Host Controls',
                 text: 'You\'re the host! Control stage access, mute speakers, toggle video/karaoke, and manage the room.',
                 icon: 'fa-crown',
-                position: 'center'
+                position: 'above'
             });
         }
 

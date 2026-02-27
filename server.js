@@ -571,15 +571,15 @@ body {
     top: 20px; left: 40px;
     width: 1120px; height: 590px;
     border-radius: 40px;
-    background: linear-gradient(160deg, #1a1033 0%, #2d1b69 40%, #1a1033 100%);
-    box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 70px rgba(139,92,246,0.2);
+    background: linear-gradient(160deg, #0d0a14 0%, #1a1033 40%, #0d0a14 100%);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 0 70px rgba(139,92,246,0.15);
     overflow: hidden;
 }
 .glow {
     position: absolute; top: -50%; right: -50%;
     width: 200%; height: 200%;
-    background: radial-gradient(circle at 70% 30%, rgba(150,197,176,0.12) 0%, transparent 50%),
-                radial-gradient(circle at 30% 70%, rgba(139,92,246,0.15) 0%, transparent 50%);
+    background: radial-gradient(circle at 70% 30%, rgba(150,197,176,0.08) 0%, transparent 50%),
+                radial-gradient(circle at 30% 70%, rgba(139,92,246,0.10) 0%, transparent 50%);
     pointer-events: none;
 }
 .top-row {
