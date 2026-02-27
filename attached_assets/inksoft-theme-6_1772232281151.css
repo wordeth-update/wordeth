@@ -254,22 +254,11 @@ div[role="listbox"] {
   border-color: rgba(0, 229, 168, 0.2) !important;
 }
 
-/* === MDC Menu — Override via CSS custom properties + direct styles === */
-/* Angular Material MDC uses --mat-* and --mdc-* vars for theming,
-   plus -webkit-text-fill-color which overrides color property. */
+/* === MDC (Material Design Components) Menu — InkSoft's actual classes === */
 
 .mat-mdc-menu-panel,
 div.mat-mdc-menu-panel,
-div[role="menu"] {
-  --mat-menu-container-color: #0D0118 !important;
-  --mat-menu-item-label-text-color: #ffffff !important;
-  --mat-menu-item-icon-color: rgba(255, 255, 255, 0.6) !important;
-  --mat-menu-item-hover-state-layer-color: rgba(0, 229, 168, 0.15) !important;
-  --mat-menu-item-focus-state-layer-color: rgba(0, 229, 168, 0.1) !important;
-  --mdc-menu-container-color: #0D0118 !important;
-  --mdc-theme-surface: #0D0118 !important;
-  --mdc-theme-on-surface: #ffffff !important;
-  --mdc-theme-text-primary-on-background: #ffffff !important;
+div[role="menu"].mat-mdc-menu-panel {
   background: #0D0118 !important;
   background-color: #0D0118 !important;
   border: 1px solid rgba(0, 229, 168, 0.2) !important;
@@ -284,11 +273,8 @@ div.mat-mdc-menu-content {
 }
 
 .mat-mdc-menu-item,
-button.mat-mdc-menu-item,
-.mat-mdc-menu-item.mat-mdc-menu-item,
-button.mat-mdc-menu-item.mat-mdc-menu-item {
+button.mat-mdc-menu-item {
   color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
   background: transparent !important;
   background-color: transparent !important;
 }
@@ -302,47 +288,31 @@ button.mat-mdc-menu-item:hover {
 .mat-mdc-menu-item:hover .mat-mdc-menu-item-text,
 .mat-mdc-menu-item:hover span {
   color: #00E5A8 !important;
-  -webkit-text-fill-color: #00E5A8 !important;
 }
 
 .mat-mdc-menu-item-text,
-span.mat-mdc-menu-item-text,
-.mat-mdc-menu-item .mat-mdc-menu-item-text,
-button.mat-mdc-menu-item .mat-mdc-menu-item-text,
-.mat-mdc-menu-item span,
-button.mat-mdc-menu-item span {
+span.mat-mdc-menu-item-text {
   color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
 }
 
 .mat-mdc-menu-ripple,
 .mat-mdc-menu-item .mat-ripple,
-.mat-mdc-menu-item .mat-mdc-menu-ripple,
-.mat-mdc-menu-item .mat-ripple-element {
+.mat-mdc-menu-item .mat-mdc-menu-ripple {
   background: transparent !important;
 }
 
 .mat-mdc-menu-submenu-icon,
-.mat-mdc-menu-item .mat-icon,
-.mat-mdc-menu-item svg {
+.mat-mdc-menu-item .mat-icon {
   color: rgba(255, 255, 255, 0.6) !important;
-  -webkit-text-fill-color: rgba(255, 255, 255, 0.6) !important;
-  fill: rgba(255, 255, 255, 0.6) !important;
 }
 
-/* === MDC Select / Option === */
+/* === MDC Select / Option — in case they use these too === */
 
-.mat-mdc-select-panel {
-  --mat-option-label-text-color: #ffffff !important;
-  --mat-option-selected-state-label-text-color: #00E5A8 !important;
-  background: #0D0118 !important;
-}
-
+.mat-mdc-select-panel,
 .mat-mdc-option,
 .mat-mdc-select-value-text,
 .mat-mdc-select-placeholder {
   color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
 }
 
 .mat-mdc-option {
@@ -356,55 +326,55 @@ button.mat-mdc-menu-item span {
 .mat-mdc-option.mdc-list-item--selected,
 .mat-mdc-option.mat-mdc-option-active {
   color: #00E5A8 !important;
-  -webkit-text-fill-color: #00E5A8 !important;
   background: rgba(0, 229, 168, 0.08) !important;
 }
 
-/* === Legacy mat-menu fallback === */
+/* === Legacy mat-menu fallback (keep for other InkSoft pages) === */
 
 .mat-menu-panel,
 .mat-menu-content {
   background: #0D0118 !important;
+  background-color: #0D0118 !important;
 }
 
 .mat-menu-item,
-button.mat-menu-item,
+button.mat-menu-item {
+  color: #ffffff !important;
+}
+
+.mat-menu-item:hover {
+  background: rgba(0, 229, 168, 0.15) !important;
+}
+
 .mat-option,
 .mat-option .mat-option-text {
   color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
 }
 
-.mat-menu-item:hover,
 .mat-option:hover {
   background: rgba(0, 229, 168, 0.15) !important;
 }
 
-/* === Force white text on ALL overlay content === */
-
+/* Force white on ALL overlay text */
 div.cdk-overlay-container span,
 div.cdk-overlay-container button,
 div.cdk-overlay-container a,
 div.cdk-overlay-container div[role="menu"] span,
 div.cdk-overlay-container div[role="menu"] button,
 .cdk-overlay-pane span,
-.cdk-overlay-pane button,
-.cdk-overlay-pane div,
-.cdk-overlay-connected-position-bounding-box span,
-.cdk-overlay-connected-position-bounding-box button {
+.cdk-overlay-pane button {
   color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
 }
 
+/* Hover inside overlays */
 div.cdk-overlay-container button:hover,
 div.cdk-overlay-container button:hover span,
 .cdk-overlay-pane button:hover,
 .cdk-overlay-pane button:hover span {
   color: #00E5A8 !important;
-  -webkit-text-fill-color: #00E5A8 !important;
 }
 
-/* Backdrop — keep transparent */
+/* Backdrop should remain transparent, not dark */
 .cdk-overlay-backdrop,
 div.cdk-overlay-container .cdk-overlay-backdrop,
 .cdk-overlay-transparent-backdrop {
