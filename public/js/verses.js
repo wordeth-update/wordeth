@@ -57,6 +57,8 @@ class AudioRoomsManager {
             onStage: new Audio('/sounds/wordeth_onstage_notification.mp3')
         };
         Object.values(this._sfx).forEach(a => { a.preload = 'auto'; a.volume = 0.5; });
+        this._sfxUnlocked = false;
+        this._enterSoundPlayed = false;
         
         // Video grid state
         this.videoMode = 'off';
@@ -596,6 +598,7 @@ class AudioRoomsManager {
         // Create room form submission
         this.createRoomForm?.addEventListener('submit', (e) => {
             e.preventDefault();
+            this._unlockSfx();
             this.createRoom();
         });
 
@@ -768,6 +771,7 @@ class AudioRoomsManager {
 
             const joinBtn = e.target.closest('.join-room-btn');
             if (joinBtn) {
+                this._unlockSfx();
                 const roomCard = joinBtn.closest('.room-card');
                 if (roomCard) {
                     const roomId = roomCard.dataset.roomId;
@@ -1625,8 +1629,20 @@ class AudioRoomsManager {
         return window.escapeHtml(text);
     }
 
+    _unlockSfx() {
+        if (this._sfxUnlocked) return;
+        this._sfxUnlocked = true;
+        Object.values(this._sfx).forEach(a => {
+            a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(() => {});
+        });
+    }
+
     _playSfx(name) {
         try {
+            if (name === 'enterRoom') {
+                if (this._enterSoundPlayed) return;
+                this._enterSoundPlayed = true;
+            }
             const sound = this._sfx?.[name];
             if (!sound) return;
             sound.currentTime = 0;
@@ -1660,25 +1676,34 @@ class AudioRoomsManager {
         const key = 'wordeth_verses_guide_seen';
         if (!this.isGuest && localStorage.getItem(key)) return;
 
+        setTimeout(() => this._launchGuide(key), 600);
+    }
+
+    _launchGuide(key) {
         const isMobile = window.innerWidth <= 768;
 
         if (isMobile) {
             this._showMobileTooltipWalkthrough(key);
         } else {
             const overlay = document.getElementById('welcome-guide-overlay');
-            if (!overlay) return;
-            overlay.style.display = '';
+            if (!overlay) {
+                this._showMobileTooltipWalkthrough(key);
+                return;
+            }
+            overlay.style.cssText = '';
             overlay.classList.add('active');
             const closeBtn = document.getElementById('welcome-guide-close');
             if (closeBtn) {
                 closeBtn.addEventListener('click', () => {
                     overlay.classList.remove('active');
+                    overlay.style.display = 'none';
                     localStorage.setItem(key, '1');
                 }, { once: true });
             }
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) {
                     overlay.classList.remove('active');
+                    overlay.style.display = 'none';
                     localStorage.setItem(key, '1');
                 }
             });
@@ -1687,6 +1712,7 @@ class AudioRoomsManager {
                 fullGuideLink.addEventListener('click', (e) => {
                     e.preventDefault();
                     overlay.classList.remove('active');
+                    overlay.style.display = 'none';
                     localStorage.setItem(key, '1');
                     this._showFullInlineGuide();
                 });
@@ -1864,7 +1890,20 @@ class AudioRoomsManager {
         overlay.className = 'mobile-walkthrough-overlay';
         document.body.appendChild(overlay);
 
+        let elevatedEl = null;
+        let elevatedPrev = null;
+
+        const restoreElevated = () => {
+            if (elevatedEl) {
+                elevatedEl.style.zIndex = elevatedPrev?.z || '';
+                elevatedEl.style.position = elevatedPrev?.pos || '';
+                elevatedEl = null;
+                elevatedPrev = null;
+            }
+        };
+
         const dismiss = () => {
+            restoreElevated();
             overlay.remove();
             closeBtn.remove();
             if (highlight) highlight.remove();
@@ -1879,21 +1918,6 @@ class AudioRoomsManager {
         document.body.appendChild(closeBtn);
 
         setTimeout(() => overlay.addEventListener('click', dismiss), 300);
-
-        let elevatedEl = null;
-        let elevatedPrev = null;
-
-        const restoreElevated = () => {
-            if (elevatedEl) {
-                elevatedEl.style.zIndex = elevatedPrev?.z || '';
-                elevatedEl.style.position = elevatedPrev?.pos || '';
-                elevatedEl = null;
-                elevatedPrev = null;
-            }
-        };
-
-        const oldDismiss = dismiss;
-        dismiss = () => { restoreElevated(); oldDismiss(); };
 
         const showStep = (idx) => {
             restoreElevated();
@@ -2553,13 +2577,15 @@ class AudioRoomsManager {
                 }
             }).catch(e => console.warn('Background socket connect error:', e));
 
-            try {
-                const agoraRole = isHost ? 'host' : 'audience';
-                await this._agoraJoinGuarded(roomId, { forceRole: agoraRole });
-                console.log('joinRoom: Agora join succeeded as', agoraRole);
-            } catch (agoraErr) {
-                console.warn('joinRoom: Agora join error:', agoraErr.message);
-                this._agoraJoinHandled = false;
+            if (!guestJoin) {
+                try {
+                    const agoraRole = isHost ? 'host' : 'audience';
+                    await this._agoraJoinGuarded(roomId, { forceRole: agoraRole });
+                    console.log('joinRoom: Agora join succeeded as', agoraRole);
+                } catch (agoraErr) {
+                    console.warn('joinRoom: Agora join error:', agoraErr.message);
+                    this._agoraJoinHandled = false;
+                }
             }
 
             fetch(apiUrl('/api/analytics/track'), {
@@ -2749,6 +2775,12 @@ class AudioRoomsManager {
         const { forceRole, skipPublish } = options;
         try {
             await this.initAgoraClient();
+
+            const connState = this.agoraClient?.connectionState;
+            if (connState === 'CONNECTED' || connState === 'CONNECTING') {
+                console.log('Agora: already', connState, 'in joinAgoraChannel — skipping');
+                return;
+            }
 
             const agoraRole = forceRole || (this.isSpeaker ? 'host' : 'audience');
             console.log('Agora: setting client role to', agoraRole, 'isSpeaker:', this.isSpeaker);
@@ -3171,7 +3203,9 @@ class AudioRoomsManager {
                 }
             }
 
-            if (this._agoraJoinHandled) {
+            if (this.isGuest) {
+                console.log('Agora: guest user, skipping Agora join');
+            } else if (this._agoraJoinHandled) {
                 console.log('Agora: skipping room-joined join — already handled by createRoom/joinRoom');
             } else {
                 try {
@@ -4022,6 +4056,7 @@ class AudioRoomsManager {
         this._savedRoomName = null;
         this._welcomeShown = false;
         this._agoraJoinHandled = false;
+        this._enterSoundPlayed = false;
         this._releaseWakeLock();
         this._stopSilentAudioKeepAlive();
         this.resetAudioFilter();

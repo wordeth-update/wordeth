@@ -1996,8 +1996,7 @@ body.in-room {
     position: fixed;
     inset: 0;
     z-index: 10002;
-    background: rgba(6, 4, 9, 0.9);
-    backdrop-filter: blur(12px);
+    background: rgba(6, 4, 9, 0.92);
     align-items: center;
     justify-content: center;
     padding: 1rem;
