@@ -1,26 +1,30 @@
-// DOM Elements
-const searchInput = document.getElementById('lyrics-search');
-const searchBtn = document.getElementById('search-btn');
-const resultsSection = document.getElementById('results-section');
-const resultsTitle = document.getElementById('results-title');
-const resultsSubtitle = document.getElementById('results-subtitle');
-const resultsGrid = document.getElementById('results-grid');
-const loading = document.getElementById('loading');
-const noResults = document.getElementById('no-results');
-const lyricsModal = document.getElementById('lyrics-modal');
-const modalOverlay = document.getElementById('modal-overlay');
-const closeModal = document.getElementById('close-modal');
-const popularTags = document.querySelectorAll('.popular-tag');
+let searchInput, searchBtn, resultsSection, resultsTitle, resultsSubtitle,
+    resultsGrid, loading, noResults, lyricsModal, modalOverlay, closeModal, popularTags,
+    modalSongTitle, modalSongArtist, modalSongImage, modalSongAlbum, modalSongRelease,
+    modalLyricsText, modalSidebarAd, modalBottomAd;
 
-// Modal elements
-const modalSongTitle = document.getElementById('modal-song-title');
-const modalSongArtist = document.getElementById('modal-song-artist');
-const modalSongImage = document.getElementById('modal-song-image');
-const modalSongAlbum = document.getElementById('modal-song-album');
-const modalSongRelease = document.getElementById('modal-song-release');
-const modalLyricsText = document.getElementById('modal-lyrics-text');
-let modalSidebarAd = null;
-let modalBottomAd = null;
+function resolveDOM() {
+    searchInput = document.getElementById('lyrics-search');
+    searchBtn = document.getElementById('search-btn');
+    resultsSection = document.getElementById('results-section');
+    resultsTitle = document.getElementById('results-title');
+    resultsSubtitle = document.getElementById('results-subtitle');
+    resultsGrid = document.getElementById('results-grid');
+    loading = document.getElementById('loading');
+    noResults = document.getElementById('no-results');
+    lyricsModal = document.getElementById('lyrics-modal');
+    modalOverlay = document.getElementById('modal-overlay');
+    closeModal = document.getElementById('close-modal');
+    popularTags = document.querySelectorAll('.popular-tag');
+    modalSongTitle = document.getElementById('modal-song-title');
+    modalSongArtist = document.getElementById('modal-song-artist');
+    modalSongImage = document.getElementById('modal-song-image');
+    modalSongAlbum = document.getElementById('modal-song-album');
+    modalSongRelease = document.getElementById('modal-song-release');
+    modalLyricsText = document.getElementById('modal-lyrics-text');
+    modalSidebarAd = null;
+    modalBottomAd = null;
+}
 
 // Search state
 let searchTimeout;
@@ -301,9 +305,8 @@ function hideLyricsModal() {
     document.body.style.overflow = 'auto';
 }
 
-// Event listeners
 function setupEventListeners() {
-    // Initialize modal ad containers (must be done after DOM is ready)
+    resolveDOM();
     modalSidebarAd = document.getElementById('modal-sidebar-ad');
     modalBottomAd = document.getElementById('modal-bottom-ad');
     
@@ -539,8 +542,13 @@ function hideTooltip() {
     }
 }
 
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
+function initLyrics() {
     setupEventListeners();
     setupLyricsSelection();
-}); 
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLyrics);
+} else {
+    initLyrics();
+} 

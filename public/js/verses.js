@@ -1876,20 +1876,7 @@ class AudioRoomsManager {
         overlay.className = 'mobile-walkthrough-overlay';
         document.body.appendChild(overlay);
 
-        let elevatedEl = null;
-        let elevatedPrev = null;
-
-        const restoreElevated = () => {
-            if (elevatedEl) {
-                elevatedEl.style.zIndex = elevatedPrev?.z || '';
-                elevatedEl.style.position = elevatedPrev?.pos || '';
-                elevatedEl = null;
-                elevatedPrev = null;
-            }
-        };
-
         const dismiss = () => {
-            restoreElevated();
             overlay.remove();
             closeBtn.remove();
             if (highlight) highlight.remove();
@@ -1906,7 +1893,6 @@ class AudioRoomsManager {
         setTimeout(() => overlay.addEventListener('click', dismiss), 300);
 
         const showStep = (idx) => {
-            restoreElevated();
             if (highlight) highlight.remove();
             if (tooltip) tooltip.remove();
 
@@ -1946,15 +1932,7 @@ class AudioRoomsManager {
             tooltip.append(tipHeader, tipText, this._el('div', {className: 'walk-tip-footer'}, dotsDiv, navDiv));
 
             if (targetEl) {
-                const liftTarget = targetEl.closest('.room-controls, .host-controls-panel, .room-header, .audio-section, .room-main');
-                if (liftTarget) {
-                    elevatedPrev = { z: liftTarget.style.zIndex, pos: liftTarget.style.position };
-                    elevatedEl = liftTarget;
-                    liftTarget.style.zIndex = '10004';
-                    if (!getComputedStyle(liftTarget).position || getComputedStyle(liftTarget).position === 'static') {
-                        liftTarget.style.position = 'relative';
-                    }
-                }
+                overlay.style.opacity = '0';
 
                 const rect = targetEl.getBoundingClientRect();
                 highlight = document.createElement('div');
@@ -1963,6 +1941,7 @@ class AudioRoomsManager {
                 highlight.style.left = (rect.left - 6) + 'px';
                 highlight.style.width = (rect.width + 12) + 'px';
                 highlight.style.height = (rect.height + 12) + 'px';
+                highlight.style.boxShadow = '0 0 0 9999px rgba(6, 4, 9, 0.85), 0 0 20px rgba(0, 229, 168, 0.4)';
                 document.body.appendChild(highlight);
 
                 const gap = 16;
@@ -1995,6 +1974,7 @@ class AudioRoomsManager {
                 tooltip.style.left = '16px';
                 tooltip.style.right = '16px';
             } else {
+                overlay.style.opacity = '1';
                 tooltip.style.top = '50%';
                 tooltip.style.left = '16px';
                 tooltip.style.right = '16px';
