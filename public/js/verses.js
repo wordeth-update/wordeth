@@ -591,6 +591,7 @@ class AudioRoomsManager {
     setupEventListeners() {
         // Create room button
         this.createRoomBtn?.addEventListener('click', () => {
+            this._primeSfx();
             this.showCreateRoomModal();
         });
 
