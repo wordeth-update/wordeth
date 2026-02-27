@@ -1626,6 +1626,18 @@ class AudioRoomsManager {
         return window.escapeHtml(text);
     }
 
+    _primeSfx() {
+        if (this._sfxPrimed) return;
+        try {
+            Object.values(this._sfx).forEach(a => {
+                a.muted = true;
+                a.play().then(() => { a.pause(); a.currentTime = 0; a.muted = false; }).catch(() => { a.muted = false; });
+            });
+            this._sfxPrimed = true;
+            console.log('[SFX] audio primed');
+        } catch(e) {}
+    }
+
     _playSfx(name) {
         try {
             const sound = this._sfx?.[name];
@@ -1960,7 +1972,7 @@ class AudioRoomsManager {
                     tooltip.style.transform = 'translateY(-50%)';
                     tooltip.style.maxHeight = '40vh';
                 } else if (step.position === 'above' || (rect.top > window.innerHeight * 0.45 && spaceAbove > minTipHeight)) {
-                    const tipTop = Math.max(safeTop, highlightTop - gap - 200);
+                    const tipTop = Math.max(safeTop, highlightTop - gap - 170);
                     tooltip.style.top = tipTop + 'px';
                     tooltip.style.maxHeight = Math.max(highlightTop - gap - tipTop, minTipHeight) + 'px';
                     tooltip.classList.add('arrow-below');
@@ -2184,6 +2196,7 @@ class AudioRoomsManager {
 
     // Room Management
     async createRoom() {
+        this._primeSfx();
         if (!this.createRoomForm) {
             console.error('[CreateRoom] No form element found');
             return;
@@ -2216,7 +2229,8 @@ class AudioRoomsManager {
             let roomId = null;
 
             for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-                if (submitBtn) submitBtn.textContent = attempt > 1 ? `Retrying (${attempt}/${maxAttempts})…` : 'Creating…';
+                var retryMessages = ['Creating…', 'Gathering the vibes…', 'Polishing up your room…'];
+                if (submitBtn) submitBtn.textContent = retryMessages[attempt - 1] || 'Almost there…';
                 console.log(`[CreateRoom] Attempt ${attempt}/${maxAttempts}`);
                 try {
                     const resp = await this._fetchWithTimeout(apiUrl('/api/rooms/create-and-join'), {
@@ -2402,6 +2416,7 @@ class AudioRoomsManager {
     }
 
     async joinRoom(roomId, isHost = false, isInvite = false) {
+        this._primeSfx();
         if (!roomId) {
             console.warn('joinRoom called with empty roomId');
             return;

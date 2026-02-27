@@ -144,6 +144,8 @@ class SpaRouter {
       this._managedScripts.forEach(el => el.remove());
       this._managedScripts.clear();
 
+      document.body.style.overflow = '';
+
       const currentMain = document.querySelector('main');
       if (currentMain) {
         currentMain.innerHTML = newMain.innerHTML;

@@ -563,7 +563,7 @@ app.get('/og-image/:roomId', ogCrawlerHeaders, async (req, res) => {
 body {
     width: 1200px; height: 630px;
     font-family: 'Inter', sans-serif;
-    background: #0a0a12;
+    background: #060409;
     overflow: hidden;
 }
 .card {
@@ -571,15 +571,15 @@ body {
     top: 20px; left: 40px;
     width: 1120px; height: 590px;
     border-radius: 40px;
-    background: linear-gradient(160deg, #0d0a14 0%, #1a1033 40%, #0d0a14 100%);
-    box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 0 70px rgba(139,92,246,0.15);
+    background: linear-gradient(160deg, #080612 0%, #100b20 40%, #080612 100%);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.8), 0 0 40px rgba(139,92,246,0.08);
     overflow: hidden;
 }
 .glow {
     position: absolute; top: -50%; right: -50%;
     width: 200%; height: 200%;
-    background: radial-gradient(circle at 70% 30%, rgba(150,197,176,0.08) 0%, transparent 50%),
-                radial-gradient(circle at 30% 70%, rgba(139,92,246,0.10) 0%, transparent 50%);
+    background: radial-gradient(circle at 70% 30%, rgba(150,197,176,0.04) 0%, transparent 50%),
+                radial-gradient(circle at 30% 70%, rgba(139,92,246,0.06) 0%, transparent 50%);
     pointer-events: none;
 }
 .top-row {
@@ -610,7 +610,7 @@ body {
 }
 .logo {
     height: 180px;
-    filter: drop-shadow(0 0 20px rgba(150,197,176,0.5)) drop-shadow(0 0 40px rgba(139,92,246,0.3));
+    filter: drop-shadow(0 0 12px rgba(150,197,176,0.3)) drop-shadow(0 0 24px rgba(139,92,246,0.15));
 }
 .body {
     position: relative;
@@ -666,7 +666,7 @@ body {
     width: 36px; height: 36px;
     border-radius: 50%;
     background: rgba(139,92,246,0.4);
-    border: 3px solid #1a1033;
+    border: 3px solid #100b20;
     display: flex;
     align-items: center;
     justify-content: center;
