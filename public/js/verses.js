@@ -57,8 +57,6 @@ class AudioRoomsManager {
             onStage: new Audio('/sounds/wordeth_onstage_notification.mp3')
         };
         Object.values(this._sfx).forEach(a => { a.preload = 'auto'; a.volume = 0.5; });
-        this._sfxUnlocked = false;
-        this._enterSoundPlayed = false;
         
         // Video grid state
         this.videoMode = 'off';
@@ -324,9 +322,10 @@ class AudioRoomsManager {
         try {
             if (this._invite.status === 'pending') {
                 this._initComplete = true;
+                this._updateJoiningStatus('Connecting\u2026');
+                await this.connectToServer();
                 this._updateJoiningStatus('Joining room\u2026');
                 this._processInvite();
-                this.connectToServer().catch(e => console.warn('Background socket connect error:', e));
                 this.loadActiveRooms().catch(() => {});
                 this.loadReplays();
                 return;
@@ -598,7 +597,6 @@ class AudioRoomsManager {
         // Create room form submission
         this.createRoomForm?.addEventListener('submit', (e) => {
             e.preventDefault();
-            this._unlockSfx();
             this.createRoom();
         });
 
@@ -771,7 +769,6 @@ class AudioRoomsManager {
 
             const joinBtn = e.target.closest('.join-room-btn');
             if (joinBtn) {
-                this._unlockSfx();
                 const roomCard = joinBtn.closest('.room-card');
                 if (roomCard) {
                     const roomId = roomCard.dataset.roomId;
@@ -1629,22 +1626,11 @@ class AudioRoomsManager {
         return window.escapeHtml(text);
     }
 
-    _unlockSfx() {
-        if (this._sfxUnlocked) return;
-        this._sfxUnlocked = true;
-        Object.values(this._sfx).forEach(a => {
-            a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(() => {});
-        });
-    }
-
     _playSfx(name) {
         try {
-            if (name === 'enterRoom') {
-                if (this._enterSoundPlayed) return;
-                this._enterSoundPlayed = true;
-            }
             const sound = this._sfx?.[name];
             if (!sound) return;
+            console.log('[SFX] playing:', name);
             sound.currentTime = 0;
             sound.play().catch(() => {});
         } catch(e) {}
@@ -2308,6 +2294,7 @@ class AudioRoomsManager {
             this.updateVideoButtonState();
             this.updateHostControls();
             this._showRoomUI(roomId, true);
+            this._playSfx('enterRoom');
 
             this._welcomeShown = true;
             this._agoraJoinHandled = true;
@@ -2542,6 +2529,8 @@ class AudioRoomsManager {
             if (isInvite) {
                 if (this._invite.status === 'joining') this._invite.status = 'joined';
             }
+
+            this._playSfx('enterRoom');
 
             this._welcomeShown = true;
             this._agoraJoinHandled = true;
@@ -3232,7 +3221,6 @@ class AudioRoomsManager {
                 if (muteIcon) muteIcon.className = 'fas fa-microphone-slash';
             }
 
-            this._playSfx('enterRoom');
             this.showFirstVisitGuide();
 
             try {
@@ -4056,7 +4044,6 @@ class AudioRoomsManager {
         this._savedRoomName = null;
         this._welcomeShown = false;
         this._agoraJoinHandled = false;
-        this._enterSoundPlayed = false;
         this._releaseWakeLock();
         this._stopSilentAudioKeepAlive();
         this.resetAudioFilter();
