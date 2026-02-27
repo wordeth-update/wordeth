@@ -194,10 +194,10 @@
 #body .category-dropdown,
 #body select,
 #body .mat-select {
-  background: #1E0D38 !important;
-  border: 1px solid rgba(0, 229, 168, 0.15) !important;
+  background: #1E0D38;
+  border: 1px solid rgba(0, 229, 168, 0.15);
   border-radius: 12px;
-  color: #ffffff !important;
+  color: #ffffff;
 }
 
 #body .mat-select-value,
@@ -211,119 +211,100 @@
   color: #00E5A8 !important;
 }
 
-/* --- NUCLEAR: Force dark on ALL overlays, dropdowns, popups --- */
-
-.cdk-overlay-container,
-.cdk-overlay-container *,
-.cdk-overlay-pane,
-.cdk-overlay-pane *,
-.cdk-overlay-connected-position-bounding-box,
-.cdk-overlay-connected-position-bounding-box * {
+#body .mat-option,
+.mat-option {
+  background: #1E0D38 !important;
   color: rgba(255, 255, 255, 0.87) !important;
 }
 
-.cdk-overlay-pane > *,
-.cdk-overlay-pane > div,
-.cdk-overlay-pane > div > *,
-.cdk-overlay-pane > div > div,
-.cdk-overlay-pane > div > div > *,
-.cdk-overlay-container > *,
-.cdk-overlay-container > div > *,
-.mat-menu-panel,
-.mat-menu-content,
-.mat-select-panel,
-.mat-autocomplete-panel,
-.mat-dialog-container,
-.mat-bottom-sheet-container,
-.mat-snack-bar-container,
-.mat-tooltip,
-[class*="menu-panel"],
-[class*="dropdown-panel"],
-[class*="dropdown-menu"],
-[class*="select-panel"],
-[class*="overlay-panel"],
-[class*="popover"],
-[class*="popup"],
-[class*="flyout"],
-.dropdown-menu,
-.popover,
-ul[role="menu"],
-ul[role="listbox"],
-div[role="menu"],
-div[role="listbox"],
-div[role="dialog"] {
-  background: #0D0118 !important;
-  background-color: #0D0118 !important;
-  border-color: rgba(0, 229, 168, 0.2) !important;
-}
-
-.cdk-overlay-pane > div,
-.cdk-overlay-pane [class*="panel"],
-.cdk-overlay-pane [class*="menu"],
-.cdk-overlay-pane [class*="dropdown"],
-.cdk-overlay-pane [class*="list"],
-.cdk-overlay-pane [class*="select"] {
-  background: #0D0118 !important;
-  background-color: #0D0118 !important;
-}
-
-.mat-option,
-[class*="option"],
-[class*="menu-item"],
-[class*="dropdown-item"],
-.mat-menu-item,
-li[role="option"],
-li[role="menuitem"],
-button[role="menuitem"],
-a[role="menuitem"] {
-  background: transparent !important;
-  background-color: transparent !important;
-  color: rgba(255, 255, 255, 0.87) !important;
-}
-
+#body .mat-option:hover,
+#body .mat-option.mat-active,
 .mat-option:hover,
-.mat-option.mat-active,
-[class*="option"]:hover,
-[class*="menu-item"]:hover,
-[class*="dropdown-item"]:hover,
-.mat-menu-item:hover,
-li[role="option"]:hover,
-li[role="menuitem"]:hover,
-button[role="menuitem"]:hover,
-a[role="menuitem"]:hover {
+.mat-option.mat-active {
   background: rgba(0, 229, 168, 0.12) !important;
-  background-color: rgba(0, 229, 168, 0.12) !important;
-  color: #00E5A8 !important;
 }
 
-.mat-option.mat-selected,
-[class*="option"][class*="selected"],
-[class*="option"][class*="active"],
-li[role="option"][aria-selected="true"] {
+#body .mat-option.mat-selected,
+.mat-option.mat-selected {
   color: #00E5A8 !important;
   background: rgba(0, 229, 168, 0.08) !important;
 }
 
-.mat-option .mat-option-text,
-[class*="option-text"],
-[class*="menu-item"] span,
-[class*="dropdown-item"] span {
+#body .mat-option .mat-option-text,
+.mat-option .mat-option-text {
   color: rgba(255, 255, 255, 0.87) !important;
 }
 
-.mat-menu-submenu-icon,
-[class*="submenu-icon"],
-[class*="arrow-icon"] {
-  color: rgba(255, 255, 255, 0.5) !important;
+#body .cdk-overlay-pane .mat-select-panel,
+.cdk-overlay-pane .mat-select-panel,
+.mat-select-panel,
+.mat-autocomplete-panel {
+  background: #0D0118 !important;
+  border: 1px solid rgba(0, 229, 168, 0.2) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
 }
 
-/* --- END NUCLEAR --- */
+.cdk-overlay-container *,
+.cdk-overlay-pane * {
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.cdk-overlay-container .mat-menu-panel,
+.cdk-overlay-container .mat-select-panel,
+.cdk-overlay-container .mat-autocomplete-panel,
+.cdk-overlay-container .mat-dialog-container {
+  background: #0D0118 !important;
+}
+
+.mat-menu-panel,
+.mat-menu-content,
+#body .mat-menu-panel,
+#body .mat-menu-content,
+div.mat-menu-panel,
+div.mat-menu-content,
+.cdk-overlay-container .mat-menu-panel,
+.cdk-overlay-container .mat-menu-content {
+  background: #0D0118 !important;
+  border: 1px solid rgba(0, 229, 168, 0.2) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
+}
+
+.mat-menu-item,
+#body .mat-menu-item,
+.cdk-overlay-container .mat-menu-item,
+button.mat-menu-item,
+a.mat-menu-item {
+  color: rgba(255, 255, 255, 0.87) !important;
+  background: transparent !important;
+}
+
+.mat-menu-item:hover,
+#body .mat-menu-item:hover,
+.cdk-overlay-container .mat-menu-item:hover,
+button.mat-menu-item:hover,
+a.mat-menu-item:hover {
+  background: rgba(0, 229, 168, 0.12) !important;
+  color: #00E5A8 !important;
+}
+
+.mat-menu-item .mat-icon,
+#body .mat-menu-item .mat-icon,
+.cdk-overlay-container .mat-menu-item .mat-icon {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.mat-menu-item .mat-menu-submenu-icon,
+.cdk-overlay-container .mat-menu-submenu-icon {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
 
 #body .ds-select-product-container .filter-group,
 #body .ds-select-product-container .category-filter-bar,
 #body .ds-select-product-container .product-filter,
 #body .ds-select-product-container .filter-wrap {
-  color: #ffffff !important;
+  color: #ffffff;
 }
 
 #body .ds-select-product-container .filter-group label,
@@ -335,22 +316,22 @@ li[role="option"][aria-selected="true"] {
 
 #body .category-list-wrap,
 #body .category-sidebar {
-  background: #0D0118 !important;
+  background: #0D0118;
   border-right: 1px solid rgba(0, 229, 168, 0.1);
 }
 
 #body ul.category-list li {
-  color: rgba(255, 255, 255, 0.8) !important;
+  color: rgba(255, 255, 255, 0.8);
   transition: color 0.3s ease;
 }
 
 #body ul.category-list li:hover,
 #body ul.category-list li.active {
-  color: #00E5A8 !important;
+  color: #00E5A8;
 }
 
 #body a.category-view-all {
-  color: #00E5A8 !important;
+  color: #00E5A8;
 }
 
 #body .ds-select-product-container .mat-form-field,
