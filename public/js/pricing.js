@@ -111,7 +111,8 @@
     function createPlanCard(plan) {
         const isFeatured = featuredSlugs.includes(plan.slug);
         const isCurrent = currentUserPlan === plan.slug;
-        const price = billingCycle === 'yearly' ? plan.priceYearly : plan.priceMonthly;
+        const yearlyPrice = plan.priceYearly || Math.round(plan.priceMonthly * 9.6);
+        const price = billingCycle === 'yearly' ? yearlyPrice : plan.priceMonthly;
         const isFree = plan.priceMonthly === 0 && plan.priceYearly === 0;
         const isContactSales = plan.isCustomPricing || (plan.category === 'label' && plan.maxArtists > 5);
 

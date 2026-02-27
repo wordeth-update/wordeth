@@ -14,6 +14,7 @@
 
     /* Mint family — upgraded from muted sage to electric neon */
     --mint:            #00E5A8;
+    --mint-light:      #33EABB;
     --mint-dim:        #7ECBAE;   /* old mint, kept for subtle uses */
     --mint-deep:       #00A87D;
 

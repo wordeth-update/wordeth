@@ -417,12 +417,12 @@
             <div class="loading-spinner-wrap">
                 <svg class="loading-ring" viewBox="0 0 120 120">
                     <defs>
-                        <path id="textArc" d="M 60,60 m -45,0 a 45,45 0 1,1 90,0 a 45,45 0 1,1 -90,0"/>
+                        <path id="textArc" d="M 60,60 m -45,0 a 45,45 0 0,1 90,0"/>
                     </defs>
                     <circle cx="60" cy="60" r="28" fill="none" stroke="rgba(95,14,130,0.3)" stroke-width="3"/>
                     <circle class="spinner-arc" cx="60" cy="60" r="28" fill="none" stroke="var(--mint, #00E5A8)" stroke-width="3" stroke-linecap="round" stroke-dasharray="44 132"/>
-                    <text class="arc-text" fill="var(--mint, #00E5A8)">
-                        <textPath href="#textArc" startOffset="0%">Searching for lyrics...</textPath>
+                    <text class="arc-text" fill="var(--mint, #00E5A8)" font-size="11" letter-spacing="3">
+                        <textPath href="#textArc" startOffset="50%" text-anchor="middle">SEARCHING FOR LYRICS</textPath>
                     </text>
                 </svg>
             </div>

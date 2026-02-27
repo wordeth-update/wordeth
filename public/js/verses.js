@@ -829,6 +829,17 @@ class AudioRoomsManager {
 
     connectToServer() {
         return new Promise((resolve, reject) => {
+            if (typeof io === 'undefined') {
+                console.warn('[Socket] socket.io not loaded yet, waiting...');
+                const waitForIo = setInterval(() => {
+                    if (typeof io !== 'undefined') {
+                        clearInterval(waitForIo);
+                        this.connectToServer().then(resolve).catch(reject);
+                    }
+                }, 200);
+                setTimeout(() => { clearInterval(waitForIo); resolve(); }, 5000);
+                return;
+            }
             console.log('Connecting to signaling server...');
             const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
             this.lobbySocket = io(serverUrl, {
@@ -874,11 +885,15 @@ class AudioRoomsManager {
     
 
     async loadActiveRooms() {
+        if (this._loadingRooms) return;
+        this._loadingRooms = true;
         try {
             const rooms = await this.fetchActiveRooms();
             this.renderRooms(rooms);
         } catch (error) {
             console.error('Error loading rooms:', error);
+        } finally {
+            this._loadingRooms = false;
         }
     }
 
@@ -3030,6 +3045,18 @@ class AudioRoomsManager {
             });
         }
 
+        if (typeof io === 'undefined') {
+            console.warn('[connectSocket] socket.io not loaded yet, waiting...');
+            return new Promise((resolve) => {
+                const waitForIo = setInterval(() => {
+                    if (typeof io !== 'undefined') {
+                        clearInterval(waitForIo);
+                        this.connectSocket().then(resolve);
+                    }
+                }, 200);
+                setTimeout(() => { clearInterval(waitForIo); resolve(); }, 5000);
+            });
+        }
         const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
         this.lobbySocket = io(serverUrl, {
             transports: ['websocket', 'polling'],
