@@ -247,6 +247,41 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 60px rgba(95, 14, 130, 0.08);
         }
 
+        .cdk-overlay-container .mat-mdc-menu-panel,
+        .cdk-overlay-container div[role="menu"],
+        .cdk-overlay-container .mat-mdc-menu-content {
+            background: #0D0118 !important;
+            background-color: #0D0118 !important;
+            border: 1px solid rgba(0, 229, 168, 0.2) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
+        }
+        .cdk-overlay-container .mat-mdc-menu-item,
+        .cdk-overlay-container button.mat-mdc-menu-item {
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+            background: transparent !important;
+        }
+        .cdk-overlay-container .mat-mdc-menu-item:hover {
+            background: rgba(0, 229, 168, 0.15) !important;
+        }
+        .cdk-overlay-container .mat-mdc-menu-item:hover span {
+            color: #00E5A8 !important;
+            -webkit-text-fill-color: #00E5A8 !important;
+        }
+        .cdk-overlay-container .mat-mdc-menu-item-text,
+        .cdk-overlay-container span.mat-mdc-menu-item-text {
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+        }
+        .cdk-overlay-container .mat-mdc-menu-submenu-icon {
+            color: rgba(255, 255, 255, 0.6) !important;
+            fill: rgba(255, 255, 255, 0.6) !important;
+        }
+        .cdk-overlay-container .cdk-overlay-backdrop {
+            background: transparent !important;
+        }
+
         #inksoftEmbed {
             width: 100%;
             height: 720px;
@@ -689,8 +724,86 @@
                     options.designId = designId;
                 }
                 window.inksoftApi.launchEmbeddedDesignStudio(options);
+                startOverlayObserver();
             };
             document.body.appendChild(scriptElement);
+        }
+
+        function startOverlayObserver() {
+            var observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(m) {
+                    m.addedNodes.forEach(function(node) {
+                        if (node.nodeType !== 1) return;
+                        if (node.classList && node.classList.contains('cdk-overlay-container')) {
+                            styleOverlayContainer(node);
+                            observeOverlayChildren(node);
+                        }
+                        if (node.classList && (node.classList.contains('mat-mdc-menu-panel') || node.getAttribute('role') === 'menu')) {
+                            styleMenuPanel(node);
+                        }
+                    });
+                });
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+
+            var existing = document.querySelector('.cdk-overlay-container');
+            if (existing) {
+                observeOverlayChildren(existing);
+            }
+        }
+
+        function observeOverlayChildren(container) {
+            var childObserver = new MutationObserver(function(mutations) {
+                mutations.forEach(function(m) {
+                    m.addedNodes.forEach(function(node) {
+                        if (node.nodeType !== 1) return;
+                        styleMenuPanel(node);
+                        var panels = node.querySelectorAll ? node.querySelectorAll('[role="menu"], .mat-mdc-menu-panel, .mat-mdc-menu-content') : [];
+                        panels.forEach(function(p) { styleMenuPanel(p); });
+                        var items = node.querySelectorAll ? node.querySelectorAll('.mat-mdc-menu-item, .mat-mdc-menu-item-text, button[class*="menu-item"], span[class*="menu-item-text"]') : [];
+                        items.forEach(function(item) { styleMenuItem(item); });
+                    });
+                });
+            });
+            childObserver.observe(container, { childList: true, subtree: true });
+        }
+
+        function styleOverlayContainer(el) {
+            observeOverlayChildren(el);
+        }
+
+        function styleMenuPanel(el) {
+            if (!el || !el.style) return;
+            if (el.classList && (el.classList.contains('mat-mdc-menu-panel') || el.getAttribute('role') === 'menu')) {
+                el.style.setProperty('background', '#0D0118', 'important');
+                el.style.setProperty('background-color', '#0D0118', 'important');
+                el.style.setProperty('border', '1px solid rgba(0, 229, 168, 0.2)', 'important');
+                el.style.setProperty('border-radius', '12px', 'important');
+                el.style.setProperty('box-shadow', '0 8px 32px rgba(0,0,0,0.6)', 'important');
+            }
+            if (el.classList && el.classList.contains('mat-mdc-menu-content')) {
+                el.style.setProperty('background', '#0D0118', 'important');
+                el.style.setProperty('background-color', '#0D0118', 'important');
+            }
+            var items = el.querySelectorAll ? el.querySelectorAll('.mat-mdc-menu-item, button[class*="menu-item"]') : [];
+            items.forEach(function(item) { styleMenuItem(item); });
+            var texts = el.querySelectorAll ? el.querySelectorAll('.mat-mdc-menu-item-text, span[class*="menu-item-text"]') : [];
+            texts.forEach(function(t) {
+                t.style.setProperty('color', '#ffffff', 'important');
+                t.style.setProperty('-webkit-text-fill-color', '#ffffff', 'important');
+            });
+        }
+
+        function styleMenuItem(item) {
+            if (!item || !item.style) return;
+            item.style.setProperty('color', '#ffffff', 'important');
+            item.style.setProperty('-webkit-text-fill-color', '#ffffff', 'important');
+            item.style.setProperty('background', 'transparent', 'important');
+            var spans = item.querySelectorAll ? item.querySelectorAll('span') : [];
+            spans.forEach(function(s) {
+                s.style.setProperty('color', '#ffffff', 'important');
+                s.style.setProperty('-webkit-text-fill-color', '#ffffff', 'important');
+            });
         }
 
         function closeDesigner() {
