@@ -1950,6 +1950,10 @@ body.in-room * {
         background: transparent;
     }
     .control-btn .ctrl-label { display: none; }
+    #audio-filter-btn,
+    #karaoke-btn,
+    #video-btn,
+    #share-photo-btn { display: none !important; }
     .control-btn:hover,
     .control-btn.active {
         background: rgba(0, 229, 168, 0.15);

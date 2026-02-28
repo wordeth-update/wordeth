@@ -2506,7 +2506,7 @@ class AudioRoomsManager {
             try { await this._acquireMic(); console.log('[Create] 4/5 Mic ready'); }
             catch (e) { console.warn('[Create] 4/5 Mic skipped:', e.message); }
 
-            try { await this._agoraJoinGuarded(roomId, { forceRole: 'host' }); console.log('[Create] 5/5 Agora connected'); }
+            try { await this._agoraJoinGuarded(roomId, {}); console.log('[Create] 5/5 Agora connected'); }
             catch (e) { console.warn('[Create] 5/5 Agora failed:', e.message); }
 
             this._applyRoomState(roomId, true, httpData);
@@ -2626,7 +2626,7 @@ class AudioRoomsManager {
 
             if (!ctx.isGuest) {
                 try {
-                    await this._agoraJoinGuarded(roomId, { forceRole: 'host', skipPublish: !effectiveHost });
+                    await this._agoraJoinGuarded(roomId, { skipPublish: !effectiveHost });
                     console.log('[Join] 5/5 Agora ok, publish:', effectiveHost);
                 } catch (e) { console.warn('[Join] 5/5 Agora failed:', e.message); }
             }
@@ -2681,7 +2681,7 @@ class AudioRoomsManager {
 
     async initAgoraClient() {
         if (this.agoraClient) return;
-        this.agoraClient = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+        this.agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
         AgoraRTC.setLogLevel(2);
 
         this._showAutoplayBanner = () => {
@@ -2833,7 +2833,7 @@ class AudioRoomsManager {
     }
 
     async joinAgoraChannel(roomId, options = {}) {
-        const { forceRole, skipPublish } = options;
+        const { skipPublish } = options;
         try {
             await this.initAgoraClient();
 
@@ -2843,9 +2843,7 @@ class AudioRoomsManager {
                 return;
             }
 
-            const agoraRole = forceRole || 'host';
-            console.log('[Agora] role:', agoraRole);
-            await this.agoraClient.setClientRole('host');
+            console.log('[Agora] joining channel (rtc mode)');
 
             const authToken = localStorage.getItem('authToken');
             const resp = await this._fetchWithTimeout(apiUrl('/api/agora/token'), {
@@ -2860,13 +2858,13 @@ class AudioRoomsManager {
             this.agoraAppId = data.appId;
             this._resumeAllAudioContexts();
             this.agoraUid = await this.agoraClient.join(data.appId, roomId, data.token, data.uid || null);
-            console.log('[Agora] joined channel', roomId, 'uid:', this.agoraUid, 'role:', agoraRole);
+            console.log('[Agora] joined channel', roomId, 'uid:', this.agoraUid);
 
             if (this.socket) {
                 this.socket.emit('agora-uid-map', { roomId, agoraUid: this.agoraUid, socketId: this.socket.id });
             }
 
-            if (!skipPublish && agoraRole === 'host') {
+            if (!skipPublish) {
                 await this.publishAgoraAudio();
             }
 
@@ -2907,10 +2905,6 @@ class AudioRoomsManager {
         }
 
         try {
-            if (this.agoraClient.role !== 'host') {
-                await this.agoraClient.setClientRole('host');
-            }
-
             if (this.agoraLocalAudioTrack) {
                 try { await this.agoraClient.unpublish([this.agoraLocalAudioTrack]); } catch(e) {}
                 this.agoraLocalAudioTrack.close();
@@ -3181,7 +3175,7 @@ class AudioRoomsManager {
                 try {
                     const connState = this.agoraClient?.connectionState;
                     if (connState !== 'CONNECTED' && connState !== 'CONNECTING') {
-                        await this._agoraJoinGuarded(confirmedRoom, { forceRole: 'host', skipPublish: !this.isSpeaker });
+                        await this._agoraJoinGuarded(confirmedRoom, { skipPublish: !this.isSpeaker });
                     }
                     this._agoraJoinHandled = true;
                 } catch (e) {
@@ -3351,7 +3345,7 @@ class AudioRoomsManager {
             } else if (this.currentRoom) {
                 try {
                     console.log('[Promotion] Agora not connected, joining as host');
-                    await this._agoraJoinGuarded(this.currentRoom, { forceRole: 'host' });
+                    await this._agoraJoinGuarded(this.currentRoom, {});
                 } catch (e) {
                     console.error('[Promotion] Agora join failed:', e.message);
                     this.addChatMessage('System', 'Audio connection failed. Try refreshing.', true);
@@ -3399,7 +3393,7 @@ class AudioRoomsManager {
                 try {
                     await this._agoraWithLock(async () => {
                         await this.leaveAgoraChannel();
-                        await this.joinAgoraChannel(this.currentRoom, { forceRole: 'host', skipPublish: !this.isSpeaker });
+                        await this.joinAgoraChannel(this.currentRoom, { skipPublish: !this.isSpeaker });
                     });
                 } catch (e) {
                     console.error('[Reconnect] Failed to rejoin Agora channel:', e);
