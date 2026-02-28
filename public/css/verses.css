@@ -1952,7 +1952,6 @@ body.in-room * {
     .control-btn .ctrl-label { display: none; }
     #audio-filter-btn,
     #karaoke-btn,
-    #video-btn,
     #share-photo-btn { display: none !important; }
     .control-btn:hover,
     .control-btn.active {
