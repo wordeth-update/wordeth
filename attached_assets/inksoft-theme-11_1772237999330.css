@@ -24,8 +24,6 @@
 =======================================*/
 
 
-/* ====== MDC THEME VARIABLES (root-level override) ====== */
-
 /* ====== MENU TEXT Z-INDEX FIX ======
    color and -webkit-text-fill-color are already white (confirmed via
    Computed panel). The text is invisible because a ripple/overlay
@@ -48,6 +46,8 @@ span.mat-mdc-menu-item-text,
   color: #00E5A8 !important;
   -webkit-text-fill-color: #00E5A8 !important;
 }
+
+
 
 
 :root,
