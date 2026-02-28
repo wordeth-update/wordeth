@@ -832,11 +832,12 @@ class AudioRoomsManager {
             if (this._invite.status === 'joining') return;
 
             const joinBtn = e.target.closest('.join-room-btn');
-            if (joinBtn) {
-                const roomCard = joinBtn.closest('.room-card');
+            const clickedCard = !joinBtn ? e.target.closest('.room-card') : null;
+            if (joinBtn || clickedCard) {
+                const roomCard = joinBtn ? joinBtn.closest('.room-card') : clickedCard;
                 if (roomCard) {
                     const roomId = roomCard.dataset.roomId;
-                    this.joinRoom(roomId);
+                    if (roomId) this.joinRoom(roomId);
                 }
                 return;
             }
@@ -2273,13 +2274,126 @@ class AudioRoomsManager {
         }
     }
 
-    // Room Management
+    // ═══════════════════════════════════════════════════════════════
+    // Room Management — sequential pipeline (create / join / leave)
+    // Each step MUST succeed before the next runs. UI only appears
+    // after all critical gates pass. Every failure resets state and
+    // returns the user to the lobby with a clear message.
+    // ═══════════════════════════════════════════════════════════════
+
+    _getUserContext() {
+        const user = this.isGuest ? {} : JSON.parse(localStorage.getItem('user') || '{}');
+        return {
+            user,
+            userName: this.isGuest ? 'Guest' : (user.name || user.username || 'Anonymous'),
+            userId: this.isGuest ? `guest_${Date.now()}` : (user._id || user.id || `anon_${Date.now()}`),
+            avatar: user.avatar || null,
+            isGuest: this.isGuest
+        };
+    }
+
+    _resetJoinState() {
+        this.currentRoom = null;
+        this.roomJoinTime = null;
+        this._joinConfirmed = false;
+        this._pendingJoinRoom = null;
+        this._pendingJoinIsInvite = false;
+        this._pendingJoinIsHost = false;
+        this.isRoomHost = false;
+        this.isSpeaker = false;
+        this.isAudioMuted = false;
+        this._welcomeShown = false;
+        this._agoraJoinHandled = false;
+        if (this._invite.status !== 'pending') {
+            this._invite = { status: 'idle', roomId: null, retries: 0, maxRetries: 5 };
+        }
+        if (this._inviteHardTimeout) {
+            clearTimeout(this._inviteHardTimeout);
+            this._inviteHardTimeout = null;
+        }
+    }
+
+    async _ensureSocket() {
+        await this.connectSocket();
+        if (!this.socket?.connected) {
+            throw new Error('Could not establish a live connection. Check your network and try again.');
+        }
+        return this.socket;
+    }
+
+    async _socketJoinRoom(payload) {
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Room join was not confirmed by the server.')), 10000);
+            this.socket.emit('join-room', payload, (ack) => {
+                clearTimeout(timeout);
+                if (ack && ack.success === false) {
+                    reject(new Error(ack.message || 'Server rejected the room join.'));
+                } else {
+                    resolve(ack || {});
+                }
+            });
+        });
+    }
+
+    async _acquireMic() {
+        if (this.localStream) {
+            const existing = this.localStream.getAudioTracks()[0];
+            if (existing && existing.readyState === 'live' && existing.enabled) return;
+            this.localStream.getTracks().forEach(t => t.stop());
+            this.localStream = null;
+        }
+        this.localStream = await navigator.mediaDevices.getUserMedia({
+            video: false,
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        });
+        const track = this.localStream.getAudioTracks()[0];
+        if (!track || track.readyState !== 'live') {
+            throw new Error('Microphone track is not active.');
+        }
+    }
+
+    _applyRoomState(roomId, isHost, extra = {}) {
+        this.currentRoom = roomId;
+        this.roomJoinTime = Date.now();
+        this._joinConfirmed = true;
+        this._pendingJoinRoom = null;
+        this.isRoomHost = isHost;
+        this.isSpeaker = isHost;
+        this.isAudioMuted = false;
+        this.stageAccess = extra.stageAccess || 'invite-only';
+        this.karaokeEnabled = isHost ? false : (extra.karaokeEnabled || false);
+        this.videoMode = isHost ? 'off' : (extra.videoMode || 'off');
+        this._welcomeShown = true;
+        this._agoraJoinHandled = true;
+        this._pendingJoinIsInvite = false;
+        this._pendingJoinIsHost = false;
+    }
+
+    _enterRoomUI(roomId, isHost, roomName, participants) {
+        if (this.toggleAudioBtn) {
+            this._setBtnWithSpan(this.toggleAudioBtn, 'fas fa-microphone', 'Mic');
+            this.toggleAudioBtn.classList.remove('muted');
+        }
+        this.updateKaraokeButtonState();
+        this.updateVideoButtonState();
+        this.updateHostControls();
+
+        if (roomName) {
+            const rnEl = document.getElementById('room-name');
+            if (rnEl) rnEl.textContent = roomName;
+        }
+
+        this._showRoomUI(roomId, isHost);
+        if (participants) this.updateParticipantDisplay(participants);
+
+        this._requestWakeLock();
+        this._startSilentAudioKeepAlive();
+        this._playSfx('enterRoom');
+    }
+
     async createRoom() {
         this._primeSfx();
-        if (!this.createRoomForm) {
-            console.error('[CreateRoom] No form element found');
-            return;
-        }
+        if (!this.createRoomForm) return;
 
         const submitBtn = this.createRoomForm.querySelector('button[type="submit"]');
         const origText = submitBtn?.textContent;
@@ -2287,172 +2401,71 @@ class AudioRoomsManager {
         if (submitBtn) submitBtn.disabled = true;
 
         const formData = new FormData(this.createRoomForm);
-        const roomData = {
-            name: formData.get('room-name-input'),
-            genre: formData.get('room-genre'),
-            initialSong: formData.get('initial-song'),
-            isPrivate: formData.get('private-room') === 'on'
-        };
+        const roomName = formData.get('room-name-input') || 'Untitled Room';
+        const initialSong = formData.get('initial-song') || '';
+        const ctx = this._getUserContext();
 
-        const user = this.isGuest ? {} : JSON.parse(localStorage.getItem('user') || '{}');
-        const userName = this.isGuest ? 'Guest' : (user.name || user.username || 'Anonymous');
-        const userId = user._id || user.id || `anon_${Date.now()}`;
-
-        console.log('[CreateRoom] Starting pipeline for:', roomData.name);
+        console.log('[Create] Pipeline start:', roomName);
 
         try {
-            // ── STEP 1: Register room on server ──
-            setStatus('Creating…');
-            console.log('[CreateRoom] Step 1: HTTP create');
+            setStatus('Creating\u2026');
             const resp = await this._fetchWithTimeout(apiUrl('/api/rooms/create-and-join'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store' },
-                body: JSON.stringify({
-                    name: roomData.name || 'Untitled Room',
-                    userId,
-                    userName,
-                    avatar: user.avatar || null
-                }),
+                body: JSON.stringify({ name: roomName, userId: ctx.userId, userName: ctx.userName, avatar: ctx.avatar }),
                 cache: 'no-store'
             }, 15000);
             const httpData = await resp.json();
+            if (!httpData.success || !httpData.id) throw new Error(httpData?.message || 'Server could not create the room.');
             const roomId = httpData.id;
-            if (!httpData.success || !roomId) {
-                throw new Error(httpData?.message || 'Server could not create the room.');
-            }
-            console.log('[CreateRoom] Step 1 done: roomId =', roomId);
+            console.log('[Create] 1/5 HTTP ok, roomId:', roomId);
 
-            // ── STEP 2: Connect socket (must succeed) ──
-            setStatus('Connecting…');
-            console.log('[CreateRoom] Step 2: Socket connect');
-            await this.connectSocket();
-            if (!this.socket?.connected) {
-                throw new Error('Could not establish a live connection. Check your network and try again.');
-            }
-            console.log('[CreateRoom] Step 2 done: socket =', this.socket.id);
+            setStatus('Connecting\u2026');
+            const sock = await this._ensureSocket();
+            console.log('[Create] 2/5 Socket ok:', sock.id);
 
-            // ── STEP 3: Join room via socket (must be acknowledged) ──
-            setStatus('Gathering the vibes…');
-            console.log('[CreateRoom] Step 3: Socket join-room');
-            const joinPayload = { roomId, userId, userName, isHost: true, roomName: roomData.name || 'Untitled Room', avatar: user.avatar || null };
-            const socketAck = await new Promise((resolve, reject) => {
-                const ackTimeout = setTimeout(() => reject(new Error('Room join was not confirmed by the server.')), 10000);
-                this.socket.emit('join-room', joinPayload, (ack) => {
-                    clearTimeout(ackTimeout);
-                    resolve(ack);
-                });
-            });
-            if (socketAck && socketAck.success === false) {
-                throw new Error(socketAck.message || 'Server rejected the room join.');
-            }
-            console.log('[CreateRoom] Step 3 done: join confirmed');
+            setStatus('Gathering the vibes\u2026');
+            await this._socketJoinRoom({ roomId, userId: ctx.userId, userName: ctx.userName, isHost: true, roomName, avatar: ctx.avatar });
+            console.log('[Create] 3/5 Socket join confirmed');
 
-            // ── STEP 4: Get microphone ──
-            setStatus('Tidying things up…');
-            console.log('[CreateRoom] Step 4: Mic access');
-            try {
-                await this.initializeMedia();
-                console.log('[CreateRoom] Step 4 done: mic ready');
-            } catch (e) {
-                console.warn('[CreateRoom] Step 4: mic denied, continuing without:', e.message);
-            }
+            setStatus('Tidying things up\u2026');
+            try { await this._acquireMic(); console.log('[Create] 4/5 Mic ready'); }
+            catch (e) { console.warn('[Create] 4/5 Mic skipped:', e.message); }
 
-            // ── STEP 5: Join Agora audio channel ──
-            console.log('[CreateRoom] Step 5: Agora join');
-            try {
-                await this._agoraJoinGuarded(roomId, { forceRole: 'host' });
-                console.log('[CreateRoom] Step 5 done: Agora connected');
-            } catch (agoraErr) {
-                console.error('[CreateRoom] Step 5 FAILED: Agora error:', agoraErr.message);
-                this.addChatMessage('System', 'Audio connection failed. Others may not hear you. Try leaving and rejoining.', true);
-            }
+            try { await this._agoraJoinGuarded(roomId, { forceRole: 'host' }); console.log('[Create] 5/5 Agora connected'); }
+            catch (e) { console.warn('[Create] 5/5 Agora failed:', e.message); }
 
-            // ── STEP 6: Show room UI (only after all gates pass) ──
-            console.log('[CreateRoom] Step 6: Show room');
-            this.isRoomHost = true;
-            this.currentRoom = roomId;
-            this.roomJoinTime = Date.now();
-            this._joinConfirmed = true;
-            this.isSpeaker = true;
-            this.isAudioMuted = false;
-            this.stageAccess = httpData.stageAccess || 'invite-only';
-            this.karaokeEnabled = false;
-            this.videoMode = 'off';
-
-            const roomNameEl = document.getElementById('room-name');
-            const currentSongEl = document.getElementById('current-song');
-            if (roomNameEl) roomNameEl.textContent = roomData.name || 'Untitled Room';
-            if (currentSongEl) currentSongEl.textContent = roomData.initialSong ? `Currently discussing: "${roomData.initialSong}"` : '';
-
+            this._applyRoomState(roomId, true, httpData);
             this.hideAllModals();
-
-            if (this.toggleAudioBtn) {
-                this._setBtnWithSpan(this.toggleAudioBtn, 'fas fa-microphone', 'Mic');
-                this.toggleAudioBtn.classList.remove('muted');
-            }
-            this.updateKaraokeButtonState();
-            this.updateVideoButtonState();
-            this.updateHostControls();
-            this._showRoomUI(roomId, true);
-
-            this._welcomeShown = true;
-            this._agoraJoinHandled = true;
+            const songEl = document.getElementById('current-song');
+            if (songEl) songEl.textContent = initialSong ? `Currently discussing: "${initialSong}"` : '';
+            this._enterRoomUI(roomId, true, roomName);
             this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
-            this._requestWakeLock();
-            this._startSilentAudioKeepAlive();
-            this._playSfx('enterRoom');
 
             window.history.replaceState({ room: roomId }, '', `/verses.html?room=${encodeURIComponent(roomId)}`);
-
-            fetch(apiUrl('/api/analytics/track'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ eventType: 'verse_create', segment: 'community', metadata: { roomId, page: 'verses' } })
-            }).catch(() => {});
-
-            console.log('[CreateRoom] Pipeline complete — room live');
+            fetch(apiUrl('/api/analytics/track'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventType: 'verse_create', segment: 'community', metadata: { roomId, page: 'verses' } }) }).catch(() => {});
+            console.log('[Create] Pipeline complete');
         } catch (error) {
-            console.error('[CreateRoom] Pipeline failed at:', error.message);
-            this.currentRoom = null;
-            this._joinConfirmed = false;
+            console.error('[Create] Failed:', error.message);
+            this._resetJoinState();
             this._restoreLobbyUI();
-            const msg = error.name === 'AbortError'
-                ? 'Server took too long to respond. Please try again.'
-                : (error.message || 'Something went wrong. Please try again.');
-            this.showToast?.('Failed to create room: ' + msg, 'fa-exclamation-circle');
+            this.showToast?.(error.name === 'AbortError' ? 'Server took too long. Please try again.' : (error.message || 'Something went wrong.'), 'fa-exclamation-circle');
         } finally {
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.textContent = origText || 'Create Room';
-            }
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText || 'Create Room'; }
         }
     }
 
     _fetchWithTimeout(url, options, timeoutMs = 10000) {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
-        return fetch(url, { ...options, signal: controller.signal })
-            .finally(() => clearTimeout(timer));
-    }
-
-    async createRoomOnServer(roomData) {
-        const res = await this._fetchWithTimeout(apiUrl('/api/rooms/create'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: roomData.name || 'Untitled Room' })
-        });
-        if (!res.ok) {
-            const errText = await res.text().catch(() => 'Unknown error');
-            throw new Error(`Server returned ${res.status}: ${errText}`);
-        }
-        const data = await res.json();
-        console.log('[CreateRoom] Server assigned room id:', data.id);
-        return { id: data.id, ...roomData };
+        return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
     }
 
     _restoreLobbyUI() {
         const inviteSpinner = document.getElementById('invite-joining-msg');
         if (inviteSpinner) inviteSpinner.remove();
+        const endedScreen = document.getElementById('room-ended-screen');
+        if (endedScreen) endedScreen.remove();
         if (this.roomSelection) this.roomSelection.style.display = '';
         this.audioRoom?.classList.add('hidden');
         document.body.classList.remove('in-room');
@@ -2460,11 +2473,8 @@ class AudioRoomsManager {
         if (pageFooter) pageFooter.style.display = '';
         const mainContainer = document.querySelector('.audio-rooms-container');
         if (mainContainer) mainContainer.style.overflow = '';
-        this.currentRoom = null;
-        this._pendingJoinRoom = null;
-        if (this._invite.status !== 'pending') {
-            this._invite = { status: 'idle', roomId: null, retries: 0, maxRetries: 5 };
-        }
+        try { screen.orientation?.unlock?.(); } catch(e) {}
+        this._resetJoinState();
         localStorage.removeItem('wordeth_pending_room');
         localStorage.removeItem('wordeth_pending_room_ts');
         if (window.location.search.includes('room=') || window.location.pathname.startsWith('/room/')) {
@@ -2503,170 +2513,68 @@ class AudioRoomsManager {
 
     async joinRoom(roomId, isHost = false, isInvite = false) {
         this._primeSfx();
-        if (!roomId) {
-            console.warn('[JoinRoom] called with empty roomId');
-            return;
-        }
+        if (!roomId) return;
 
-        const user = this.isGuest ? {} : JSON.parse(localStorage.getItem('user') || '{}');
-        const userName = this.isGuest ? 'Guest' : (user.name || user.username || 'Anonymous');
-        const guestJoin = this.isGuest;
-        const userId = guestJoin ? `guest_${Date.now()}` : (user._id || user.id || `anon_${Date.now()}`);
-
+        const ctx = this._getUserContext();
         this._pendingJoinRoom = roomId;
         this._pendingJoinIsInvite = isInvite;
         this._pendingJoinIsHost = isHost;
 
-        console.log('[JoinRoom] Starting pipeline for', roomId, 'as', isHost ? 'host' : (guestJoin ? 'guest' : 'listener'));
+        console.log('[Join] Pipeline start:', roomId, isHost ? 'host' : (ctx.isGuest ? 'guest' : 'listener'));
 
         try {
-            // ── STEP 1: Validate room exists on server ──
             this._updateJoiningStatus('Joining room\u2026');
-            console.log('[JoinRoom] Step 1: HTTP join');
-            const joinPayload = {
-                roomId,
-                userId,
-                userName,
-                isHost: guestJoin ? false : isHost,
-                roomName: this._inviteMeta?.name || null,
-                avatar: user.avatar || null
-            };
+            const joinPayload = { roomId, userId: ctx.userId, userName: ctx.userName, isHost: ctx.isGuest ? false : isHost, roomName: this._inviteMeta?.name || null, avatar: ctx.avatar };
             const httpResp = await this._fetchWithTimeout(apiUrl(`/api/rooms/join?_t=${Date.now()}`), {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Cache-Control': 'no-cache, no-store',
-                    'Pragma': 'no-cache'
-                },
+                headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' },
                 body: JSON.stringify(joinPayload),
                 cache: 'no-store'
             }, 15000);
             const httpData = await httpResp.json();
-            if (!httpData.success) {
-                throw new Error(httpData.message || 'This room is no longer live.');
-            }
-            console.log('[JoinRoom] Step 1 done: room confirmed');
+            if (!httpData.success) throw new Error(httpData.message || 'This room is no longer live.');
+            console.log('[Join] 1/5 HTTP ok');
 
-            // ── STEP 2: Connect socket (must succeed) ──
             this._updateJoiningStatus('Connecting\u2026');
-            console.log('[JoinRoom] Step 2: Socket connect');
-            await this.connectSocket();
-            if (!this.socket?.connected) {
-                throw new Error('Could not establish a live connection. Check your network and try again.');
-            }
-            console.log('[JoinRoom] Step 2 done: socket =', this.socket.id);
+            const sock = await this._ensureSocket();
+            console.log('[Join] 2/5 Socket ok:', sock.id);
 
-            // ── STEP 3: Join room via socket (must be acknowledged) ──
             this._updateJoiningStatus('Almost there\u2026');
-            console.log('[JoinRoom] Step 3: Socket join-room');
-            joinPayload.userId = guestJoin ? `guest_${this.socket.id}` : (user._id || user.id || this.socket.id);
-            const socketAck = await new Promise((resolve, reject) => {
-                const ackTimeout = setTimeout(() => reject(new Error('Room join was not confirmed by the server.')), 10000);
-                this.socket.emit('join-room', joinPayload, (ack) => {
-                    clearTimeout(ackTimeout);
-                    resolve(ack);
-                });
-            });
-            if (socketAck && socketAck.success === false) {
-                throw new Error(socketAck.message || 'Server rejected the room join.');
-            }
-            console.log('[JoinRoom] Step 3 done: join confirmed');
+            joinPayload.userId = ctx.isGuest ? `guest_${sock.id}` : (ctx.user._id || ctx.user.id || sock.id);
+            const ack = await this._socketJoinRoom(joinPayload);
+            console.log('[Join] 3/5 Socket join confirmed');
 
-            // ── STEP 4: Mic access (host only, non-blocking for listeners) ──
-            if (isHost) {
-                console.log('[JoinRoom] Step 4: Mic access (host)');
-                try {
-                    await this.initializeMedia();
-                    console.log('[JoinRoom] Step 4 done: mic ready');
-                } catch (e) {
-                    console.warn('[JoinRoom] Step 4: mic denied, continuing:', e.message);
-                }
+            const effectiveHost = httpData.isHost || isHost;
+            if (effectiveHost) {
+                try { await this._acquireMic(); console.log('[Join] 4/5 Mic ready'); }
+                catch (e) { console.warn('[Join] 4/5 Mic skipped:', e.message); }
             }
 
-            // ── STEP 5: Join Agora audio channel (non-guest only) ──
-            if (!guestJoin) {
-                console.log('[JoinRoom] Step 5: Agora join');
+            if (!ctx.isGuest) {
                 try {
-                    const agoraRole = isHost ? 'host' : 'audience';
+                    const agoraRole = effectiveHost ? 'host' : 'audience';
                     await this._agoraJoinGuarded(roomId, { forceRole: agoraRole });
-                    console.log('[JoinRoom] Step 5 done: Agora connected as', agoraRole);
-                } catch (agoraErr) {
-                    console.error('[JoinRoom] Step 5 FAILED: Agora error:', agoraErr.message);
-                    this.addChatMessage('System', 'Audio connection issue. You may need to leave and rejoin.', true);
-                }
+                    console.log('[Join] 5/5 Agora ok as', agoraRole);
+                } catch (e) { console.warn('[Join] 5/5 Agora failed:', e.message); }
             }
 
-            // ── STEP 6: Show room UI (only after all gates pass) ──
-            console.log('[JoinRoom] Step 6: Show room');
-            this.currentRoom = roomId;
-            this.roomJoinTime = Date.now();
-            this._joinConfirmed = true;
-            this._pendingJoinRoom = null;
-            this.isRoomHost = httpData.isHost || isHost;
-            this.isSpeaker = isHost;
-            this.isAudioMuted = false;
+            this._applyRoomState(roomId, effectiveHost, httpData);
+            if (isInvite && this._invite.status === 'joining') this._invite.status = 'joined';
+            this._enterRoomUI(httpData.roomId || roomId, effectiveHost, httpData.roomName, httpData.participants || ack.participants);
 
-            if (this._inviteHardTimeout) {
-                clearTimeout(this._inviteHardTimeout);
-                this._inviteHardTimeout = null;
-            }
-
-            if (httpData.karaokeEnabled !== undefined) this.karaokeEnabled = httpData.karaokeEnabled;
-            if (httpData.videoMode) this.videoMode = httpData.videoMode;
-            if (httpData.stageAccess) this.stageAccess = httpData.stageAccess;
-            this.karaokeEnabled = isHost ? false : (this.karaokeEnabled || false);
-            this.videoMode = isHost ? 'off' : (this.videoMode || 'off');
-
-            if (this.toggleAudioBtn) {
-                this._setBtnWithSpan(this.toggleAudioBtn, 'fas fa-microphone', 'Mic');
-                this.toggleAudioBtn.classList.remove('muted');
-            }
-            this.updateKaraokeButtonState();
-            this.updateVideoButtonState();
-            this.updateHostControls();
-
-            if (httpData.roomName) {
-                const rnEl = document.getElementById('room-name');
-                if (rnEl) rnEl.textContent = httpData.roomName;
-            }
-            this._showRoomUI(httpData.roomId || roomId, this.isRoomHost);
-            if (httpData.participants) this.updateParticipantDisplay(httpData.participants);
-
-            if (isInvite && this._invite.status === 'joining') {
-                this._invite.status = 'joined';
-            }
-
-            this._playSfx('enterRoom');
-            this._welcomeShown = true;
-            this._agoraJoinHandled = true;
-
-            if (guestJoin) {
+            if (ctx.isGuest) {
                 this.addChatMessage('System', 'Welcome! You\'re listening as a guest. Sign up to chat and join the conversation.', true);
-            } else if (this.isRoomHost) {
+            } else if (effectiveHost) {
                 this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
             } else {
                 this.addChatMessage('System', 'Welcome! You joined as a listener. Raise your hand or wait for an invite to speak.', true);
             }
 
-            this._requestWakeLock();
-            this._startSilentAudioKeepAlive();
-            this._pendingJoinIsInvite = false;
-            this._pendingJoinIsHost = false;
-
-            fetch(apiUrl('/api/analytics/track'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ eventType: 'verse_join', segment: 'community', metadata: { roomId, page: 'verses' } })
-            }).catch(() => {});
-
-            console.log('[JoinRoom] Pipeline complete — in room');
+            fetch(apiUrl('/api/analytics/track'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventType: 'verse_join', segment: 'community', metadata: { roomId, page: 'verses' } }) }).catch(() => {});
+            console.log('[Join] Pipeline complete');
         } catch (error) {
-            console.error('[JoinRoom] Pipeline failed:', error.message);
-            this.currentRoom = null;
-            this._pendingJoinRoom = null;
-            this._joinConfirmed = false;
-            this._pendingJoinIsInvite = false;
-            this._pendingJoinIsHost = false;
+            console.error('[Join] Failed:', error.message);
+            this._resetJoinState();
             if (isInvite) {
                 this._failInvite(error.message || 'Could not join the room.', true);
             } else {
@@ -2691,14 +2599,7 @@ class AudioRoomsManager {
 
     async initializeMedia() {
         try {
-            this.localStream = await navigator.mediaDevices.getUserMedia({
-                video: false,
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true
-                }
-            });
+            await this._acquireMic();
         } catch (error) {
             console.error('Error accessing audio device:', error);
             throw error;
@@ -2854,115 +2755,75 @@ class AudioRoomsManager {
 
             const connState = this.agoraClient?.connectionState;
             if (connState === 'CONNECTED' || connState === 'CONNECTING') {
-                console.log('Agora: already', connState, 'in joinAgoraChannel — skipping');
+                console.log('[Agora] already', connState, '— skipping join');
                 return;
             }
 
             const agoraRole = forceRole || (this.isSpeaker ? 'host' : 'audience');
-            console.log('Agora: setting client role to', agoraRole, 'isSpeaker:', this.isSpeaker);
-            if (agoraRole === 'audience') {
-                await this.agoraClient.setClientRole('audience', { level: 1 });
-            } else {
-                await this.agoraClient.setClientRole('host');
-            }
+            console.log('[Agora] role:', agoraRole);
+            await this.agoraClient.setClientRole(agoraRole === 'audience' ? 'audience' : 'host', agoraRole === 'audience' ? { level: 1 } : undefined);
 
-            console.log('Agora: requesting token for channel', roomId);
             const authToken = localStorage.getItem('authToken');
-            const resp = await fetch(apiUrl('/api/agora/token'), {
+            const resp = await this._fetchWithTimeout(apiUrl('/api/agora/token'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}) },
-                body: JSON.stringify({
-                    channelName: roomId,
-                    uid: 0,
-                    role: 'publisher'
-                })
-            });
-
-            if (!resp.ok) {
-                const errText = await resp.text();
-                throw new Error(`Token request failed (${resp.status}): ${errText}`);
-            }
-
+                body: JSON.stringify({ channelName: roomId, uid: 0, role: 'publisher' })
+            }, 10000);
+            if (!resp.ok) throw new Error(`Token request failed (${resp.status})`);
             const data = await resp.json();
-            if (!data.token || !data.appId) {
-                throw new Error('Token response missing token or appId: ' + JSON.stringify(data));
-            }
-            console.log('Agora: token received, appId present:', !!data.appId);
+            if (!data.token || !data.appId) throw new Error('Token response incomplete');
 
             this.agoraAppId = data.appId;
             this._resumeAllAudioContexts();
             this.agoraUid = await this.agoraClient.join(data.appId, roomId, data.token, data.uid || null);
-            console.log('Agora: joined channel', roomId, 'as uid', this.agoraUid, 'role:', agoraRole, 'connectionState:', this.agoraClient.connectionState);
-            const remoteUsersOnJoin = this.agoraClient.remoteUsers;
-            console.log('Agora: remote users already in channel:', remoteUsersOnJoin.length, remoteUsersOnJoin.map(u => ({ uid: u.uid, hasAudio: u.hasAudio, hasVideo: u.hasVideo })));
+            console.log('[Agora] joined channel', roomId, 'uid:', this.agoraUid, 'role:', agoraRole);
 
             if (this.socket) {
-                this.socket.emit('agora-uid-map', {
-                    roomId,
-                    agoraUid: this.agoraUid,
-                    socketId: this.socket.id
-                });
+                this.socket.emit('agora-uid-map', { roomId, agoraUid: this.agoraUid, socketId: this.socket.id });
             }
 
             this._scheduleAudioHealthCheck();
 
-            if (!skipPublish && (agoraRole === 'host' || this.isSpeaker)) {
-                if (this.localStream) {
-                    console.log('Agora: speaker with localStream, publishing audio...');
-                    await this.publishAgoraAudio();
-                } else {
-                    console.warn('Agora: speaker but no localStream available, requesting mic...');
-                    try {
-                        await this.initializeMedia();
-                        if (this.localStream) {
-                            await this.publishAgoraAudio();
-                        }
-                    } catch (micErr) {
-                        console.warn('Agora: mic request failed:', micErr.message);
-                    }
-                }
+            if (!skipPublish && agoraRole === 'host') {
+                await this.publishAgoraAudio();
             } else if (agoraRole === 'audience') {
-                console.log('Agora: joined as audience (listener), will subscribe to remote tracks');
-                setTimeout(() => {
-                    const remoteUsers = this.agoraClient?.remoteUsers || [];
-                    console.log('Agora: post-join check - remote users:', remoteUsers.length);
-                    remoteUsers.forEach(async (user) => {
-                        if (user.hasAudio && !this.agoraRemoteUsers.has(String(user.uid))) {
-                            console.log('Agora: found unsubscribed remote audio from uid', user.uid, '- subscribing now');
-                            try {
-                                await this.agoraClient.subscribe(user, 'audio');
-                                if (user.audioTrack) {
-                                    user.audioTrack.setVolume(100);
-                                    user.audioTrack.play();
-                                    this.agoraRemoteUsers.set(String(user.uid), user);
-                                    console.log('Agora: fallback subscribe+play succeeded for uid', user.uid);
-                                }
-                            } catch (e) {
-                                console.warn('Agora: fallback subscribe failed for uid', user.uid, e.message);
-                            }
-                        }
-                    });
-                }, 2000);
+                console.log('[Agora] audience mode — subscribing to existing tracks');
+                setTimeout(() => this._subscribeToExistingRemoteAudio(), 2000);
             }
         } catch (error) {
-            console.error('Agora join failed:', error);
-            const msg = error.message || '';
-            if (msg.includes('not configured') || msg.includes('credentials')) {
-                this.addChatMessage('System', 'Audio service is temporarily unavailable. The room host has been notified.', true);
-            } else if (msg.includes('Token') || msg.includes('token')) {
-                this.addChatMessage('System', 'Audio authentication failed. Please try refreshing the page.', true);
-            } else {
-                this.addChatMessage('System', 'Audio connection issue - try refreshing the page.', true);
-            }
+            console.error('[Agora] join failed:', error.message);
             throw error;
         }
     }
 
+    _subscribeToExistingRemoteAudio() {
+        const remoteUsers = this.agoraClient?.remoteUsers || [];
+        remoteUsers.forEach(async (user) => {
+            if (user.hasAudio && !this.agoraRemoteUsers.has(String(user.uid))) {
+                try {
+                    await this.agoraClient.subscribe(user, 'audio');
+                    if (user.audioTrack) {
+                        user.audioTrack.setVolume(100);
+                        user.audioTrack.play();
+                        this.agoraRemoteUsers.set(String(user.uid), user);
+                        console.log('[Agora] subscribed to existing audio uid:', user.uid);
+                    }
+                } catch (e) {
+                    console.warn('[Agora] subscribe failed uid:', user.uid, e.message);
+                }
+            }
+        });
+    }
+
     async publishAgoraAudio() {
+        if (!this.agoraClient || this.agoraClient.connectionState !== 'CONNECTED') {
+            console.warn('[Agora] cannot publish — not connected');
+            return;
+        }
+
         try {
-            if (!this.agoraClient || this.agoraClient.connectionState !== 'CONNECTED') {
-                console.warn('Agora: cannot publish - client not connected, state:', this.agoraClient?.connectionState);
-                return;
+            if (this.agoraClient.role !== 'host') {
+                await this.agoraClient.setClientRole('host');
             }
 
             if (this.agoraLocalAudioTrack) {
@@ -2971,71 +2832,78 @@ class AudioRoomsManager {
                 this.agoraLocalAudioTrack = null;
             }
 
-            const streamToUse = this.mixedStream || this.localStream;
-            const audioTrack = streamToUse?.getAudioTracks()[0];
-            if (!audioTrack) {
-                console.warn('Agora: no audio track available to publish');
-                console.warn('  mixedStream:', !!this.mixedStream, 'localStream:', !!this.localStream);
-                if (this.localStream) {
-                    console.warn('  localStream tracks:', this.localStream.getTracks().map(t => `${t.kind}:${t.readyState}:enabled=${t.enabled}`));
+            let streamToUse = this.mixedStream || this.localStream;
+            let audioTrack = streamToUse?.getAudioTracks()[0];
+
+            if (!audioTrack || audioTrack.readyState !== 'live') {
+                console.log('[Agora] mic track not live, acquiring fresh mic...');
+                try {
+                    await this._acquireMic();
+                    streamToUse = this.localStream;
+                    audioTrack = streamToUse?.getAudioTracks()[0];
+                } catch (e) {
+                    console.error('[Agora] mic acquire failed:', e.message);
+                    this.addChatMessage('System', 'Microphone access denied. Others won\'t hear you.', true);
+                    return;
                 }
+            }
+
+            if (!audioTrack || audioTrack.readyState !== 'live') {
+                console.error('[Agora] no live audio track after acquire');
                 return;
             }
 
             audioTrack.enabled = true;
-            console.log('Agora: creating custom audio track from', audioTrack.kind, 'readyState:', audioTrack.readyState, 'enabled:', audioTrack.enabled);
-
-            this.agoraLocalAudioTrack = AgoraRTC.createCustomAudioTrack({
-                mediaStreamTrack: audioTrack
-            });
+            this.agoraLocalAudioTrack = AgoraRTC.createCustomAudioTrack({ mediaStreamTrack: audioTrack });
 
             if (this.isAudioMuted) {
                 await this.agoraLocalAudioTrack.setMuted(true);
             }
 
             await this.agoraClient.publish([this.agoraLocalAudioTrack]);
-            console.log('Agora: audio track published successfully, muted:', this.isAudioMuted);
+            console.log('[Agora] audio published, muted:', this.isAudioMuted);
+
+            setTimeout(() => this._verifyPublishedTrack(), 2000);
         } catch (error) {
-            console.error('Agora: error publishing audio:', error);
+            console.error('[Agora] publish error:', error.message);
+            this.addChatMessage('System', 'Audio publish failed. Try toggling your mic.', true);
+        }
+    }
+
+    _verifyPublishedTrack() {
+        if (!this.agoraLocalAudioTrack) return;
+        const mt = this.agoraLocalAudioTrack.getMediaStreamTrack?.();
+        if (!mt || mt.readyState !== 'live') {
+            console.error('[Agora] published track died, auto-recovering...');
+            this.publishAgoraAudio();
+        } else {
+            console.log('[Agora] track health OK');
         }
     }
 
     async unpublishAgoraAudio() {
         try {
-            if (this.agoraLocalAudioTrack) {
+            if (this.agoraLocalAudioTrack && this.agoraClient) {
                 await this.agoraClient.unpublish([this.agoraLocalAudioTrack]);
                 this.agoraLocalAudioTrack.close();
                 this.agoraLocalAudioTrack = null;
-                console.log('Agora: unpublished audio track');
             }
         } catch (error) {
-            console.error('Error unpublishing Agora audio:', error);
+            console.error('[Agora] unpublish error:', error.message);
         }
     }
 
     async leaveAgoraChannel() {
         try {
-            if (this.agoraMusicAudioTrack) {
-                try { this.agoraMusicAudioTrack.close(); } catch(e) {}
-                this.agoraMusicAudioTrack = null;
-            }
-            if (this.agoraLocalAudioTrack) {
-                this.agoraLocalAudioTrack.close();
-                this.agoraLocalAudioTrack = null;
-            }
-            if (this.agoraLocalVideoTrack) {
-                this.agoraLocalVideoTrack.close();
-                this.agoraLocalVideoTrack = null;
-            }
-            if (this.agoraClient) {
-                await this.agoraClient.leave();
-                this.agoraClient = null;
-                console.log('Agora: left channel and released client');
-            }
+            if (this.agoraMusicAudioTrack) { try { this.agoraMusicAudioTrack.close(); } catch(e) {} this.agoraMusicAudioTrack = null; }
+            if (this.agoraLocalAudioTrack) { this.agoraLocalAudioTrack.close(); this.agoraLocalAudioTrack = null; }
+            if (this.agoraLocalVideoTrack) { this.agoraLocalVideoTrack.close(); this.agoraLocalVideoTrack = null; }
+            if (this.agoraClient) { await this.agoraClient.leave(); this.agoraClient = null; }
             this.agoraRemoteUsers.clear();
             this.agoraUid = null;
+            console.log('[Agora] left channel, all tracks released');
         } catch (error) {
-            console.error('Error leaving Agora channel:', error);
+            console.error('[Agora] leave error:', error.message);
             this.agoraClient = null;
         }
     }
@@ -3092,13 +2960,9 @@ class AudioRoomsManager {
     }
 
     connectSocket() {
-        if (this.lobbySocket && this.lobbySocket.connected) {
-            if (!this._roomHandlersRegistered) {
-                this.socket = this.lobbySocket;
-                this._registerRoomHandlers();
-            } else {
-                this.socket = this.lobbySocket;
-            }
+        if (this.lobbySocket?.connected) {
+            this.socket = this.lobbySocket;
+            if (!this._roomHandlersRegistered) this._registerRoomHandlers();
             this._emitRegisterUser();
             return Promise.resolve();
         }
@@ -3106,78 +2970,35 @@ class AudioRoomsManager {
         if (this.lobbySocket && !this.lobbySocket.connected) {
             this.socket = this.lobbySocket;
             return new Promise((resolve, reject) => {
-                const reconnectTimeout = setTimeout(() => {
-                    console.warn('[connectSocket] reconnect timed out after 10s');
-                    reject(new Error('Socket reconnection timed out.'));
-                }, 10000);
-                this.lobbySocket.once('connect', () => {
-                    clearTimeout(reconnectTimeout);
-                    console.log('[connectSocket] reconnected:', this.lobbySocket.id);
-                    this._emitRegisterUser();
-                    if (!this._roomHandlersRegistered) {
-                        this._registerRoomHandlers();
-                    }
-                    resolve();
-                });
-                this.lobbySocket.once('connect_error', (err) => {
-                    clearTimeout(reconnectTimeout);
-                    console.warn('[connectSocket] reconnect error:', err.message);
-                    reject(new Error('Could not reconnect: ' + err.message));
-                });
-                if (this.lobbySocket.disconnected) {
-                    this.lobbySocket.connect();
-                }
+                const timer = setTimeout(() => reject(new Error('Socket reconnection timed out.')), 10000);
+                const cleanup = () => { clearTimeout(timer); this.lobbySocket.off('connect', onConnect); this.lobbySocket.off('connect_error', onErr); };
+                const onConnect = () => { cleanup(); this._emitRegisterUser(); if (!this._roomHandlersRegistered) this._registerRoomHandlers(); resolve(); };
+                const onErr = (err) => { cleanup(); reject(new Error('Reconnect failed: ' + err.message)); };
+                this.lobbySocket.once('connect', onConnect);
+                this.lobbySocket.once('connect_error', onErr);
+                if (this.lobbySocket.disconnected) this.lobbySocket.connect();
             });
         }
 
         if (typeof io === 'undefined') {
-            console.warn('[connectSocket] socket.io not loaded yet, waiting...');
             return new Promise((resolve, reject) => {
-                const waitForIo = setInterval(() => {
-                    if (typeof io !== 'undefined') {
-                        clearInterval(waitForIo);
-                        this.connectSocket().then(resolve).catch(reject);
-                    }
-                }, 200);
-                setTimeout(() => {
-                    clearInterval(waitForIo);
-                    reject(new Error('Socket.io library did not load in time.'));
-                }, 5000);
+                const poll = setInterval(() => { if (typeof io !== 'undefined') { clearInterval(poll); this.connectSocket().then(resolve).catch(reject); } }, 200);
+                setTimeout(() => { clearInterval(poll); reject(new Error('Socket.io library did not load.')); }, 5000);
             });
         }
+
         const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
-        this.lobbySocket = io(serverUrl, {
-            transports: ['websocket', 'polling'],
-            upgrade: true,
-            reconnection: true,
-            reconnectionAttempts: 10,
-            reconnectionDelay: 1000,
-            timeout: 10000
-        });
+        this.lobbySocket = io(serverUrl, { transports: ['websocket', 'polling'], upgrade: true, reconnection: true, reconnectionAttempts: 10, reconnectionDelay: 1000, timeout: 10000 });
         this.socket = this.lobbySocket;
-        
         this._registerRoomHandlers();
 
         return new Promise((resolve, reject) => {
-            const connectTimeout = setTimeout(() => {
-                console.warn('[connectSocket] connection timed out after 12s');
-                reject(new Error('Could not connect to the server. Please check your network.'));
-            }, 12000);
-            if (this.socket.connected) {
-                clearTimeout(connectTimeout);
-                resolve();
-            } else {
-                this.socket.once('connect', () => {
-                    clearTimeout(connectTimeout);
-                    console.log('[connectSocket] connected:', this.socket.id);
-                    resolve();
-                });
-                this.socket.once('connect_error', (err) => {
-                    clearTimeout(connectTimeout);
-                    console.warn('[connectSocket] connect_error:', err.message);
-                    reject(new Error('Could not connect to server: ' + err.message));
-                });
-            }
+            const timer = setTimeout(() => reject(new Error('Could not connect to the server.')), 12000);
+            const cleanup = () => { clearTimeout(timer); this.socket.off('connect', onConnect); this.socket.off('connect_error', onErr); };
+            const onConnect = () => { cleanup(); console.log('[Socket] connected:', this.socket.id); resolve(); };
+            const onErr = (err) => { cleanup(); reject(new Error('Connection failed: ' + err.message)); };
+            if (this.socket.connected) { cleanup(); resolve(); }
+            else { this.socket.once('connect', onConnect); this.socket.once('connect_error', onErr); }
         });
     }
     
@@ -4152,80 +3973,46 @@ class AudioRoomsManager {
     leaveRoom() {
         if (this._guestGate('leave')) return;
         this._playSfx('leaveRoom');
-        if (window._verseMiniPlayer) {
-            window._verseMiniPlayer.deactivate();
+
+        const leavingRoom = this.currentRoom;
+        const duration = this.roomJoinTime ? Math.round((Date.now() - this.roomJoinTime) / 1000) : 0;
+
+        if (this.socket && leavingRoom) {
+            this.socket.emit('leave-room', { roomId: leavingRoom });
         }
+
+        this._agoraLeaveGuarded().catch(e => console.warn('[Leave] Agora:', e.message));
+
+        if (this.localStream) { this.localStream.getTracks().forEach(t => t.stop()); this.localStream = null; }
+        if (this.localVideoStream) { this.localVideoStream.getTracks().forEach(t => t.stop()); this.localVideoStream = null; }
+        if (this.nativeScreenCapture) { this.nativeScreenCapture.stop().catch(() => {}); this.nativeScreenCapture = null; }
+        this.stopMusicStream();
+        this.stopAudioMix();
+        this.resetAudioFilter();
+        if (this.audioContext && this.audioContext.state !== 'closed') { try { this.audioContext.close(); } catch(e) {} this.audioContext = null; }
+
+        if (window._verseMiniPlayer) window._verseMiniPlayer.deactivate();
         this._detached = false;
         this._savedRoomName = null;
-        this._welcomeShown = false;
-        this._agoraJoinHandled = false;
         this._releaseWakeLock();
         this._stopSilentAudioKeepAlive();
-        if (this._audioHealthTimer) {
-            clearTimeout(this._audioHealthTimer);
-            this._audioHealthTimer = null;
-        }
-        this.resetAudioFilter();
-
-        this._agoraLeaveGuarded().catch(e => console.warn('Agora leave error:', e));
+        if (this._audioHealthTimer) { clearTimeout(this._audioHealthTimer); this._audioHealthTimer = null; }
         if (this._agoraUidMap) this._agoraUidMap.clear();
         const autoplayBanner = document.getElementById('agora-autoplay-banner');
         if (autoplayBanner) autoplayBanner.remove();
 
-        if (this.audioContext && this.audioContext.state !== 'closed') {
-            try { this.audioContext.close(); } catch(e) {}
-            this.audioContext = null;
-        }
-
-        const duration = this.roomJoinTime ? Math.round((Date.now() - this.roomJoinTime) / 1000) : 0;
-        if (this.currentRoom) {
-            fetch(apiUrl('/api/analytics/track'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    eventType: 'verse_leave',
-                    segment: 'community',
-                    metadata: { roomId: this.currentRoom, duration, page: 'verses' }
-                })
-            }).catch(() => {});
-        }
-
-        this.stopMusicStream();
-        this.stopAudioMix();
-        
-        if (this.nativeScreenCapture) {
-            this.nativeScreenCapture.stop().catch(() => {});
-            this.nativeScreenCapture = null;
-        }
-        
-        if (this.localVideoStream) {
-            this.localVideoStream.getTracks().forEach(track => track.stop());
-            this.localVideoStream = null;
-        }
         this.isVideoActive = false;
         this.activeVideoFeeds.clear();
-        this.videoMode = 'off';
+        this.handRaised = false;
+        this.chatVisible = true;
         const videoGridWrapper = document.getElementById('video-grid-wrapper');
         const videoGrid = document.getElementById('video-grid');
         if (videoGridWrapper) videoGridWrapper.classList.add('hidden');
         this._clearEl(videoGrid);
         this.updateVideoButtonState();
-        
-        if (this.localStream) {
-            this.localStream.getTracks().forEach(track => track.stop());
-            this.localStream = null;
-        }
-        
-        if (this.socket && this.currentRoom) {
-            this.socket.emit('leave-room', { roomId: this.currentRoom });
-        }
-        
-        this.isSpeaker = false;
-        this.isAudioMuted = false;
-        this.handRaised = false;
-        this.chatVisible = true;
-        this._invite = { status: 'idle', roomId: null, retries: 0, maxRetries: 5 };
-        
+
+        this._resetJoinState();
+
         this.audioRoom?.classList.add('hidden');
         document.body.classList.remove('in-room');
         const pageFooter = document.querySelector('footer');
@@ -4234,9 +4021,7 @@ class AudioRoomsManager {
         if (mainContainer) mainContainer.style.overflow = '';
         try { screen.orientation?.unlock?.(); } catch(e) {}
         if (this.roomSelection) this.roomSelection.style.display = 'block';
-        this.currentRoom = null;
-        this.roomJoinTime = null;
-        
+
         this._clearEl(this.chatMessagesContainer);
         this._clearEl(this.speakersStage);
         this._clearEl(this.listenersGrid);
@@ -4244,8 +4029,13 @@ class AudioRoomsManager {
         if (roomNameEl) roomNameEl.textContent = '';
         const currentSongEl = document.getElementById('current-song');
         if (currentSongEl) currentSongEl.textContent = '';
-        
+
+        if (leavingRoom) {
+            fetch(apiUrl('/api/analytics/track'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventType: 'verse_leave', segment: 'community', metadata: { roomId: leavingRoom, duration, page: 'verses' } }) }).catch(() => {});
+        }
+
         this.loadActiveRooms();
+        console.log('[Leave] Room left, lobby restored');
     }
 
     _playJoinSound() {
