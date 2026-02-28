@@ -105,7 +105,7 @@ app.use(helmet({
 // Rate limiting — use real client IP behind Cloudflare/proxies
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100,
+    max: 300,
     message: 'Too many requests from this IP, please try again later.',
     keyGenerator: (req) => {
         return req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
@@ -144,8 +144,8 @@ if (mongoUri && mongoUri !== 'mongodb://localhost:27017/wordeth') {
         useNewUrlParser: true,
         useUnifiedTopology: true,
         serverSelectionTimeoutMS: process.env.NODE_ENV === 'test' ? 2000 : 5000,
-        maxPoolSize: 3,
-        minPoolSize: 1,
+        maxPoolSize: 20,
+        minPoolSize: 2,
     })
     .then(() => {
         if (process.env.NODE_ENV !== 'test') {
@@ -197,20 +197,34 @@ app.use('/api', (req, res, next) => {
     next();
 });
 
+const _htmlCache = new Map();
 app.use((req, res, next) => {
     const ext = path.extname(req.path);
     if (req.path.startsWith('/api/')) return next();
     if (ext === '.html' || req.path === '/') {
-        const filePath = path.join(__dirname, 'public', req.path === '/' ? 'index.html' : req.path);
-        if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-            let html = fs.readFileSync(filePath, 'utf8');
-            html = html.replace(/(\.(js|css))\?v=\d+/g, `$1?v=${BUILD_ID}`);
+        const reqPath = req.path === '/' ? '/index.html' : req.path;
+        if (_htmlCache.has(reqPath)) {
             res.setHeader('Content-Type', 'text/html');
             res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
             res.setHeader('CDN-Cache-Control', 'no-store');
             res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
             res.setHeader('Pragma', 'no-cache');
-            return res.send(html);
+            return res.send(_htmlCache.get(reqPath));
+        }
+        const filePath = path.join(__dirname, 'public', reqPath);
+        if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+            fs.readFile(filePath, 'utf8', (err, raw) => {
+                if (err) return next();
+                const html = raw.replace(/(\.(js|css))\?v=\d+/g, `$1?v=${BUILD_ID}`);
+                _htmlCache.set(reqPath, html);
+                res.setHeader('Content-Type', 'text/html');
+                res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+                res.setHeader('CDN-Cache-Control', 'no-store');
+                res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
+                res.setHeader('Pragma', 'no-cache');
+                return res.send(html);
+            });
+            return;
         }
     }
     next();
@@ -218,11 +232,12 @@ app.use((req, res, next) => {
 
 app.use(express.static(path.join(__dirname, 'public'), {
     setHeaders: (res, filePath) => {
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        res.setHeader('CDN-Cache-Control', 'no-store');
-        res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
+        if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+        } else {
+            res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
+        }
     }
 }));
 

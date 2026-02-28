@@ -84,7 +84,7 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Cookie Consent**: Unified key `wordeth_cookie_consent` across all files; ad tracking gated by consent. "Cookie Preferences" link in all footers.
 - **SPA Router**: Intercepts navigation for all SPA pages; confirms before leaving audio rooms.
 - **Avatars**: New uploads go to Replit Object Storage; served via `/api/user/avatar/:userId`.
-- **Performance**: Search history capped at 100; ad matching uses MongoDB `$in` with compound index; trending songs cached 15min.
+- **Performance**: MongoDB pool size 20 (up from 3); HTML served from in-memory cache (async read on first hit); static assets cached 5min with `stale-while-revalidate`; API rate limit 300/15min; search history capped at 100; ad matching uses MongoDB `$in` with compound index; trending songs cached 15min; Agora join lock has 10s timeout to prevent deadlocks.
 - **Seed Scripts**: Production guard on both; all 13 plans have `active: true` and correct yearly pricing.
 - **Search Autocomplete**: Results container properly appended to DOM with CSS styling.
 - **Deploy Script**: Uses `npm audit --production` (report-only); test failures block deployment.

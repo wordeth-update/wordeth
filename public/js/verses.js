@@ -2810,9 +2810,18 @@ class AudioRoomsManager {
     }
 
     async _agoraWithLock(fn) {
-        while (this._agoraJoinLock) {
-            console.log('Agora: waiting for previous operation to complete...');
-            try { await this._agoraJoinLock; } catch(_) {}
+        const lockTimeout = 10000;
+        if (this._agoraJoinLock) {
+            console.log('[Agora] waiting for previous operation...');
+            try {
+                await Promise.race([
+                    this._agoraJoinLock,
+                    new Promise((_, rej) => setTimeout(() => rej(new Error('Agora lock timeout')), lockTimeout))
+                ]);
+            } catch(e) {
+                console.warn('[Agora] lock wait expired, forcing release:', e.message);
+                this._agoraJoinLock = null;
+            }
         }
         let resolve;
         this._agoraJoinLock = new Promise(r => { resolve = r; });
