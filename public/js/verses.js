@@ -2042,25 +2042,33 @@ class AudioRoomsManager {
                 const highlightTop = rect.top - pad;
                 const spaceBelow = window.innerHeight - highlightBottom;
                 const spaceAbove = highlightTop;
-                const minTipHeight = 140;
+                const minTipHeight = 190;
 
                 const safeTop = 60;
                 const safeBottom = 80;
+
+                let useAbove = step.position === 'above' && spaceAbove >= minTipHeight;
+                let useBelow = step.position === 'below' || (!useAbove && spaceBelow >= minTipHeight);
 
                 if (step.position === 'center') {
                     tooltip.style.top = '50%';
                     tooltip.style.transform = 'translateY(-50%)';
                     tooltip.style.maxHeight = '40vh';
-                } else if (step.position === 'above' || (rect.top > window.innerHeight * 0.45 && spaceAbove > minTipHeight)) {
-                    const tipTop = Math.max(safeTop, highlightTop - gap - 170);
+                } else if (useAbove) {
+                    const tipTop = Math.max(safeTop, highlightTop - gap - 200);
                     tooltip.style.top = tipTop + 'px';
                     tooltip.style.maxHeight = Math.max(highlightTop - gap - tipTop, minTipHeight) + 'px';
                     tooltip.classList.add('arrow-below');
-                } else {
+                } else if (useBelow) {
                     const tipTop = Math.min(highlightBottom + gap, window.innerHeight - minTipHeight - safeBottom);
                     const maxH = Math.max(window.innerHeight - tipTop - safeBottom, minTipHeight);
                     tooltip.style.top = Math.max(safeTop, tipTop) + 'px';
                     tooltip.style.maxHeight = maxH + 'px';
+                    tooltip.classList.add('arrow-above');
+                } else {
+                    const tipTop = Math.max(safeTop, Math.min(highlightBottom + gap, window.innerHeight - minTipHeight - safeBottom));
+                    tooltip.style.top = tipTop + 'px';
+                    tooltip.style.maxHeight = (window.innerHeight - tipTop - safeBottom) + 'px';
                     tooltip.classList.add('arrow-above');
                 }
                 tooltip.style.left = '16px';
@@ -2077,13 +2085,22 @@ class AudioRoomsManager {
 
             requestAnimationFrame(() => {
                 const tipRect = tooltip.getBoundingClientRect();
-                if (tipRect.bottom > window.innerHeight) {
-                    tooltip.style.top = Math.max(60, window.innerHeight - tipRect.height - 80) + 'px';
+                if (tipRect.bottom > window.innerHeight - 20) {
+                    tooltip.style.top = Math.max(safeTop, window.innerHeight - tipRect.height - safeBottom) + 'px';
                     tooltip.style.transform = '';
                 }
-                if (tipRect.top < 50) {
-                    tooltip.style.top = '60px';
+                if (tipRect.top < safeTop) {
+                    tooltip.style.top = safeTop + 'px';
                     tooltip.style.transform = '';
+                }
+                const footerEl = tooltip.querySelector('.walk-tip-footer');
+                if (footerEl) {
+                    const footerRect = footerEl.getBoundingClientRect();
+                    if (footerRect.bottom > window.innerHeight - 20) {
+                        const overflow = footerRect.bottom - (window.innerHeight - 20);
+                        const currentTop = parseFloat(tooltip.style.top);
+                        tooltip.style.top = Math.max(safeTop, currentTop - overflow) + 'px';
+                    }
                 }
             });
 

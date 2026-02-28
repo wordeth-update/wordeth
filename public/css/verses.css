@@ -2203,6 +2203,11 @@ body.in-room {
     padding: 1rem 1.1rem;
     box-shadow: 0 16px 50px rgba(0, 0, 0, 0.7), 0 0 30px rgba(139, 47, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08);
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+.mobile-walkthrough-tooltip .walk-tip-footer {
+    flex-shrink: 0;
 }
 
 .walk-tip-header {
