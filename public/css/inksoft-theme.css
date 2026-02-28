@@ -1004,59 +1004,29 @@ product-detail .store-page {
 
 
 /* ====== DESIGN STUDIO — Create Design Panel (light bg) ====== */
+/* The design panel has a white/light background. Our global
+   #body span/p/label rule sets color to white, making text invisible.
+   Target the actual InkSoft classes: .m16 on text spans, <li> rows,
+   mat-icon elements, and the "NEXT STEP" / "Change Product" buttons. */
 
-#body .ds-step-wrap,
-#body .ds-create-design,
-#body .ds-steps-container,
-#body .design-step-container {
-  color: #1a1a2e !important;
-}
-
-#body .ds-step-wrap span,
-#body .ds-step-wrap p,
-#body .ds-step-wrap label,
-#body .ds-step-wrap a,
-#body .ds-step-wrap div,
-#body .ds-create-design span,
-#body .ds-create-design p,
-#body .ds-create-design label,
-#body .ds-create-design a,
-#body .ds-create-design div,
-#body .ds-steps-container span,
-#body .ds-steps-container p,
-#body .ds-steps-container div,
-#body .design-step-container span,
-#body .design-step-container p,
-#body .design-step-container div {
+#body li span.m16,
+#body li .m16,
+#body .m16 {
   color: #1a1a2e !important;
   -webkit-text-fill-color: #1a1a2e !important;
 }
 
-#body .ds-step-wrap .mat-icon,
-#body .ds-step-wrap svg,
-#body .ds-step-wrap mat-icon,
-#body .ds-create-design .mat-icon,
-#body .ds-create-design svg,
-#body .ds-create-design mat-icon,
-#body .ds-steps-container .mat-icon,
-#body .ds-steps-container svg {
+#body li .mat-icon.notranslate,
+#body li mat-icon,
+#body li .mat-icon {
   color: #2D1B69 !important;
-  fill: #2D1B69 !important;
   -webkit-text-fill-color: #2D1B69 !important;
 }
 
-#body .ds-step-wrap button,
-#body .ds-create-design button,
-#body .ds-steps-container button {
-  color: #1a1a2e !important;
-  -webkit-text-fill-color: #1a1a2e !important;
-}
-
-#body .ds-step-wrap button span,
-#body .ds-create-design button span,
-#body .ds-steps-container button span {
-  color: #1a1a2e !important;
-  -webkit-text-fill-color: #1a1a2e !important;
+#body li mat-icon[fonticon="chevron_right"],
+#body li .mat-icon[data-mat-icon-name="chevron_right"] {
+  color: #666 !important;
+  -webkit-text-fill-color: #666 !important;
 }
 
 
