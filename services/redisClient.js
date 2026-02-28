@@ -100,7 +100,10 @@ async function saveRoom(roomId, room) {
     const pipeline = client.pipeline();
     pipeline.set(roomKey(roomId), serializeRoom(room), 'EX', 86400);
     pipeline.sadd(ROOMS_INDEX_KEY, roomId);
-    const results = await pipeline.exec();
+    const results = await Promise.race([
+      pipeline.exec(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('Redis save timeout')), 5000))
+    ]);
     const hasError = results.some(([err]) => err);
     if (hasError) {
       console.error('[Redis] saveRoom partial failure for', roomId, results);
@@ -142,21 +145,27 @@ async function loadAllRooms() {
   const client = getClient();
   if (!client) return new Map();
   if (!isConnected) {
-    const connected = await waitForConnection();
+    const connected = await waitForConnection(5000);
     if (!connected) {
       console.warn('[Redis] Could not connect in time — skipping room restore');
       return new Map();
     }
   }
   try {
-    const roomIds = await client.smembers(ROOMS_INDEX_KEY);
+    const roomIds = await Promise.race([
+      client.smembers(ROOMS_INDEX_KEY),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('Redis smembers timeout')), 5000))
+    ]);
     if (!roomIds || roomIds.length === 0) return new Map();
 
     const pipeline = client.pipeline();
     for (const id of roomIds) {
       pipeline.get(roomKey(id));
     }
-    const results = await pipeline.exec();
+    const results = await Promise.race([
+      pipeline.exec(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('Redis pipeline timeout')), 5000))
+    ]);
 
     const rooms = new Map();
     const staleIds = [];

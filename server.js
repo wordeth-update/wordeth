@@ -314,7 +314,7 @@ app.post('/api/rooms/create-and-join', async (req, res) => {
     roomsMap.set(roomId, room);
     try {
         const joinResult = await joinRoomHTTP({ roomId, userId, userName, isHost: true, roomName: name, avatar });
-        saveRoom(roomId, room);
+        saveRoom(roomId, room).catch(e => console.warn('[Rooms API] saveRoom error:', e.message));
         console.log(`[Rooms API] Room created+joined in one step: ${roomId}`);
         res.json({ id: roomId, joined: true, ...joinResult });
     } catch (err) {

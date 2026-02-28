@@ -882,7 +882,12 @@ let _roomsReadyPromise = null;
 function setRoomsReadyPromise(p) { _roomsReadyPromise = p; }
 
 async function waitForRoomsReady() {
-    if (_roomsReadyPromise) await _roomsReadyPromise;
+    if (_roomsReadyPromise) {
+        await Promise.race([
+            _roomsReadyPromise,
+            new Promise(resolve => setTimeout(resolve, 8000))
+        ]);
+    }
 }
 
 async function joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar }) {
@@ -894,7 +899,10 @@ async function joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar
     if (!rooms.has(roomId)) {
         try {
             console.log(`[HTTP Join] Room ${roomId} not in memory, checking Redis...`);
-            const redisRoom = await loadRoom(roomId);
+            const redisRoom = await Promise.race([
+                loadRoom(roomId),
+                new Promise(resolve => setTimeout(() => resolve(null), 5000))
+            ]);
             if (redisRoom) {
                 console.log(`[HTTP Join] Room "${roomId}" restored from Redis: "${redisRoom.name}"`);
                 redisRoom.participants = new Map();
@@ -938,7 +946,7 @@ async function joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar
         return { success: false, message: 'This room is currently locked.' };
     }
 
-    saveRoom(roomId, room);
+    saveRoom(roomId, room).catch(e => console.warn('[HTTP Join] saveRoom error:', e.message));
 
     return {
         success: true,
