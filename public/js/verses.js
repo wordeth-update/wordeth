@@ -537,45 +537,55 @@ class AudioRoomsManager {
     }
 
     _scheduleAudioHealthCheck() {
-        if (this._audioHealthTimer) clearTimeout(this._audioHealthTimer);
-        this._audioHealthTimer = setTimeout(() => {
-            if (!this.isInRoom() || !this.agoraClient) return;
-            this._resumeAllAudioContexts();
-            const remoteUsers = this.agoraClient.remoteUsers || [];
-            console.log('Agora health check: remote users:', remoteUsers.length);
-            let silentCount = 0;
-            remoteUsers.forEach(async (user) => {
-                if (user.hasAudio) {
-                    const existing = this.agoraRemoteUsers.get(String(user.uid));
-                    if (!existing || !existing.audioTrack) {
-                        console.log('Agora health: uid', user.uid, 'has audio but not subscribed — subscribing now');
-                        try {
-                            await this.agoraClient.subscribe(user, 'audio');
-                            if (user.audioTrack) {
-                                user.audioTrack.setVolume(100);
-                                user.audioTrack.play();
-                                this.agoraRemoteUsers.set(String(user.uid), user);
-                            }
-                        } catch (e) {
-                            console.warn('Agora health: subscribe failed for uid', user.uid, e.message);
-                        }
-                    } else if (existing.audioTrack) {
-                        const vol = existing.audioTrack.getVolumeLevel?.() ?? -1;
-                        if (vol === 0 || vol === -1) {
-                            silentCount++;
-                            try {
-                                existing.audioTrack.setVolume(100);
-                                existing.audioTrack.play();
-                            } catch (_) {}
-                        }
+        this._stopAudioHealthCheck();
+        this._audioHealthTimer = setTimeout(() => this._runAudioHealthCheck(), 3000);
+    }
+
+    _stopAudioHealthCheck() {
+        if (this._audioHealthTimer) { clearTimeout(this._audioHealthTimer); this._audioHealthTimer = null; }
+        if (this._audioHealthInterval) { clearInterval(this._audioHealthInterval); this._audioHealthInterval = null; }
+    }
+
+    _startRecurringAudioHealthCheck() {
+        this._stopAudioHealthCheck();
+        this._runAudioHealthCheck();
+        this._audioHealthInterval = setInterval(() => this._runAudioHealthCheck(), 8000);
+    }
+
+    async _runAudioHealthCheck() {
+        if (!this.isInRoom() || !this.agoraClient || this.agoraClient.connectionState !== 'CONNECTED') return;
+        this._resumeAllAudioContexts();
+        const remoteUsers = this.agoraClient.remoteUsers || [];
+        let silentCount = 0;
+        for (const user of remoteUsers) {
+            if (!user.hasAudio) continue;
+            const key = String(user.uid);
+            const existing = this.agoraRemoteUsers.get(key);
+            if (!existing || !existing.audioTrack) {
+                console.log('[AudioHealth] uid', user.uid, 'has audio but not subscribed — fixing');
+                try {
+                    await this.agoraClient.subscribe(user, 'audio');
+                    if (user.audioTrack) {
+                        user.audioTrack.setVolume(100);
+                        user.audioTrack.play();
+                        this.agoraRemoteUsers.set(key, user);
+                        console.log('[AudioHealth] subscribed+playing uid', user.uid);
                     }
+                } catch (e) {
+                    console.warn('[AudioHealth] subscribe failed uid', user.uid, e.message);
                 }
-            });
-            if (silentCount > 0) {
-                console.warn('Agora health: found', silentCount, 'silent remote track(s) — showing tap banner');
-                this._showAutoplayBanner?.();
+            } else if (existing.audioTrack) {
+                const vol = existing.audioTrack.getVolumeLevel?.() ?? -1;
+                if (vol === 0 || vol === -1) {
+                    silentCount++;
+                    try { existing.audioTrack.setVolume(100); existing.audioTrack.play(); } catch (_) {}
+                }
             }
-        }, 3000);
+        }
+        if (silentCount > 0) {
+            console.warn('[AudioHealth]', silentCount, 'silent track(s) — showing tap banner');
+            this._showAutoplayBanner?.();
+        }
     }
 
     _handleAppHidden() {
@@ -2655,62 +2665,65 @@ class AudioRoomsManager {
         };
 
         this.agoraClient.on('user-published', async (user, mediaType) => {
-            console.log('Agora: user-published event - uid:', user.uid, 'mediaType:', mediaType, 'connectionState:', this.agoraClient.connectionState, 'localRole:', this.agoraClient.role);
+            console.log('[Agora] user-published uid:', user.uid, 'type:', mediaType);
+            const key = String(user.uid);
 
-            const oldEntry = this.agoraRemoteUsers.get(String(user.uid));
-            if (oldEntry && oldEntry !== user && mediaType === 'audio') {
-                if (oldEntry.audioTrack) {
-                    try { oldEntry.audioTrack.stop(); } catch(_) {}
+            if (mediaType === 'audio') {
+                const old = this.agoraRemoteUsers.get(key);
+                if (old && old !== user && old.audioTrack) {
+                    try { old.audioTrack.stop(); } catch(_) {}
+                    this.agoraRemoteUsers.delete(key);
                 }
-                this.agoraRemoteUsers.delete(String(user.uid));
-                console.log('Agora: cleaned up stale entry for uid', user.uid);
             }
 
             try {
                 await this.agoraClient.subscribe(user, mediaType);
-                console.log('Agora: subscribed to', user.uid, mediaType, 'successfully');
-            } catch (subErr) {
-                console.error('Agora: subscribe failed for', user.uid, mediaType, subErr.message || subErr);
+            } catch (err) {
+                console.error('[Agora] subscribe failed uid:', user.uid, mediaType, err.message);
+                if (mediaType === 'audio') {
+                    setTimeout(async () => {
+                        try {
+                            await this.agoraClient.subscribe(user, 'audio');
+                            if (user.audioTrack) { user.audioTrack.setVolume(100); user.audioTrack.play(); this.agoraRemoteUsers.set(key, user); console.log('[Agora] retry subscribe ok uid:', user.uid); }
+                        } catch (_) {}
+                    }, 2000);
+                }
                 return;
             }
+
             if (mediaType === 'audio') {
                 this._resumeAllAudioContexts();
-                const remoteTrack = user.audioTrack;
-                if (remoteTrack) {
-                    this.agoraRemoteUsers.set(String(user.uid), user);
+                if (user.audioTrack) {
+                    this.agoraRemoteUsers.set(key, user);
                     try {
-                        remoteTrack.setVolume(100);
-                        remoteTrack.play();
-                        console.log('Agora: playing remote audio from uid', user.uid, 'volume:', remoteTrack.getVolumeLevel?.() ?? 'N/A');
-                        setTimeout(() => {
-                            const vol = remoteTrack.getVolumeLevel?.() ?? -1;
-                            if (vol === 0 || vol === -1) {
-                                console.warn('Agora: remote audio from uid', user.uid, 'may be silent (vol:', vol, ') — showing tap banner');
-                                this._showAutoplayBanner?.();
-                            }
-                        }, 1500);
+                        user.audioTrack.setVolume(100);
+                        user.audioTrack.play();
+                        console.log('[Agora] playing remote audio uid:', user.uid);
                     } catch (e) {
-                        console.warn('Agora: audio autoplay blocked for uid', user.uid, '- showing tap banner:', e.message);
+                        console.warn('[Agora] autoplay blocked uid:', user.uid);
                         this._showAutoplayBanner?.();
                     }
-                } else {
-                    console.warn('Agora: subscribed to audio but audioTrack is null for uid', user.uid);
-                    try {
-                        await this.agoraClient.subscribe(user, 'audio');
-                        if (user.audioTrack) {
-                            user.audioTrack.setVolume(100);
-                            user.audioTrack.play();
-                            this.agoraRemoteUsers.set(String(user.uid), user);
-                            console.log('Agora: retry subscribe succeeded for uid', user.uid);
+                    setTimeout(() => {
+                        if (!user.audioTrack) return;
+                        const vol = user.audioTrack.getVolumeLevel?.() ?? -1;
+                        if (vol === 0 || vol === -1) {
+                            console.warn('[Agora] silent track uid:', user.uid, '- retrying play');
+                            try { user.audioTrack.setVolume(100); user.audioTrack.play(); } catch(_) {}
+                            this._showAutoplayBanner?.();
                         }
-                    } catch (retryErr) {
-                        console.error('Agora: retry subscribe also failed for uid', user.uid);
-                    }
+                    }, 2000);
+                } else {
+                    console.warn('[Agora] audioTrack null after subscribe uid:', user.uid, '— retry in 1s');
+                    setTimeout(async () => {
+                        try {
+                            await this.agoraClient.subscribe(user, 'audio');
+                            if (user.audioTrack) { user.audioTrack.setVolume(100); user.audioTrack.play(); this.agoraRemoteUsers.set(key, user); }
+                        } catch (_) {}
+                    }, 1000);
                 }
             } else if (mediaType === 'video') {
-                const remoteTrack = user.videoTrack;
-                if (remoteTrack && this.videoMode !== 'off') {
-                    this._attachRemoteVideo(user.uid, remoteTrack);
+                if (user.videoTrack && this.videoMode !== 'off') {
+                    this._attachRemoteVideo(user.uid, user.videoTrack);
                 }
             }
         });
@@ -2735,9 +2748,17 @@ class AudioRoomsManager {
         });
 
         this.agoraClient.on('connection-state-change', (curState, prevState) => {
-            console.log(`Agora connection: ${prevState} -> ${curState}`);
+            console.log(`[Agora] connection: ${prevState} -> ${curState}`);
+            if (curState === 'CONNECTED' && prevState !== 'CONNECTED' && this.isInRoom()) {
+                console.log('[Agora] reconnected — re-subscribing to all remote audio');
+                setTimeout(() => this._subscribeToAllRemoteAudio(), 1000);
+                if (this.isSpeaker && this.localStream) {
+                    setTimeout(() => this.publishAgoraAudio(), 1500);
+                }
+            }
             if (curState === 'DISCONNECTED' && this.isInRoom()) {
-                console.log('Agora disconnected while in room, will reconnect via Socket.io rejoin');
+                console.warn('[Agora] disconnected while in room');
+                this.addChatMessage('System', 'Audio connection lost. Attempting to reconnect...', true);
             }
         });
     }
@@ -2799,37 +2820,38 @@ class AudioRoomsManager {
                 this.socket.emit('agora-uid-map', { roomId, agoraUid: this.agoraUid, socketId: this.socket.id });
             }
 
-            this._scheduleAudioHealthCheck();
-
             if (!skipPublish && agoraRole === 'host') {
                 await this.publishAgoraAudio();
-            } else if (agoraRole === 'audience') {
-                console.log('[Agora] audience mode — subscribing to existing tracks');
-                setTimeout(() => this._subscribeToExistingRemoteAudio(), 2000);
             }
+
+            setTimeout(() => this._subscribeToAllRemoteAudio(), 1500);
+            this._startRecurringAudioHealthCheck();
         } catch (error) {
             console.error('[Agora] join failed:', error.message);
             throw error;
         }
     }
 
-    _subscribeToExistingRemoteAudio() {
-        const remoteUsers = this.agoraClient?.remoteUsers || [];
-        remoteUsers.forEach(async (user) => {
-            if (user.hasAudio && !this.agoraRemoteUsers.has(String(user.uid))) {
-                try {
-                    await this.agoraClient.subscribe(user, 'audio');
-                    if (user.audioTrack) {
-                        user.audioTrack.setVolume(100);
-                        user.audioTrack.play();
-                        this.agoraRemoteUsers.set(String(user.uid), user);
-                        console.log('[Agora] subscribed to existing audio uid:', user.uid);
-                    }
-                } catch (e) {
-                    console.warn('[Agora] subscribe failed uid:', user.uid, e.message);
+    async _subscribeToAllRemoteAudio() {
+        if (!this.agoraClient || this.agoraClient.connectionState !== 'CONNECTED') return;
+        const remoteUsers = this.agoraClient.remoteUsers || [];
+        console.log('[Agora] sweeping', remoteUsers.length, 'remote user(s) for unsubscribed audio');
+        for (const user of remoteUsers) {
+            if (!user.hasAudio) continue;
+            const key = String(user.uid);
+            if (this.agoraRemoteUsers.has(key) && this.agoraRemoteUsers.get(key).audioTrack) continue;
+            try {
+                await this.agoraClient.subscribe(user, 'audio');
+                if (user.audioTrack) {
+                    user.audioTrack.setVolume(100);
+                    user.audioTrack.play();
+                    this.agoraRemoteUsers.set(key, user);
+                    console.log('[Agora] subscribed to audio uid:', user.uid);
                 }
+            } catch (e) {
+                console.warn('[Agora] subscribe failed uid:', user.uid, e.message);
             }
-        });
+        }
     }
 
     async publishAgoraAudio() {
@@ -3395,13 +3417,12 @@ class AudioRoomsManager {
                 } catch (e) {
                     console.error('Failed to rejoin Agora channel:', e);
                 }
-            } else if (agoraState === 'CONNECTED' && this.isSpeaker && !this.agoraLocalAudioTrack) {
-                console.log('Agora connected but no audio track, re-publishing...');
-                try {
-                    await this.publishAgoraAudio();
-                } catch (e) {
-                    console.error('Failed to re-publish Agora audio:', e);
+            } else if (agoraState === 'CONNECTED') {
+                if (this.isSpeaker && !this.agoraLocalAudioTrack) {
+                    console.log('[Reconnect] Agora connected but no audio track, re-publishing');
+                    try { await this.publishAgoraAudio(); } catch (e) { console.error('[Reconnect] publish failed:', e.message); }
                 }
+                await this._subscribeToAllRemoteAudio();
             }
         }
         
@@ -4013,7 +4034,7 @@ class AudioRoomsManager {
         this._savedRoomName = null;
         this._releaseWakeLock();
         this._stopSilentAudioKeepAlive();
-        if (this._audioHealthTimer) { clearTimeout(this._audioHealthTimer); this._audioHealthTimer = null; }
+        this._stopAudioHealthCheck();
         if (this._agoraUidMap) this._agoraUidMap.clear();
         const autoplayBanner = document.getElementById('agora-autoplay-banner');
         if (autoplayBanner) autoplayBanner.remove();
@@ -4215,6 +4236,11 @@ class AudioRoomsManager {
     }
 
     addRemoteListener(participantId, name, handRaised = false, userId = null, avatarUrl = null) {
+        if (document.querySelector(`[data-participant-id="${participantId}"]`)) return;
+        if (userId) {
+            const existing = document.querySelector(`[data-user-id="${userId}"]`);
+            if (existing && existing.getAttribute('data-participant-id') !== 'self') existing.remove();
+        }
         const initial = (name || '?').charAt(0).toUpperCase();
         const listenerAvatar = document.createElement('div');
         listenerAvatar.className = `listener-avatar ${handRaised ? 'hand-raised' : ''}`;

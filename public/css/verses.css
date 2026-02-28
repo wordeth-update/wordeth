@@ -803,6 +803,11 @@ body.in-room {
     overflow: hidden;
     margin: 0;
     padding: 0;
+    touch-action: pan-y;
+    -ms-touch-action: pan-y;
+}
+body.in-room * {
+    touch-action: manipulation;
 }
 
 /* ── Audio Room (Live) ──────────────────────────────────────── */
@@ -1302,7 +1307,7 @@ body.in-room {
     border-radius: 10px;
     padding: 0.55rem 0.85rem;
     color: #fff;
-    font-size: 0.85rem;
+    font-size: 16px;
     outline: none;
     transition: border-color 0.2s;
 }
@@ -1325,6 +1330,26 @@ body.in-room {
 .chat-input-container button:hover {
     transform: scale(1.05);
     box-shadow: 0 0 12px rgba(0, 229, 168, 0.4);
+}
+
+.control-btn.chat-glow {
+    animation: chatGlowPulse 1.2s ease-in-out infinite;
+    position: relative;
+}
+.control-btn.chat-glow::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 8px;
+    height: 8px;
+    background: var(--mint, #00E5A8);
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(0, 229, 168, 0.8);
+}
+@keyframes chatGlowPulse {
+    0%, 100% { box-shadow: 0 0 4px rgba(0, 229, 168, 0.3); }
+    50% { box-shadow: 0 0 14px rgba(0, 229, 168, 0.6), 0 0 4px rgba(0, 229, 168, 0.3); }
 }
 
 /* ── Modal System ──────────────────────────────────────────── */
