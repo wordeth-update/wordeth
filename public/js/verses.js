@@ -500,10 +500,33 @@ class AudioRoomsManager {
         if (this._silentAudioTimer) return;
         this._silentAudioTimer = setInterval(() => {
             if (!this.isInRoom()) return;
-            if (this.audioContext && this.audioContext.state === 'suspended') {
-                this.audioContext.resume().catch(() => {});
-            }
+            this._resumeAllAudioContexts();
         }, 3000);
+    }
+
+    _resumeAllAudioContexts() {
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+            this.audioContext.resume().catch(() => {});
+        }
+        try {
+            const agoraCtx = AgoraRTC?.getPlaybackDevices ? null : null;
+            if (window.AgoraRTC && window.AgoraRTC._audioContext && window.AgoraRTC._audioContext.state === 'suspended') {
+                window.AgoraRTC._audioContext.resume().catch(() => {});
+            }
+        } catch (_) {}
+        this.agoraRemoteUsers.forEach((user) => {
+            if (user.audioTrack) {
+                try {
+                    const track = user.audioTrack;
+                    if (track._source?.context?.state === 'suspended') {
+                        track._source.context.resume().catch(() => {});
+                    }
+                    if (track._mediaStreamTrack && !track._mediaStreamTrack.enabled) {
+                        track._mediaStreamTrack.enabled = true;
+                    }
+                } catch (_) {}
+            }
+        });
     }
 
     _stopSilentAudioKeepAlive() {
@@ -511,6 +534,48 @@ class AudioRoomsManager {
             clearInterval(this._silentAudioTimer);
             this._silentAudioTimer = null;
         }
+    }
+
+    _scheduleAudioHealthCheck() {
+        if (this._audioHealthTimer) clearTimeout(this._audioHealthTimer);
+        this._audioHealthTimer = setTimeout(() => {
+            if (!this.isInRoom() || !this.agoraClient) return;
+            this._resumeAllAudioContexts();
+            const remoteUsers = this.agoraClient.remoteUsers || [];
+            console.log('Agora health check: remote users:', remoteUsers.length);
+            let silentCount = 0;
+            remoteUsers.forEach(async (user) => {
+                if (user.hasAudio) {
+                    const existing = this.agoraRemoteUsers.get(String(user.uid));
+                    if (!existing || !existing.audioTrack) {
+                        console.log('Agora health: uid', user.uid, 'has audio but not subscribed — subscribing now');
+                        try {
+                            await this.agoraClient.subscribe(user, 'audio');
+                            if (user.audioTrack) {
+                                user.audioTrack.setVolume(100);
+                                user.audioTrack.play();
+                                this.agoraRemoteUsers.set(String(user.uid), user);
+                            }
+                        } catch (e) {
+                            console.warn('Agora health: subscribe failed for uid', user.uid, e.message);
+                        }
+                    } else if (existing.audioTrack) {
+                        const vol = existing.audioTrack.getVolumeLevel?.() ?? -1;
+                        if (vol === 0 || vol === -1) {
+                            silentCount++;
+                            try {
+                                existing.audioTrack.setVolume(100);
+                                existing.audioTrack.play();
+                            } catch (_) {}
+                        }
+                    }
+                }
+            });
+            if (silentCount > 0) {
+                console.warn('Agora health: found', silentCount, 'silent remote track(s) — showing tap banner');
+                this._showAutoplayBanner?.();
+            }
+        }, 3000);
     }
 
     _handleAppHidden() {
@@ -523,9 +588,7 @@ class AudioRoomsManager {
 
     _handleAppVisible() {
         if (!this.isInRoom()) return;
-        if (this.audioContext && this.audioContext.state === 'suspended') {
-            this.audioContext.resume().catch(() => {});
-        }
+        this._resumeAllAudioContexts();
         if (this.musicAudioElement && this.musicAudioElement.paused && this._audioContextWasRunning) {
             this.musicAudioElement.play().catch(() => {});
         }
@@ -2687,6 +2750,7 @@ class AudioRoomsManager {
                 return;
             }
             if (mediaType === 'audio') {
+                this._resumeAllAudioContexts();
                 const remoteTrack = user.audioTrack;
                 if (remoteTrack) {
                     this.agoraRemoteUsers.set(String(user.uid), user);
@@ -2694,6 +2758,13 @@ class AudioRoomsManager {
                         remoteTrack.setVolume(100);
                         remoteTrack.play();
                         console.log('Agora: playing remote audio from uid', user.uid, 'volume:', remoteTrack.getVolumeLevel?.() ?? 'N/A');
+                        setTimeout(() => {
+                            const vol = remoteTrack.getVolumeLevel?.() ?? -1;
+                            if (vol === 0 || vol === -1) {
+                                console.warn('Agora: remote audio from uid', user.uid, 'may be silent (vol:', vol, ') — showing tap banner');
+                                this._showAutoplayBanner?.();
+                            }
+                        }, 1500);
                     } catch (e) {
                         console.warn('Agora: audio autoplay blocked for uid', user.uid, '- showing tap banner:', e.message);
                         this._showAutoplayBanner?.();
@@ -2813,6 +2884,7 @@ class AudioRoomsManager {
             console.log('Agora: token received, appId present:', !!data.appId);
 
             this.agoraAppId = data.appId;
+            this._resumeAllAudioContexts();
             this.agoraUid = await this.agoraClient.join(data.appId, roomId, data.token, data.uid || null);
             console.log('Agora: joined channel', roomId, 'as uid', this.agoraUid, 'role:', agoraRole, 'connectionState:', this.agoraClient.connectionState);
             const remoteUsersOnJoin = this.agoraClient.remoteUsers;
@@ -2825,6 +2897,8 @@ class AudioRoomsManager {
                     socketId: this.socket.id
                 });
             }
+
+            this._scheduleAudioHealthCheck();
 
             if (!skipPublish && (agoraRole === 'host' || this.isSpeaker)) {
                 if (this.localStream) {
@@ -4068,6 +4142,10 @@ class AudioRoomsManager {
         this._agoraJoinHandled = false;
         this._releaseWakeLock();
         this._stopSilentAudioKeepAlive();
+        if (this._audioHealthTimer) {
+            clearTimeout(this._audioHealthTimer);
+            this._audioHealthTimer = null;
+        }
         this.resetAudioFilter();
 
         this._agoraLeaveGuarded().catch(e => console.warn('Agora leave error:', e));
