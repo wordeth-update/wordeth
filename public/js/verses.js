@@ -2308,7 +2308,7 @@ class AudioRoomsManager {
             let roomId = null;
 
             for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-                var retryMessages = ['Creating…', 'Gathering the vibes…', 'Polishing up your room…'];
+                var retryMessages = ['Creating…', 'Gathering the vibes…', 'Tidying things up…'];
                 if (submitBtn) submitBtn.textContent = retryMessages[attempt - 1] || 'Almost there…';
                 console.log(`[CreateRoom] Attempt ${attempt}/${maxAttempts}`);
                 try {

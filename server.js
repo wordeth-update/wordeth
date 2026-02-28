@@ -285,7 +285,11 @@ app.post('/api/rooms/create', async (req, res) => {
 });
 
 app.post('/api/rooms/create-and-join', async (req, res) => {
-    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    res.setHeader('CDN-Cache-Control', 'no-store');
+    res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     await waitForRoomsReady();
     const roomId = generateRoomId();
     const { getRoomsMap } = require('./routes/signaling');
