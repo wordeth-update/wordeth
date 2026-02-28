@@ -2681,7 +2681,7 @@ class AudioRoomsManager {
 
     async initAgoraClient() {
         if (this.agoraClient) return;
-        this.agoraClient = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+        this.agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
         AgoraRTC.setLogLevel(2);
 
         this._showAutoplayBanner = () => {
@@ -2843,7 +2843,7 @@ class AudioRoomsManager {
                 return;
             }
 
-            console.log('[Agora] joining channel (live mode, all-host)');
+            console.log('[Agora] joining channel (rtc mode)');
 
             const authToken = localStorage.getItem('authToken');
             const resp = await this._fetchWithTimeout(apiUrl('/api/agora/token'), {
@@ -2857,7 +2857,6 @@ class AudioRoomsManager {
 
             this.agoraAppId = data.appId;
             this._resumeAllAudioContexts();
-            await this.agoraClient.setClientRole('host');
             this.agoraUid = await this.agoraClient.join(data.appId, roomId, data.token, data.uid || null);
             console.log('[Agora] joined channel', roomId, 'uid:', this.agoraUid);
 
