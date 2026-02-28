@@ -2626,9 +2626,8 @@ class AudioRoomsManager {
 
             if (!ctx.isGuest) {
                 try {
-                    const agoraRole = effectiveHost ? 'host' : 'audience';
-                    await this._agoraJoinGuarded(roomId, { forceRole: agoraRole });
-                    console.log('[Join] 5/5 Agora ok as', agoraRole);
+                    await this._agoraJoinGuarded(roomId, { forceRole: 'host', skipPublish: !effectiveHost });
+                    console.log('[Join] 5/5 Agora ok, publish:', effectiveHost);
                 } catch (e) { console.warn('[Join] 5/5 Agora failed:', e.message); }
             }
 
@@ -2844,9 +2843,9 @@ class AudioRoomsManager {
                 return;
             }
 
-            const agoraRole = forceRole || (this.isSpeaker ? 'host' : 'audience');
+            const agoraRole = forceRole || 'host';
             console.log('[Agora] role:', agoraRole);
-            await this.agoraClient.setClientRole(agoraRole === 'audience' ? 'audience' : 'host', agoraRole === 'audience' ? { level: 1 } : undefined);
+            await this.agoraClient.setClientRole('host');
 
             const authToken = localStorage.getItem('authToken');
             const resp = await this._fetchWithTimeout(apiUrl('/api/agora/token'), {
@@ -3182,7 +3181,7 @@ class AudioRoomsManager {
                 try {
                     const connState = this.agoraClient?.connectionState;
                     if (connState !== 'CONNECTED' && connState !== 'CONNECTING') {
-                        await this._agoraJoinGuarded(confirmedRoom, { forceRole: this.isSpeaker ? 'host' : 'audience' });
+                        await this._agoraJoinGuarded(confirmedRoom, { forceRole: 'host', skipPublish: !this.isSpeaker });
                     }
                     this._agoraJoinHandled = true;
                 } catch (e) {
@@ -3302,9 +3301,7 @@ class AudioRoomsManager {
                 this.isAudioMuted = true;
 
                 if (this.agoraClient) {
-                    this.unpublishAgoraAudio().then(() => {
-                        this.agoraClient.setClientRole('audience').catch(e => console.warn('Agora role switch error:', e));
-                    }).catch(e => console.warn('Agora unpublish error:', e));
+                    this.unpublishAgoraAudio().catch(e => console.warn('Agora unpublish error:', e));
                 }
 
                 const selfEl = document.querySelector('[data-participant-id="self"]');
@@ -3344,9 +3341,9 @@ class AudioRoomsManager {
 
             if (this.agoraClient && this.agoraClient.connectionState === 'CONNECTED') {
                 try {
-                    console.log('[Promotion] upgrading Agora role in-place to host');
+                    console.log('[Promotion] publishing audio (already host role)');
                     await this.publishAgoraAudio();
-                    console.log('[Promotion] now publishing audio');
+                    console.log('[Promotion] audio published');
                 } catch (e) {
                     console.error('[Promotion] publish failed:', e.message);
                     this.addChatMessage('System', 'Audio setup failed after promotion. Try toggling your mic.', true);
@@ -3402,7 +3399,7 @@ class AudioRoomsManager {
                 try {
                     await this._agoraWithLock(async () => {
                         await this.leaveAgoraChannel();
-                        await this.joinAgoraChannel(this.currentRoom, { forceRole: this.isSpeaker ? 'host' : 'audience' });
+                        await this.joinAgoraChannel(this.currentRoom, { forceRole: 'host', skipPublish: !this.isSpeaker });
                     });
                 } catch (e) {
                     console.error('[Reconnect] Failed to rejoin Agora channel:', e);
