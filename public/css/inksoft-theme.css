@@ -1029,6 +1029,92 @@ product-detail .store-page {
   -webkit-text-fill-color: #666 !important;
 }
 
+/* ====== DESIGN STUDIO — Light-bg panels (canvas toolbar, modals, pickers) ====== */
+/* The design canvas area, bottom toolbar (BACK / TEMPLATES / UNDO),
+   NEXT STEP button, and art/clipart picker modal all have light/white
+   backgrounds. Force dark text and icons throughout. */
+
+#body .ds-canvas-wrap,
+#body .ds-canvas-wrap *,
+#body .ds-bottom-toolbar,
+#body .ds-bottom-toolbar * {
+  color: #1a1a2e !important;
+  -webkit-text-fill-color: #1a1a2e !important;
+}
+
+/* Broad catch: any element inside a white/light-bg container in the
+   design flow. InkSoft wraps these in generic divs with white bg. */
+#body [style*="background: rgb(255"],
+#body [style*="background-color: rgb(255"],
+#body [style*="background: white"],
+#body [style*="background-color: white"],
+#body [style*="background:#fff"],
+#body [style*="background-color:#fff"] {
+  color: #1a1a2e !important;
+  -webkit-text-fill-color: #1a1a2e !important;
+}
+
+/* Art picker / clipart modal — white bg with white text */
+#body .modal-content span,
+#body .modal-content p,
+#body .modal-content label,
+#body .modal-content button,
+#body .modal-content a,
+#body .modal-content div,
+#body .dialog-content span,
+#body .dialog-content p,
+#body .dialog-content label,
+#body .dialog-content button,
+#body .dialog-content div,
+#body .mat-dialog-content span,
+#body .mat-dialog-content p,
+#body .mat-dialog-content label,
+#body .mat-dialog-content button,
+#body .mat-dialog-content div,
+#body .mat-mdc-dialog-content span,
+#body .mat-mdc-dialog-content p,
+#body .mat-mdc-dialog-content label,
+#body .mat-mdc-dialog-content button,
+#body .mat-mdc-dialog-content div {
+  color: #1a1a2e !important;
+  -webkit-text-fill-color: #1a1a2e !important;
+}
+
+/* Accordion/expandable rows in clipart picker (Brush (10), etc.) */
+#body .mat-expansion-panel,
+#body .mat-expansion-panel-header,
+#body .mat-expansion-panel-header-title,
+#body .mat-expansion-panel-body,
+#body .mat-mdc-expansion-panel,
+#body .mat-accordion {
+  color: #1a1a2e !important;
+  -webkit-text-fill-color: #1a1a2e !important;
+}
+
+#body .mat-expansion-panel-header-title span,
+#body .mat-expansion-panel-header span,
+#body .mat-mdc-expansion-panel span {
+  color: #1a1a2e !important;
+  -webkit-text-fill-color: #1a1a2e !important;
+}
+
+/* Chevrons and arrows in light-bg panels */
+#body .mat-expansion-indicator::after,
+#body .mat-expansion-panel mat-icon,
+#body .mat-expansion-panel .mat-icon {
+  color: #666 !important;
+  -webkit-text-fill-color: #666 !important;
+  border-color: #666 !important;
+}
+
+/* NEXT STEP / BACK buttons in design studio */
+#body button[class*="next-step"],
+#body button[class*="back-btn"],
+#body .ds-action-btn {
+  color: #1a1a2e !important;
+  -webkit-text-fill-color: #1a1a2e !important;
+}
+
 
 /* ====== DESIGN STUDIO CANVAS ====== */
 
