@@ -83,7 +83,7 @@ html {
 #body {
   font-family: 'Outfit', 'Inter', sans-serif;
   background: #060409;
-  color: #1a1a2e;
+  color: rgba(255, 255, 255, 0.87);
 }
 
 #body .store-page,
@@ -134,21 +134,7 @@ html {
   color: rgba(255, 255, 255, 0.9);
 }
 
-/* White text only on dark-background areas (store browse, nav, footer, checkout).
-   Design studio panels have white/light backgrounds — text must stay dark there.
-   Scoped to .store-page (product browse) and known dark containers only. */
-#body .store-page p,
-#body .store-page span,
-#body .store-page label,
-#body .store-header p,
-#body .store-header span,
-#body .store-header label,
-#body .store-footer p,
-#body .store-footer span,
-#body .store-footer label,
-#body .main-nav p,
-#body .main-nav span,
-#body .main-nav label {
+#body p, #body span, #body label {
   color: rgba(255, 255, 255, 0.75);
 }
 
@@ -1043,10 +1029,31 @@ product-detail .store-page {
   -webkit-text-fill-color: #666 !important;
 }
 
-/* ====== DESIGN STUDIO — Dark text inherits from #body ====== */
-/* #body base color is now dark (#1a1a2e). White text is applied only
-   to .store-page and other known dark-bg containers above. Design studio
-   panels, modals, and toolbars all inherit dark text automatically. */
+/* ====== DESIGN STUDIO — Dark text on light-bg panels ====== */
+/* The design studio uses light/white backgrounds. Our global #body rules
+   set white text, so we override with dark text using the actual InkSoft
+   MDC class names found via inspector. */
+
+#body .mdc-button__label,
+#body span.mdc-button__label,
+#body button.mdc-button .mdc-button__label,
+#body button.mat-mdc-button .mdc-button__label,
+#body button.mat-mdc-button-base .mdc-button__label {
+  color: #1a1a2e !important;
+  -webkit-text-fill-color: #1a1a2e !important;
+}
+
+#body span.button-label,
+#body .button-label {
+  color: #1a1a2e !important;
+  -webkit-text-fill-color: #1a1a2e !important;
+}
+
+#body button#saveDesign .mdc-button__label,
+#body button#addStyles .mdc-button__label {
+  color: #1a1a2e !important;
+  -webkit-text-fill-color: #1a1a2e !important;
+}
 
 
 /* ====== DESIGN STUDIO CANVAS ====== */
