@@ -546,6 +546,39 @@ class AudioRoomsManager {
         if (this._audioHealthInterval) { clearInterval(this._audioHealthInterval); this._audioHealthInterval = null; }
     }
 
+    _startSpeakingIndicator() {
+        this._stopSpeakingIndicator();
+        const THRESHOLD = 0.05;
+        this._speakingInterval = setInterval(() => {
+            if (!this.isInRoom() || !this.agoraClient) { this._stopSpeakingIndicator(); return; }
+
+            const selfRing = document.querySelector('[data-participant-id="self"] .avatar-ring');
+            if (selfRing) {
+                let localVol = 0;
+                if (this.agoraLocalAudioTrack && !this.isAudioMuted) {
+                    localVol = this.agoraLocalAudioTrack.getVolumeLevel?.() ?? 0;
+                }
+                selfRing.classList.toggle('speaking', localVol > THRESHOLD);
+            }
+
+            for (const [key, user] of this.agoraRemoteUsers) {
+                const vol = user.audioTrack?.getVolumeLevel?.() ?? 0;
+                const socketId = this._findParticipantIdByAgoraUid(parseInt(key) || key);
+                if (!socketId) continue;
+                const ring = document.querySelector(`[data-participant-id="${socketId}"] .avatar-ring`);
+                if (ring) ring.classList.toggle('speaking', vol > THRESHOLD);
+            }
+        }, 200);
+    }
+
+    _stopSpeakingIndicator() {
+        if (this._speakingInterval) {
+            clearInterval(this._speakingInterval);
+            this._speakingInterval = null;
+        }
+        document.querySelectorAll('.avatar-ring.speaking').forEach(el => el.classList.remove('speaking'));
+    }
+
     _startRecurringAudioHealthCheck() {
         this._stopAudioHealthCheck();
         this._runAudioHealthCheck();
@@ -2415,6 +2448,7 @@ class AudioRoomsManager {
 
         this._requestWakeLock();
         this._startSilentAudioKeepAlive();
+        this._startSpeakingIndicator();
         this._playSfx('enterRoom');
     }
 
@@ -4035,6 +4069,7 @@ class AudioRoomsManager {
         this._releaseWakeLock();
         this._stopSilentAudioKeepAlive();
         this._stopAudioHealthCheck();
+        this._stopSpeakingIndicator();
         if (this._agoraUidMap) this._agoraUidMap.clear();
         const autoplayBanner = document.getElementById('agora-autoplay-banner');
         if (autoplayBanner) autoplayBanner.remove();
