@@ -184,12 +184,6 @@ body{font-family:var(--font-body);background:var(--black);color:var(--white);lin
 .account-perks li{font-size:0.78rem;color:rgba(255,255,255,0.55);display:flex;align-items:center;gap:0.4rem}
 .account-perks .fa-check{font-size:0.65rem;color:var(--mint)}
 
-.arch-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1.2rem;margin:2rem 0}
-.arch-item{text-align:center;padding:1.5rem 1rem;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;transition:all 0.3s}
-.arch-item:hover{border-color:var(--glass-border-hi)}
-.arch-icon{font-size:2rem;color:var(--mint);margin-bottom:0.6rem}
-.arch-item h4{font-family:var(--font-display);font-size:0.9rem;font-weight:700;margin-bottom:0.3rem}
-.arch-item p{font-size:0.75rem;color:rgba(255,255,255,0.4)}
 
 .features-footer{text-align:center;padding:3rem 2rem;border-top:1px solid var(--glass-border);margin-top:2rem}
 .footer-brand{display:flex;align-items:center;justify-content:center;gap:0.6rem;margin-bottom:0.5rem}
