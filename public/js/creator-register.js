@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const userData = localStorage.getItem('user');
         if (userData) {
             const user = JSON.parse(userData);
-            if (user.accountType === 'artist' || user.accountType === 'designer') {
+            if (user.accountType === 'artist' || user.accountType === 'designer' || user.accountType === 'creator') {
                 window.location.href = '/creator-dashboard.html';
                 return;
             }
@@ -26,7 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
             typeCards.forEach(c => c.classList.remove('active'));
             card.classList.add('active');
             selectedType = card.dataset.type;
-            formTitle.textContent = selectedType === 'artist' ? 'Register as Artist' : 'Register as Designer';
+            const titleMap = { artist: 'Register as Artist', designer: 'Register as Designer', creator: 'Register as Creator' };
+            formTitle.textContent = titleMap[selectedType] || 'Register as Creator';
         });
     });
 

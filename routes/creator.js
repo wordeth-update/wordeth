@@ -23,7 +23,7 @@ router.post('/register', [
     body('name').trim().isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
     body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-    body('accountType').isIn(['artist', 'designer']).withMessage('Account type must be artist or designer'),
+    body('accountType').isIn(['artist', 'designer', 'creator']).withMessage('Account type must be artist, designer, or creator'),
     body('displayName').trim().isLength({ min: 2 }).withMessage('Display name is required'),
     body('genres').optional().isArray()
 ], async (req, res) => {
@@ -55,7 +55,7 @@ router.post('/register', [
             handle = `${handle}-${Date.now().toString(36).slice(-4)}`;
         }
 
-        const roleMap = { artist: 'ARTIST', designer: 'DESIGNER' };
+        const roleMap = { artist: 'ARTIST', designer: 'DESIGNER', creator: 'CREATOR' };
 
         const freePlanSlug = `${accountType}-free`;
         let plan = await Plan.findOne({ slug: freePlanSlug, active: true });
@@ -119,7 +119,7 @@ router.post('/register', [
     }
 });
 
-router.get('/dashboard', auth, requireAccountType('artist', 'designer'), async (req, res) => {
+router.get('/dashboard', auth, requireAccountType('artist', 'designer', 'creator'), async (req, res) => {
     try {
         const entitlements = await getUserEntitlements(req.user);
         const graduation = checkGraduation(req.user);
@@ -190,7 +190,7 @@ router.get('/dashboard', auth, requireAccountType('artist', 'designer'), async (
     }
 });
 
-router.put('/profile', auth, requireAccountType('artist', 'designer'), [
+router.put('/profile', auth, requireAccountType('artist', 'designer', 'creator'), [
     body('displayName').optional().trim().isLength({ min: 2 }),
     body('genres').optional().isArray(),
     body('bio').optional().trim()
@@ -220,7 +220,7 @@ router.put('/profile', auth, requireAccountType('artist', 'designer'), [
 router.post('/upgrade-account', auth, async (req, res) => {
     try {
         const { accountType } = req.body;
-        if (!['artist', 'designer'].includes(accountType)) {
+        if (!['artist', 'designer', 'creator'].includes(accountType)) {
             return res.status(400).json({ message: 'Invalid account type' });
         }
 
@@ -228,7 +228,7 @@ router.post('/upgrade-account', auth, async (req, res) => {
             return res.status(400).json({ message: `Already registered as ${accountType}` });
         }
 
-        const roleMap = { artist: 'ARTIST', designer: 'DESIGNER' };
+        const roleMap = { artist: 'ARTIST', designer: 'DESIGNER', creator: 'CREATOR' };
         req.user.accountType = accountType;
         req.user.role = roleMap[accountType];
 
@@ -285,7 +285,7 @@ router.post('/upgrade-account', auth, async (req, res) => {
 const { recordSale, getSellerPayoutRate, getPayoutSummary } = require('../services/payoutService');
 const MerchSale = require('../models/MerchSale');
 
-router.get('/payout-info', auth, requireAccountType('artist', 'designer'), async (req, res) => {
+router.get('/payout-info', auth, requireAccountType('artist', 'designer', 'creator'), async (req, res) => {
     try {
         const user = req.user;
         const sellerType = user.accountType;
@@ -307,7 +307,7 @@ router.get('/payout-info', auth, requireAccountType('artist', 'designer'), async
     }
 });
 
-router.post('/record-sale', auth, requireAccountType('artist', 'designer'), [
+router.post('/record-sale', auth, requireAccountType('artist', 'designer', 'creator'), [
     body('orderId').trim().notEmpty().withMessage('Order ID is required'),
     body('sku').trim().notEmpty().withMessage('SKU is required'),
     body('productName').trim().notEmpty().withMessage('Product name is required'),
@@ -368,7 +368,7 @@ router.post('/record-sale', auth, requireAccountType('artist', 'designer'), [
     }
 });
 
-router.get('/sales', auth, requireAccountType('artist', 'designer'), async (req, res) => {
+router.get('/sales', auth, requireAccountType('artist', 'designer', 'creator'), async (req, res) => {
     try {
         const { startDate, endDate, limit } = req.query;
         const match = { sellerType: req.user.accountType, sellerId: req.user._id };
@@ -391,7 +391,7 @@ router.get('/sales', auth, requireAccountType('artist', 'designer'), async (req,
     }
 });
 
-router.get('/ledger', auth, requireAccountType('artist', 'designer'), async (req, res) => {
+router.get('/ledger', auth, requireAccountType('artist', 'designer', 'creator'), async (req, res) => {
     try {
         const { limit } = req.query;
 

@@ -63,6 +63,9 @@ function serializeRoom(room) {
     lastActivity: room.lastActivity || room.createdAt || Date.now(),
     participants: Array.from(room.participants.values()),
     activeVideos: Array.from(room.activeVideos || []),
+    participantHistory: room.participantHistory ? Array.from(room.participantHistory) : [],
+    peakParticipants: room.peakParticipants || 0,
+    genre: room.genre || '',
   });
 }
 
@@ -88,6 +91,9 @@ function deserializeRoom(json) {
     tokenPrice: data.tokenPrice || 0,
     createdAt: data.createdAt || Date.now(),
     lastActivity: data.lastActivity || data.createdAt || Date.now(),
+    participantHistory: new Set(data.participantHistory || []),
+    peakParticipants: data.peakParticipants || 0,
+    genre: data.genre || '',
   };
 }
 

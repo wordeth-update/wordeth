@@ -23,6 +23,16 @@ document.addEventListener('DOMContentLoaded', function() {
             desktopBtn.href = '/profile.html';
 
             if (!desktopBtn.parentNode.querySelector('.nav-signout-btn')) {
+                const acctType = (user.accountType || 'fan').toLowerCase();
+                if (['artist', 'designer', 'creator'].includes(acctType)) {
+                    const dashLink = document.createElement('a');
+                    dashLink.textContent = 'Creator Dashboard';
+                    dashLink.href = '/creator-dashboard.html';
+                    dashLink.className = 'nav-creator-btn';
+                    dashLink.style.cssText = 'color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.85rem; margin-left: 0.75rem;';
+                    desktopBtn.parentNode.appendChild(dashLink);
+                }
+
                 const subLink = document.createElement('a');
                 subLink.textContent = 'My Plan';
                 subLink.href = '/subscription.html';
@@ -58,6 +68,17 @@ document.addEventListener('DOMContentLoaded', function() {
             profileSpan.textContent = 'My Profile';
             profileLink.append(profileIcon, profileSpan);
 
+            const mobileAcctType = (user.accountType || 'fan').toLowerCase();
+            if (['artist', 'designer', 'creator'].includes(mobileAcctType)) {
+                const dashLink = document.createElement('a');
+                dashLink.href = '/creator-dashboard.html';
+                dashLink.className = 'mobile-creator-link';
+                dashLink.textContent = 'Creator Dashboard';
+                mobileAuthSection.append(profileLink, dashLink);
+            } else {
+                mobileAuthSection.append(profileLink);
+            }
+
             const subLink = document.createElement('a');
             subLink.href = '/subscription.html';
             subLink.className = 'mobile-sub-link';
@@ -69,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
             signoutLink.textContent = 'Sign Out';
             signoutLink.addEventListener('click', handleSignOut);
 
-            mobileAuthSection.append(profileLink, subLink, signoutLink);
+            mobileAuthSection.append(subLink, signoutLink);
         }
     }
 

@@ -2,10 +2,12 @@ const { saveRoom, deleteRoom, loadAllRooms, loadRoom, getClient } = require('../
 const User = require('../models/User');
 const TokenLedger = require('../models/TokenLedger');
 const EventsLedger = require('../models/EventsLedger');
+const Replay = require('../models/Replay');
 
 let rooms = new Map();
 const connectedUsers = new Map();
 let isShuttingDown = false;
+let _io = null;
 const roomDeletionTimers = new Map();
 const ROOM_EMPTY_GRACE_PERIOD = 10 * 60 * 1000;
 
@@ -17,10 +19,52 @@ function scheduleRoomDeletion(roomId, reason) {
         saveRoom(roomId, room);
     }
     console.log(`Room ${roomId} empty (${reason}) — will delete in ${ROOM_EMPTY_GRACE_PERIOD / 60000} min if no one rejoins`);
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
         roomDeletionTimers.delete(roomId);
         const r = rooms.get(roomId);
         if (r && r.participants.size === 0) {
+            const durationSeconds = Math.round((Date.now() - (r.createdAt || Date.now())) / 1000);
+            const durationMinutes = durationSeconds / 60;
+            const shouldSaveReplay = (r.tokenPrice > 0 || durationMinutes > 5) && r.creatorUserId;
+
+            if (shouldSaveReplay) {
+                try {
+                    const participantHistoryArray = r.participantHistory ? Array.from(r.participantHistory) : [];
+                    const replay = await Replay.create({
+                        roomId: roomId,
+                        creatorUserId: r.creatorUserId,
+                        title: r.name || 'Untitled Room',
+                        genre: r.genre || '',
+                        duration: durationSeconds,
+                        participantCount: r.peakParticipants || 0,
+                        participantHistory: participantHistoryArray,
+                        tokenPrice: r.tokenPrice || 0,
+                        status: 'available'
+                    });
+                    console.log(`[Replay] Auto-saved replay ${replay._id} for room ${roomId} (duration: ${Math.round(durationMinutes)}min, peak: ${r.peakParticipants || 0})`);
+
+                    if (r.creatorUserId && connectedUsers.has(r.creatorUserId) && _io) {
+                        const creatorSockets = connectedUsers.get(r.creatorUserId);
+                        if (creatorSockets && creatorSockets.size > 0) {
+                            for (const sid of creatorSockets) {
+                                const creatorSocket = _io.sockets.sockets.get(sid);
+                                if (creatorSocket && creatorSocket.connected) {
+                                    creatorSocket.emit('replay-saved', {
+                                        replayId: replay._id,
+                                        roomId: roomId,
+                                        title: replay.title,
+                                        duration: durationSeconds,
+                                        participantCount: r.peakParticipants || 0
+                                    });
+                                }
+                            }
+                        }
+                    }
+                } catch (replayErr) {
+                    console.error(`[Replay] Error auto-saving replay for room ${roomId}:`, replayErr.message);
+                }
+            }
+
             rooms.delete(roomId);
             if (!isShuttingDown) {
                 deleteRoom(roomId);
@@ -74,6 +118,7 @@ async function initRooms() {
 }
 
 function setupSignaling(io) {
+    _io = io;
     let roomsReady = false;
     const roomsReadyPromise = initRooms()
         .then(() => { roomsReady = true; })
@@ -264,7 +309,9 @@ function setupSignaling(io) {
                         isLocked: false,
                         stageAccess: 'invite-only',
                         tokenPrice: 0,
-                        createdAt: Date.now()
+                        createdAt: Date.now(),
+                        participantHistory: new Set(),
+                        peakParticipants: 0
                     });
                 }
             }
@@ -390,6 +437,15 @@ function setupSignaling(io) {
                 isMuted: !shouldBeHost,
                 joinedAt: Date.now()
             });
+
+            if (socket.userId && socket.userId !== socket.id) {
+                if (!room.participantHistory) room.participantHistory = new Set();
+                room.participantHistory.add(socket.userId);
+            }
+            if (!room.peakParticipants) room.peakParticipants = 0;
+            if (room.participants.size > room.peakParticipants) {
+                room.peakParticipants = room.participants.size;
+            }
 
             const participantList = Array.from(room.participants.values());
 
@@ -1016,7 +1072,9 @@ async function joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar
                 stageAccess: 'invite-only',
                 tokenPrice: 0,
                 createdAt: now,
-                lastActivity: now
+                lastActivity: now,
+                participantHistory: new Set(),
+                peakParticipants: 0
             });
             console.log(`[HTTP Join] Room created: ${roomId} "${roomName}" by ${userName}`);
         } else {
@@ -1052,4 +1110,8 @@ function getRoomsMap() {
     return rooms;
 }
 
-module.exports = { setupSignaling, getActiveRooms, setShuttingDown, joinRoomHTTP, getRoomsMap, waitForRoomsReady };
+function getRoomById(roomId) {
+    return rooms.get(roomId) || null;
+}
+
+module.exports = { setupSignaling, getActiveRooms, setShuttingDown, joinRoomHTTP, getRoomsMap, waitForRoomsReady, getRoomById };

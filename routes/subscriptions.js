@@ -20,7 +20,10 @@ const PLAN_TOKEN_GRANTS = {
     'artist-pro': 135,
     'label-boutique': 100,
     'label-mid': 150,
-    'label-enterprise': 200
+    'label-enterprise': 200,
+    'creator-starter': 50,
+    'creator-growth': 100,
+    'creator-pro': 135
 };
 
 async function grantTokensForPlan(user, planSlug) {
@@ -178,7 +181,7 @@ router.post('/subscribe', auth, async (req, res) => {
                 });
 
                 req.user.accountType = plan.category;
-                const roleMap = { fan: 'USER_FAN', designer: 'DESIGNER', artist: 'ARTIST', label: 'LABEL_ADMIN' };
+                const roleMap = { fan: 'USER_FAN', designer: 'DESIGNER', artist: 'ARTIST', creator: 'CREATOR', label: 'LABEL_ADMIN' };
                 req.user.role = roleMap[plan.category] || 'USER_FAN';
                 await req.user.save();
 
@@ -201,7 +204,7 @@ router.post('/subscribe', auth, async (req, res) => {
 
         req.user.subscriptionId = subscription._id;
         req.user.accountType = plan.category;
-        const roleMap = { fan: 'USER_FAN', designer: 'DESIGNER', artist: 'ARTIST', label: 'LABEL_ADMIN' };
+        const roleMap = { fan: 'USER_FAN', designer: 'DESIGNER', artist: 'ARTIST', creator: 'CREATOR', label: 'LABEL_ADMIN' };
         req.user.role = roleMap[plan.category] || 'USER_FAN';
         await req.user.save();
 

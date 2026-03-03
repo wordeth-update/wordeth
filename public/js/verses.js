@@ -18,6 +18,14 @@ class AudioRoomsManager {
         this.chatVisible = true;
         this.chatMessages = [];
         this.replays = [];
+        this.replayData = [];
+        this.replayPage = 1;
+        this.replayGenre = 'all';
+        this.replaySort = 'recent';
+        this.replayHasMore = false;
+        this._selectedRating = 0;
+        this._selectedTags = [];
+        this._lastLeftRoomId = null;
         this.currentFilterTab = 'all';
         
         // New features state
@@ -726,6 +734,44 @@ class AudioRoomsManager {
             });
         });
 
+        // View tabs (Live / Replays)
+        document.querySelectorAll('.view-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const view = tab.dataset.view;
+                document.getElementById('live-view').style.display = view === 'live' ? '' : 'none';
+                document.getElementById('replays-view').style.display = view === 'replays' ? '' : 'none';
+                if (view === 'replays') this._fetchReplays(true);
+            });
+        });
+
+        // Replay genre filters
+        document.querySelectorAll('#replay-genre-filters .filter-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('#replay-genre-filters .filter-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                this.replayGenre = tab.dataset.filter;
+                this._fetchReplays(true);
+            });
+        });
+
+        // Replay sort
+        document.getElementById('replay-sort')?.addEventListener('change', (e) => {
+            this.replaySort = e.target.value;
+            this._fetchReplays(true);
+        });
+
+        // Load more replays
+        document.getElementById('load-more-replays')?.addEventListener('click', () => {
+            this.replayPage++;
+            this._fetchReplays(false);
+        });
+
+        // Rating and boost listeners
+        this._setupRatingListeners();
+        this._setupBoostListeners();
+
         // Room controls
         this.toggleAudioBtn?.addEventListener('click', () => this.toggleAudio());
         this.raiseHandBtn?.addEventListener('click', () => this.toggleHandRaise());
@@ -876,11 +922,26 @@ class AudioRoomsManager {
         document.addEventListener('click', (e) => {
             if (this._invite.status === 'joining') return;
 
-            const joinBtn = e.target.closest('.join-room-btn');
-            const clickedCard = !joinBtn ? e.target.closest('.room-card') : null;
+            const replayPlayBtn = e.target.closest('.replay-play-btn');
+            if (replayPlayBtn) {
+                const replayId = replayPlayBtn.dataset.replayId;
+                const tokenPrice = parseInt(replayPlayBtn.dataset.tokenPrice || '0', 10);
+                if (replayId) this._playReplay(replayId, tokenPrice);
+                return;
+            }
+
+            const boostBtn = e.target.closest('.boost-replay-btn');
+            if (boostBtn) {
+                const replayId = boostBtn.dataset.replayId;
+                if (replayId) this._showBoostModal(replayId);
+                return;
+            }
+
+            const joinBtn = e.target.closest('.join-room-btn:not(.replay-play-btn)');
+            const clickedCard = !joinBtn ? e.target.closest('.room-card:not(.replay-card)') : null;
             if (joinBtn || clickedCard) {
                 const roomCard = joinBtn ? joinBtn.closest('.room-card') : clickedCard;
-                if (roomCard) {
+                if (roomCard && !roomCard.classList.contains('replay-card')) {
                     const roomId = roomCard.dataset.roomId;
                     const tokenPrice = parseInt(roomCard.dataset.tokenPrice || '0', 10);
                     if (roomId) {
@@ -1026,7 +1087,7 @@ class AudioRoomsManager {
     }
 
     renderRooms(rooms) {
-        const roomsGrid = document.querySelector('.rooms-grid');
+        const roomsGrid = document.getElementById('rooms-grid');
         if (!roomsGrid) return;
 
         if (rooms.length === 0) {
@@ -1313,7 +1374,7 @@ class AudioRoomsManager {
         if (this.createRoomModal) {
             const user = JSON.parse(localStorage.getItem('user') || '{}');
             const acctType = (user.accountType || 'fan').toLowerCase();
-            const isCreator = ['artist', 'designer', 'label'].includes(acctType);
+            const isCreator = ['artist', 'designer', 'creator', 'label'].includes(acctType);
             const tokenGroup = document.getElementById('token-price-group');
             if (tokenGroup) {
                 tokenGroup.style.display = isCreator ? '' : 'none';
@@ -2328,49 +2389,401 @@ class AudioRoomsManager {
         setTimeout(() => { if (toast.parentNode) toast.remove(); }, 15000);
     }
 
-    // Replay Management
+    // ═══════════════════════════════════════════════════════════════
+    // Replays Browse System
+    // ═══════════════════════════════════════════════════════════════
+
     async loadReplays() {
-        this.replays = [
-            {
-                id: 'replay1',
-                title: 'Hip-Hop Discussion Session',
-                topic: 'Analyzing Kendrick Lamar lyrics',
-                date: '2024-01-15',
-                duration: '45:30',
-                participants: 4
-            },
-            {
-                id: 'replay2',
-                title: 'Rock Legends Deep Dive',
-                topic: 'Queen\'s songwriting process',
-                date: '2024-01-14',
-                duration: '62:15',
-                participants: 6
+        await this._fetchReplays(true);
+    }
+
+    async _fetchReplays(reset) {
+        if (reset) {
+            this.replayPage = 1;
+            this.replayData = [];
+        }
+        try {
+            const params = new URLSearchParams({ page: this.replayPage, limit: 12, sort: this.replaySort });
+            if (this.replayGenre !== 'all') params.set('genre', this.replayGenre);
+            const resp = await fetch(apiUrl('/api/replays?' + params.toString()));
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (reset) this.replayData = data.replays || [];
+            else this.replayData = this.replayData.concat(data.replays || []);
+            this.replayHasMore = data.hasMore || false;
+            this._renderReplays();
+        } catch (e) {
+            console.warn('[Replays] Fetch error:', e.message);
+        }
+    }
+
+    _renderReplays() {
+        const grid = document.getElementById('replays-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const currentUserId = user._id || null;
+        const acctType = (user.accountType || 'fan').toLowerCase();
+        const isCreator = ['artist', 'designer', 'label', 'creator'].includes(acctType);
+
+        if (this.replayData.length === 0) {
+            grid.innerHTML = '<div class="empty-state"><i class="fas fa-play-circle"></i><p>No replays yet. Replays are saved when rooms end.</p></div>';
+            return;
+        }
+
+        this.replayData.forEach(replay => {
+            grid.appendChild(this._createReplayCard(replay, currentUserId, isCreator));
+        });
+
+        const loadMoreEl = document.getElementById('replay-load-more');
+        if (loadMoreEl) loadMoreEl.style.display = this.replayHasMore ? '' : 'none';
+    }
+
+    _createReplayCard(replay, currentUserId, isCreator) {
+        const creatorName = replay.creatorUserId?.name || 'Unknown';
+        const creatorAvatar = replay.creatorUserId?.avatar || '';
+        const creatorRating = replay.creatorUserId?.creatorRating || {};
+        const genre = replay.genre || 'general';
+        const genreIcon = this.getGenreIconClass(genre);
+        const duration = this._formatDuration(replay.duration || 0);
+        const tokenPrice = replay.tokenPrice || 0;
+        const isBoosted = replay.boostedUntil && new Date(replay.boostedUntil) > new Date();
+        const isOwn = currentUserId && replay.creatorUserId?._id === currentUserId;
+
+        const priceBadge = tokenPrice > 0
+            ? this._el('span', {className: 'room-token-badge gated'}, this._text('\uD83C\uDF9F ' + tokenPrice + ' tokens'))
+            : this._el('span', {className: 'room-token-badge free'}, this._text('FREE'));
+
+        const ratingStars = this._renderStars(replay.rating?.average || 0);
+        const ratingCount = replay.rating?.count || 0;
+
+        const statsDiv = this._el('div', {className: 'room-stats'},
+            this._el('span', {className: 'stat'}, this._icon('fas fa-play'), this._text(' ' + (replay.totalPlays || 0))),
+            this._el('span', {className: 'stat'}, this._icon('fas fa-clock'), this._text(' ' + duration)),
+            this._el('span', {className: 'stat replay-rating-stat'}, ratingStars, this._text(' (' + ratingCount + ')')));
+
+        const creatorDiv = this._el('div', {className: 'replay-creator'},
+            creatorAvatar
+                ? this._el('img', {className: 'replay-creator-avatar', src: creatorAvatar, alt: creatorName})
+                : this._el('div', {className: 'replay-creator-avatar-placeholder'}, this._text(creatorName.charAt(0).toUpperCase())),
+            this._el('span', {className: 'replay-creator-name', textContent: creatorName}));
+
+        if (creatorRating.average > 0) {
+            creatorDiv.appendChild(this._renderStars(creatorRating.average, true));
+        }
+
+        const roomInfo = this._el('div', {className: 'room-info'},
+            this._el('div', {className: 'room-genre'}, this._icon(genreIcon), this._el('span', {textContent: this.capitalizeFirst(genre)})),
+            this._el('h3', {textContent: replay.title || 'Untitled Replay'}),
+            priceBadge,
+            creatorDiv,
+            statsDiv);
+
+        const actionsDiv = this._el('div', {className: 'room-actions'});
+        const playBtn = this._el('button', {className: 'join-room-btn primary replay-play-btn'}, this._icon('fas fa-play'), this._text(' Play'));
+        playBtn.dataset.replayId = replay._id;
+        playBtn.dataset.tokenPrice = tokenPrice;
+        actionsDiv.appendChild(playBtn);
+
+        if (isOwn && isCreator) {
+            const boostBtn = this._el('button', {className: 'boost-replay-btn secondary-btn'}, this._icon('fas fa-rocket'), this._text(' Boost'));
+            boostBtn.dataset.replayId = replay._id;
+            actionsDiv.appendChild(boostBtn);
+        }
+
+        const cardClass = isBoosted ? 'room-card replay-card replay-boosted' : (tokenPrice > 0 ? 'room-card replay-card room-card-gated' : 'room-card replay-card');
+        const card = this._el('div', {className: cardClass},
+            this._el('div', {className: 'room-preview'}, roomInfo),
+            actionsDiv);
+
+        if (isBoosted) {
+            const promotedBadge = this._el('span', {className: 'promoted-badge'}, this._icon('fas fa-rocket'), this._text(' Promoted'));
+            card.querySelector('.room-info').prepend(promotedBadge);
+        }
+
+        if (isOwn && replay.boostTier !== 'none' && isBoosted) {
+            const timeLeft = this._boostTimeLeft(replay.boostedUntil);
+            const statusEl = this._el('div', {className: 'boost-status'}, this._text(replay.boostTier.charAt(0).toUpperCase() + replay.boostTier.slice(1) + ' boost \u2022 ' + timeLeft + ' left'));
+            card.querySelector('.room-actions').prepend(statusEl);
+        }
+
+        card.dataset.replayId = replay._id;
+        return card;
+    }
+
+    _formatDuration(seconds) {
+        if (seconds < 60) return seconds + 's';
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        if (m < 60) return m + ':' + String(s).padStart(2, '0');
+        const h = Math.floor(m / 60);
+        return h + ':' + String(m % 60).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }
+
+    _boostTimeLeft(until) {
+        const diff = new Date(until) - new Date();
+        if (diff <= 0) return 'expired';
+        const hours = Math.floor(diff / 3600000);
+        if (hours < 24) return hours + 'h';
+        return Math.floor(hours / 24) + 'd ' + (hours % 24) + 'h';
+    }
+
+    _renderStars(avg, small) {
+        const container = this._el('span', {className: small ? 'star-display star-display-sm' : 'star-display'});
+        for (let i = 1; i <= 5; i++) {
+            const cls = i <= Math.round(avg) ? 'fas fa-star' : 'far fa-star';
+            container.appendChild(this._icon(cls));
+        }
+        return container;
+    }
+
+    async _playReplay(replayId, tokenPrice) {
+        if (tokenPrice > 0) {
+            const authToken = localStorage.getItem('authToken');
+            if (!authToken) {
+                this._showReplayGate(replayId, tokenPrice, true);
+                return;
             }
-        ];
+            const balance = await this._fetchTokenBalance();
+            if (balance === 0) {
+                this._showReplayGate(replayId, tokenPrice, true);
+                return;
+            }
+            if (balance < tokenPrice) {
+                this._showReplayGate(replayId, tokenPrice, false, balance);
+                return;
+            }
+            this._showReplayConfirm(replayId, tokenPrice, balance);
+            return;
+        }
+        this._doPlayReplay(replayId);
+    }
+
+    _showReplayGate(replayId, tokenPrice, noSub, balance) {
+        const modal = document.getElementById('token-gate-modal');
+        if (!modal) return;
+        const actionsDiv = document.getElementById('token-gate-actions');
+        const insufficientDiv = document.getElementById('token-gate-insufficient');
+        const noSubDiv = document.getElementById('token-gate-no-sub');
+        document.getElementById('token-gate-price').textContent = tokenPrice;
+        document.getElementById('token-gate-user-balance').textContent = balance || 0;
+        actionsDiv.classList.add('hidden');
+        insufficientDiv.classList.add('hidden');
+        noSubDiv.classList.add('hidden');
+        if (noSub) noSubDiv.classList.remove('hidden');
+        else {
+            insufficientDiv.classList.remove('hidden');
+            document.getElementById('token-gate-needed').textContent = tokenPrice;
+            document.getElementById('token-gate-have').textContent = balance || 0;
+        }
+        modal.classList.add('active');
+    }
+
+    _showReplayConfirm(replayId, tokenPrice, balance) {
+        const modal = document.getElementById('token-gate-modal');
+        if (!modal) return;
+        document.getElementById('token-gate-price').textContent = tokenPrice;
+        document.getElementById('token-gate-user-balance').textContent = balance;
+        document.getElementById('token-gate-actions').classList.remove('hidden');
+        document.getElementById('token-gate-insufficient').classList.add('hidden');
+        document.getElementById('token-gate-no-sub')?.classList.add('hidden');
+
+        const cleanup = () => {
+            modal.classList.remove('active');
+            confirmBtn?.removeEventListener('click', onConfirm);
+            cancelBtn?.removeEventListener('click', onCancel);
+        };
+        const onConfirm = () => { cleanup(); this._doPlayReplay(replayId); };
+        const onCancel = () => { cleanup(); };
+        const confirmBtn = document.getElementById('token-gate-confirm');
+        const cancelBtn = document.getElementById('token-gate-cancel');
+        confirmBtn?.addEventListener('click', onConfirm);
+        cancelBtn?.addEventListener('click', onCancel);
+        modal.classList.add('active');
+    }
+
+    async _doPlayReplay(replayId) {
+        const token = localStorage.getItem('authToken');
+        try {
+            const resp = await fetch(apiUrl('/api/replays/' + replayId + '/play'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': 'Bearer ' + token } : {}) }
+            });
+            const data = await resp.json();
+            if (resp.ok) {
+                const replay = this.replayData.find(r => r._id === replayId);
+                if (replay) replay.totalPlays = (replay.totalPlays || 0) + 1;
+                this._renderReplays();
+                this._showToast('Playing replay', 'success');
+            } else {
+                this._showToast(data.message || 'Could not play replay', 'error');
+            }
+        } catch (e) {
+            this._showToast('Error playing replay', 'error');
+        }
     }
 
     loadReplayList() {
         const replayList = document.querySelector('.replay-list');
-        if (replayList) {
-            replayList.replaceChildren(...this.replays.map(replay => {
-                const item = this._el('div', {className: 'replay-item'},
-                    this._el('div', {className: 'replay-thumbnail'}, this._icon('fas fa-play')),
-                    this._el('div', {className: 'replay-info'},
-                        this._el('div', {className: 'replay-title', textContent: replay.title}),
-                        this._el('div', {className: 'replay-details', textContent: replay.topic + ' \u2022 ' + replay.date + ' \u2022 ' + replay.participants + ' participants'})),
-                    this._el('div', {className: 'replay-duration', textContent: replay.duration}));
-                item.dataset.replayId = replay.id;
-                return item;
-            }));
+        if (!replayList) return;
+        if (this.replayData.length === 0) {
+            replayList.innerHTML = '<div class="empty-state" style="padding:1rem;text-align:center;color:var(--text-secondary);">No replays available yet.</div>';
+            return;
         }
+        replayList.replaceChildren(...this.replayData.slice(0, 5).map(replay => {
+            const item = this._el('div', {className: 'replay-item'},
+                this._el('div', {className: 'replay-thumbnail'}, this._icon('fas fa-play')),
+                this._el('div', {className: 'replay-info'},
+                    this._el('div', {className: 'replay-title', textContent: replay.title || 'Untitled'}),
+                    this._el('div', {className: 'replay-details', textContent: (replay.genre || '') + ' \u2022 ' + this._formatDuration(replay.duration || 0) + ' \u2022 ' + (replay.participantCount || 0) + ' participants'})),
+                this._el('div', {className: 'replay-duration', textContent: (replay.totalPlays || 0) + ' plays'}));
+            item.dataset.replayId = replay._id;
+            return item;
+        }));
     }
 
     playReplay(replayId) {
-        const replay = this.replays.find(r => r.id === replayId);
+        const replay = this.replayData.find(r => r._id === replayId);
         if (replay) {
-            alert(`Playing replay: ${replay.title}`);
+            this._playReplay(replayId, replay.tokenPrice || 0);
             this.hideAllModals();
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Room Rating System
+    // ═══════════════════════════════════════════════════════════════
+
+    _showRatingModal(roomId, replayId) {
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+        const modal = document.getElementById('rating-modal');
+        if (!modal) return;
+
+        this._selectedRating = 0;
+        this._selectedTags = [];
+        document.getElementById('rating-room-id').value = roomId || '';
+        document.getElementById('rating-replay-id').value = replayId || '';
+
+        const stars = document.querySelectorAll('#star-rating-input i');
+        stars.forEach(s => { s.className = 'far fa-star'; });
+        document.querySelectorAll('.rating-tag').forEach(t => t.classList.remove('active'));
+        document.getElementById('rating-label').textContent = '';
+        document.getElementById('rating-submit').disabled = true;
+
+        modal.classList.add('active');
+    }
+
+    _setupRatingListeners() {
+        const ratingLabels = ['', 'Poor', 'Fair', 'Good', 'Great', 'Amazing'];
+        const starsContainer = document.getElementById('star-rating-input');
+        if (starsContainer) {
+            starsContainer.addEventListener('click', (e) => {
+                const starEl = e.target.closest('[data-star]');
+                if (!starEl) return;
+                this._selectedRating = parseInt(starEl.dataset.star, 10);
+                const stars = starsContainer.querySelectorAll('i');
+                stars.forEach((s, idx) => {
+                    s.className = idx < this._selectedRating ? 'fas fa-star' : 'far fa-star';
+                });
+                document.getElementById('rating-label').textContent = ratingLabels[this._selectedRating] || '';
+                document.getElementById('rating-submit').disabled = false;
+            });
+        }
+
+        document.querySelectorAll('.rating-tag').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tag = btn.dataset.tag;
+                if (this._selectedTags.includes(tag)) {
+                    this._selectedTags = this._selectedTags.filter(t => t !== tag);
+                    btn.classList.remove('active');
+                } else {
+                    this._selectedTags.push(tag);
+                    btn.classList.add('active');
+                }
+            });
+        });
+
+        document.getElementById('rating-submit')?.addEventListener('click', () => this._submitRating());
+    }
+
+    async _submitRating() {
+        const token = localStorage.getItem('authToken');
+        if (!token || this._selectedRating === 0) return;
+        const roomId = document.getElementById('rating-room-id').value;
+        const replayId = document.getElementById('rating-replay-id').value;
+        try {
+            const resp = await fetch(apiUrl('/api/ratings'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ roomId, replayId: replayId || undefined, rating: this._selectedRating, tags: this._selectedTags })
+            });
+            const data = await resp.json();
+            if (resp.ok) {
+                this._showToast('Thanks for rating!', 'success');
+            } else {
+                this._showToast(data.message || 'Could not submit rating', 'error');
+            }
+        } catch (e) {
+            this._showToast('Error submitting rating', 'error');
+        }
+        document.getElementById('rating-modal')?.classList.remove('active');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Token Boost System
+    // ═══════════════════════════════════════════════════════════════
+
+    async _showBoostModal(replayId) {
+        const modal = document.getElementById('boost-modal');
+        if (!modal) return;
+        document.getElementById('boost-replay-id').value = replayId;
+        document.querySelectorAll('.boost-tier-option').forEach(o => o.classList.remove('selected'));
+        document.getElementById('boost-confirm').disabled = true;
+        const balance = await this._fetchTokenBalance();
+        document.getElementById('boost-token-balance').textContent = balance;
+        modal.classList.add('active');
+    }
+
+    _setupBoostListeners() {
+        document.querySelectorAll('.boost-tier-option').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.boost-tier-option').forEach(o => o.classList.remove('selected'));
+                btn.classList.add('selected');
+                document.getElementById('boost-confirm').disabled = false;
+            });
+        });
+
+        document.getElementById('boost-confirm')?.addEventListener('click', () => this._submitBoost());
+    }
+
+    async _submitBoost() {
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+        const replayId = document.getElementById('boost-replay-id').value;
+        const selectedTier = document.querySelector('.boost-tier-option.selected');
+        if (!selectedTier) return;
+        const tier = selectedTier.dataset.tier;
+
+        document.getElementById('boost-confirm').disabled = true;
+        try {
+            const resp = await fetch(apiUrl('/api/boost'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ replayId, tier })
+            });
+            const data = await resp.json();
+            if (resp.ok) {
+                this._showToast('Replay boosted!', 'success');
+                document.getElementById('boost-modal')?.classList.remove('active');
+                this._fetchReplays(true);
+            } else {
+                this._showToast(data.message || 'Could not boost replay', 'error');
+                document.getElementById('boost-confirm').disabled = false;
+            }
+        } catch (e) {
+            this._showToast('Error boosting replay', 'error');
+            document.getElementById('boost-confirm').disabled = false;
         }
     }
 
@@ -4188,6 +4601,11 @@ class AudioRoomsManager {
 
         this.loadActiveRooms();
         console.log('[Leave] Room left, lobby restored');
+
+        if (leavingRoom && duration > 60 && localStorage.getItem('authToken')) {
+            this._lastLeftRoomId = leavingRoom;
+            setTimeout(() => this._showRatingModal(leavingRoom), 800);
+        }
     }
 
     _playJoinSound() {

@@ -185,18 +185,50 @@
             </div>
 
             <div class="rooms-section">
-                <div class="section-header">
-                    <h2>Live Music Rooms</h2>
-                    <div class="filter-tabs">
-                        <button class="filter-tab active" data-filter="all">All</button>
-                        <button class="filter-tab" data-filter="hip-hop">Hip-Hop</button>
-                        <button class="filter-tab" data-filter="rock">Rock</button>
-                        <button class="filter-tab" data-filter="pop">Pop</button>
-                        <button class="filter-tab" data-filter="jazz">Jazz</button>
+                <div class="view-tabs">
+                    <button class="view-tab active" data-view="live"><i class="fas fa-broadcast-tower"></i> Live Rooms</button>
+                    <button class="view-tab" data-view="replays"><i class="fas fa-play-circle"></i> Replays</button>
+                </div>
+
+                <div id="live-view">
+                    <div class="section-header">
+                        <h2>Live Music Rooms</h2>
+                        <div class="filter-tabs">
+                            <button class="filter-tab active" data-filter="all">All</button>
+                            <button class="filter-tab" data-filter="hip-hop">Hip-Hop</button>
+                            <button class="filter-tab" data-filter="rock">Rock</button>
+                            <button class="filter-tab" data-filter="pop">Pop</button>
+                            <button class="filter-tab" data-filter="jazz">Jazz</button>
+                        </div>
+                    </div>
+                    <div class="rooms-grid" id="rooms-grid">
                     </div>
                 </div>
 
-                <div class="rooms-grid" id="rooms-grid">
+                <div id="replays-view" style="display:none;">
+                    <div class="section-header">
+                        <h2>Replays</h2>
+                        <div class="replay-controls">
+                            <div class="filter-tabs" id="replay-genre-filters">
+                                <button class="filter-tab active" data-filter="all">All</button>
+                                <button class="filter-tab" data-filter="hip-hop">Hip-Hop</button>
+                                <button class="filter-tab" data-filter="rock">Rock</button>
+                                <button class="filter-tab" data-filter="pop">Pop</button>
+                                <button class="filter-tab" data-filter="jazz">Jazz</button>
+                            </div>
+                            <select id="replay-sort" class="replay-sort-select">
+                                <option value="recent">Newest</option>
+                                <option value="rating">Top Rated</option>
+                                <option value="plays">Most Played</option>
+                                <option value="price-low">Price: Low to High</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="rooms-grid" id="replays-grid">
+                    </div>
+                    <div class="replay-load-more" id="replay-load-more" style="display:none;">
+                        <button class="secondary-btn" id="load-more-replays">Load More</button>
+                    </div>
                 </div>
             </div>
 
@@ -564,6 +596,79 @@
             </div>
             <div class="modal-actions">
                 <button type="button" class="cancel-btn close-modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rating Modal -->
+    <div class="modal" id="rating-modal">
+        <div class="modal-content" style="max-width:400px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-star"></i> Rate This Room</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="rating-body">
+                <p class="rating-prompt">How was your experience?</p>
+                <div class="star-rating-input" id="star-rating-input">
+                    <i class="far fa-star" data-star="1"></i>
+                    <i class="far fa-star" data-star="2"></i>
+                    <i class="far fa-star" data-star="3"></i>
+                    <i class="far fa-star" data-star="4"></i>
+                    <i class="far fa-star" data-star="5"></i>
+                </div>
+                <p class="rating-label" id="rating-label"></p>
+                <div class="rating-tags" id="rating-tags">
+                    <button class="rating-tag" data-tag="great-host">Great Host</button>
+                    <button class="rating-tag" data-tag="good-music">Good Music</button>
+                    <button class="rating-tag" data-tag="lively-chat">Lively Chat</button>
+                    <button class="rating-tag" data-tag="informative">Informative</button>
+                    <button class="rating-tag" data-tag="entertaining">Entertaining</button>
+                    <button class="rating-tag" data-tag="professional">Professional</button>
+                </div>
+                <input type="hidden" id="rating-room-id" value="">
+                <input type="hidden" id="rating-replay-id" value="">
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn close-modal" id="rating-skip">Skip</button>
+                    <button type="button" class="create-btn" id="rating-submit" disabled><i class="fas fa-paper-plane"></i> Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Boost Modal -->
+    <div class="modal" id="boost-modal">
+        <div class="modal-content" style="max-width:440px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-rocket"></i> Boost Replay</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="boost-body">
+                <p class="boost-subtitle">Promote your replay to reach more listeners.</p>
+                <div class="boost-tiers">
+                    <button class="boost-tier-option" data-tier="small">
+                        <div class="boost-tier-name">Small Boost</div>
+                        <div class="boost-tier-detail">24 hours visibility</div>
+                        <div class="boost-tier-cost">100 tokens</div>
+                    </button>
+                    <button class="boost-tier-option" data-tier="medium">
+                        <div class="boost-tier-name">Medium Boost</div>
+                        <div class="boost-tier-detail">3 days visibility</div>
+                        <div class="boost-tier-cost">250 tokens</div>
+                    </button>
+                    <button class="boost-tier-option featured" data-tier="featured">
+                        <div class="boost-tier-name">Featured</div>
+                        <div class="boost-tier-detail">7 days + banner placement</div>
+                        <div class="boost-tier-cost">500 tokens</div>
+                    </button>
+                </div>
+                <div class="boost-balance">
+                    Your balance: <strong id="boost-token-balance">0</strong> tokens
+                </div>
+                <input type="hidden" id="boost-replay-id" value="">
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn close-modal">Cancel</button>
+                    <button type="button" class="create-btn" id="boost-confirm" disabled><i class="fas fa-rocket"></i> Boost</button>
+                </div>
             </div>
         </div>
     </div>

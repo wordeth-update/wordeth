@@ -61,6 +61,9 @@ const creatorRoutes = require('./routes/creator'); // Independent artist/designe
 const tournamentRoutes = require('./routes/tournaments'); // Verses Tournaments
 const agoraRoutes = require('./routes/agora'); // Agora RTC token generation
 const tokenRoutes = require('./routes/tokens'); // Token economy
+const boostRoutes = require('./routes/boost'); // Token boost for replays
+const ratingsRoutes = require('./routes/ratings'); // Room ratings
+const replayRoutes = require('./routes/replays'); // Replay system
 const trackingMiddleware = require('./middleware/tracking'); // Event tracking
 
 const app = express();
@@ -263,6 +266,9 @@ app.use('/api/creator', creatorRoutes); // Independent artist/designer
 app.use('/api/tournaments', tournamentRoutes); // Verses Tournaments
 app.use('/api/agora', agoraRoutes); // Agora RTC tokens
 app.use('/api/tokens', tokenRoutes); // Token economy
+app.use('/api/boost', boostRoutes); // Token boost for replays
+app.use('/api/ratings', ratingsRoutes); // Room ratings
+app.use('/api/replays', replayRoutes); // Replay system
 function generateRoomId() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const bytes = crypto.randomBytes(18);
@@ -295,7 +301,9 @@ app.post('/api/rooms/create', async (req, res) => {
         stageAccess: 'invite-only',
         tokenPrice: Math.max(0, tokenPrice),
         createdAt: now,
-        lastActivity: now
+        lastActivity: now,
+        participantHistory: new Set(),
+        peakParticipants: 0
     };
     roomsMap.set(roomId, room);
     saveRoom(roomId, room);
@@ -330,7 +338,9 @@ app.post('/api/rooms/create-and-join', async (req, res) => {
         stageAccess: 'invite-only',
         tokenPrice: Math.max(0, tokenPrice),
         createdAt: now,
-        lastActivity: now
+        lastActivity: now,
+        participantHistory: new Set(),
+        peakParticipants: 0
     };
     roomsMap.set(roomId, room);
     try {

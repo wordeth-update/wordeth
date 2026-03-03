@@ -41,7 +41,9 @@ const eventsLedgerSchema = new mongoose.Schema({
             'token_grant',
             'token_pack_purchase',
             'token_room_entry',
-            'token_payout'
+            'token_payout',
+            'token_replay_play',
+            'token_boost'
         ]
     },
     resourceType: {

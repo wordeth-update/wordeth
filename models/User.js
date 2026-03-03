@@ -21,13 +21,13 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['USER_FAN', 'DESIGNER', 'ARTIST', 'LABEL_ADMIN', 'LABEL_MANAGER', 'ADMIN'],
+        enum: ['USER_FAN', 'DESIGNER', 'ARTIST', 'CREATOR', 'LABEL_ADMIN', 'LABEL_MANAGER', 'ADMIN'],
         default: 'USER_FAN',
         index: true
     },
     accountType: {
         type: String,
-        enum: ['fan', 'designer', 'artist', 'label'],
+        enum: ['fan', 'designer', 'artist', 'creator', 'label'],
         default: 'fan',
         index: true
     },
@@ -74,6 +74,10 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0,
         min: 0
+    },
+    creatorRating: {
+        average: { type: Number, default: 0 },
+        count: { type: Number, default: 0 }
     },
     bio: {
         type: String,
