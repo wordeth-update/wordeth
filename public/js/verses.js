@@ -2226,11 +2226,11 @@ class AudioRoomsManager {
                 joinStageBtn.style.display = 'none';
             } else if (this.stageAccess === 'open') {
                 joinStageBtn.style.display = '';
-                this._setBtn(joinStageBtn, 'fas fa-arrow-up', 'Join Stage');
+                this._setBtnWithSpan(joinStageBtn, 'fas fa-arrow-up', 'Join Stage');
                 joinStageBtn.title = 'Join the stage (open)';
             } else {
                 joinStageBtn.style.display = '';
-                this._setBtn(joinStageBtn, 'fas fa-hand-paper', 'Request to Speak');
+                this._setBtnWithSpan(joinStageBtn, 'fas fa-hand-paper', 'Request to Speak');
                 joinStageBtn.title = 'Ask the host to join the stage';
             }
         }
