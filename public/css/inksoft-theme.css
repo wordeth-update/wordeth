@@ -156,7 +156,12 @@ html {
 #body button.mat-icon-button,
 #body button.mat-mini-fab,
 #body button.mat-raised-button,
-#body button.mat-stroked-button {
+#body button.mat-stroked-button,
+#body button.mat-mdc-button,
+#body button.mat-mdc-raised-button,
+#body button.mat-mdc-unelevated-button,
+#body button.mat-mdc-outlined-button,
+#body button.mdc-button {
   border-radius: 25px;
   font-weight: 700;
   font-family: 'Inter', 'Syne', sans-serif;
@@ -164,42 +169,66 @@ html {
   transition: all 0.3s ease;
 }
 
-#body button.mat-raised-button {
-  background: linear-gradient(135deg, #00E5A8 0%, #8B2FFF 100%);
-  color: #060409;
+#body button.mat-raised-button,
+#body button.mat-mdc-raised-button,
+#body button.mat-mdc-unelevated-button {
+  background: linear-gradient(135deg, #00E5A8 0%, #8B2FFF 100%) !important;
+  color: #060409 !important;
+  -webkit-text-fill-color: #060409 !important;
   box-shadow: 0 4px 15px rgba(0, 229, 168, 0.35);
 }
 
-#body button.mat-raised-button:hover {
+#body button.mat-raised-button:hover,
+#body button.mat-mdc-raised-button:hover,
+#body button.mat-mdc-unelevated-button:hover {
   box-shadow: 0 8px 24px rgba(0, 229, 168, 0.5);
   transform: translateY(-2px);
 }
 
-#body button.mat-flat-button {
-  background: linear-gradient(135deg, #00E5A8 0%, #8B2FFF 100%);
-  color: #060409;
+#body button.mat-flat-button,
+#body button.mat-mdc-button:not(.mat-mdc-icon-button),
+#body button.mdc-button {
+  background: linear-gradient(135deg, #00E5A8 0%, #8B2FFF 100%) !important;
+  color: #060409 !important;
+  -webkit-text-fill-color: #060409 !important;
 }
 
-#body button.mat-flat-button:hover {
+#body button.mat-flat-button:hover,
+#body button.mat-mdc-button:not(.mat-mdc-icon-button):hover,
+#body button.mdc-button:hover {
   box-shadow: 0 8px 24px rgba(0, 229, 168, 0.5);
   transform: translateY(-2px);
 }
 
-#body button.mat-stroked-button {
-  border: 2px solid #00E5A8;
-  color: #00E5A8;
-  background: transparent;
+#body button.mat-stroked-button,
+#body button.mat-mdc-outlined-button {
+  border: 2px solid #00E5A8 !important;
+  color: #00E5A8 !important;
+  -webkit-text-fill-color: #00E5A8 !important;
+  background: transparent !important;
 }
 
-#body button.mat-stroked-button:hover {
-  background: linear-gradient(135deg, #00E5A8 0%, #8B2FFF 100%);
-  color: #060409;
-  border-color: transparent;
+#body button.mat-stroked-button:hover,
+#body button.mat-mdc-outlined-button:hover {
+  background: linear-gradient(135deg, #00E5A8 0%, #8B2FFF 100%) !important;
+  color: #060409 !important;
+  -webkit-text-fill-color: #060409 !important;
+  border-color: transparent !important;
 }
 
 #body .mat-button-disabled,
 #body button[disabled] {
   opacity: 0.4;
+}
+
+#body button.mat-raised-button .mdc-button__label,
+#body button.mat-mdc-raised-button .mdc-button__label,
+#body button.mat-mdc-unelevated-button .mdc-button__label,
+#body button.mat-flat-button .mdc-button__label,
+#body button.mat-mdc-button .mdc-button__label,
+#body button.mdc-button .mdc-button__label {
+  color: #060409 !important;
+  -webkit-text-fill-color: #060409 !important;
 }
 
 
@@ -1033,55 +1062,88 @@ product-detail .store-page {
   -webkit-text-fill-color: #666 !important;
 }
 
-/* ====== DESIGN STUDIO — Dark text on light-bg panels ====== */
-/* The design studio uses light/white backgrounds. Our global #body rules
-   set white text, so we override with dark text using the actual InkSoft
-   MDC class names found via inspector. */
+/* ====== DESIGN STUDIO — All buttons gradient ====== */
 
-#body .mdc-button__label,
-#body span.mdc-button__label,
-#body button.mdc-button .mdc-button__label,
-#body button.mat-mdc-button .mdc-button__label,
-#body button.mat-mdc-button-base .mdc-button__label {
-  color: #1a1a2e !important;
-  -webkit-text-fill-color: #1a1a2e !important;
+#body button,
+#body [role="button"],
+#body a.mat-button,
+#body a.mat-raised-button,
+#body a.mat-flat-button,
+#body a.mdc-button {
+  background: linear-gradient(135deg, #00E5A8 0%, #8B2FFF 100%) !important;
+  color: #060409 !important;
+  -webkit-text-fill-color: #060409 !important;
+  border: none !important;
+  border-radius: 25px !important;
+  font-weight: 700 !important;
+  transition: all 0.3s ease !important;
 }
 
-#body span.button-label,
-#body .button-label {
-  color: #1a1a2e !important;
-  -webkit-text-fill-color: #1a1a2e !important;
+#body button:hover,
+#body [role="button"]:hover,
+#body a.mat-button:hover,
+#body a.mdc-button:hover {
+  box-shadow: 0 8px 24px rgba(0, 229, 168, 0.5) !important;
+  transform: translateY(-2px);
+}
+
+#body button .mdc-button__label,
+#body button span.mdc-button__label,
+#body button .button-label,
+#body button span.button-label {
+  color: #060409 !important;
+  -webkit-text-fill-color: #060409 !important;
 }
 
 #body button#saveDesign .mdc-button__label,
 #body button#addStyles .mdc-button__label {
-  color: #1a1a2e !important;
-  -webkit-text-fill-color: #1a1a2e !important;
+  color: #060409 !important;
+  -webkit-text-fill-color: #060409 !important;
+}
+
+#body button.mat-mdc-icon-button,
+#body button.mat-icon-button {
+  background: transparent !important;
+  border-radius: 50% !important;
+  box-shadow: none !important;
+}
+
+#body button.mat-mdc-icon-button:hover,
+#body button.mat-icon-button:hover {
+  background: rgba(0, 229, 168, 0.1) !important;
+  transform: none;
 }
 
 
 /* ====== DESIGN STUDIO CANVAS ====== */
 
 #body .ds-toolbar {
-  background: linear-gradient(180deg, #0D0118 0%, #060409 100%);
+  background: linear-gradient(180deg, #0D0118 0%, #060409 100%) !important;
   border-bottom: 1px solid rgba(0, 229, 168, 0.08);
 }
 
 #body .ds-toolbar button,
 #body .ds-toolbar .tool-btn {
-  color: rgba(255, 255, 255, 0.7);
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.7) !important;
+  border-radius: 8px !important;
   transition: color 0.2s ease;
 }
 
 #body .ds-toolbar button:hover,
 #body .ds-toolbar .tool-btn:hover {
-  color: #00E5A8;
+  color: #00E5A8 !important;
+  -webkit-text-fill-color: #00E5A8 !important;
+  box-shadow: none !important;
+  transform: none;
 }
 
 #body .ds-toolbar button.active,
 #body .ds-toolbar .tool-btn.active {
-  color: #00E5A8;
-  background: rgba(0, 229, 168, 0.1);
+  color: #00E5A8 !important;
+  -webkit-text-fill-color: #00E5A8 !important;
+  background: rgba(0, 229, 168, 0.1) !important;
 }
 
 #body .ds-sidebar,
