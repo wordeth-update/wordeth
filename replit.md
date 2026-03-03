@@ -45,7 +45,7 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 ### Token Economy System
 - **User Tokens**: Monthly grants based on subscription tier, non-expiring.
 - **Gated Rooms**: Creators set token prices for Verses rooms, with tokens deducted from users and credited to creators.
-- **Creator Payout**: Monthly conversion of `tokenEarnings` to USD ($0.03/token).
+- **Creator Payout**: Monthly conversion of `tokenEarnings` to USD at a dynamic rate based on platform activity.
 - **Extra Token Packs**: Users can purchase additional token packs.
 - **Token Boost**: Creators can spend tokens to promote replays.
 
@@ -77,7 +77,7 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 ### Key Features Architecture
 - **Verses (Audio Rooms)**: Uses Agora RTC SDK in `rtc` mode for scalable audio/video, with Socket.io for room management. Supports server-side token generation, Web Audio API for filters, and listener-first stage access with promotion paths.
 - **Auth UX**: Custom styling for autofill, rounded inputs, and focus states.
-- **Lyrics**: Server-side search integrating with Musixmatch API and fallback sources.
+- **Lyrics**: Server-side search integrating with licensed third-party lyrics APIs and fallback sources.
 - **Advertising**: Contextual keyword-based ads with a self-serve portal and admin approval.
 - **Trending Topics**: Displays conversation starters on the Verses page.
 - **Usage Analytics**: Event tracking middleware for admin dashboards.
@@ -86,4 +86,4 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 ## External Dependencies
 
 - **NPM Packages**: express, mongoose, bcryptjs, jsonwebtoken, cors, helmet, express-rate-limit, express-validator, dotenv, axios, multer, @replit/object-storage, puppeteer, agora-access-token.
-- **External APIs & Services**: Musixmatch API, LRCLIB/Lyrics.ovh, YouTube, MongoDB, Replit Object Storage, InkSoft, Google Fonts, Font Awesome, Agora RTC.
+- **External APIs & Services**: Licensed lyrics APIs (internal), YouTube, MongoDB, Replit Object Storage, InkSoft, Google Fonts, Font Awesome, Agora RTC.
