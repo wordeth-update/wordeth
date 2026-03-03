@@ -46,6 +46,16 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **RBAC middleware**: Enforces access control based on roles and account types.
 - **Payment Processing**: Natively built billing engine for subscriptions, invoices, and payment tracking with an integrated payment gateway.
 
+### Token Economy System
+- **User Tokens**: Users receive monthly token grants based on subscription tier (Fan Plus=50, Fan Creator=100, Artist Pro=135, etc.). Tokens never expire and carry over month to month.
+- **Gated Rooms**: Creators set any token price when creating a Verses room (0=free). Users pay tokens at the door; host enters free.
+- **Token Transfer**: On room entry, tokens deduct from user's `tokenBalance` and credit to creator's `tokenEarnings`. Both sides logged in TokenLedger and EventsLedger.
+- **Creator Payout**: Monthly admin-triggered payout converts `tokenEarnings` to dollars at $0.03/token, logged in EventsLedger as `token_payout`.
+- **Extra Token Packs**: Users can buy additional tokens (25/$1.99, 50/$3.49, 100/$5.99) when they run out.
+- **Models**: `TokenLedger` tracks every transaction (monthly_grant, pack_purchase, room_entry, room_earning, creator_payout). User model has `tokenBalance` and `tokenEarnings` fields.
+- **API Routes**: `routes/tokens.js` — balance, grant, purchase-pack, history, payout endpoints.
+- **UI**: Token balance display on Verses page, token gate confirmation modal, buy tokens modal, token price badge on room cards, creator earnings on dashboard.
+
 ### Payout & Revenue Share System
 - **Centralized PayoutService**: Computes payout amounts and platform fees for all seller types, logging transactions to an Events Ledger.
 - **Seller Types**: Supports Labels, Designers, and Independent Artists with configurable revenue shares.

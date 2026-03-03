@@ -2345,6 +2345,358 @@ body.in-room * {
     border-top: 8px solid rgba(139, 47, 255, 0.3);
 }
 
+/* ── Token Balance Display ─────────────────────────────────── */
+.token-balance-display {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.token-balance-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 215, 0, 0.08);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+}
+
+.token-balance-info i {
+    color: #ffd700;
+    font-size: 1rem;
+    filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.4));
+}
+
+.token-balance-amount {
+    font-family: var(--font-display, 'Syne', sans-serif);
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #ffd700;
+    text-shadow: 0 0 12px rgba(255, 215, 0, 0.3);
+}
+
+.token-balance-label {
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.token-buy-btn {
+    background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
+    color: #1a0a2e;
+    border: none;
+    padding: 0.5rem 1.2rem;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    box-shadow: 0 4px 16px rgba(255, 215, 0, 0.25);
+}
+
+.token-buy-btn:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 8px 28px rgba(255, 215, 0, 0.4);
+}
+
+.token-earnings-display {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(0, 229, 168, 0.08);
+    border: 1px solid rgba(0, 229, 168, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+}
+
+.token-earnings-display i {
+    color: var(--mint, #00E5A8);
+    font-size: 0.9rem;
+}
+
+.token-earnings-amount {
+    font-family: var(--font-display, 'Syne', sans-serif);
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--mint, #00E5A8);
+}
+
+.token-earnings-label {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.token-earnings-value {
+    font-size: 0.78rem;
+    color: rgba(0, 229, 168, 0.7);
+    font-weight: 600;
+}
+
+/* ── Buy Tokens Modal / Token Packs ──────────────────────── */
+.token-packs-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin: 1rem 0;
+}
+
+.token-pack-option {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1.5px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 1.25rem 0.75rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    color: #fff;
+}
+
+.token-pack-option:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 215, 0, 0.4);
+    background: rgba(255, 215, 0, 0.06);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 215, 0, 0.08);
+}
+
+.token-pack-option.featured {
+    border-color: rgba(255, 215, 0, 0.3);
+    background: rgba(255, 215, 0, 0.06);
+}
+
+.token-pack-option.purchasing {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.token-pack-best {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #ffd700, #ffaa00);
+    color: #1a0a2e;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 0.2rem 0.6rem;
+    border-radius: 50px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+.token-pack-amount {
+    font-family: var(--font-display, 'Syne', sans-serif);
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #ffd700;
+    line-height: 1;
+    margin-bottom: 0.2rem;
+}
+
+.token-pack-label {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+}
+
+.token-pack-price {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--mint, #00E5A8);
+}
+
+.token-current-balance {
+    text-align: center;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.5);
+    padding: 0.5rem 0;
+}
+
+.token-current-balance strong {
+    color: #ffd700;
+}
+
+/* ── Creator Token Earnings Card (Dashboard) ─────────────── */
+.token-earnings-card {
+    background: linear-gradient(135deg, rgba(0, 229, 168, 0.1) 0%, rgba(139, 47, 255, 0.08) 100%);
+    border: 1px solid rgba(0, 229, 168, 0.2);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.token-earnings-card h4 {
+    font-family: var(--font-display, 'Syne', sans-serif);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.token-earnings-card h4 i {
+    color: var(--mint, #00E5A8);
+}
+
+.token-earnings-stats {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.token-earnings-stat {
+    display: flex;
+    flex-direction: column;
+}
+
+.token-earnings-stat .te-value {
+    font-family: var(--font-display, 'Syne', sans-serif);
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--mint, #00E5A8);
+}
+
+.token-earnings-stat .te-label {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+}
+
+@media (max-width: 600px) {
+    .token-balance-display {
+        gap: 0.5rem;
+    }
+    .token-packs-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+    }
+    .token-pack-amount {
+        font-size: 1.4rem;
+    }
+}
+
+/* ── Room Token Badge (on room cards) ────────────────────── */
+.room-token-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.65rem;
+    border-radius: 50px;
+    margin-bottom: 0.4rem;
+    letter-spacing: 0.02em;
+}
+
+.room-token-badge.gated {
+    background: rgba(255, 215, 0, 0.12);
+    border: 1px solid rgba(255, 215, 0, 0.25);
+    color: #ffd700;
+}
+
+.room-token-badge.free {
+    background: rgba(0, 229, 168, 0.1);
+    border: 1px solid rgba(0, 229, 168, 0.2);
+    color: var(--mint, #00E5A8);
+}
+
+/* ── Token Gate Modal ────────────────────────────────────── */
+.token-gate-body {
+    text-align: center;
+    padding: 0.5rem 0;
+}
+
+.token-gate-icon {
+    font-size: 2.5rem;
+    color: #ffd700;
+    margin-bottom: 1rem;
+    filter: drop-shadow(0 0 16px rgba(255, 215, 0, 0.4));
+}
+
+.token-gate-info {
+    margin-bottom: 1.5rem;
+}
+
+.token-gate-cost {
+    font-size: 1.05rem;
+    color: rgba(255, 255, 255, 0.85);
+    margin-bottom: 0.5rem;
+}
+
+.token-gate-cost strong {
+    color: #ffd700;
+    font-weight: 800;
+}
+
+.token-gate-balance {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.token-gate-balance strong {
+    color: var(--mint, #00E5A8);
+    font-weight: 700;
+}
+
+.token-gate-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.token-gate-actions .cancel-btn {
+    flex: 1;
+}
+
+.token-gate-actions .create-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    text-decoration: none;
+}
+
+.token-gate-insufficient {
+    margin-top: 0.5rem;
+}
+
+.token-gate-warning {
+    color: #ff6b6b;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+.token-gate-warning i {
+    color: #ff6b6b;
+}
+
+.token-gate-warning strong {
+    color: #ffd700;
+}
+
 @media (orientation: landscape) and (max-height: 500px) {
     body.in-room::after {
         content: 'Please rotate your device to portrait mode';

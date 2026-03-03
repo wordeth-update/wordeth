@@ -631,3 +631,49 @@
 .payout-rate-display .payout-value.highlight {
     color: #22c55e;
 }
+
+.token-earnings-card {
+    background: linear-gradient(135deg, rgba(0, 229, 168, 0.1) 0%, rgba(139, 47, 255, 0.08) 100%);
+    border: 1px solid rgba(0, 229, 168, 0.2);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.token-earnings-card h4 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.token-earnings-card h4 i {
+    color: #ffd700;
+}
+
+.token-earnings-stats {
+    display: flex;
+    gap: 2rem;
+}
+
+.token-earnings-stat {
+    display: flex;
+    flex-direction: column;
+}
+
+.token-earnings-stat .te-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--mint, #64ffda);
+}
+
+.token-earnings-stat .te-label {
+    font-size: 0.72rem;
+    color: var(--text-secondary, #999);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+}

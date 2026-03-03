@@ -5,7 +5,46 @@ const { loadEntitlements } = require('../middleware/rbac');
 const Plan = require('../models/Plan');
 const Subscription = require('../models/Subscription');
 const EventsLedger = require('../models/EventsLedger');
+const TokenLedger = require('../models/TokenLedger');
+const User = require('../models/User');
 const { getUserEntitlements, checkGraduation } = require('../services/entitlements');
+
+const PLAN_TOKEN_GRANTS = {
+    'fan-plus': 50,
+    'fan-creator': 100,
+    'designer-starter': 25,
+    'designer-pro': 50,
+    'designer-studio': 75,
+    'artist-starter': 50,
+    'artist-growth': 100,
+    'artist-pro': 135,
+    'label-boutique': 100,
+    'label-mid': 150,
+    'label-enterprise': 200
+};
+
+async function grantTokensForPlan(user, planSlug) {
+    const tokenAmount = PLAN_TOKEN_GRANTS[planSlug];
+    if (!tokenAmount || tokenAmount <= 0) return null;
+
+    const targetUser = await User.findById(user._id);
+    if (!targetUser) return null;
+
+    const balanceBefore = targetUser.tokenBalance || 0;
+    targetUser.tokenBalance = balanceBefore + tokenAmount;
+    await targetUser.save();
+
+    await TokenLedger.create({
+        userId: targetUser._id,
+        type: 'monthly_grant',
+        amount: tokenAmount,
+        balanceBefore,
+        balanceAfter: targetUser.tokenBalance,
+        metadata: { planSlug, grantType: 'subscription' }
+    });
+
+    return { tokenAmount, newBalance: targetUser.tokenBalance };
+}
 
 router.get('/plans', async (req, res) => {
     try {
@@ -143,7 +182,9 @@ router.post('/subscribe', auth, async (req, res) => {
                 req.user.role = roleMap[plan.category] || 'USER_FAN';
                 await req.user.save();
 
-                return res.json({ message: 'Subscription updated', subscription: existingSub });
+                const upgradeGrant = await grantTokensForPlan(req.user, planSlug);
+
+                return res.json({ message: 'Subscription updated', subscription: existingSub, tokenGrant: upgradeGrant });
             }
         }
 
@@ -174,7 +215,9 @@ router.post('/subscribe', auth, async (req, res) => {
             metadata: { planSlug, billingCycle: cycle }
         });
 
-        res.status(201).json({ message: 'Subscription created', subscription });
+        const tokenGrant = await grantTokensForPlan(req.user, planSlug);
+
+        res.status(201).json({ message: 'Subscription created', subscription, tokenGrant });
     } catch (error) {
         console.error('Subscribe error:', error);
         res.status(500).json({ message: 'Server error' });
@@ -250,3 +293,5 @@ router.post('/record-gmv', auth, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.PLAN_TOKEN_GRANTS = PLAN_TOKEN_GRANTS;
+module.exports.grantTokensForPlan = grantTokensForPlan;

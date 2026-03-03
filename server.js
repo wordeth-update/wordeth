@@ -60,6 +60,7 @@ const subscriptionRoutes = require('./routes/subscriptions'); // Subscription & 
 const creatorRoutes = require('./routes/creator'); // Independent artist/designer
 const tournamentRoutes = require('./routes/tournaments'); // Verses Tournaments
 const agoraRoutes = require('./routes/agora'); // Agora RTC token generation
+const tokenRoutes = require('./routes/tokens'); // Token economy
 const trackingMiddleware = require('./middleware/tracking'); // Event tracking
 
 const app = express();
@@ -261,6 +262,7 @@ app.use('/api/subscriptions', subscriptionRoutes); // Subscription & plans
 app.use('/api/creator', creatorRoutes); // Independent artist/designer
 app.use('/api/tournaments', tournamentRoutes); // Verses Tournaments
 app.use('/api/agora', agoraRoutes); // Agora RTC tokens
+app.use('/api/tokens', tokenRoutes); // Token economy
 function generateRoomId() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const bytes = crypto.randomBytes(18);
@@ -279,6 +281,7 @@ app.post('/api/rooms/create', async (req, res) => {
     const { saveRoom } = require('./services/redisClient');
     const now = Date.now();
     const roomsMap = getRoomsMap();
+    const tokenPrice = parseInt(req.body?.tokenPrice, 10) || 0;
     const room = {
         id: roomId,
         name: req.body?.name || null,
@@ -290,6 +293,7 @@ app.post('/api/rooms/create', async (req, res) => {
         activeVideos: new Set(),
         isLocked: false,
         stageAccess: 'invite-only',
+        tokenPrice: Math.max(0, tokenPrice),
         createdAt: now,
         lastActivity: now
     };
@@ -311,7 +315,8 @@ app.post('/api/rooms/create-and-join', async (req, res) => {
     const { saveRoom } = require('./services/redisClient');
     const now = Date.now();
     const roomsMap = getRoomsMap();
-    const { name, userId, userName, avatar } = req.body;
+    const { name, userId, userName, avatar, tokenPrice: reqTokenPrice } = req.body;
+    const tokenPrice = parseInt(reqTokenPrice, 10) || 0;
     const room = {
         id: roomId,
         name: name || null,
@@ -323,6 +328,7 @@ app.post('/api/rooms/create-and-join', async (req, res) => {
         activeVideos: new Set(),
         isLocked: false,
         stageAccess: 'invite-only',
+        tokenPrice: Math.max(0, tokenPrice),
         createdAt: now,
         lastActivity: now
     };

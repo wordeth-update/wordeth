@@ -58,6 +58,7 @@ function serializeRoom(room) {
     videoMode: room.videoMode || 'off',
     isLocked: room.isLocked,
     stageAccess: room.stageAccess || 'invite-only',
+    tokenPrice: room.tokenPrice || 0,
     createdAt: room.createdAt,
     lastActivity: room.lastActivity || room.createdAt || Date.now(),
     participants: Array.from(room.participants.values()),
@@ -84,6 +85,7 @@ function deserializeRoom(json) {
     activeVideos: new Set(data.activeVideos || []),
     isLocked: data.isLocked || false,
     stageAccess: data.stageAccess || 'invite-only',
+    tokenPrice: data.tokenPrice || 0,
     createdAt: data.createdAt || Date.now(),
     lastActivity: data.lastActivity || data.createdAt || Date.now(),
   };

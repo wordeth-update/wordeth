@@ -65,6 +65,16 @@ const userSchema = new mongoose.Schema({
         of: mongoose.Schema.Types.Mixed,
         default: {}
     },
+    tokenBalance: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    tokenEarnings: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
     bio: {
         type: String,
         default: ''

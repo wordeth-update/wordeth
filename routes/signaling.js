@@ -1,4 +1,7 @@
 const { saveRoom, deleteRoom, loadAllRooms, loadRoom, getClient } = require('../services/redisClient');
+const User = require('../models/User');
+const TokenLedger = require('../models/TokenLedger');
+const EventsLedger = require('../models/EventsLedger');
 
 let rooms = new Map();
 const connectedUsers = new Map();
@@ -260,6 +263,7 @@ function setupSignaling(io) {
                         activeVideos: new Set(),
                         isLocked: false,
                         stageAccess: 'invite-only',
+                        tokenPrice: 0,
                         createdAt: Date.now()
                     });
                 }
@@ -268,6 +272,79 @@ function setupSignaling(io) {
             const room = rooms.get(roomId);
             if (roomName && isHost) {
                 room.name = roomName;
+            }
+
+            const isCreatorOfRoom = room.creatorUserId && socket.userId && room.creatorUserId === socket.userId;
+            if (room.tokenPrice > 0 && !isCreatorOfRoom && !requestedHost) {
+                try {
+                    const joinerUser = await User.findById(socket.userId);
+                    if (!joinerUser) {
+                        socket.emit('room-error', { message: 'User not found. Please sign in again.' });
+                        if (typeof ackCallback === 'function') ackCallback({ success: false, message: 'User not found.' });
+                        socket.leave(roomId);
+                        socket.roomId = null;
+                        return;
+                    }
+                    if (joinerUser.tokenBalance < room.tokenPrice) {
+                        socket.emit('room-error', { message: `Insufficient tokens. This room costs ${room.tokenPrice} tokens but you only have ${joinerUser.tokenBalance}.`, code: 'INSUFFICIENT_TOKENS', required: room.tokenPrice, balance: joinerUser.tokenBalance });
+                        if (typeof ackCallback === 'function') ackCallback({ success: false, message: `Insufficient tokens.`, code: 'INSUFFICIENT_TOKENS', required: room.tokenPrice, balance: joinerUser.tokenBalance });
+                        socket.leave(roomId);
+                        socket.roomId = null;
+                        return;
+                    }
+
+                    const balanceBefore = joinerUser.tokenBalance;
+                    joinerUser.tokenBalance -= room.tokenPrice;
+                    await joinerUser.save();
+
+                    await TokenLedger.create({
+                        userId: joinerUser._id,
+                        type: 'room_entry',
+                        amount: -room.tokenPrice,
+                        balanceBefore: balanceBefore,
+                        balanceAfter: joinerUser.tokenBalance,
+                        relatedUserId: room.creatorUserId,
+                        roomId: roomId,
+                        metadata: { roomName: room.name }
+                    });
+
+                    if (room.creatorUserId) {
+                        const creatorUser = await User.findById(room.creatorUserId);
+                        if (creatorUser) {
+                            const creatorEarningsBefore = creatorUser.tokenEarnings;
+                            creatorUser.tokenEarnings += room.tokenPrice;
+                            await creatorUser.save();
+
+                            await TokenLedger.create({
+                                userId: creatorUser._id,
+                                type: 'room_earning',
+                                amount: room.tokenPrice,
+                                balanceBefore: creatorEarningsBefore,
+                                balanceAfter: creatorUser.tokenEarnings,
+                                relatedUserId: joinerUser._id,
+                                roomId: roomId,
+                                metadata: { roomName: room.name }
+                            });
+                        }
+                    }
+
+                    EventsLedger.create({
+                        actorId: joinerUser._id,
+                        actorType: 'user',
+                        eventType: 'token_room_entry',
+                        amount: room.tokenPrice,
+                        metadata: { roomId, roomName: room.name, creatorUserId: room.creatorUserId, tokenPrice: room.tokenPrice }
+                    }).catch(e => console.warn('[Token Gate] EventsLedger error:', e.message));
+
+                    console.log(`[Token Gate] ${socket.userName} paid ${room.tokenPrice} tokens to enter room ${roomId}`);
+                } catch (tokenErr) {
+                    console.error('[Token Gate] Error processing token payment:', tokenErr);
+                    socket.emit('room-error', { message: 'Error processing token payment. Please try again.' });
+                    if (typeof ackCallback === 'function') ackCallback({ success: false, message: 'Error processing token payment.' });
+                    socket.leave(roomId);
+                    socket.roomId = null;
+                    return;
+                }
             }
 
             if (socket.userId && socket.userId !== socket.id) {
@@ -325,7 +402,8 @@ function setupSignaling(io) {
                 videoMode: room.videoMode || 'off',
                 activeVideos: Array.from(room.activeVideos || []),
                 isLocked: room.isLocked,
-                stageAccess: room.stageAccess || 'invite-only'
+                stageAccess: room.stageAccess || 'invite-only',
+                tokenPrice: room.tokenPrice || 0
             };
             socket.emit('room-joined', joinData);
             if (typeof ackCallback === 'function') ackCallback({ success: true, ...joinData });
@@ -871,6 +949,7 @@ function getActiveRooms() {
             isLocked: room.isLocked,
             karaokeEnabled: room.karaokeEnabled,
             videoMode: room.videoMode || 'off',
+            tokenPrice: room.tokenPrice || 0,
             createdAt: room.createdAt
         });
     });
@@ -935,6 +1014,7 @@ async function joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar
                 activeVideos: new Set(),
                 isLocked: false,
                 stageAccess: 'invite-only',
+                tokenPrice: 0,
                 createdAt: now,
                 lastActivity: now
             });
@@ -963,7 +1043,8 @@ async function joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar
         videoMode: room.videoMode || 'off',
         activeVideos: Array.from(room.activeVideos || []),
         isLocked: room.isLocked,
-        stageAccess: room.stageAccess || 'invite-only'
+        stageAccess: room.stageAccess || 'invite-only',
+        tokenPrice: room.tokenPrice || 0
     };
 }
 

@@ -37,7 +37,11 @@ const eventsLedgerSchema = new mongoose.Schema({
             'graduation_triggered',
             'entitlement_override',
             'account_created',
-            'account_type_changed'
+            'account_type_changed',
+            'token_grant',
+            'token_pack_purchase',
+            'token_room_entry',
+            'token_payout'
         ]
     },
     resourceType: {

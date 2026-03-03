@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         container.style.display = 'block';
 
         loadPayoutInfo(token);
+        loadTokenEarnings(token);
     } catch (err) {
         console.error('Dashboard load error:', err);
         loading.innerHTML = `<p style="color:#fca5a5;">Failed to load dashboard. <a href="/" style="color:var(--mint);">Go Home</a></p>`;
@@ -41,6 +42,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupTabs();
     setupLogout();
 });
+
+async function loadTokenEarnings(token) {
+    try {
+        const res = await fetch('/api/tokens/balance', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (typeof data.tokenEarnings !== 'undefined') {
+            const card = document.getElementById('tokenEarningsCard');
+            if (card) card.style.display = 'block';
+            const earningsEl = document.getElementById('creatorTokenEarnings');
+            const valueEl = document.getElementById('creatorTokenValue');
+            if (earningsEl) earningsEl.textContent = (data.tokenEarnings || 0).toLocaleString();
+            if (valueEl) valueEl.textContent = '$' + (data.earningsValue || 0).toFixed(2);
+        }
+    } catch (e) {
+        console.error('Token earnings load error:', e);
+    }
+}
 
 async function loadPayoutInfo(token) {
     try {

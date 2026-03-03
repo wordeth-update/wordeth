@@ -138,6 +138,8 @@ class AudioRoomsManager {
             this.initializeElements();
             this.setupEventListeners();
             this.setupVisibilityHandler();
+            this._setupTokenListeners();
+            this.loadTokenBalance();
         } catch (e) {
             console.error('[Verses] Error during element/event setup:', e);
         }
@@ -880,7 +882,14 @@ class AudioRoomsManager {
                 const roomCard = joinBtn ? joinBtn.closest('.room-card') : clickedCard;
                 if (roomCard) {
                     const roomId = roomCard.dataset.roomId;
-                    if (roomId) this.joinRoom(roomId);
+                    const tokenPrice = parseInt(roomCard.dataset.tokenPrice || '0', 10);
+                    if (roomId) {
+                        if (tokenPrice > 0) {
+                            this._showTokenGate(roomId, tokenPrice);
+                        } else {
+                            this.joinRoom(roomId);
+                        }
+                    }
                 }
                 return;
             }
@@ -1080,9 +1089,15 @@ class AudioRoomsManager {
             statsDiv.appendChild(this._el('span', {className: 'stat'}, this._icon('fas fa-lock')));
         }
 
+        const tokenPrice = room.tokenPrice || 0;
+        const priceBadge = tokenPrice > 0
+            ? this._el('span', {className: 'room-token-badge gated'}, this._text('\uD83C\uDF9F ' + tokenPrice + ' tokens'))
+            : this._el('span', {className: 'room-token-badge free'}, this._text('FREE'));
+
         const roomInfo = this._el('div', {className: 'room-info'},
             this._el('div', {className: 'room-genre'}, this._icon(genreIconCls), this._el('span', {textContent: this.capitalizeFirst(genre)})),
             this._el('h3', {textContent: roomName}),
+            priceBadge,
             this._el('p', {className: 'room-topic', textContent: 'Hosted by ' + hostName}),
             statsDiv);
 
@@ -1094,6 +1109,7 @@ class AudioRoomsManager {
             this._el('div', {className: 'room-actions'}, joinBtn));
         card.dataset.roomId = room.id;
         card.dataset.genre = genre;
+        if (tokenPrice > 0) card.dataset.tokenPrice = tokenPrice;
         return card;
     }
 
@@ -2477,6 +2493,7 @@ class AudioRoomsManager {
         const formData = new FormData(this.createRoomForm);
         const roomName = formData.get('room-name-input') || 'Untitled Room';
         const initialSong = formData.get('initial-song') || '';
+        const tokenPrice = parseInt(formData.get('room-token-price'), 10) || 0;
         const ctx = this._getUserContext();
 
         console.log('[Create] Pipeline start:', roomName);
@@ -2486,7 +2503,7 @@ class AudioRoomsManager {
             const resp = await this._fetchWithTimeout(apiUrl('/api/rooms/create-and-join'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store' },
-                body: JSON.stringify({ name: roomName, userId: ctx.userId, userName: ctx.userName, avatar: ctx.avatar }),
+                body: JSON.stringify({ name: roomName, userId: ctx.userId, userName: ctx.userName, avatar: ctx.avatar, tokenPrice }),
                 cache: 'no-store'
             }, 15000);
             const httpData = await resp.json();
@@ -2669,6 +2686,67 @@ class AudioRoomsManager {
         }
     }
     
+    async _fetchTokenBalance() {
+        const token = localStorage.getItem('authToken');
+        if (!token) return 0;
+        try {
+            const resp = await fetch(apiUrl('/api/tokens/balance'), {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                return data.tokenBalance || 0;
+            }
+        } catch (e) {
+            console.warn('[Tokens] Failed to fetch balance:', e.message);
+        }
+        return 0;
+    }
+
+    async _showTokenGate(roomId, tokenPrice) {
+        const modal = document.getElementById('token-gate-modal');
+        if (!modal) { this.joinRoom(roomId); return; }
+
+        const balance = await this._fetchTokenBalance();
+        const sufficient = balance >= tokenPrice;
+
+        document.getElementById('token-gate-price').textContent = tokenPrice;
+        document.getElementById('token-gate-user-balance').textContent = balance;
+
+        const actionsDiv = document.getElementById('token-gate-actions');
+        const insufficientDiv = document.getElementById('token-gate-insufficient');
+
+        if (sufficient) {
+            actionsDiv.classList.remove('hidden');
+            insufficientDiv.classList.add('hidden');
+        } else {
+            actionsDiv.classList.add('hidden');
+            insufficientDiv.classList.remove('hidden');
+            document.getElementById('token-gate-needed').textContent = tokenPrice;
+            document.getElementById('token-gate-have').textContent = balance;
+        }
+
+        modal.classList.add('active');
+
+        const cleanup = () => {
+            modal.classList.remove('active');
+            confirmBtn?.removeEventListener('click', onConfirm);
+            cancelBtn?.removeEventListener('click', onCancel);
+            cancelBtn2?.removeEventListener('click', onCancel);
+        };
+
+        const onConfirm = () => { cleanup(); this.joinRoom(roomId); };
+        const onCancel = () => { cleanup(); };
+
+        const confirmBtn = document.getElementById('token-gate-confirm');
+        const cancelBtn = document.getElementById('token-gate-cancel');
+        const cancelBtn2 = document.getElementById('token-gate-cancel-2');
+
+        confirmBtn?.addEventListener('click', onConfirm);
+        cancelBtn?.addEventListener('click', onCancel);
+        cancelBtn2?.addEventListener('click', onCancel);
+    }
+
     async checkRoomLockStatus(roomId) {
         // Check the shared room lock state
         // In a real implementation, this would query the server
@@ -7370,6 +7448,97 @@ class AudioRoomsManager {
                     resolve(false);
                 }
             }, 100);
+        });
+    }
+
+    async loadTokenBalance() {
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+
+        try {
+            const res = await fetch(apiUrl('/api/tokens/balance'), {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            this._updateTokenDisplay(data);
+        } catch (e) {
+            console.error('Error loading token balance:', e);
+        }
+    }
+
+    _updateTokenDisplay(data) {
+        const display = document.getElementById('token-balance-display');
+        const amountEl = document.getElementById('token-balance-amount');
+        const modalBalanceEl = document.getElementById('modal-token-balance');
+        if (!display) return;
+
+        display.style.display = 'flex';
+        if (amountEl) amountEl.textContent = (data.tokenBalance || 0).toLocaleString();
+        if (modalBalanceEl) modalBalanceEl.textContent = (data.tokenBalance || 0).toLocaleString();
+
+        this._cachedTokenBalance = data.tokenBalance || 0;
+
+        const earningsDisplay = document.getElementById('token-earnings-display');
+        if (earningsDisplay && typeof data.tokenEarnings !== 'undefined') {
+            earningsDisplay.style.display = 'flex';
+            const earningsAmountEl = document.getElementById('token-earnings-amount');
+            const earningsValueEl = document.getElementById('token-earnings-value');
+            if (earningsAmountEl) earningsAmountEl.textContent = (data.tokenEarnings || 0).toLocaleString();
+            if (earningsValueEl) earningsValueEl.textContent = '($' + (data.earningsValue || 0).toFixed(2) + ')';
+        }
+    }
+
+    showBuyTokensModal() {
+        const modal = document.getElementById('buy-tokens-modal');
+        if (modal) modal.classList.add('active');
+        this.loadTokenBalance();
+    }
+
+    async purchaseTokenPack(packId) {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            this._showAuthPrompt();
+            return;
+        }
+
+        const packBtn = document.querySelector('[data-pack-id="' + packId + '"]');
+        if (packBtn) packBtn.classList.add('purchasing');
+
+        try {
+            const res = await fetch(apiUrl('/api/tokens/purchase-pack'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ packId })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                this.showToast?.(data.message || 'Purchase failed', 'fa-exclamation-circle');
+                return;
+            }
+
+            this._cachedTokenBalance = data.newBalance;
+            const amountEl = document.getElementById('token-balance-amount');
+            const modalBalanceEl = document.getElementById('modal-token-balance');
+            if (amountEl) amountEl.textContent = data.newBalance.toLocaleString();
+            if (modalBalanceEl) modalBalanceEl.textContent = data.newBalance.toLocaleString();
+
+            this.showToast?.('Purchased ' + data.pack.tokens + ' tokens!', 'fa-check-circle');
+        } catch (e) {
+            console.error('Token purchase error:', e);
+            this.showToast?.('Purchase failed. Please try again.', 'fa-exclamation-circle');
+        } finally {
+            if (packBtn) packBtn.classList.remove('purchasing');
+        }
+    }
+
+    _setupTokenListeners() {
+        document.getElementById('token-buy-btn')?.addEventListener('click', () => this.showBuyTokensModal());
+        document.querySelectorAll('.token-pack-option').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const packId = btn.dataset.packId;
+                if (packId) this.purchaseTokenPack(packId);
+            });
         });
     }
 }
