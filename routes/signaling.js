@@ -852,7 +852,12 @@ function setupSignaling(io) {
 
 function getActiveRooms() {
     const activeRooms = [];
+    const seen = new Set();
     rooms.forEach((room, roomId) => {
+        if (room.participants.size === 0) return;
+        const nameKey = (room.name || '').toLowerCase().trim();
+        if (nameKey && seen.has(nameKey)) return;
+        if (nameKey) seen.add(nameKey);
         activeRooms.push({
             id: roomId,
             name: room.name || null,

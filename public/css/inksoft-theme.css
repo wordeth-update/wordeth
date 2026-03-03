@@ -165,7 +165,7 @@ html {
 }
 
 #body button.mat-raised-button {
-  background: linear-gradient(135deg, #00E5A8 0%, #00A87D 100%);
+  background: linear-gradient(135deg, #00E5A8 0%, #8B2FFF 100%);
   color: #060409;
   box-shadow: 0 4px 15px rgba(0, 229, 168, 0.35);
 }
@@ -176,21 +176,25 @@ html {
 }
 
 #body button.mat-flat-button {
-  background: rgba(139, 47, 255, 0.2);
-  color: #ffffff;
+  background: linear-gradient(135deg, #00E5A8 0%, #8B2FFF 100%);
+  color: #060409;
 }
 
 #body button.mat-flat-button:hover {
-  background: rgba(139, 47, 255, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 229, 168, 0.5);
+  transform: translateY(-2px);
 }
 
 #body button.mat-stroked-button {
-  border-color: #00E5A8;
+  border: 2px solid #00E5A8;
   color: #00E5A8;
+  background: transparent;
 }
 
 #body button.mat-stroked-button:hover {
-  background: rgba(0, 229, 168, 0.1);
+  background: linear-gradient(135deg, #00E5A8 0%, #8B2FFF 100%);
+  color: #060409;
+  border-color: transparent;
 }
 
 #body .mat-button-disabled,
@@ -752,7 +756,7 @@ a.mobile-menu-link:hover {
 }
 
 #body .store-products-wrap .mat-raised-button {
-  background: linear-gradient(135deg, #00E5A8 0%, #00A87D 100%);
+  background: linear-gradient(135deg, #00E5A8 0%, #8B2FFF 100%);
   color: #060409;
   border-radius: 25px;
   font-weight: 700;
