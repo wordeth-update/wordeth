@@ -2368,6 +2368,8 @@ class AudioRoomsManager {
         this.currentRoom = null;
         this.roomJoinTime = null;
         this._joinConfirmed = false;
+        this._agoraJoinHandled = false;
+        this._firstVisitGuideShown = false;
         this._pendingJoinRoom = null;
         this._pendingJoinIsInvite = false;
         this._pendingJoinIsHost = false;
@@ -2375,8 +2377,6 @@ class AudioRoomsManager {
         this.isSpeaker = false;
         this.isAudioMuted = false;
         this._welcomeShown = false;
-        this._agoraJoinHandled = false;
-        this._firstVisitGuideShown = false;
         if (this._invite.status !== 'pending') {
             this._invite = { status: 'idle', roomId: null, retries: 0, maxRetries: 5 };
         }
@@ -2498,6 +2498,10 @@ class AudioRoomsManager {
             const sock = await this._ensureSocket();
             console.log('[Create] 2/5 Socket ok:', sock.id);
 
+            this._agoraJoinHandled = true;
+            this._joinConfirmed = true;
+            this._firstVisitGuideShown = true;
+
             setStatus('Gathering the vibes\u2026');
             await this._socketJoinRoom({ roomId, userId: ctx.userId, userName: ctx.userName, isHost: true, roomName, avatar: ctx.avatar });
             console.log('[Create] 3/5 Socket join confirmed');
@@ -2515,6 +2519,8 @@ class AudioRoomsManager {
             if (songEl) songEl.textContent = initialSong ? `Currently discussing: "${initialSong}"` : '';
             this._enterRoomUI(roomId, true, roomName);
             this.addChatMessage('System', 'Welcome! You are on stage as the host.', true);
+            this._firstVisitGuideShown = false;
+            this.showFirstVisitGuide();
 
             window.history.replaceState({ room: roomId }, '', `/verses.html?room=${encodeURIComponent(roomId)}`);
             fetch(apiUrl('/api/analytics/track'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventType: 'verse_create', segment: 'community', metadata: { roomId, page: 'verses' } }) }).catch(() => {});
@@ -2613,6 +2619,10 @@ class AudioRoomsManager {
             const sock = await this._ensureSocket();
             console.log('[Join] 2/5 Socket ok:', sock.id);
 
+            this._agoraJoinHandled = true;
+            this._joinConfirmed = true;
+            this._firstVisitGuideShown = true;
+
             this._updateJoiningStatus('Almost there\u2026');
             joinPayload.userId = ctx.isGuest ? `guest_${sock.id}` : (ctx.user._id || ctx.user.id || sock.id);
             const ack = await this._socketJoinRoom(joinPayload);
@@ -2642,6 +2652,8 @@ class AudioRoomsManager {
             } else {
                 this.addChatMessage('System', 'Welcome! You joined as a listener. Raise your hand or wait for an invite to speak.', true);
             }
+            this._firstVisitGuideShown = false;
+            this.showFirstVisitGuide();
 
             fetch(apiUrl('/api/analytics/track'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventType: 'verse_join', segment: 'community', metadata: { roomId, page: 'verses' } }) }).catch(() => {});
             console.log('[Join] Pipeline complete');
