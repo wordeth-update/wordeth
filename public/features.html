@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordeth Features</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/features.css">
+</head>
+<body>
+
+<nav class="features-nav">
+    <a href="/" class="nav-logo">
+        <span class="logo-text">W</span>
+    </a>
+    <div class="nav-links">
+        <a href="#verses">Verses</a>
+        <a href="#replays">Replays</a>
+        <a href="#tokens">Tokens</a>
+        <a href="#accounts">Accounts</a>
+        <a href="#lyrics">Lyrics</a>
+        <a href="#merch">Merch</a>
+        <a href="#tournaments">Tournaments</a>
+        <a href="#privacy">Trust</a>
+    </div>
+</nav>
+
+<header class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-content">
+        <span class="hero-badge"><i class="fas fa-bolt"></i> Platform Overview</span>
+        <h1>Everything on <span class="gradient-text">Wordeth</span></h1>
+        <p class="hero-sub">A complete look at every feature powering the social music experience.</p>
+        <div class="hero-stats">
+            <div class="stat-item">
+                <span class="stat-number">12+</span>
+                <span class="stat-label">Core Features</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">5</span>
+                <span class="stat-label">Account Types</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">3</span>
+                <span class="stat-label">Revenue Streams</span>
+            </div>
+        </div>
+    </div>
+</header>
+
+<nav class="toc">
+    <div class="toc-inner">
+        <a href="#verses" class="toc-item"><i class="fas fa-headphones"></i> Verses</a>
+        <a href="#replays" class="toc-item"><i class="fas fa-play-circle"></i> Replays</a>
+        <a href="#tokens" class="toc-item"><i class="fas fa-coins"></i> Tokens</a>
+        <a href="#ratings" class="toc-item"><i class="fas fa-star"></i> Ratings</a>
+        <a href="#boost" class="toc-item"><i class="fas fa-rocket"></i> Boost</a>
+        <a href="#accounts" class="toc-item"><i class="fas fa-users"></i> Accounts</a>
+        <a href="#subscriptions" class="toc-item"><i class="fas fa-crown"></i> Plans</a>
+        <a href="#lyrics" class="toc-item"><i class="fas fa-music"></i> Lyrics</a>
+        <a href="#merch" class="toc-item"><i class="fas fa-store"></i> Merch</a>
+        <a href="#tournaments" class="toc-item"><i class="fas fa-trophy"></i> Tournaments</a>
+        <a href="#partners" class="toc-item"><i class="fas fa-chart-line"></i> Partners</a>
+        <a href="#privacy" class="toc-item"><i class="fas fa-shield-alt"></i> Trust</a>
+    </div>
+</nav>
+
+<!-- VERSES -->
+<section id="verses" class="feature-section">
+    <div class="section-header">
+        <span class="section-number">01</span>
+        <h2>Verses <span class="accent">Live Audio Rooms</span></h2>
+        <p class="section-desc">Real-time audio rooms where music lovers connect, discuss, and vibe together. Powered by Agora RTC with full WebSocket signaling.</p>
+    </div>
+
+    <div class="screenshot-showcase">
+        <div class="screenshot-frame">
+            <div class="frame-dots"><span></span><span></span><span></span></div>
+            <img src="/features/verses-lobby.png" alt="Verses lobby with live rooms" loading="lazy">
+        </div>
+        <div class="screenshot-caption">The Verses lobby shows live rooms, active users, and room creation</div>
+    </div>
+
+    <div class="feature-grid three-col">
+        <div class="feature-card">
+            <div class="card-icon mint"><i class="fas fa-microphone-alt"></i></div>
+            <h3>Host Controls</h3>
+            <p>Creators manage who speaks with stage access controls. Promote listeners to speakers, mute participants, and lock rooms for private sessions.</p>
+        </div>
+        <div class="feature-card">
+            <div class="card-icon purple"><i class="fas fa-video"></i></div>
+            <h3>Video & Camera</h3>
+            <p>Toggle video mode for face-to-face conversations. Share your camera alongside audio for a richer experience in intimate rooms.</p>
+        </div>
+        <div class="feature-card">
+            <div class="card-icon pink"><i class="fas fa-music"></i></div>
+            <h3>Karaoke Mode</h3>
+            <p>Built-in karaoke with synced lyrics display. YouTube audio sharing lets the whole room listen and sing along together.</p>
+        </div>
+        <div class="feature-card">
+            <div class="card-icon blue"><i class="fas fa-image"></i></div>
+            <h3>Chat & Photos</h3>
+            <p>Real-time text chat alongside audio. Share images directly in the room. System messages keep everyone updated on room events.</p>
+        </div>
+        <div class="feature-card">
+            <div class="card-icon mint"><i class="fas fa-sliders-h"></i></div>
+            <h3>Audio Filters</h3>
+            <p>Web Audio API powered filters let speakers customize their sound. Built-in noise suppression keeps conversations clean.</p>
+        </div>
+        <div class="feature-card">
+            <div class="card-icon purple"><i class="fas fa-user-plus"></i></div>
+            <h3>Room Invites</h3>
+            <p>Invite friends to join your room with real-time notifications. Users get a prompt to accept and join instantly via WebSocket.</p>
+        </div>
+    </div>
+
+    <div class="screenshot-showcase">
+        <div class="screenshot-frame">
+            <div class="frame-dots"><span></span><span></span><span></span></div>
+            <img src="/features/verses-guide.png" alt="Verses Room Guide" loading="lazy">
+        </div>
+        <div class="screenshot-caption">Comprehensive room guide teaches new users how to host and participate</div>
+    </div>
+
+    <div class="detail-callout">
+        <div class="callout-icon"><i class="fas fa-broadcast-tower"></i></div>
+        <div class="callout-text">
+            <h4>Persistent Mini-Player</h4>
+            <p>A floating bar maintains your audio connection as you navigate across pages. You never lose your place in the conversation, even when browsing lyrics or merch.</p>
+        </div>
+    </div>
+</section>
+
+<!-- REPLAYS -->
+<section id="replays" class="feature-section alt-bg">
+    <div class="section-header">
+        <span class="section-number">02</span>
+        <h2>Paid <span class="accent">Replays</span></h2>
+        <p class="section-desc">Rooms are automatically saved as replayable content, giving creators long-tail revenue from their best sessions.</p>
+    </div>
+
+    <div class="feature-grid two-col">
+        <div class="feature-detail-card">
+            <div class="detail-header">
+                <i class="fas fa-save"></i>
+                <h3>Auto-Save</h3>
+            </div>
+            <p>When a room ends, if it had a token price or ran for more than 5 minutes, a Replay record is automatically created with the room's metadata: title, genre, duration, peak participant count, and participant history.</p>
+            <div class="detail-specs">
+                <div class="spec"><span class="spec-label">Trigger</span><span class="spec-value">Token price > 0 OR duration > 5 min</span></div>
+                <div class="spec"><span class="spec-label">Data Stored</span><span class="spec-value">Title, genre, duration, participants, history</span></div>
+                <div class="spec"><span class="spec-label">Status</span><span class="spec-value">Available immediately after room ends</span></div>
+            </div>
+        </div>
+        <div class="feature-detail-card">
+            <div class="detail-header">
+                <i class="fas fa-coins"></i>
+                <h3>Token-Gated Playback</h3>
+            </div>
+            <p>Creators set a replay price (typically lower than the live room). Listeners pay tokens to play, which are deducted from their balance and credited to the creator's earnings. Free replays are also supported.</p>
+            <div class="detail-specs">
+                <div class="spec"><span class="spec-label">Pricing</span><span class="spec-value">Creator sets price per replay</span></div>
+                <div class="spec"><span class="spec-label">Revenue</span><span class="spec-value">100% credited to creator earnings</span></div>
+                <div class="spec"><span class="spec-label">Tracking</span><span class="spec-value">TokenLedger + EventsLedger entries</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="browse-preview">
+        <h3 class="preview-title"><i class="fas fa-compass"></i> Browse Replays</h3>
+        <div class="preview-tabs">
+            <span class="tab active">Live</span>
+            <span class="tab">Replays</span>
+        </div>
+        <div class="preview-filters">
+            <span class="filter active">All</span>
+            <span class="filter">Hip-Hop</span>
+            <span class="filter">Rock</span>
+            <span class="filter">Pop</span>
+            <span class="filter">Jazz</span>
+        </div>
+        <div class="preview-sort">
+            <span class="sort-label">Sort:</span>
+            <span class="sort-option active">Newest</span>
+            <span class="sort-option">Top Rated</span>
+            <span class="sort-option">Most Played</span>
+            <span class="sort-option">Price: Low-High</span>
+        </div>
+        <div class="preview-cards">
+            <div class="preview-card promoted">
+                <span class="promoted-badge"><i class="fas fa-rocket"></i> Promoted</span>
+                <div class="preview-card-info">
+                    <span class="pc-title">Friday Night Vibes</span>
+                    <span class="pc-meta"><i class="fas fa-star"></i> 4.8 &middot; 1.2k plays &middot; 47 min</span>
+                    <span class="pc-price"><i class="fas fa-coins"></i> 15 tokens</span>
+                </div>
+            </div>
+            <div class="preview-card gated">
+                <div class="preview-card-info">
+                    <span class="pc-title">R&B Deep Cuts Session</span>
+                    <span class="pc-meta"><i class="fas fa-star"></i> 4.5 &middot; 340 plays &middot; 32 min</span>
+                    <span class="pc-price"><i class="fas fa-coins"></i> 10 tokens</span>
+                </div>
+            </div>
+            <div class="preview-card">
+                <div class="preview-card-info">
+                    <span class="pc-title">Jazz Hour Open Mic</span>
+                    <span class="pc-meta"><i class="fas fa-star"></i> 4.2 &middot; 89 plays &middot; 61 min</span>
+                    <span class="pc-price free">FREE</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- TOKEN ECONOMY -->
+<section id="tokens" class="feature-section">
+    <div class="section-header">
+        <span class="section-number">03</span>
+        <h2>Token <span class="accent">Economy</span></h2>
+        <p class="section-desc">A built-in currency system that powers creator monetization, content gating, and platform engagement.</p>
+    </div>
+
+    <div class="token-flow">
+        <div class="flow-step">
+            <div class="flow-icon earn"><i class="fas fa-gift"></i></div>
+            <h4>Earn</h4>
+            <p>Subscribers receive monthly token grants based on their plan tier. Extra token packs are available for purchase.</p>
+        </div>
+        <div class="flow-arrow"><i class="fas fa-arrow-right"></i></div>
+        <div class="flow-step">
+            <div class="flow-icon spend"><i class="fas fa-ticket-alt"></i></div>
+            <h4>Spend</h4>
+            <p>Use tokens to join gated rooms, play paid replays, or boost your content for more visibility.</p>
+        </div>
+        <div class="flow-arrow"><i class="fas fa-arrow-right"></i></div>
+        <div class="flow-step">
+            <div class="flow-icon cash"><i class="fas fa-money-bill-wave"></i></div>
+            <h4>Cash Out</h4>
+            <p>Creators convert token earnings to USD at $0.03 per token through monthly payouts.</p>
+        </div>
+    </div>
+
+    <div class="feature-grid three-col">
+        <div class="feature-card highlight">
+            <div class="card-icon gold"><i class="fas fa-door-open"></i></div>
+            <h3>Gated Rooms</h3>
+            <p>Creators set a token price for live Verses rooms. Tokens are deducted from the listener and credited to the creator upon joining. Non-subscribers see a prompt to view subscription plans.</p>
+            <div class="card-accent gold-accent"></div>
+        </div>
+        <div class="feature-card highlight">
+            <div class="card-icon gold"><i class="fas fa-play-circle"></i></div>
+            <h3>Paid Replays</h3>
+            <p>Replay token prices are set independently (typically lower than live). Each play generates a token transfer logged in both the TokenLedger and EventsLedger for full auditability.</p>
+            <div class="card-accent gold-accent"></div>
+        </div>
+        <div class="feature-card highlight">
+            <div class="card-icon gold"><i class="fas fa-fire"></i></div>
+            <h3>Token Burn (Boost)</h3>
+            <p>When creators boost replays, those tokens are burned (removed from circulation), creating deflationary pressure and funding platform growth. They don't transfer to anyone.</p>
+            <div class="card-accent gold-accent"></div>
+        </div>
+    </div>
+
+    <div class="detail-callout">
+        <div class="callout-icon"><i class="fas fa-infinity"></i></div>
+        <div class="callout-text">
+            <h4>Tokens Never Expire</h4>
+            <p>Unlike many platforms that expire virtual currency, Wordeth tokens are permanent. Your balance carries forward month after month, so you can save up or spend freely.</p>
+        </div>
+    </div>
+
+    <div class="token-rate-card">
+        <h3>Payout Rate</h3>
+        <div class="rate-display">
+            <span class="rate-tokens"><i class="fas fa-coins"></i> 1 Token</span>
+            <span class="rate-equals">=</span>
+            <span class="rate-usd">$0.03 USD</span>
+        </div>
+        <p>Creators receive monthly payouts. Wordeth retains approximately 62% of subscription revenue to fund platform operations, with the remainder flowing into the token economy.</p>
+    </div>
+</section>
+
+<!-- RATINGS -->
+<section id="ratings" class="feature-section alt-bg">
+    <div class="section-header">
+        <span class="section-number">04</span>
+        <h2>Room <span class="accent">Ratings</span></h2>
+        <p class="section-desc">Attendee-driven quality signals that help listeners discover the best content and reward great creators.</p>
+    </div>
+
+    <div class="feature-grid two-col">
+        <div class="rating-demo">
+            <h3>Post-Room Rating</h3>
+            <p>After spending at least 60 seconds in a room, users see an interactive rating prompt when they leave.</p>
+            <div class="star-demo">
+                <div class="stars-row">
+                    <i class="fas fa-star filled"></i>
+                    <i class="fas fa-star filled"></i>
+                    <i class="fas fa-star filled"></i>
+                    <i class="fas fa-star filled"></i>
+                    <i class="fas fa-star empty"></i>
+                </div>
+                <span class="star-label">4 out of 5</span>
+            </div>
+            <div class="tag-chips">
+                <span class="chip selected"><i class="fas fa-check"></i> Great Host</span>
+                <span class="chip selected"><i class="fas fa-check"></i> Good Music</span>
+                <span class="chip">Lively Chat</span>
+                <span class="chip">Informative</span>
+                <span class="chip selected"><i class="fas fa-check"></i> Entertaining</span>
+                <span class="chip">Professional</span>
+            </div>
+        </div>
+        <div class="feature-detail-card">
+            <div class="detail-header">
+                <i class="fas fa-shield-alt"></i>
+                <h3>Verified Attendance</h3>
+            </div>
+            <p>Only real attendees can rate. The server validates each rating against the room's participant history, preventing fake reviews. A compound unique index ensures one rating per user per room.</p>
+            <div class="detail-specs">
+                <div class="spec"><span class="spec-label">Minimum Time</span><span class="spec-value">60 seconds in room</span></div>
+                <div class="spec"><span class="spec-label">Validation</span><span class="spec-value">Server-side participant history check</span></div>
+                <div class="spec"><span class="spec-label">Duplicates</span><span class="spec-value">Prevented by compound unique index</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="detail-callout">
+        <div class="callout-icon"><i class="fas fa-chart-bar"></i></div>
+        <div class="callout-text">
+            <h4>Dual Aggregation</h4>
+            <p>Each rating updates two averages: the individual replay's rating score AND the creator's overall profile rating. Both are visible on room cards and replay cards throughout the platform.</p>
+        </div>
+    </div>
+</section>
+
+<!-- BOOST -->
+<section id="boost" class="feature-section">
+    <div class="section-header">
+        <span class="section-number">05</span>
+        <h2>Token <span class="accent">Boost</span></h2>
+        <p class="section-desc">Creators invest tokens to promote their replays to the top of browse results, building audience with earned currency.</p>
+    </div>
+
+    <div class="boost-tiers">
+        <div class="tier-card">
+            <div class="tier-header small">
+                <i class="fas fa-rocket"></i>
+                <h3>Small</h3>
+            </div>
+            <div class="tier-price">100 <span>tokens</span></div>
+            <div class="tier-duration">24 hours</div>
+            <p>Quick visibility bump for new replays. Shows the "Promoted" badge for one full day.</p>
+        </div>
+        <div class="tier-card featured-tier">
+            <span class="popular-badge">Popular</span>
+            <div class="tier-header medium">
+                <i class="fas fa-rocket"></i>
+                <h3>Medium</h3>
+            </div>
+            <div class="tier-price">250 <span>tokens</span></div>
+            <div class="tier-duration">3 days</div>
+            <p>Extended promotion window. Great for weekend content that builds momentum over time.</p>
+        </div>
+        <div class="tier-card">
+            <div class="tier-header large">
+                <i class="fas fa-rocket"></i>
+                <h3>Featured</h3>
+            </div>
+            <div class="tier-price">500 <span>tokens</span></div>
+            <div class="tier-duration">7 days</div>
+            <p>Maximum exposure. Full week at the top of browse results with priority placement.</p>
+        </div>
+    </div>
+
+    <div class="feature-grid two-col">
+        <div class="feature-detail-card">
+            <div class="detail-header">
+                <i class="fas fa-bell"></i>
+                <h3>Smart Prompting</h3>
+            </div>
+            <p>The boost modal appears at the right moment: right after a replay is saved, giving creators the option to promote while the content is fresh. A "Boost" button also shows on their own replay cards for the first 3 days.</p>
+        </div>
+        <div class="feature-detail-card">
+            <div class="detail-header">
+                <i class="fas fa-fire-alt"></i>
+                <h3>Deflationary Burn</h3>
+            </div>
+            <p>Boost tokens are burned, not transferred. This creates a healthy deflationary mechanism that benefits the entire ecosystem while giving creators a clear path to reinvest earnings into audience growth.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ACCOUNT TYPES -->
+<section id="accounts" class="feature-section alt-bg">
+    <div class="section-header">
+        <span class="section-number">06</span>
+        <h2>Account <span class="accent">Types</span></h2>
+        <p class="section-desc">Five distinct account types tailored to every role in the music community.</p>
+    </div>
+
+    <div class="screenshot-showcase">
+        <div class="screenshot-frame">
+            <div class="frame-dots"><span></span><span></span><span></span></div>
+            <img src="/features/creator-register.png" alt="Creator registration with account type selection" loading="lazy">
+        </div>
+        <div class="screenshot-caption">Creator registration lets you choose your role and set up your profile</div>
+    </div>
+
+    <div class="account-grid">
+        <div class="account-card">
+            <div class="account-icon fan"><i class="fas fa-headphones"></i></div>
+            <h3>Fan</h3>
+            <span class="account-tag">Default</span>
+            <p>The starting point for all users. Browse rooms, join conversations, discover lyrics, shop merch, and build connections.</p>
+            <ul class="account-perks">
+                <li><i class="fas fa-check"></i> Join any open room</li>
+                <li><i class="fas fa-check"></i> Search lyrics</li>
+                <li><i class="fas fa-check"></i> Shop merch store</li>
+                <li><i class="fas fa-check"></i> Rate rooms</li>
+            </ul>
+        </div>
+        <div class="account-card">
+            <div class="account-icon artist"><i class="fas fa-microphone"></i></div>
+            <h3>Music Artist</h3>
+            <span class="account-tag">Creator</span>
+            <p>For musicians and recording artists. Build your storefront, monetize lyrics, sell merch, and earn from your rooms.</p>
+            <ul class="account-perks">
+                <li><i class="fas fa-check"></i> Official artist storefront</li>
+                <li><i class="fas fa-check"></i> Lyric pack monetization</li>
+                <li><i class="fas fa-check"></i> Merch sales & analytics</li>
+                <li><i class="fas fa-check"></i> Set token prices on rooms</li>
+                <li><i class="fas fa-check"></i> Enter tournaments</li>
+            </ul>
+        </div>
+        <div class="account-card">
+            <div class="account-icon designer"><i class="fas fa-palette"></i></div>
+            <h3>Designer</h3>
+            <span class="account-tag">Creator</span>
+            <p>For graphic designers and visual artists. Upload design templates, build collections, and earn revenue per use.</p>
+            <ul class="account-perks">
+                <li><i class="fas fa-check"></i> Upload design templates</li>
+                <li><i class="fas fa-check"></i> Earn revenue per use</li>
+                <li><i class="fas fa-check"></i> Build your portfolio</li>
+                <li><i class="fas fa-check"></i> Set token prices on rooms</li>
+            </ul>
+        </div>
+        <div class="account-card">
+            <div class="account-icon label"><i class="fas fa-building"></i></div>
+            <h3>Label</h3>
+            <span class="account-tag">Business</span>
+            <p>For record labels and music companies. Manage artist rosters, access partner dashboards, and track revenue.</p>
+            <ul class="account-perks">
+                <li><i class="fas fa-check"></i> Partner dashboard access</li>
+                <li><i class="fas fa-check"></i> Artist roster management</li>
+                <li><i class="fas fa-check"></i> Revenue analytics & heatmaps</li>
+                <li><i class="fas fa-check"></i> Bulk merch operations</li>
+            </ul>
+        </div>
+        <div class="account-card highlight-card">
+            <div class="account-icon creator"><i class="fas fa-bolt"></i></div>
+            <h3>Creator</h3>
+            <span class="account-tag new">New</span>
+            <p>For DJs, hosts, teachers, and professionals who aren't traditional music artists but want to host, monetize, and grow.</p>
+            <ul class="account-perks">
+                <li><i class="fas fa-check"></i> Host & monetize rooms</li>
+                <li><i class="fas fa-check"></i> Set token prices</li>
+                <li><i class="fas fa-check"></i> Earn from paid replays</li>
+                <li><i class="fas fa-check"></i> Creator dashboard</li>
+                <li><i class="fas fa-check"></i> Boost content</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- SUBSCRIPTIONS -->
+<section id="subscriptions" class="feature-section">
+    <div class="section-header">
+        <span class="section-number">07</span>
+        <h2>Plans & <span class="accent">Pricing</span></h2>
+        <p class="section-desc">Configuration-driven subscription plans with role-based entitlements and monthly token grants.</p>
+    </div>
+
+    <div class="screenshot-showcase">
+        <div class="screenshot-frame">
+            <div class="frame-dots"><span></span><span></span><span></span></div>
+            <img src="/features/pricing.png" alt="Plans and pricing page" loading="lazy">
+        </div>
+        <div class="screenshot-caption">Flexible pricing tiers for Fans, Designers, Artists, and Labels</div>
+    </div>
+
+    <div class="feature-grid three-col">
+        <div class="feature-card">
+            <div class="card-icon mint"><i class="fas fa-layer-group"></i></div>
+            <h3>Tiered Plans</h3>
+            <p>Free, Fan+, and Creator tiers with monthly/yearly billing. Each plan includes different token grants, room limits, and feature access.</p>
+        </div>
+        <div class="feature-card">
+            <div class="card-icon purple"><i class="fas fa-coins"></i></div>
+            <h3>Token Grants</h3>
+            <p>Paid subscribers receive monthly token grants automatically. Higher tiers get more tokens, plus the ability to purchase extra token packs.</p>
+        </div>
+        <div class="feature-card">
+            <div class="card-icon pink"><i class="fas fa-lock-open"></i></div>
+            <h3>RBAC Entitlements</h3>
+            <p>Role-Based Access Control middleware enforces feature access by account type and subscription tier. Clean, configuration-driven entitlement checks.</p>
+        </div>
+    </div>
+
+    <div class="detail-callout">
+        <div class="callout-icon"><i class="fas fa-credit-card"></i></div>
+        <div class="callout-text">
+            <h4>Native Billing Engine</h4>
+            <p>Built-in payment processing with an integrated payment gateway. No reliance on third-party subscription management — full control over billing cycles, upgrades, and downgrades.</p>
+        </div>
+    </div>
+</section>
+
+<!-- LYRICS -->
+<section id="lyrics" class="feature-section alt-bg">
+    <div class="section-header">
+        <span class="section-number">08</span>
+        <h2>Lyrics <span class="accent">Search</span></h2>
+        <p class="section-desc">Discover the words behind the music with instant access to lyrics, artist information, and more.</p>
+    </div>
+
+    <div class="screenshot-showcase">
+        <div class="screenshot-frame">
+            <div class="frame-dots"><span></span><span></span><span></span></div>
+            <img src="/features/lyrics.png" alt="Lyrics search page" loading="lazy">
+        </div>
+        <div class="screenshot-caption">Clean search interface for finding lyrics by song, artist, or album</div>
+    </div>
+
+    <div class="feature-grid two-col">
+        <div class="feature-detail-card">
+            <div class="detail-header">
+                <i class="fas fa-search"></i>
+                <h3>Multi-Source Search</h3>
+            </div>
+            <p>Server-side search integrates with Musixmatch API as the primary source, with fallback to LRCLIB and Lyrics.ovh for comprehensive coverage. Results include synced lyrics when available for karaoke mode.</p>
+        </div>
+        <div class="feature-detail-card">
+            <div class="detail-header">
+                <i class="fas fa-compact-disc"></i>
+                <h3>In-Room Karaoke</h3>
+            </div>
+            <p>Lyrics display syncs with YouTube audio playback inside Verses rooms. The whole room sees the same lyrics, highlighted line by line, making group karaoke sessions seamless.</p>
+        </div>
+    </div>
+</section>
+
+<!-- MERCH -->
+<section id="merch" class="feature-section">
+    <div class="section-header">
+        <span class="section-number">09</span>
+        <h2>Artist <span class="accent">Merch Store</span></h2>
+        <p class="section-desc">Custom merchandise designed with your favorite artists' templates, powered by InkSoft integration.</p>
+    </div>
+
+    <div class="screenshot-showcase">
+        <div class="screenshot-frame">
+            <div class="frame-dots"><span></span><span></span><span></span></div>
+            <img src="/features/merch.png" alt="Artist Merch Store" loading="lazy">
+        </div>
+        <div class="screenshot-caption">Browse merch by artist type — Music Artists, Designers, and Labels</div>
+    </div>
+
+    <div class="feature-grid three-col">
+        <div class="feature-card">
+            <div class="card-icon mint"><i class="fas fa-tshirt"></i></div>
+            <h3>Artist Storefronts</h3>
+            <p>Each artist and designer gets their own storefront showcasing their merch templates and collections.</p>
+        </div>
+        <div class="feature-card">
+            <div class="card-icon purple"><i class="fas fa-paint-brush"></i></div>
+            <h3>Custom Design</h3>
+            <p>Fans can customize designs with artist templates, choosing colors, sizes, and placements before ordering.</p>
+        </div>
+        <div class="feature-card">
+            <div class="card-icon pink"><i class="fas fa-fire"></i></div>
+            <h3>Featured This Week</h3>
+            <p>Curated weekly featured merch highlights trending designs and new releases from creators.</p>
+        </div>
+    </div>
+</section>
+
+<!-- TOURNAMENTS -->
+<section id="tournaments" class="feature-section alt-bg">
+    <div class="section-header">
+        <span class="section-number">10</span>
+        <h2>Verses <span class="accent">Tournaments</span></h2>
+        <p class="section-desc">Competitive bracket-style tournaments where artists submit verses and fans vote head-to-head.</p>
+    </div>
+
+    <div class="screenshot-showcase">
+        <div class="screenshot-frame">
+            <div class="frame-dots"><span></span><span></span><span></span></div>
+            <img src="/features/tournaments.png" alt="Verses Tournaments page" loading="lazy">
+        </div>
+        <div class="screenshot-caption">Bracket-style tournament seasons with rounds, matches, and fan voting</div>
+    </div>
+
+    <div class="feature-grid three-col">
+        <div class="feature-card">
+            <div class="card-icon mint"><i class="fas fa-trophy"></i></div>
+            <h3>Seasonal Brackets</h3>
+            <p>Organized tournament seasons with multiple rounds. Artists progress through brackets as fans vote on head-to-head matchups.</p>
+        </div>
+        <div class="feature-card">
+            <div class="card-icon purple"><i class="fas fa-vote-yea"></i></div>
+            <h3>Fan Voting</h3>
+            <p>Fans decide who advances. Vote on matches, react to submissions, and watch your favorites compete for the crown.</p>
+        </div>
+        <div class="feature-card">
+            <div class="card-icon pink"><i class="fas fa-medal"></i></div>
+            <h3>Leaderboards & Sponsors</h3>
+            <p>Track standings on the leaderboard. Sponsors support seasons, adding prizes and promotional opportunities for winners.</p>
+        </div>
+    </div>
+</section>
+
+<!-- PARTNERS -->
+<section id="partners" class="feature-section">
+    <div class="section-header">
+        <span class="section-number">11</span>
+        <h2>Partner & Admin <span class="accent">Dashboards</span></h2>
+        <p class="section-desc">Comprehensive analytics and management tools for labels, advertisers, and platform administrators.</p>
+    </div>
+
+    <div class="screenshot-showcase">
+        <div class="screenshot-frame">
+            <div class="frame-dots"><span></span><span></span><span></span></div>
+            <img src="/features/partner-dashboard.png" alt="Label Partner Dashboard Login" loading="lazy">
+        </div>
+        <div class="screenshot-caption">Partner portal with real-time revenue and sales analytics for labels</div>
+    </div>
+
+    <div class="feature-grid three-col">
+        <div class="feature-card">
+            <div class="card-icon mint"><i class="fas fa-chart-line"></i></div>
+            <h3>Label Dashboard</h3>
+            <p>Revenue overviews, artist breakdowns, and sales heatmaps. Partners see real-time analytics across their entire roster.</p>
+        </div>
+        <div class="feature-card">
+            <div class="card-icon purple"><i class="fas fa-bullhorn"></i></div>
+            <h3>Ad Platform</h3>
+            <p>Self-serve advertising system with contextual keyword-based targeting. Advertisers create, manage, and track campaigns with admin approval flow.</p>
+        </div>
+        <div class="feature-card">
+            <div class="card-icon pink"><i class="fas fa-chart-bar"></i></div>
+            <h3>Usage Analytics</h3>
+            <p>Event tracking middleware captures platform usage. Admin dashboards visualize engagement, growth, and system health metrics.</p>
+        </div>
+    </div>
+
+    <div class="feature-grid two-col">
+        <div class="feature-detail-card">
+            <div class="detail-header">
+                <i class="fas fa-user-shield"></i>
+                <h3>Creator Dashboard</h3>
+            </div>
+            <p>Artists, designers, and creators access their own dashboard with profile management, payout information, sales history, and an events ledger tracking every financial transaction.</p>
+        </div>
+        <div class="feature-detail-card">
+            <div class="detail-header">
+                <i class="fas fa-cogs"></i>
+                <h3>Admin Controls</h3>
+            </div>
+            <p>Platform administrators manage ad approvals, user accounts, tournament seasons, privacy compliance, and system-wide settings through dedicated admin interfaces.</p>
+        </div>
+    </div>
+</section>
+
+<!-- PRIVACY & TRUST -->
+<section id="privacy" class="feature-section alt-bg">
+    <div class="section-header">
+        <span class="section-number">12</span>
+        <h2>Privacy & <span class="accent">Trust</span></h2>
+        <p class="section-desc">Robust security measures and transparent policies that protect users and their data.</p>
+    </div>
+
+    <div class="screenshot-showcase">
+        <div class="screenshot-frame">
+            <div class="frame-dots"><span></span><span></span><span></span></div>
+            <img src="/features/privacy.png" alt="Privacy Policy page" loading="lazy">
+        </div>
+        <div class="screenshot-caption">Comprehensive privacy policy covering data collection, usage, and user rights</div>
+    </div>
+
+    <div class="feature-grid three-col">
+        <div class="feature-card">
+            <div class="card-icon mint"><i class="fas fa-lock"></i></div>
+            <h3>JWT Authentication</h3>
+            <p>Secure token-based authentication with 7-day expiry. Passwords hashed with bcrypt. Separate auth flows for users, advertisers, and partners.</p>
+        </div>
+        <div class="feature-card">
+            <div class="card-icon purple"><i class="fas fa-shield-alt"></i></div>
+            <h3>Security Headers</h3>
+            <p>Helmet.js enforces Content Security Policy. Express-rate-limit prevents abuse. CORS configured for trusted origins. Trust proxy enabled for accurate client identification.</p>
+        </div>
+        <div class="feature-card">
+            <div class="card-icon pink"><i class="fas fa-file-contract"></i></div>
+            <h3>Legal Compliance</h3>
+            <p>Full Privacy Policy and Terms of Service. Cookie consent banner with granular controls. Privacy admin tools for data management and compliance requests.</p>
+        </div>
+    </div>
+
+    <div class="feature-grid two-col">
+        <div class="feature-detail-card">
+            <div class="detail-header">
+                <i class="fas fa-cookie-bite"></i>
+                <h3>Cookie Controls</h3>
+            </div>
+            <p>Users can choose between "Accept All" and "Essential Only" cookie preferences. The persistent cookie banner ensures informed consent before any non-essential tracking begins.</p>
+        </div>
+        <div class="feature-detail-card">
+            <div class="detail-header">
+                <i class="fas fa-book"></i>
+                <h3>Events Ledger</h3>
+            </div>
+            <p>An immutable events ledger tracks all financial transactions: token purchases, room earnings, replay plays, boost purchases, and payout calculations. Full audit trail for transparency.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture" class="feature-section">
+    <div class="section-header">
+        <span class="section-number">13</span>
+        <h2>Under the <span class="accent">Hood</span></h2>
+        <p class="section-desc">The technical foundation that makes it all work reliably at scale.</p>
+    </div>
+
+    <div class="arch-grid">
+        <div class="arch-item">
+            <div class="arch-icon"><i class="fab fa-node-js"></i></div>
+            <h4>Node.js + Express</h4>
+            <p>HTTP server with modular API routes</p>
+        </div>
+        <div class="arch-item">
+            <div class="arch-icon"><i class="fas fa-plug"></i></div>
+            <h4>Socket.io</h4>
+            <p>Real-time WebSocket signaling</p>
+        </div>
+        <div class="arch-item">
+            <div class="arch-icon"><i class="fas fa-database"></i></div>
+            <h4>MongoDB + Mongoose</h4>
+            <p>Document database with ODM</p>
+        </div>
+        <div class="arch-item">
+            <div class="arch-icon"><i class="fas fa-server"></i></div>
+            <h4>Redis</h4>
+            <p>Room state persistence across restarts</p>
+        </div>
+        <div class="arch-item">
+            <div class="arch-icon"><i class="fas fa-broadcast-tower"></i></div>
+            <h4>Agora RTC</h4>
+            <p>Scalable audio/video communication</p>
+        </div>
+        <div class="arch-item">
+            <div class="arch-icon"><i class="fas fa-cloud"></i></div>
+            <h4>Object Storage</h4>
+            <p>Replit Object Storage for assets</p>
+        </div>
+    </div>
+</section>
+
+<footer class="features-footer">
+    <div class="footer-brand">
+        <span class="footer-logo">W</span>
+        <span class="footer-name">Wordeth</span>
+    </div>
+    <p>Where Music Comes Alive</p>
+    <div class="footer-links">
+        <a href="/verses.html">Verses</a>
+        <a href="/lyrics.html">Lyrics</a>
+        <a href="/merch.html">Merch</a>
+        <a href="/pricing.html">Pricing</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
+    </div>
+</footer>
+
+</body>
+</html>

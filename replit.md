@@ -69,6 +69,11 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Overview**: Competitive bracket-style tournaments for artists featuring fan voting, sponsorship, and leaderboards.
 - **Models**: Comprehensive models for seasons, rounds, submissions, matches, votes, reactions, leaderboards, sponsors, and metrics.
 
+### Features Showcase Page
+- **Path**: `/features.html` with `/css/features.css`
+- **Screenshots**: Auto-captured via Puppeteer to `public/features/` (12 PNG screenshots of platform pages)
+- **Content**: Comprehensive visual showcase of all platform features, organized into 13 sections with embedded screenshots, CSS component recreations, and the Wordeth design system
+
 ### Key Features Architecture
 - **Verses (Audio Rooms)**: Uses Agora RTC SDK in `rtc` mode for scalable audio/video, with Socket.io for room management. Supports server-side token generation, Web Audio API for filters, and listener-first stage access with promotion paths.
 - **Auth UX**: Custom styling for autofill, rounded inputs, and focus states.
