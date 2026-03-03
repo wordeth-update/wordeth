@@ -2618,6 +2618,28 @@ body.in-room * {
     color: var(--mint, #00E5A8);
 }
 
+.room-card-gated {
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.08), inset 0 1px 0 rgba(255, 215, 0, 0.06);
+}
+
+.room-card-gated:hover {
+    border-color: rgba(255, 215, 0, 0.45);
+    box-shadow: 0 0 18px rgba(255, 215, 0, 0.12), inset 0 1px 0 rgba(255, 215, 0, 0.08);
+}
+
+.token-gate-no-sub .token-gate-warning {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 1rem;
+}
+
+.token-gate-no-sub .token-gate-warning i {
+    color: #ffd700;
+    margin-right: 0.3rem;
+}
+
 /* ── Token Gate Modal ────────────────────────────────────── */
 .token-gate-body {
     text-align: center;

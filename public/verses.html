@@ -522,6 +522,13 @@
                         <a href="verses.html#buy-tokens" class="create-btn" id="token-gate-buy"><i class="fas fa-coins"></i> Buy Tokens</a>
                     </div>
                 </div>
+                <div class="token-gate-no-sub hidden" id="token-gate-no-sub">
+                    <p class="token-gate-warning"><i class="fas fa-lock"></i> This room requires tokens to enter. Subscribe to a plan to receive monthly tokens and unlock gated rooms.</p>
+                    <div class="token-gate-actions">
+                        <button class="cancel-btn" id="token-gate-cancel-3">Cancel</button>
+                        <a href="pricing.html" class="create-btn"><i class="fas fa-crown"></i> View Plans</a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -589,7 +596,7 @@
                     <label for="initial-song">Topic (Optional)</label>
                     <input type="text" id="initial-song" name="initial-song" placeholder="What's the discussion about?">
                 </div>
-                <div class="form-group">
+                <div class="form-group" id="token-price-group" style="display:none;">
                     <label for="room-token-price">Token Price (0 = Free)</label>
                     <input type="number" id="room-token-price" name="room-token-price" placeholder="0" min="0" value="0">
                 </div>

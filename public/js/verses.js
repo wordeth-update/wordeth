@@ -1104,7 +1104,8 @@ class AudioRoomsManager {
         const joinBtn = this._el('button', {className: 'join-room-btn primary'}, this._icon('fas fa-play'), this._text(room.isLocked ? ' Locked' : ' Join Room'));
         if (room.isLocked) joinBtn.disabled = true;
 
-        const card = this._el('div', {className: 'room-card'},
+        const cardClass = tokenPrice > 0 ? 'room-card room-card-gated' : 'room-card';
+        const card = this._el('div', {className: cardClass},
             this._el('div', {className: 'room-preview'}, participantsPreview, roomInfo),
             this._el('div', {className: 'room-actions'}, joinBtn));
         card.dataset.roomId = room.id;
@@ -1310,6 +1311,17 @@ class AudioRoomsManager {
             console.log('[CreateRoom] re-queried modal:', !!this.createRoomModal);
         }
         if (this.createRoomModal) {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const acctType = (user.accountType || 'fan').toLowerCase();
+            const isCreator = ['artist', 'designer', 'label'].includes(acctType);
+            const tokenGroup = document.getElementById('token-price-group');
+            if (tokenGroup) {
+                tokenGroup.style.display = isCreator ? '' : 'none';
+                if (!isCreator) {
+                    const priceInput = document.getElementById('room-token-price');
+                    if (priceInput) priceInput.value = '0';
+                }
+            }
             this.createRoomModal.classList.add('active');
             console.log('[CreateRoom] modal active class added');
         } else {
@@ -2707,23 +2719,37 @@ class AudioRoomsManager {
         const modal = document.getElementById('token-gate-modal');
         if (!modal) { this.joinRoom(roomId); return; }
 
-        const balance = await this._fetchTokenBalance();
-        const sufficient = balance >= tokenPrice;
-
-        document.getElementById('token-gate-price').textContent = tokenPrice;
-        document.getElementById('token-gate-user-balance').textContent = balance;
-
+        const authToken = localStorage.getItem('authToken');
         const actionsDiv = document.getElementById('token-gate-actions');
         const insufficientDiv = document.getElementById('token-gate-insufficient');
+        const noSubDiv = document.getElementById('token-gate-no-sub');
 
-        if (sufficient) {
-            actionsDiv.classList.remove('hidden');
-            insufficientDiv.classList.add('hidden');
-        } else {
+        document.getElementById('token-gate-price').textContent = tokenPrice;
+
+        if (!authToken) {
             actionsDiv.classList.add('hidden');
-            insufficientDiv.classList.remove('hidden');
-            document.getElementById('token-gate-needed').textContent = tokenPrice;
-            document.getElementById('token-gate-have').textContent = balance;
+            insufficientDiv.classList.add('hidden');
+            noSubDiv.classList.remove('hidden');
+            document.getElementById('token-gate-user-balance').textContent = '0';
+        } else {
+            const balance = await this._fetchTokenBalance();
+            const sufficient = balance >= tokenPrice;
+            document.getElementById('token-gate-user-balance').textContent = balance;
+            noSubDiv.classList.add('hidden');
+
+            if (sufficient) {
+                actionsDiv.classList.remove('hidden');
+                insufficientDiv.classList.add('hidden');
+            } else if (balance === 0) {
+                actionsDiv.classList.add('hidden');
+                insufficientDiv.classList.add('hidden');
+                noSubDiv.classList.remove('hidden');
+            } else {
+                actionsDiv.classList.add('hidden');
+                insufficientDiv.classList.remove('hidden');
+                document.getElementById('token-gate-needed').textContent = tokenPrice;
+                document.getElementById('token-gate-have').textContent = balance;
+            }
         }
 
         modal.classList.add('active');
@@ -2733,6 +2759,7 @@ class AudioRoomsManager {
             confirmBtn?.removeEventListener('click', onConfirm);
             cancelBtn?.removeEventListener('click', onCancel);
             cancelBtn2?.removeEventListener('click', onCancel);
+            cancelBtn3?.removeEventListener('click', onCancel);
         };
 
         const onConfirm = () => { cleanup(); this.joinRoom(roomId); };
@@ -2741,10 +2768,12 @@ class AudioRoomsManager {
         const confirmBtn = document.getElementById('token-gate-confirm');
         const cancelBtn = document.getElementById('token-gate-cancel');
         const cancelBtn2 = document.getElementById('token-gate-cancel-2');
+        const cancelBtn3 = document.getElementById('token-gate-cancel-3');
 
         confirmBtn?.addEventListener('click', onConfirm);
         cancelBtn?.addEventListener('click', onCancel);
         cancelBtn2?.addEventListener('click', onCancel);
+        cancelBtn3?.addEventListener('click', onCancel);
     }
 
     async checkRoomLockStatus(roomId) {
