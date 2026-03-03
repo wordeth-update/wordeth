@@ -2485,10 +2485,14 @@ class AudioRoomsManager {
         playBtn.dataset.tokenPrice = tokenPrice;
         actionsDiv.appendChild(playBtn);
 
-        if (isOwn && isCreator) {
-            const boostBtn = this._el('button', {className: 'boost-replay-btn secondary-btn'}, this._icon('fas fa-rocket'), this._text(' Boost'));
-            boostBtn.dataset.replayId = replay._id;
-            actionsDiv.appendChild(boostBtn);
+        if (isOwn && isCreator && !isBoosted) {
+            const replayAge = Date.now() - new Date(replay.createdAt).getTime();
+            const threeDays = 3 * 24 * 60 * 60 * 1000;
+            if (replayAge < threeDays) {
+                const boostBtn = this._el('button', {className: 'boost-replay-btn secondary-btn'}, this._icon('fas fa-rocket'), this._text(' Boost'));
+                boostBtn.dataset.replayId = replay._id;
+                actionsDiv.appendChild(boostBtn);
+            }
         }
 
         const cardClass = isBoosted ? 'room-card replay-card replay-boosted' : (tokenPrice > 0 ? 'room-card replay-card room-card-gated' : 'room-card replay-card');
@@ -3792,6 +3796,14 @@ class AudioRoomsManager {
             if (mixing) {
                 this.addChatMessage('System', `${userName} is sharing YouTube audio with the room.`, true);
             }
+        });
+
+        sock.on('replay-saved', (data) => {
+            console.log('[Replay] Auto-saved replay:', data);
+            this._showToast('Your room was saved as a replay!', 'success');
+            setTimeout(() => {
+                if (data.replayId) this._showBoostModal(data.replayId);
+            }, 1500);
         });
 
         sock.on('participants-list', (data) => {
