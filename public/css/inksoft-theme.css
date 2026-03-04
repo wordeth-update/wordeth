@@ -1682,3 +1682,28 @@ store-cart .cart-page {
   color: #000000 !important;
   -webkit-text-fill-color: #000000 !important;
 }
+
+#body .r14,
+#body .r16,
+#body .r18,
+#body .r20,
+#body .text-grey-secondary,
+#body .text-grey-primary,
+#body .mat-content span,
+#body .mat-content div,
+#body .bg-grey-hover,
+#body .bg-grey-hover *,
+#body [class*="bg-grey"] span,
+#body [class*="bg-grey"] div,
+#body .mat-expansion-panel-header span,
+#body .mat-expansion-panel-header div,
+#body [class*="cdk-accordion-child"] span,
+#body [class*="cdk-accordion-child"] div {
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
+}
+
+#body .text-grey-secondary {
+  color: #666666 !important;
+  -webkit-text-fill-color: #666666 !important;
+}
