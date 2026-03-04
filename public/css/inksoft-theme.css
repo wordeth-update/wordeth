@@ -1605,57 +1605,80 @@ store-cart .cart-page {
 }
 
 
-/* ====== DESIGN STUDIO FONT PICKER FIX ======
-   The font list panel has a white/light background (InkSoft default).
-   Our dark theme forces white text, making font names invisible.
-   Target font list items inside the design studio to use dark text.
+/* ====== DESIGN STUDIO LIGHT-PANEL TEXT FIX ======
+   Several InkSoft design studio panels (font picker, text options,
+   clipart browser) render with white/light backgrounds. Our dark
+   theme forces white text globally, making content invisible.
+   Force dark text on every element inside any panel that sits on
+   a white or light surface.
 ============================================= */
 
 #body .mat-expansion-panel,
+#body .mat-expansion-panel *,
 #body .mat-expansion-panel-header,
+#body .mat-expansion-panel-header *,
 #body .mat-expansion-panel-body,
-#body .mat-accordion .mat-expansion-panel {
-  color: #1a1a1a !important;
-  -webkit-text-fill-color: #1a1a1a !important;
-}
-
-#body .mat-expansion-panel-header-title,
-#body .mat-expansion-panel-header-description,
-#body .mat-expansion-panel .mat-content,
-#body .mat-expansion-panel-header .mat-content {
-  color: #1a1a1a !important;
-  -webkit-text-fill-color: #1a1a1a !important;
-}
-
-#body .font-list-item,
-#body .font-item,
-#body .font-name,
-#body .font-family-name,
-#body [class*="font-list"] span,
-#body [class*="font-list"] div,
-#body [class*="font-picker"] span,
-#body [class*="font-picker"] div,
-#body [class*="font-select"] span,
-#body [class*="font-select"] div {
+#body .mat-expansion-panel-body *,
+#body .mat-accordion,
+#body .mat-accordion * {
   color: #1a1a1a !important;
   -webkit-text-fill-color: #1a1a1a !important;
 }
 
 #body .mat-expansion-panel .mat-expansion-indicator::after {
   color: #666666 !important;
-  -webkit-text-fill-color: #666666 !important;
+  border-color: #666666 !important;
+}
+
+#body .mat-tab-label,
+#body .mat-tab-label *,
+#body .mat-tab-link,
+#body .mat-tab-link *,
+#body .mdc-tab,
+#body .mdc-tab *,
+#body .mdc-tab__text-label {
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
 }
 
 #body .ds-side-panel .mat-expansion-panel,
+#body .ds-side-panel .mat-expansion-panel *,
 #body .ds-sidebar .mat-expansion-panel,
+#body .ds-sidebar .mat-expansion-panel *,
 #body .ds-side-panel .mat-accordion,
-#body .ds-sidebar .mat-accordion {
+#body .ds-side-panel .mat-accordion * {
   color: #1a1a1a !important;
   -webkit-text-fill-color: #1a1a1a !important;
 }
 
-#body .ds-side-panel .mat-expansion-panel *,
-#body .ds-sidebar .mat-expansion-panel * {
+#body [class*="font-list"],
+#body [class*="font-list"] *,
+#body [class*="font-picker"],
+#body [class*="font-picker"] *,
+#body [class*="font-select"],
+#body [class*="font-select"] *,
+#body [class*="text-option"],
+#body [class*="text-option"] *,
+#body [class*="text-panel"],
+#body [class*="text-panel"] * {
   color: #1a1a1a !important;
   -webkit-text-fill-color: #1a1a1a !important;
+}
+
+#body .mat-mdc-list-item,
+#body .mat-mdc-list-item *,
+#body .mat-list-item,
+#body .mat-list-item *,
+#body .mdc-list-item,
+#body .mdc-list-item * {
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
+}
+
+#body .mat-mdc-list-item:hover,
+#body .mat-mdc-list-item:hover *,
+#body .mat-list-item:hover,
+#body .mat-list-item:hover * {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
 }
