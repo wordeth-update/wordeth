@@ -1603,3 +1603,59 @@ store-cart .cart-page {
 #body .qty-btn:hover {
   background: rgba(0, 229, 168, 0.15);
 }
+
+
+/* ====== DESIGN STUDIO FONT PICKER FIX ======
+   The font list panel has a white/light background (InkSoft default).
+   Our dark theme forces white text, making font names invisible.
+   Target font list items inside the design studio to use dark text.
+============================================= */
+
+#body .mat-expansion-panel,
+#body .mat-expansion-panel-header,
+#body .mat-expansion-panel-body,
+#body .mat-accordion .mat-expansion-panel {
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
+}
+
+#body .mat-expansion-panel-header-title,
+#body .mat-expansion-panel-header-description,
+#body .mat-expansion-panel .mat-content,
+#body .mat-expansion-panel-header .mat-content {
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
+}
+
+#body .font-list-item,
+#body .font-item,
+#body .font-name,
+#body .font-family-name,
+#body [class*="font-list"] span,
+#body [class*="font-list"] div,
+#body [class*="font-picker"] span,
+#body [class*="font-picker"] div,
+#body [class*="font-select"] span,
+#body [class*="font-select"] div {
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
+}
+
+#body .mat-expansion-panel .mat-expansion-indicator::after {
+  color: #666666 !important;
+  -webkit-text-fill-color: #666666 !important;
+}
+
+#body .ds-side-panel .mat-expansion-panel,
+#body .ds-sidebar .mat-expansion-panel,
+#body .ds-side-panel .mat-accordion,
+#body .ds-sidebar .mat-accordion {
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
+}
+
+#body .ds-side-panel .mat-expansion-panel *,
+#body .ds-sidebar .mat-expansion-panel * {
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
+}
