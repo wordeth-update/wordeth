@@ -169,47 +169,47 @@ html {
   transition: all 0.3s ease;
 }
 
-#body button.mat-raised-button:not(.mat-expansion-panel-header),
-#body button.mat-mdc-raised-button:not(.mat-expansion-panel-header),
-#body button.mat-mdc-unelevated-button:not(.mat-expansion-panel-header) {
+#body button.mat-raised-button,
+#body button.mat-mdc-raised-button,
+#body button.mat-mdc-unelevated-button {
   background: linear-gradient(135deg, #00E5A8 0%, #8B2FFF 100%) !important;
   color: #060409 !important;
   -webkit-text-fill-color: #060409 !important;
   box-shadow: 0 4px 15px rgba(0, 229, 168, 0.35);
 }
 
-#body button.mat-raised-button:not(.mat-expansion-panel-header):hover,
-#body button.mat-mdc-raised-button:not(.mat-expansion-panel-header):hover,
-#body button.mat-mdc-unelevated-button:not(.mat-expansion-panel-header):hover {
+#body button.mat-raised-button:hover,
+#body button.mat-mdc-raised-button:hover,
+#body button.mat-mdc-unelevated-button:hover {
   box-shadow: 0 8px 24px rgba(0, 229, 168, 0.5);
   transform: translateY(-2px);
 }
 
-#body button.mat-flat-button:not(.mat-expansion-panel-header),
-#body button.mat-mdc-button:not(.mat-mdc-icon-button):not(.mat-expansion-panel-header),
-#body button.mdc-button:not(.mat-expansion-panel-header) {
+#body button.mat-flat-button,
+#body button.mat-mdc-button:not(.mat-mdc-icon-button),
+#body button.mdc-button {
   background: linear-gradient(135deg, #00E5A8 0%, #8B2FFF 100%) !important;
   color: #060409 !important;
   -webkit-text-fill-color: #060409 !important;
 }
 
-#body button.mat-flat-button:not(.mat-expansion-panel-header):hover,
-#body button.mat-mdc-button:not(.mat-mdc-icon-button):not(.mat-expansion-panel-header):hover,
-#body button.mdc-button:not(.mat-expansion-panel-header):hover {
+#body button.mat-flat-button:hover,
+#body button.mat-mdc-button:not(.mat-mdc-icon-button):hover,
+#body button.mdc-button:hover {
   box-shadow: 0 8px 24px rgba(0, 229, 168, 0.5);
   transform: translateY(-2px);
 }
 
-#body button.mat-stroked-button:not(.mat-expansion-panel-header),
-#body button.mat-mdc-outlined-button:not(.mat-expansion-panel-header) {
+#body button.mat-stroked-button,
+#body button.mat-mdc-outlined-button {
   border: 2px solid #00E5A8 !important;
   color: #00E5A8 !important;
   -webkit-text-fill-color: #00E5A8 !important;
   background: transparent !important;
 }
 
-#body button.mat-stroked-button:not(.mat-expansion-panel-header):hover,
-#body button.mat-mdc-outlined-button:not(.mat-expansion-panel-header):hover {
+#body button.mat-stroked-button:hover,
+#body button.mat-mdc-outlined-button:hover {
   background: linear-gradient(135deg, #00E5A8 0%, #8B2FFF 100%) !important;
   color: #060409 !important;
   -webkit-text-fill-color: #060409 !important;
@@ -1064,8 +1064,8 @@ product-detail .store-page {
 
 /* ====== DESIGN STUDIO — All buttons gradient ====== */
 
-#body button:not(.mat-expansion-panel-header),
-#body [role="button"]:not(.mat-expansion-panel-header),
+#body button,
+#body [role="button"],
 #body a.mat-button,
 #body a.mat-raised-button,
 #body a.mat-flat-button,
@@ -1079,8 +1079,8 @@ product-detail .store-page {
   transition: all 0.3s ease !important;
 }
 
-#body button:not(.mat-expansion-panel-header):hover,
-#body [role="button"]:not(.mat-expansion-panel-header):hover,
+#body button:hover,
+#body [role="button"]:hover,
 #body a.mat-button:hover,
 #body a.mdc-button:hover {
   box-shadow: 0 8px 24px rgba(0, 229, 168, 0.5) !important;
@@ -1683,20 +1683,51 @@ store-cart .cart-page {
   -webkit-text-fill-color: #000000 !important;
 }
 
-#body .mat-expansion-panel-header,
-#body .mat-expansion-panel-header.bg-grey-hover,
-#body .mat-expansion-panel-header.mat-focus-indicator {
-  background: transparent !important;
-  background-image: none !important;
+#body .mat-expansion-panel {
+  overflow: hidden !important;
+  border: none !important;
   box-shadow: none !important;
-  transform: none !important;
 }
 
-#body .mat-expansion-panel-header:hover,
-#body .mat-expansion-panel-header.bg-grey-hover:hover {
-  background: rgba(0, 0, 0, 0.04) !important;
+#body .mat-expansion-panel::before,
+#body .mat-expansion-panel::after {
+  display: none !important;
+}
+
+#body .mat-expansion-panel-header {
+  border: none !important;
+  outline: none !important;
+}
+
+#body .mat-accordion .mat-expansion-panel {
+  border: none !important;
   box-shadow: none !important;
-  transform: none !important;
+  overflow: hidden !important;
+}
+
+#body .mat-accordion .mat-expansion-panel + .mat-expansion-panel {
+  border-top: none !important;
+}
+
+#body .mat-expansion-panel .mat-expansion-panel-header {
+  border-bottom: none !important;
+}
+
+#body .mat-expansion-panel-spacing {
+  margin: 0 !important;
+}
+
+#body .mat-accordion > *,
+#body .mat-accordion .mat-expansion-panel-header,
+#body .mat-accordion .mat-expansion-panel-body {
+  border: none !important;
+  outline: none !important;
+}
+
+#body .mat-divider,
+#body .mat-expansion-panel .mat-divider,
+#body hr {
+  display: none !important;
 }
 
 #body .r14,
