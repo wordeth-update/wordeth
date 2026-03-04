@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+function _initProfile() {
     const token = localStorage.getItem('authToken');
     if (!token) {
         window.location.href = '/signin.html';
@@ -432,7 +432,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadProfile();
     loadTabContent('history');
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _initProfile);
+} else {
+    _initProfile();
+}
 
 function viewUserProfile(userId) {
     if (!userId) return;

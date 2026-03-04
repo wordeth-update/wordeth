@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', async () => {
+async function _initCreatorDashboard() {
     const token = localStorage.getItem('authToken');
     if (!token) {
         window.location.href = '/creator-register.html';
@@ -41,7 +41,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setupTabs();
     setupLogout();
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _initCreatorDashboard);
+} else {
+    _initCreatorDashboard();
+}
 
 async function loadTokenEarnings(token) {
     try {

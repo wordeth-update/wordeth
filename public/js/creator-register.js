@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+function _initCreatorRegister() {
     const token = localStorage.getItem('authToken');
     if (token) {
         const userData = localStorage.getItem('user');
@@ -102,4 +102,10 @@ document.addEventListener('DOMContentLoaded', () => {
         errorMessage.textContent = msg;
         errorMessage.style.display = 'block';
     }
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _initCreatorRegister);
+} else {
+    _initCreatorRegister();
+}

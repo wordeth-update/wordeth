@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', async () => {
+async function _initSubscription() {
     const token = localStorage.getItem('authToken');
     if (!token) {
         window.location.href = '/signin.html?redirect=' + encodeURIComponent('/subscription.html');
@@ -37,7 +37,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     setupCancelModal();
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _initSubscription);
+} else {
+    _initSubscription();
+}
 
 function renderSubscription(subData, allPlans) {
     const { subscription, plan, entitlements, graduation, accountType } = subData;
