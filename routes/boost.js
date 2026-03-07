@@ -38,18 +38,23 @@ router.post('/', auth, async (req, res) => {
             return res.status(400).json({ message: 'Cannot boost a removed replay' });
         }
 
-        const user = await User.findById(req.user._id);
-        if ((user.tokenBalance || 0) < tierConfig.cost) {
+        const deductResult = await User.findOneAndUpdate(
+            { _id: req.user._id, tokenBalance: { $gte: tierConfig.cost } },
+            { $inc: { tokenBalance: -tierConfig.cost } },
+            { new: true }
+        );
+
+        if (!deductResult) {
+            const checkUser = await User.findById(req.user._id);
             return res.status(400).json({
                 message: 'Insufficient token balance',
                 required: tierConfig.cost,
-                current: user.tokenBalance || 0
+                current: checkUser ? (checkUser.tokenBalance || 0) : 0
             });
         }
 
-        const balanceBefore = user.tokenBalance;
-        user.tokenBalance = balanceBefore - tierConfig.cost;
-        await user.save();
+        const balanceAfter = deductResult.tokenBalance;
+        const balanceBefore = balanceAfter + tierConfig.cost;
 
         const now = new Date();
         replay.boostedUntil = new Date(now.getTime() + tierConfig.durationHours * 60 * 60 * 1000);
@@ -57,11 +62,11 @@ router.post('/', auth, async (req, res) => {
         await replay.save();
 
         await TokenLedger.create({
-            userId: user._id,
+            userId: deductResult._id,
             type: 'boost_purchase',
             amount: -tierConfig.cost,
             balanceBefore,
-            balanceAfter: user.tokenBalance,
+            balanceAfter,
             metadata: {
                 replayId: replay._id.toString(),
                 tier,
@@ -71,7 +76,7 @@ router.post('/', auth, async (req, res) => {
         });
 
         await EventsLedger.create({
-            actorId: user._id,
+            actorId: deductResult._id,
             actorType: 'user',
             eventType: 'token_boost',
             resourceType: 'replay',
@@ -93,7 +98,7 @@ router.post('/', auth, async (req, res) => {
             tier,
             boostedUntil: replay.boostedUntil,
             tokensDeducted: tierConfig.cost,
-            newBalance: user.tokenBalance
+            newBalance: balanceAfter
         });
     } catch (error) {
         console.error('Error boosting replay:', error);

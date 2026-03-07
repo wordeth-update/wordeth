@@ -324,51 +324,55 @@ function setupSignaling(io) {
             const isCreatorOfRoom = room.creatorUserId && socket.userId && room.creatorUserId === socket.userId;
             if (room.tokenPrice > 0 && !isCreatorOfRoom && !requestedHost) {
                 try {
-                    const joinerUser = await User.findById(socket.userId);
-                    if (!joinerUser) {
-                        socket.emit('room-error', { message: 'User not found. Please sign in again.' });
-                        if (typeof ackCallback === 'function') ackCallback({ success: false, message: 'User not found.' });
-                        socket.leave(roomId);
-                        socket.roomId = null;
-                        return;
-                    }
-                    if (joinerUser.tokenBalance < room.tokenPrice) {
-                        socket.emit('room-error', { message: `Insufficient tokens. This room costs ${room.tokenPrice} tokens but you only have ${joinerUser.tokenBalance}.`, code: 'INSUFFICIENT_TOKENS', required: room.tokenPrice, balance: joinerUser.tokenBalance });
-                        if (typeof ackCallback === 'function') ackCallback({ success: false, message: `Insufficient tokens.`, code: 'INSUFFICIENT_TOKENS', required: room.tokenPrice, balance: joinerUser.tokenBalance });
+                    const deductResult = await User.findOneAndUpdate(
+                        { _id: socket.userId, tokenBalance: { $gte: room.tokenPrice } },
+                        { $inc: { tokenBalance: -room.tokenPrice } },
+                        { new: true }
+                    );
+
+                    if (!deductResult) {
+                        const checkUser = await User.findById(socket.userId);
+                        if (!checkUser) {
+                            socket.emit('room-error', { message: 'User not found. Please sign in again.' });
+                            if (typeof ackCallback === 'function') ackCallback({ success: false, message: 'User not found.' });
+                        } else {
+                            socket.emit('room-error', { message: `Insufficient tokens. This room costs ${room.tokenPrice} tokens but you only have ${checkUser.tokenBalance}.`, code: 'INSUFFICIENT_TOKENS', required: room.tokenPrice, balance: checkUser.tokenBalance });
+                            if (typeof ackCallback === 'function') ackCallback({ success: false, message: `Insufficient tokens.`, code: 'INSUFFICIENT_TOKENS', required: room.tokenPrice, balance: checkUser.tokenBalance });
+                        }
                         socket.leave(roomId);
                         socket.roomId = null;
                         return;
                     }
 
-                    const balanceBefore = joinerUser.tokenBalance;
-                    joinerUser.tokenBalance -= room.tokenPrice;
-                    await joinerUser.save();
+                    const balanceAfter = deductResult.tokenBalance;
+                    const balanceBefore = balanceAfter + room.tokenPrice;
 
                     await TokenLedger.create({
-                        userId: joinerUser._id,
+                        userId: deductResult._id,
                         type: 'room_entry',
                         amount: -room.tokenPrice,
                         balanceBefore: balanceBefore,
-                        balanceAfter: joinerUser.tokenBalance,
+                        balanceAfter: balanceAfter,
                         relatedUserId: room.creatorUserId,
                         roomId: roomId,
                         metadata: { roomName: room.name }
                     });
 
                     if (room.creatorUserId) {
-                        const creatorUser = await User.findById(room.creatorUserId);
-                        if (creatorUser) {
-                            const creatorEarningsBefore = creatorUser.tokenEarnings;
-                            creatorUser.tokenEarnings += room.tokenPrice;
-                            await creatorUser.save();
+                        const creatorUpdate = await User.findOneAndUpdate(
+                            { _id: room.creatorUserId },
+                            { $inc: { tokenEarnings: room.tokenPrice } },
+                            { new: true }
+                        );
 
+                        if (creatorUpdate) {
                             await TokenLedger.create({
-                                userId: creatorUser._id,
+                                userId: creatorUpdate._id,
                                 type: 'room_earning',
                                 amount: room.tokenPrice,
-                                balanceBefore: creatorEarningsBefore,
-                                balanceAfter: creatorUser.tokenEarnings,
-                                relatedUserId: joinerUser._id,
+                                balanceBefore: creatorUpdate.tokenEarnings - room.tokenPrice,
+                                balanceAfter: creatorUpdate.tokenEarnings,
+                                relatedUserId: deductResult._id,
                                 roomId: roomId,
                                 metadata: { roomName: room.name }
                             });
@@ -376,7 +380,7 @@ function setupSignaling(io) {
                     }
 
                     EventsLedger.create({
-                        actorId: joinerUser._id,
+                        actorId: deductResult._id,
                         actorType: 'user',
                         eventType: 'token_room_entry',
                         amount: room.tokenPrice,

@@ -159,49 +159,56 @@ router.post('/:id/play', auth, async (req, res) => {
             return res.status(404).json({ message: 'Replay not found or unavailable' });
         }
 
-        const user = await User.findById(req.user._id);
         const price = replay.tokenPrice || 0;
+        let userBalance;
 
         if (price > 0) {
-            if ((user.tokenBalance || 0) < price) {
-                return res.status(402).json({ message: 'Insufficient token balance', required: price, balance: user.tokenBalance || 0 });
+            const deductResult = await User.findOneAndUpdate(
+                { _id: req.user._id, tokenBalance: { $gte: price } },
+                { $inc: { tokenBalance: -price } },
+                { new: true }
+            );
+
+            if (!deductResult) {
+                const checkUser = await User.findById(req.user._id);
+                return res.status(402).json({ message: 'Insufficient token balance', required: price, balance: checkUser ? (checkUser.tokenBalance || 0) : 0 });
             }
 
-            const userBalanceBefore = user.tokenBalance;
-            user.tokenBalance -= price;
-            await user.save();
+            userBalance = deductResult.tokenBalance;
+            const balanceBefore = userBalance + price;
 
             await TokenLedger.create({
-                userId: user._id,
+                userId: deductResult._id,
                 type: 'replay_play',
                 amount: -price,
-                balanceBefore: userBalanceBefore,
-                balanceAfter: user.tokenBalance,
+                balanceBefore: balanceBefore,
+                balanceAfter: userBalance,
                 relatedUserId: replay.creatorUserId,
                 roomId: replay.roomId,
                 metadata: { replayId: replay._id.toString(), replayTitle: replay.title }
             });
 
-            const creator = await User.findById(replay.creatorUserId);
-            if (creator) {
-                const creatorEarningsBefore = creator.tokenEarnings || 0;
-                creator.tokenEarnings = creatorEarningsBefore + price;
-                await creator.save();
+            const creatorUpdate = await User.findOneAndUpdate(
+                { _id: replay.creatorUserId },
+                { $inc: { tokenEarnings: price } },
+                { new: true }
+            );
 
+            if (creatorUpdate) {
                 await TokenLedger.create({
-                    userId: creator._id,
+                    userId: creatorUpdate._id,
                     type: 'room_earning',
                     amount: price,
-                    balanceBefore: creatorEarningsBefore,
-                    balanceAfter: creator.tokenEarnings,
-                    relatedUserId: user._id,
+                    balanceBefore: creatorUpdate.tokenEarnings - price,
+                    balanceAfter: creatorUpdate.tokenEarnings,
+                    relatedUserId: deductResult._id,
                     roomId: replay.roomId,
                     metadata: { replayId: replay._id.toString(), replayTitle: replay.title, source: 'replay_play' }
                 });
             }
 
             await EventsLedger.create({
-                actorId: user._id,
+                actorId: deductResult._id,
                 actorType: 'user',
                 eventType: 'token_replay_play',
                 resourceType: 'replay',
@@ -224,7 +231,7 @@ router.post('/:id/play', auth, async (req, res) => {
                 totalPlays: replay.totalPlays,
                 tokenPrice: replay.tokenPrice
             },
-            newBalance: price > 0 ? user.tokenBalance : undefined
+            newBalance: price > 0 ? userBalance : undefined
         });
     } catch (error) {
         console.error('Error playing replay:', error);
