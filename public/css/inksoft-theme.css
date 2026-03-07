@@ -1401,12 +1401,44 @@ store-cart .cart-page {
 
 /* ====== TOOLTIPS ====== */
 
-#body .mat-tooltip {
-  background: #1E0D38;
-  color: #ffffff;
-  border: 1px solid rgba(0, 229, 168, 0.15);
-  border-radius: 8px;
-  font-size: 0.8em;
+#body .mat-tooltip,
+.mat-tooltip,
+.mat-mdc-tooltip,
+.mat-tooltip-panel,
+.mat-mdc-tooltip .mdc-tooltip__surface,
+.cdk-overlay-container .mat-tooltip,
+.cdk-overlay-container .mat-mdc-tooltip .mdc-tooltip__surface,
+.cdk-overlay-pane .mat-tooltip,
+.cdk-overlay-pane .mat-mdc-tooltip .mdc-tooltip__surface {
+  background: #1E0D38 !important;
+  background-color: #1E0D38 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border: 1px solid rgba(0, 229, 168, 0.15) !important;
+  border-radius: 8px !important;
+  font-size: 0.8em !important;
+}
+
+.mat-tooltip-panel,
+.cdk-overlay-pane.mat-tooltip-panel,
+.cdk-overlay-pane:has(.mat-tooltip),
+.cdk-overlay-pane:has(.mat-mdc-tooltip) {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.mat-tooltip-panel div,
+.mat-tooltip-panel span,
+.cdk-overlay-pane.mat-tooltip-panel div,
+.cdk-overlay-pane.mat-tooltip-panel span,
+.cdk-overlay-pane:has(.mat-tooltip) div,
+.cdk-overlay-pane:has(.mat-tooltip) span,
+.cdk-overlay-pane:has(.mat-mdc-tooltip) div,
+.cdk-overlay-pane:has(.mat-mdc-tooltip) span {
+  background: #1E0D38 !important;
+  background-color: #1E0D38 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 
