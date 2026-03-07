@@ -1840,3 +1840,42 @@ buy-now-dialog * {
   color: #1a1a1a !important;
   -webkit-text-fill-color: #1a1a1a !important;
 }
+
+/* ====== ADDED TO CART DIALOG — white bg, dark text ====== */
+
+item-added-dialog,
+item-added-dialog *,
+.cdk-overlay-pane:has(item-added-dialog) div,
+.cdk-overlay-pane:has(item-added-dialog) span,
+.cdk-overlay-pane:has(item-added-dialog) h2,
+.cdk-overlay-pane:has(item-added-dialog) p,
+.cdk-overlay-pane:has(item-added-dialog) .mat-mdc-dialog-surface,
+.cdk-overlay-pane:has(item-added-dialog) .mdc-dialog__surface,
+.cdk-overlay-pane:has(item-added-dialog) .mat-mdc-dialog-container,
+.cdk-overlay-pane:has(item-added-dialog) .mat-mdc-dialog-inner-container,
+.cdk-overlay-pane:has(item-added-dialog) .items-added,
+.cdk-overlay-pane:has(item-added-dialog) .product-list-wrap,
+.cdk-overlay-pane:has(item-added-dialog) .item-summary {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
+}
+
+.cdk-overlay-pane:has(item-added-dialog) .text-success,
+item-added-dialog .text-success {
+  color: #2e7d32 !important;
+  -webkit-text-fill-color: #2e7d32 !important;
+}
+
+.cdk-overlay-pane:has(item-added-dialog) .text-grey-secondary,
+item-added-dialog .text-grey-secondary {
+  color: #555555 !important;
+  -webkit-text-fill-color: #555555 !important;
+}
+
+.cdk-overlay-pane:has(item-added-dialog) img,
+item-added-dialog img {
+  background-color: transparent !important;
+  background: transparent !important;
+}
