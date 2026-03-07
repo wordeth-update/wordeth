@@ -1895,3 +1895,30 @@ item-added-dialog img,
   background-color: transparent !important;
   background: transparent !important;
 }
+
+/* ====== SHOPPING CART PAGE — white bg, dark text ====== */
+
+#body .cart-page-embed-cart {
+  background: #ffffff !important;
+}
+
+#body .cart-page-embed-cart h1,
+#body .cart-page-embed-cart h2,
+#body .cart-page-embed-cart h3,
+#body .cart-page-embed-cart p,
+#body .cart-page-embed-cart span,
+#body .cart-page-embed-cart div,
+#body .cart-page-embed-cart label,
+#body .cart-page-embed-cart #noCartItem,
+#body .cart-page-embed-cart .cart-empty,
+#body .cart-page-embed-cart .grid-container {
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
+  background-color: #ffffff !important;
+}
+
+#body .cart-page-embed-cart .mat-icon {
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
+  background-color: transparent !important;
+}
