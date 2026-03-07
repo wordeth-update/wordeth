@@ -1754,3 +1754,12 @@ store-cart .cart-page {
   color: #666666 !important;
   -webkit-text-fill-color: #666666 !important;
 }
+
+#body span[class^="m"],
+#body div span,
+#body label,
+#body p,
+#body h1, #body h2, #body h3, #body h4, #body h5, #body h6 {
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
+}
