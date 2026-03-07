@@ -2944,7 +2944,7 @@ class AudioRoomsManager {
             const sock = await this._ensureSocket();
             console.log('[Create] 2/5 Socket ok:', sock.id);
 
-            this._agoraJoinHandled = true;
+            this._agoraJoinHandled = false;
             this._joinConfirmed = true;
             this._firstVisitGuideShown = true;
 
@@ -2956,8 +2956,26 @@ class AudioRoomsManager {
             try { await this._acquireMic(); console.log('[Create] 4/5 Mic ready'); }
             catch (e) { console.warn('[Create] 4/5 Mic skipped:', e.message); }
 
-            try { await this._agoraJoinGuarded(roomId, {}); console.log('[Create] 5/5 Agora connected'); }
-            catch (e) { console.warn('[Create] 5/5 Agora failed:', e.message); }
+            try {
+                await this._agoraJoinGuarded(roomId, {});
+                this._agoraJoinHandled = true;
+                console.log('[Create] 5/5 Agora connected');
+            } catch (e) {
+                console.error('[Create] 5/5 Agora failed:', e.message);
+                this._agoraJoinHandled = false;
+                this.addChatMessage('System', 'Audio connection failed. Retrying...', true);
+                setTimeout(async () => {
+                    if (this._agoraJoinHandled || !this.isInRoom()) return;
+                    try {
+                        await this._agoraJoinGuarded(roomId, {});
+                        this._agoraJoinHandled = true;
+                        this.addChatMessage('System', 'Audio connected!', true);
+                    } catch (retryErr) {
+                        console.error('[Create] Agora retry failed:', retryErr.message);
+                        this.addChatMessage('System', 'Audio connection failed. Try leaving and rejoining.', true);
+                    }
+                }, 3000);
+            }
 
             this._applyRoomState(roomId, true, httpData);
             this.hideAllModals();
@@ -3065,7 +3083,7 @@ class AudioRoomsManager {
             const sock = await this._ensureSocket();
             console.log('[Join] 2/5 Socket ok:', sock.id);
 
-            this._agoraJoinHandled = true;
+            this._agoraJoinHandled = false;
             this._joinConfirmed = true;
             this._firstVisitGuideShown = true;
 
@@ -3083,8 +3101,25 @@ class AudioRoomsManager {
             if (!ctx.isGuest) {
                 try {
                     await this._agoraJoinGuarded(roomId, { skipPublish: !effectiveHost });
+                    this._agoraJoinHandled = true;
                     console.log('[Join] 5/5 Agora ok, publish:', effectiveHost);
-                } catch (e) { console.warn('[Join] 5/5 Agora failed:', e.message); }
+                } catch (e) {
+                    console.error('[Join] 5/5 Agora failed:', e.message);
+                    this._agoraJoinHandled = false;
+                    this.addChatMessage('System', 'Audio connection failed. Retrying...', true);
+                    setTimeout(async () => {
+                        if (this._agoraJoinHandled || !this.isInRoom()) return;
+                        try {
+                            await this._agoraJoinGuarded(roomId, { skipPublish: !this.isSpeaker });
+                            this._agoraJoinHandled = true;
+                            console.log('[Join] Agora retry succeeded');
+                            this.addChatMessage('System', 'Audio connected!', true);
+                        } catch (retryErr) {
+                            console.error('[Join] Agora retry failed:', retryErr.message);
+                            this.addChatMessage('System', 'Audio connection failed. Try leaving and rejoining the room.', true);
+                        }
+                    }, 3000);
+                }
             }
 
             this._applyRoomState(roomId, effectiveHost, httpData);
@@ -3217,6 +3252,9 @@ class AudioRoomsManager {
 
     async initAgoraClient() {
         if (this.agoraClient) return;
+        if (typeof AgoraRTC === 'undefined') {
+            throw new Error('Agora SDK not loaded — check network or ad blocker');
+        }
         this.agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
         AgoraRTC.setLogLevel(2);
 
@@ -3402,8 +3440,9 @@ class AudioRoomsManager {
 
             this.agoraAppId = data.appId;
             this._resumeAllAudioContexts();
-            this.agoraUid = await this.agoraClient.join(data.appId, roomId, data.token, data.uid || null);
-            console.log('[Agora] joined channel', roomId, 'uid:', this.agoraUid);
+            const joinUid = data.uid ?? null;
+            this.agoraUid = await this.agoraClient.join(data.appId, roomId, data.token, joinUid);
+            console.log('[Agora] joined channel', roomId, 'uid:', this.agoraUid, 'remoteUsers:', this.agoraClient.remoteUsers?.length || 0);
 
             if (this.socket) {
                 this.socket.emit('agora-uid-map', { roomId, agoraUid: this.agoraUid, socketId: this.socket.id });
@@ -3717,14 +3756,19 @@ class AudioRoomsManager {
             }
 
             if (!this.isGuest && !this._agoraJoinHandled) {
-                try {
-                    const connState = this.agoraClient?.connectionState;
-                    if (connState !== 'CONNECTED' && connState !== 'CONNECTING') {
+                const connState = this.agoraClient?.connectionState;
+                if (connState !== 'CONNECTED' && connState !== 'CONNECTING') {
+                    try {
+                        console.log('[room-joined] Agora not connected, attempting join now...');
                         await this._agoraJoinGuarded(confirmedRoom, { skipPublish: !this.isSpeaker });
+                        this._agoraJoinHandled = true;
+                        this.addChatMessage('System', 'Audio connected!', true);
+                    } catch (e) {
+                        console.error('[room-joined] Agora join failed:', e.message);
+                        this.addChatMessage('System', 'Audio connection failed. Try leaving and rejoining.', true);
                     }
+                } else if (connState === 'CONNECTED') {
                     this._agoraJoinHandled = true;
-                } catch (e) {
-                    console.error('[room-joined] Agora join failed:', e.message);
                 }
             }
 
