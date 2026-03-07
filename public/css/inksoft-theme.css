@@ -1845,6 +1845,10 @@ buy-now-dialog * {
 
 item-added-dialog,
 item-added-dialog *,
+#itemAddedDialog,
+#itemAddedDialog *,
+div:has(> #itemAddedDialog),
+div:has(> #itemAddedDialog) *,
 .cdk-overlay-pane:has(item-added-dialog) div,
 .cdk-overlay-pane:has(item-added-dialog) span,
 .cdk-overlay-pane:has(item-added-dialog) h2,
@@ -1855,7 +1859,13 @@ item-added-dialog *,
 .cdk-overlay-pane:has(item-added-dialog) .mat-mdc-dialog-inner-container,
 .cdk-overlay-pane:has(item-added-dialog) .items-added,
 .cdk-overlay-pane:has(item-added-dialog) .product-list-wrap,
-.cdk-overlay-pane:has(item-added-dialog) .item-summary {
+.cdk-overlay-pane:has(item-added-dialog) .item-summary,
+.cdk-overlay-pane:has(#itemAddedDialog) div,
+.cdk-overlay-pane:has(#itemAddedDialog) span,
+.cdk-overlay-pane:has(#itemAddedDialog) h2,
+.cdk-overlay-pane:has(#itemAddedDialog) p,
+.cdk-overlay-pane:has(#itemAddedDialog) .mat-mdc-dialog-surface,
+.cdk-overlay-pane:has(#itemAddedDialog) .mdc-dialog__surface {
   background-color: #ffffff !important;
   background: #ffffff !important;
   color: #1a1a1a !important;
@@ -1863,19 +1873,25 @@ item-added-dialog *,
 }
 
 .cdk-overlay-pane:has(item-added-dialog) .text-success,
-item-added-dialog .text-success {
+.cdk-overlay-pane:has(#itemAddedDialog) .text-success,
+item-added-dialog .text-success,
+#itemAddedDialog .text-success {
   color: #2e7d32 !important;
   -webkit-text-fill-color: #2e7d32 !important;
 }
 
 .cdk-overlay-pane:has(item-added-dialog) .text-grey-secondary,
-item-added-dialog .text-grey-secondary {
+.cdk-overlay-pane:has(#itemAddedDialog) .text-grey-secondary,
+item-added-dialog .text-grey-secondary,
+#itemAddedDialog .text-grey-secondary {
   color: #555555 !important;
   -webkit-text-fill-color: #555555 !important;
 }
 
 .cdk-overlay-pane:has(item-added-dialog) img,
-item-added-dialog img {
+.cdk-overlay-pane:has(#itemAddedDialog) img,
+item-added-dialog img,
+#itemAddedDialog img {
   background-color: transparent !important;
   background: transparent !important;
 }
