@@ -1763,3 +1763,39 @@ store-cart .cart-page {
   color: #1a1a1a !important;
   -webkit-text-fill-color: #1a1a1a !important;
 }
+
+#body #priceSummaryDialog,
+#body #priceSummaryDialog * {
+  background-color: #ffffff !important;
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
+}
+
+#body #priceSummaryDialog .mat-mdc-dialog-title,
+#body #priceSummaryDialog .mat-dialog-title,
+#body #priceSummaryDialog h2,
+#body #priceSummaryDialog h3 {
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
+}
+
+#body #priceSummaryDialog .price-summary-item-list,
+#body #priceSummaryDialog .price-summary-item-list * {
+  color: #333333 !important;
+  -webkit-text-fill-color: #333333 !important;
+}
+
+#body .mat-mdc-dialog-surface:has(#priceSummaryDialog),
+#body .mdc-dialog__surface:has(#priceSummaryDialog),
+#body .mat-mdc-dialog-container:has(#priceSummaryDialog) {
+  background-color: #ffffff !important;
+}
+
+#body .cdk-overlay-container .cdk-overlay-pane:has(#priceSummaryDialog) {
+  background-color: transparent !important;
+}
+
+#body .cdk-overlay-container .cdk-overlay-pane:has(#priceSummaryDialog) .mat-mdc-dialog-surface,
+#body .cdk-overlay-container .cdk-overlay-pane:has(#priceSummaryDialog) .mdc-dialog__surface {
+  background-color: #ffffff !important;
+}
