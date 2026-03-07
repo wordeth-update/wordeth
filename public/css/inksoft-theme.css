@@ -298,16 +298,14 @@ html {
   color: #00E5A8 !important;
 }
 
-/* --- NUCLEAR: Force dark on ALL overlays, dropdowns, popups --- */
+/* --- Force light theme on ALL overlays, dropdowns, popups, dialogs --- */
 /* The cdk-overlay-container sits outside #body at the document root.
-   InkSoft's Angular components render dropdown menus here.
-   We target every level of nesting and use !important on all props. */
+   InkSoft's Angular components render dropdown menus and dialogs here. */
 
 div.cdk-overlay-container {
-  color: rgba(255, 255, 255, 0.87) !important;
+  color: #1a1a1a !important;
 }
 
-/* Force dark bg on overlay panels */
 div.cdk-overlay-container .cdk-overlay-pane div,
 div.cdk-overlay-container .cdk-overlay-pane > div,
 div.cdk-overlay-container [id^="cdk-overlay-"] > div,
@@ -336,60 +334,56 @@ ul[role="menu"],
 ul[role="listbox"],
 div[role="menu"],
 div[role="listbox"] {
-  background: #0D0118 !important;
-  background-color: #0D0118 !important;
-  border-color: rgba(0, 229, 168, 0.2) !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border-color: #e0e0e0 !important;
 }
-
-/* === MDC Menu — Override via CSS custom properties + direct styles === */
-/* Angular Material MDC uses --mat-* and --mdc-* vars for theming,
-   plus -webkit-text-fill-color which overrides color property. */
 
 .mat-mdc-menu-panel,
 div.mat-mdc-menu-panel,
 div[role="menu"] {
-  --mat-menu-container-color: #0D0118 !important;
-  --mat-menu-item-label-text-color: #ffffff !important;
-  --mat-menu-item-icon-color: rgba(255, 255, 255, 0.6) !important;
-  --mat-menu-item-hover-state-layer-color: rgba(0, 229, 168, 0.15) !important;
-  --mat-menu-item-focus-state-layer-color: rgba(0, 229, 168, 0.1) !important;
-  --mdc-menu-container-color: #0D0118 !important;
-  --mdc-theme-surface: #0D0118 !important;
-  --mdc-theme-on-surface: #ffffff !important;
-  --mdc-theme-text-primary-on-background: #ffffff !important;
-  background: #0D0118 !important;
-  background-color: #0D0118 !important;
-  border: 1px solid rgba(0, 229, 168, 0.2) !important;
+  --mat-menu-container-color: #ffffff !important;
+  --mat-menu-item-label-text-color: #1a1a1a !important;
+  --mat-menu-item-icon-color: #555555 !important;
+  --mat-menu-item-hover-state-layer-color: rgba(0, 0, 0, 0.06) !important;
+  --mat-menu-item-focus-state-layer-color: rgba(0, 0, 0, 0.04) !important;
+  --mdc-menu-container-color: #ffffff !important;
+  --mdc-theme-surface: #ffffff !important;
+  --mdc-theme-on-surface: #1a1a1a !important;
+  --mdc-theme-text-primary-on-background: #1a1a1a !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e0e0e0 !important;
   border-radius: 12px !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
 }
 
 .mat-mdc-menu-content,
 div.mat-mdc-menu-content {
-  background: #0D0118 !important;
-  background-color: #0D0118 !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
 }
 
 .mat-mdc-menu-item,
 button.mat-mdc-menu-item,
 .mat-mdc-menu-item.mat-mdc-menu-item,
 button.mat-mdc-menu-item.mat-mdc-menu-item {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
   background: transparent !important;
   background-color: transparent !important;
 }
 
 .mat-mdc-menu-item:hover,
 button.mat-mdc-menu-item:hover {
-  background: rgba(0, 229, 168, 0.15) !important;
-  background-color: rgba(0, 229, 168, 0.15) !important;
+  background: rgba(0, 0, 0, 0.06) !important;
+  background-color: rgba(0, 0, 0, 0.06) !important;
 }
 
 .mat-mdc-menu-item:hover .mat-mdc-menu-item-text,
 .mat-mdc-menu-item:hover span {
-  color: #00E5A8 !important;
-  -webkit-text-fill-color: #00E5A8 !important;
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
 }
 
 .mat-mdc-menu-item-text,
@@ -398,8 +392,8 @@ span.mat-mdc-menu-item-text,
 button.mat-mdc-menu-item .mat-mdc-menu-item-text,
 .mat-mdc-menu-item span,
 button.mat-mdc-menu-item span {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
 }
 
 .mat-mdc-menu-ripple,
@@ -412,24 +406,24 @@ button.mat-mdc-menu-item span {
 .mat-mdc-menu-submenu-icon,
 .mat-mdc-menu-item .mat-icon,
 .mat-mdc-menu-item svg {
-  color: rgba(255, 255, 255, 0.6) !important;
-  -webkit-text-fill-color: rgba(255, 255, 255, 0.6) !important;
-  fill: rgba(255, 255, 255, 0.6) !important;
+  color: #555555 !important;
+  -webkit-text-fill-color: #555555 !important;
+  fill: #555555 !important;
 }
 
 /* === MDC Select / Option === */
 
 .mat-mdc-select-panel {
-  --mat-option-label-text-color: #ffffff !important;
-  --mat-option-selected-state-label-text-color: #00E5A8 !important;
-  background: #0D0118 !important;
+  --mat-option-label-text-color: #1a1a1a !important;
+  --mat-option-selected-state-label-text-color: #7B2FFF !important;
+  background: #ffffff !important;
 }
 
 .mat-mdc-option,
 .mat-mdc-select-value-text,
 .mat-mdc-select-placeholder {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
 }
 
 .mat-mdc-option {
@@ -437,37 +431,37 @@ button.mat-mdc-menu-item span {
 }
 
 .mat-mdc-option:hover {
-  background: rgba(0, 229, 168, 0.15) !important;
+  background: rgba(0, 0, 0, 0.06) !important;
 }
 
 .mat-mdc-option.mdc-list-item--selected,
 .mat-mdc-option.mat-mdc-option-active {
-  color: #00E5A8 !important;
-  -webkit-text-fill-color: #00E5A8 !important;
-  background: rgba(0, 229, 168, 0.08) !important;
+  color: #7B2FFF !important;
+  -webkit-text-fill-color: #7B2FFF !important;
+  background: rgba(123, 47, 255, 0.08) !important;
 }
 
 /* === Legacy mat-menu fallback === */
 
 .mat-menu-panel,
 .mat-menu-content {
-  background: #0D0118 !important;
+  background: #ffffff !important;
 }
 
 .mat-menu-item,
 button.mat-menu-item,
 .mat-option,
 .mat-option .mat-option-text {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
 }
 
 .mat-menu-item:hover,
 .mat-option:hover {
-  background: rgba(0, 229, 168, 0.15) !important;
+  background: rgba(0, 0, 0, 0.06) !important;
 }
 
-/* === Force white text on ALL overlay content === */
+/* === Force dark text on ALL overlay content === */
 
 div.cdk-overlay-container span,
 div.cdk-overlay-container button,
@@ -479,19 +473,19 @@ div.cdk-overlay-container div[role="menu"] button,
 .cdk-overlay-pane div,
 .cdk-overlay-connected-position-bounding-box span,
 .cdk-overlay-connected-position-bounding-box button {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
 }
 
 div.cdk-overlay-container button:hover,
 div.cdk-overlay-container button:hover span,
 .cdk-overlay-pane button:hover,
 .cdk-overlay-pane button:hover span {
-  color: #00E5A8 !important;
-  -webkit-text-fill-color: #00E5A8 !important;
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
 }
 
-/* Backdrop — keep transparent */
+/* Backdrop */
 .cdk-overlay-backdrop,
 div.cdk-overlay-container .cdk-overlay-backdrop,
 .cdk-overlay-transparent-backdrop {
@@ -501,8 +495,8 @@ div.cdk-overlay-container .cdk-overlay-backdrop,
 
 .cdk-overlay-dark-backdrop,
 div.cdk-overlay-container .cdk-overlay-dark-backdrop {
-  background: rgba(6, 4, 9, 0.6) !important;
-  background-color: rgba(6, 4, 9, 0.6) !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
 }
 
 /* --- END OVERLAY THEMING --- */
@@ -560,33 +554,32 @@ div.cdk-overlay-container .cdk-overlay-dark-backdrop {
 
 #body .mat-dialog-container,
 #body .cdk-overlay-pane .mat-dialog-container {
-  background: linear-gradient(145deg, #1E0D38 0%, #0D0118 100%);
-  border: 1px solid rgba(0, 229, 168, 0.15);
+  background: #ffffff !important;
+  border: 1px solid #e0e0e0;
   border-radius: 20px;
-  color: rgba(255, 255, 255, 0.87);
+  color: #1a1a1a;
 }
 
 #body .mat-dialog-title {
-  color: #00E5A8;
-  font-family: 'Syne', sans-serif;
+  color: #1a1a1a;
   font-weight: 700;
 }
 
 #body .mat-dialog-content {
-  color: rgba(255, 255, 255, 0.75);
+  color: #333333;
 }
 
 #body .mat-dialog-actions {
-  border-top: 1px solid rgba(0, 229, 168, 0.12);
+  border-top: 1px solid #e0e0e0;
 }
 
 #body .cdk-overlay-dark-backdrop {
-  background: rgba(6, 4, 9, 0.8);
+  background: rgba(0, 0, 0, 0.5);
 }
 
 #itemAddedDialog {
-  background: linear-gradient(145deg, #1E0D38 0%, #060409 100%);
-  border: 1px solid rgba(0, 229, 168, 0.2);
+  background: #ffffff !important;
+  border: 1px solid #e0e0e0;
   border-radius: 20px;
 }
 
