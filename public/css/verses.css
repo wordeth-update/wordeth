@@ -1951,8 +1951,7 @@ body.in-room * {
     }
     .control-btn .ctrl-label { display: none; }
     #audio-filter-btn,
-    #karaoke-btn,
-    #share-photo-btn { display: none !important; }
+    #karaoke-btn { display: none !important; }
     .control-btn:hover,
     .control-btn.active {
         background: rgba(0, 229, 168, 0.15);

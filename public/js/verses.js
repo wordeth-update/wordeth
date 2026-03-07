@@ -519,7 +519,6 @@ class AudioRoomsManager {
             this.audioContext.resume().catch(() => {});
         }
         try {
-            const agoraCtx = AgoraRTC?.getPlaybackDevices ? null : null;
             if (window.AgoraRTC && window.AgoraRTC._audioContext && window.AgoraRTC._audioContext.state === 'suspended') {
                 window.AgoraRTC._audioContext.resume().catch(() => {});
             }
@@ -534,9 +533,41 @@ class AudioRoomsManager {
                     if (track._mediaStreamTrack && !track._mediaStreamTrack.enabled) {
                         track._mediaStreamTrack.enabled = true;
                     }
+                    try { track.play(); } catch (_) {}
                 } catch (_) {}
             }
         });
+    }
+
+    _setupRoomInteractionListener() {
+        if (this._roomInteractionBound) return;
+        this._roomInteractionBound = true;
+        const handler = () => {
+            this._resumeAllAudioContexts();
+            const banner = document.getElementById('agora-autoplay-banner');
+            if (banner) {
+                this.agoraRemoteUsers.forEach(user => {
+                    if (user.audioTrack) {
+                        try { user.audioTrack.play(); } catch (_) {}
+                    }
+                });
+                banner.remove();
+            }
+        };
+        document.addEventListener('click', handler, { capture: true });
+        document.addEventListener('touchstart', handler, { capture: true });
+        this._roomInteractionCleanup = () => {
+            document.removeEventListener('click', handler, { capture: true });
+            document.removeEventListener('touchstart', handler, { capture: true });
+            this._roomInteractionBound = false;
+        };
+    }
+
+    _teardownRoomInteractionListener() {
+        if (this._roomInteractionCleanup) {
+            this._roomInteractionCleanup();
+            this._roomInteractionCleanup = null;
+        }
     }
 
     _stopSilentAudioKeepAlive() {
@@ -3270,9 +3301,11 @@ class AudioRoomsManager {
             banner.appendChild(this._text(' Tap here to enable audio'));
             banner.addEventListener('click', () => {
                 banner.remove();
+                this._autoplayConfirmed = true;
+                this._resumeAllAudioContexts();
                 this.agoraRemoteUsers.forEach(user => {
                     if (user.audioTrack) {
-                        try { user.audioTrack.play(); } catch (e) {}
+                        try { user.audioTrack.setVolume(100); user.audioTrack.play(); } catch (e) {}
                     }
                 });
             });
@@ -3319,6 +3352,9 @@ class AudioRoomsManager {
                         user.audioTrack.setVolume(100);
                         user.audioTrack.play();
                         console.log('[Agora] playing remote audio uid:', user.uid);
+                        if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) && !this._autoplayConfirmed) {
+                            this._showAutoplayBanner?.();
+                        }
                     } catch (e) {
                         console.warn('[Agora] autoplay blocked uid:', user.uid);
                         this._showAutoplayBanner?.();
@@ -3342,8 +3378,14 @@ class AudioRoomsManager {
                     }, 1000);
                 }
             } else if (mediaType === 'video') {
-                if (user.videoTrack && this.videoMode !== 'off') {
-                    this._attachRemoteVideo(user.uid, user.videoTrack);
+                if (user.videoTrack) {
+                    if (this.videoMode !== 'off') {
+                        this._attachRemoteVideo(user.uid, user.videoTrack);
+                    } else {
+                        if (!this._pendingVideoTracks) this._pendingVideoTracks = new Map();
+                        this._pendingVideoTracks.set(user.uid, user.videoTrack);
+                        console.log('[Agora] video queued (mode off) uid:', user.uid);
+                    }
                 }
             }
         });
@@ -3454,6 +3496,7 @@ class AudioRoomsManager {
 
             setTimeout(() => this._subscribeToAllRemoteAudio(), 1500);
             this._startRecurringAudioHealthCheck();
+            this._setupRoomInteractionListener();
         } catch (error) {
             console.error('[Agora] join failed:', error.message);
             throw error;
@@ -3525,6 +3568,7 @@ class AudioRoomsManager {
 
             await this.agoraClient.publish([this.agoraLocalAudioTrack]);
             console.log('[Agora] audio published, muted:', this.isAudioMuted);
+            this.addChatMessage('System', 'Your mic is live.', true);
 
             setTimeout(() => this._verifyPublishedTrack(), 2000);
         } catch (error) {
@@ -3618,6 +3662,28 @@ class AudioRoomsManager {
                 console.log('Agora: resolved pending video for uid', uid, '→ participant', pid);
                 this._placeRemoteVideo(pid, track);
                 this._pendingVideoTracks.delete(uid);
+            }
+        }
+    }
+
+    async _subscribeToAllRemoteVideo() {
+        if (!this.agoraClient || this.agoraClient.connectionState !== 'CONNECTED') return;
+        if (this.videoMode === 'off') return;
+        const remoteUsers = this.agoraClient.remoteUsers || [];
+        for (const user of remoteUsers) {
+            if (!user.hasVideo) continue;
+            if (!user.videoTrack) {
+                try {
+                    await this.agoraClient.subscribe(user, 'video');
+                    if (user.videoTrack) {
+                        this._attachRemoteVideo(user.uid, user.videoTrack);
+                        console.log('[Agora] subscribed to video uid:', user.uid);
+                    }
+                } catch (e) {
+                    console.warn('[Agora] video subscribe failed uid:', user.uid, e.message);
+                }
+            } else {
+                this._attachRemoteVideo(user.uid, user.videoTrack);
             }
         }
     }
@@ -4060,6 +4126,10 @@ class AudioRoomsManager {
                 this.updateVideoButtonState();
                 if (data.mode === 'off' && this.isVideoActive) {
                     this.stopLocalVideo();
+                }
+                if (data.mode !== 'off') {
+                    this._resolvePendingVideos();
+                    this._subscribeToAllRemoteVideo();
                 }
                 this.addChatMessage('System', `Video mode set to "${data.mode}" by host.`, true);
                 break;
@@ -4618,6 +4688,7 @@ class AudioRoomsManager {
         this._stopSilentAudioKeepAlive();
         this._stopAudioHealthCheck();
         this._stopSpeakingIndicator();
+        this._teardownRoomInteractionListener();
         if (this._agoraUidMap) this._agoraUidMap.clear();
         const autoplayBanner = document.getElementById('agora-autoplay-banner');
         if (autoplayBanner) autoplayBanner.remove();
@@ -5544,6 +5615,10 @@ class AudioRoomsManager {
         
         if (this.videoMode === 'off' && this.isVideoActive) {
             this.stopLocalVideo();
+        }
+        if (this.videoMode !== 'off') {
+            this._resolvePendingVideos();
+            this._subscribeToAllRemoteVideo();
         }
     }
     
