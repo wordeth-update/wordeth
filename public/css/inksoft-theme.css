@@ -1766,36 +1766,28 @@ store-cart .cart-page {
 
 /* ====== PRICE SUMMARY DIALOG — white bg, dark text ====== */
 
-#priceSummaryDialog,
-#priceSummaryDialog *,
-div:has(> #priceSummaryDialog),
-div:has(> #priceSummaryDialog) *,
-.cdk-overlay-pane:has(#priceSummaryDialog) div,
-.cdk-overlay-pane:has(#priceSummaryDialog) span,
-.cdk-overlay-pane:has(#priceSummaryDialog) h3,
-.cdk-overlay-pane:has(#priceSummaryDialog) p,
-.cdk-overlay-pane:has(#priceSummaryDialog) .mat-mdc-dialog-surface,
-.cdk-overlay-pane:has(#priceSummaryDialog) .mdc-dialog__surface,
-.cdk-overlay-pane:has(#priceSummaryDialog) .mat-mdc-dialog-container,
-.cdk-overlay-pane:has(#priceSummaryDialog) .mat-mdc-dialog-inner-container,
-.cdk-overlay-pane:has(#priceSummaryDialog) mat-dialog-content,
-.cdk-overlay-pane:has(#priceSummaryDialog) .mat-mdc-dialog-content,
-price-summary-dialog,
-price-summary-dialog * {
-  background-color: #ffffff !important;
+#priceSummaryDialog {
   background: #ffffff !important;
+}
+
+#priceSummaryDialog > div,
+#priceSummaryDialog .price-summary-item-list,
+#priceSummaryDialog .cart-item--details {
+  background: #ffffff !important;
+}
+
+#priceSummaryDialog h3,
+#priceSummaryDialog p,
+#priceSummaryDialog span,
+#priceSummaryDialog div:not([hidden]),
+#priceSummaryDialog .cart-item--name,
+#priceSummaryDialog .cart-item--style,
+#priceSummaryDialog .mat-dialog-title {
   color: #1a1a1a !important;
   -webkit-text-fill-color: #1a1a1a !important;
 }
 
-#priceSummaryDialog .text-grey-secondary,
-.cdk-overlay-pane:has(#priceSummaryDialog) .text-grey-secondary {
+#priceSummaryDialog .text-grey-secondary {
   color: #555555 !important;
   -webkit-text-fill-color: #555555 !important;
-}
-
-#priceSummaryDialog img,
-.cdk-overlay-pane:has(#priceSummaryDialog) img {
-  background-color: transparent !important;
-  background: transparent !important;
 }
