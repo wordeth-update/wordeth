@@ -1294,6 +1294,16 @@ body.in-room * {
     line-height: 1.4;
 }
 
+.shared-image-thumb {
+    max-width: 160px;
+    max-height: 120px;
+    border-radius: 8px;
+    cursor: pointer;
+    object-fit: cover;
+    margin-top: 4px;
+    display: block;
+}
+
 .chat-input-container {
     display: flex;
     gap: 0.5rem;
@@ -1864,12 +1874,6 @@ body.in-room * {
     position: relative;
 }
 
-.video-tile-container video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
 .video-tile-name {
     position: absolute;
     bottom: 6px;
@@ -2389,7 +2393,7 @@ body.in-room * {
 .mobile-walkthrough-tooltip.arrow-below::after {
     content: '';
     position: absolute;
-    left: 50%;
+    left: var(--arrow-left, 50%);
     transform: translateX(-50%);
     width: 0;
     height: 0;

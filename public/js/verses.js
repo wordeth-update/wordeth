@@ -1894,6 +1894,11 @@ class AudioRoomsManager {
         } catch(e) {}
     }
 
+    _showToast(message, type = 'info') {
+        const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' };
+        this.showToast(message, icons[type] || icons.info);
+    }
+
     showToast(message, icon = 'fa-info-circle', duration = 4000) {
         let container = document.getElementById('room-toasts');
         if (!container) {
@@ -2137,8 +2142,10 @@ class AudioRoomsManager {
         overlay.className = 'mobile-walkthrough-overlay';
         document.body.appendChild(overlay);
 
+        document.documentElement.style.overflow = 'hidden';
         const dismiss = () => {
             this._walkthroughActive = false;
+            document.documentElement.style.overflow = '';
             overlay.remove();
             closeBtn.remove();
             if (highlight) highlight.remove();
@@ -2162,6 +2169,7 @@ class AudioRoomsManager {
 
             if (idx >= steps.length) {
                 this._walkthroughActive = false;
+                document.documentElement.style.overflow = '';
                 overlay.remove();
                 closeBtn.remove();
                 highlight = null;
@@ -2248,6 +2256,12 @@ class AudioRoomsManager {
                 }
                 tooltip.style.left = '16px';
                 tooltip.style.right = '16px';
+
+                const targetCenterX = rect.left + rect.width / 2;
+                const tooltipLeft = 16;
+                const tooltipWidth = window.innerWidth - 32;
+                const arrowPct = ((targetCenterX - tooltipLeft) / tooltipWidth) * 100;
+                tooltip.style.setProperty('--arrow-left', Math.max(10, Math.min(90, arrowPct)) + '%');
             } else {
                 overlay.style.opacity = '1';
                 tooltip.style.top = '50%';
