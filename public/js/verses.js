@@ -4781,18 +4781,80 @@ class AudioRoomsManager {
     }
 
     _rebindDOMListeners() {
+        this.createRoomBtn?.addEventListener('click', () => {
+            this._primeSfx();
+            this.showCreateRoomModal();
+        });
+        this.createRoomForm?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.createRoom();
+        });
+
+        this.editTopicBtn?.addEventListener('click', () => this.showTopicEditModal());
+        this.topicEditForm?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.updateTopic();
+        });
+
+        document.querySelectorAll('.close-modal, .cancel-btn').forEach(btn => {
+            btn.addEventListener('click', () => this.hideAllModals());
+        });
+
+        document.querySelectorAll('.view-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const view = tab.dataset.view;
+                document.getElementById('live-view').style.display = view === 'live' ? '' : 'none';
+                document.getElementById('replays-view').style.display = view === 'replays' ? '' : 'none';
+                if (view === 'replays') this._fetchReplays(true);
+            });
+        });
+
+        document.querySelectorAll('#replay-genre-filters .filter-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('#replay-genre-filters .filter-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                this.replayGenre = tab.dataset.filter;
+                this._fetchReplays(true);
+            });
+        });
+
+        document.getElementById('replay-sort')?.addEventListener('change', (e) => {
+            this.replaySort = e.target.value;
+            this._fetchReplays(true);
+        });
+
+        document.getElementById('load-more-replays')?.addEventListener('click', () => {
+            this.replayPage++;
+            this._fetchReplays(false);
+        });
+
+        this._setupRatingListeners();
+        this._setupBoostListeners();
+
         this.toggleAudioBtn?.addEventListener('click', () => this.toggleAudio());
         this.raiseHandBtn?.addEventListener('click', () => this.toggleHandRaise());
         this.toggleChatBtn?.addEventListener('click', () => this.toggleChat());
+        this._initChatSwipeToDismiss();
         this.shareMusicBtn?.addEventListener('click', () => this.shareMusic());
         this.leaveRoomBtn?.addEventListener('click', () => this.leaveRoom());
+        document.getElementById('join-stage-btn')?.addEventListener('click', () => this.joinStage());
+        document.getElementById('stage-access-toggle')?.addEventListener('click', () => this.toggleStageAccess());
+
         this.addUsersBtn?.addEventListener('click', () => this.showAddUsersModal());
         this.replayBtn?.addEventListener('click', () => this.showReplayModal());
+        document.getElementById('room-guide-btn')?.addEventListener('click', () => {
+            window.open('verses-guide.html', '_blank');
+        });
+
         document.getElementById('share-room-btn')?.addEventListener('click', () => this.shareRoom());
         document.getElementById('share-room-mobile-btn')?.addEventListener('click', () => this.shareRoom());
+
         this.lockRoomBtn?.addEventListener('click', () => this.toggleRoomLock());
         this.audioFilterBtn?.addEventListener('click', () => this.showAudioFiltersModal());
         this.karaokeBtn?.addEventListener('click', () => this.showKaraokeModal());
+
         document.getElementById('karaoke-toggle-btn')?.addEventListener('click', () => this.toggleKaraokePermission());
         document.getElementById('share-photo-btn')?.addEventListener('click', () => {
             if (window.Capacitor) {
@@ -4806,26 +4868,83 @@ class AudioRoomsManager {
             if (file) this.shareImage(file);
             e.target.value = '';
         });
+
         document.getElementById('video-toggle-btn')?.addEventListener('click', () => this.cycleVideoMode());
         document.getElementById('video-btn')?.addEventListener('click', () => this.toggleLocalVideo());
         document.getElementById('mute-all-btn')?.addEventListener('click', () => this.muteAllParticipants());
         document.getElementById('close-room-btn')?.addEventListener('click', () => this.closeRoom());
 
+        this.setupMobileShareListeners();
         this.initMusicSharing();
-        this._setupRatingListeners();
-        this._setupBoostListeners();
 
-        this.sendMessageBtn?.addEventListener('click', () => {
-            this.sendMessage();
+        document.getElementById('karaoke-slower')?.addEventListener('click', () => this.adjustScrollSpeed(-0.25));
+        document.getElementById('karaoke-faster')?.addEventListener('click', () => this.adjustScrollSpeed(0.25));
+
+        document.getElementById('karaoke-camera-toggle')?.addEventListener('click', () => this.toggleKaraokeCamera());
+        document.querySelectorAll('.video-filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const filter = e.currentTarget.dataset.filter;
+                this.setVideoFilter(filter);
+            });
         });
+        document.querySelectorAll('.ar-filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const filter = e.currentTarget.dataset.arFilter;
+                if (this.currentVideoFilter === filter) {
+                    this.setVideoFilter('none');
+                } else {
+                    this.setVideoFilter(filter);
+                }
+            });
+        });
+
+        document.querySelectorAll('#audio-filters-modal .filter-option').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const filter = e.currentTarget.dataset.filter;
+                this.applyAudioFilter(filter);
+            });
+        });
+
+        document.getElementById('karaoke-search-btn')?.addEventListener('click', () => this.searchKaraokeSongs());
+        document.getElementById('karaoke-search-input')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.searchKaraokeSongs();
+        });
+
+        document.getElementById('yt-embed-btn')?.addEventListener('click', () => this.embedYouTubeFromInput());
+        document.getElementById('yt-url-input')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.embedYouTubeFromInput();
+        });
+        document.getElementById('yt-embed-close')?.addEventListener('click', () => this.closeYouTubeEmbed());
+
+        document.getElementById('karaoke-play-pause')?.addEventListener('click', () => this.toggleKaraokePlayback());
+        document.getElementById('karaoke-restart')?.addEventListener('click', () => this.restartKaraoke());
+        document.getElementById('karaoke-new-song')?.addEventListener('click', () => this.newKaraokeSong());
+        document.getElementById('karaoke-stop')?.addEventListener('click', () => this.stopKaraoke());
+        document.getElementById('karaoke-record-btn')?.addEventListener('click', () => this.toggleRecording());
+
+        this.sendMessageBtn?.addEventListener('click', () => this.sendMessage());
         this.chatInput?.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 this.sendMessage();
             }
         });
 
-        document.querySelectorAll('.close-modal, .cancel-btn').forEach(btn => {
-            btn.addEventListener('click', () => this.hideAllModals());
+        document.getElementById('search-users')?.addEventListener('click', () => this.searchUsers());
+        document.getElementById('user-search-input')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.searchUsers();
+            }
+        });
+
+        document.querySelectorAll('.filter-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                const filter = e.target.dataset.filter;
+                this.filterRooms(filter);
+            });
+        });
+
+        document.querySelector('.refresh-btn')?.addEventListener('click', () => {
+            this.refreshFriendsRooms();
         });
     }
 
@@ -4854,8 +4973,12 @@ class AudioRoomsManager {
 
         this.updateHostControls();
         this.updateKaraokeButtonState();
+        this.updateVideoButtonState();
         this.initHostPanel();
         this.syncHostPanel();
+
+        this._setupRoomInteractionListener();
+        this.refreshVideoGrid();
 
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         const userName = user.name || user.username || 'Anonymous';
