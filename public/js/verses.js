@@ -4811,6 +4811,10 @@ class AudioRoomsManager {
         document.getElementById('mute-all-btn')?.addEventListener('click', () => this.muteAllParticipants());
         document.getElementById('close-room-btn')?.addEventListener('click', () => this.closeRoom());
 
+        this.initMusicSharing();
+        this._setupRatingListeners();
+        this._setupBoostListeners();
+
         this.sendMessageBtn?.addEventListener('click', () => {
             this.sendMessage();
         });
