@@ -110,7 +110,20 @@ async function initRooms() {
                 continue;
             }
             rooms.set(roomId, room);
-            scheduleRoomDeletion(roomId, 'restored-empty');
+            const roomAge = now - (room.lastActivity || room.createdAt || now);
+            const isRecent = roomAge < 30 * 60 * 1000;
+            if (isRecent) {
+                scheduleRoomDeletion(roomId, 'restored-empty');
+            } else {
+                setTimeout(() => {
+                    const r = rooms.get(roomId);
+                    if (r && r.participants.size === 0) {
+                        rooms.delete(roomId);
+                        deleteRoom(roomId);
+                        console.log(`[Signaling] Cleaned old restored room ${roomId}`);
+                    }
+                }, 2 * 60 * 1000);
+            }
             kept++;
         }
         if (kept > 0) console.log(`[Signaling] ${kept} recent room(s) restored from Redis`);
@@ -121,7 +134,13 @@ function setupSignaling(io) {
     _io = io;
     let roomsReady = false;
     const roomsReadyPromise = initRooms()
-        .then(() => { roomsReady = true; })
+        .then(() => {
+            roomsReady = true;
+            if (rooms.size > 0) {
+                io.emit('rooms-updated', getActiveRooms());
+                console.log('[Signaling] Broadcasted restored rooms to connected clients');
+            }
+        })
         .catch(err => {
             console.error('[Signaling] Room restore failed:', err.message);
             roomsReady = true;

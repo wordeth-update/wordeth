@@ -1,0 +1,156 @@
+Wordeth Audio Rooms — Bug Fix Implementation Prompt
+You are implementing a series of targeted bug fixes to the Wordeth audio social app. This app uses Socket.io for signaling, Agora RTC for audio, Express for the server, and Redis for room state persistence. Apply every fix exactly as described. Do not refactor unrelated code.
+
+FIX 1 — routes/signaling.js — Remove git diff artifact (CRITICAL)
+The first line of the file starts with a - character (a git diff marker). This will cause a Node.js syntax error.
+Find:
+-const { saveRoom, deleteRoom, loadAllRooms, loadRoom, getClient } = require('../services/redisClient');
+Replace with:
+const { saveRoom, deleteRoom, loadAllRooms, loadRoom, getClient } = require('../services/redisClient');
+
+FIX 2 — js/verses.js — Move _joinConfirmed = true to after socket ack in joinRoom()
+In the joinRoom() method, _joinConfirmed is being set to true BEFORE the socket acknowledgment resolves. This causes a race condition where the room-joined event handler fires and attempts an Agora join simultaneously with the pipeline's own Agora join step, leading to broken controls when re-entering rooms.
+Find this block inside joinRoom():
+javascriptthis._agoraJoinHandled = false;
+this._joinConfirmed = true;
+this._firstVisitGuideShown = true;
+
+this._updateJoiningStatus('Almost there\u2026');
+joinPayload.userId = ctx.isGuest ? `guest_${sock.id}` : (ctx.user._id || ctx.user.id || sock.id);
+const ack = await this._socketJoinRoom(joinPayload);
+Replace with:
+javascriptthis._agoraJoinHandled = false;
+this._firstVisitGuideShown = true;
+
+this._updateJoiningStatus('Almost there\u2026');
+joinPayload.userId = ctx.isGuest ? `guest_${sock.id}` : (ctx.user._id || ctx.user.id || sock.id);
+const ack = await this._socketJoinRoom(joinPayload);
+this._joinConfirmed = true;
+
+FIX 3 — js/verses.js — Replace fixed-delay audio subscribe with smart retry in joinAgoraChannel()
+The current code waits a fixed 1500ms before sweeping for unsubscribed remote audio. On slow mobile connections this is not enough time and users can't hear each other.
+Find inside joinAgoraChannel():
+javascriptsetTimeout(() => this._subscribeToAllRemoteAudio(), 1500);
+this._startRecurringAudioHealthCheck();
+Replace with:
+javascriptconst sweepWithRetry = async (attempts = 0) => {
+    await this._subscribeToAllRemoteAudio();
+    const missed = (this.agoraClient?.remoteUsers || []).some(
+        u => u.hasAudio && !this.agoraRemoteUsers.has(String(u.uid))
+    );
+    if (missed && attempts < 3) {
+        setTimeout(() => sweepWithRetry(attempts + 1), 2000);
+    }
+};
+setTimeout(() => sweepWithRetry(), 1500);
+this._startRecurringAudioHealthCheck();
+
+FIX 4 — routes/signaling.js — Emit rooms-updated after rooms are restored so clients see live rooms immediately
+After initRooms() restores rooms from Redis, connected clients have no idea those rooms exist until a new join event triggers a broadcast. Add an emit after the restore completes.
+Find inside setupSignaling(io):
+javascriptconst roomsReadyPromise = initRooms()
+    .then(() => { roomsReady = true; })
+    .catch(err => {
+        console.error('[Signaling] Room restore failed:', err.message);
+        roomsReady = true;
+    });
+Replace with:
+javascriptconst roomsReadyPromise = initRooms()
+    .then(() => {
+        roomsReady = true;
+        if (rooms.size > 0) {
+            io.emit('rooms-updated', getActiveRooms());
+            console.log('[Signaling] Broadcasted restored rooms to connected clients');
+        }
+    })
+    .catch(err => {
+        console.error('[Signaling] Room restore failed:', err.message);
+        roomsReady = true;
+    });
+
+FIX 5 — routes/signaling.js — Make restored room deletion grace period smarter
+Every restored room currently gets a 10-minute deletion timer immediately on restore. If the host's phone is backgrounded or locked for more than 10 minutes, the room is silently deleted. Use a tiered approach based on room age.
+Find inside initRooms():
+javascriptrooms.set(roomId, room);
+scheduleRoomDeletion(roomId, 'restored-empty');
+kept++;
+Replace with:
+javascriptrooms.set(roomId, room);
+const roomAge = now - (room.lastActivity || room.createdAt || now);
+const isRecent = roomAge < 30 * 60 * 1000; // less than 30 min old
+if (isRecent) {
+    scheduleRoomDeletion(roomId, 'restored-empty');
+} else {
+    // Older rooms get a shorter grace period — clean up faster
+    setTimeout(() => {
+        const r = rooms.get(roomId);
+        if (r && r.participants.size === 0) {
+            rooms.delete(roomId);
+            deleteRoom(roomId);
+            console.log(`[Signaling] Cleaned old restored room ${roomId}`);
+        }
+    }, 2 * 60 * 1000);
+}
+kept++;
+
+FIX 6 — server.js, js/verses.js, notifications.js — Switch all Socket.io transports to WebSocket-only
+Cloudflare WebSockets are confirmed enabled. Polling requires sticky sessions that Railway does not guarantee. WebSocket-only eliminates the 200–600ms upgrade handshake and removes the polling race condition.
+In server.js, find:
+javascriptconst io = new Server(server, {
+    cors: { origin: true, credentials: true },
+    transports: ['websocket', 'polling'],
+    allowUpgrades: true,
+Replace with:
+javascriptconst io = new Server(server, {
+    cors: { origin: true, credentials: true },
+    transports: ['websocket'],
+    allowUpgrades: false,
+In js/verses.js — connectToServer(), find:
+javascriptthis.lobbySocket = io(serverUrl, {
+    transports: ['websocket', 'polling'],
+    upgrade: true,
+    reconnection: true,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 1000,
+    timeout: 10000
+});
+Replace with:
+javascriptthis.lobbySocket = io(serverUrl, {
+    transports: ['websocket'],
+    reconnection: true,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 1000,
+    timeout: 10000
+});
+In js/verses.js — connectSocket(), find:
+javascriptthis.lobbySocket = io(serverUrl, { transports: ['websocket', 'polling'], upgrade: true, reconnection: true, reconnectionAttempts: 10, reconnectionDelay: 1000, timeout: 10000 });
+Replace with:
+javascriptthis.lobbySocket = io(serverUrl, { transports: ['websocket'], reconnection: true, reconnectionAttempts: 10, reconnectionDelay: 1000, timeout: 10000 });
+In notifications.js, find:
+javascriptconst notifSocket = io(serverUrl, {
+    transports: ['websocket', 'polling'],
+    upgrade: true,
+    reconnection: true,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 2000
+});
+Replace with:
+javascriptconst notifSocket = io(serverUrl, {
+    transports: ['websocket'],
+    reconnection: true,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 2000
+});
+
+Verification Checklist
+After applying all fixes, confirm:
+
+ signaling.js line 1 has no leading - character
+ In joinRoom(), this._joinConfirmed = true appears after await this._socketJoinRoom(joinPayload)
+ sweepWithRetry function exists inside joinAgoraChannel()
+ io.emit('rooms-updated', getActiveRooms()) is called inside the initRooms .then() block
+ initRooms() uses tiered deletion logic with isRecent check
+ All four Socket.io io() calls across all files use transports: ['websocket'] only
+ No file uses upgrade: true or allowUpgrades: true anymore
+
+Do not change anything else. Do not rename variables, restructure classes, or modify unrelated logic.

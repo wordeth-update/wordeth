@@ -70,8 +70,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: { origin: true, credentials: true },
-    transports: ['websocket', 'polling'],
-    allowUpgrades: true,
+    transports: ['websocket'],
+    allowUpgrades: false,
     pingTimeout: 60000,
     pingInterval: 25000,
     maxHttpBufferSize: 15e6,

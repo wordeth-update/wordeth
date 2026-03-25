@@ -1051,8 +1051,7 @@ class AudioRoomsManager {
             console.log('Connecting to signaling server...');
             const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
             this.lobbySocket = io(serverUrl, {
-                transports: ['websocket', 'polling'],
-                upgrade: true,
+                transports: ['websocket'],
                 reconnection: true,
                 reconnectionAttempts: 10,
                 reconnectionDelay: 1000,
@@ -2990,11 +2989,11 @@ class AudioRoomsManager {
             console.log('[Create] 2/5 Socket ok:', sock.id);
 
             this._agoraJoinHandled = false;
-            this._joinConfirmed = true;
             this._firstVisitGuideShown = true;
 
             setStatus('Gathering the vibes\u2026');
             await this._socketJoinRoom({ roomId, userId: ctx.userId, userName: ctx.userName, isHost: true, roomName, avatar: ctx.avatar });
+            this._joinConfirmed = true;
             console.log('[Create] 3/5 Socket join confirmed');
 
             setStatus('Tidying things up\u2026');
@@ -3129,12 +3128,12 @@ class AudioRoomsManager {
             console.log('[Join] 2/5 Socket ok:', sock.id);
 
             this._agoraJoinHandled = false;
-            this._joinConfirmed = true;
             this._firstVisitGuideShown = true;
 
             this._updateJoiningStatus('Almost there\u2026');
             joinPayload.userId = ctx.isGuest ? `guest_${sock.id}` : (ctx.user._id || ctx.user.id || sock.id);
             const ack = await this._socketJoinRoom(joinPayload);
+            this._joinConfirmed = true;
             console.log('[Join] 3/5 Socket join confirmed');
 
             const effectiveHost = httpData.isHost || isHost;
@@ -3508,7 +3507,16 @@ class AudioRoomsManager {
                 await this.publishAgoraAudio();
             }
 
-            setTimeout(() => this._subscribeToAllRemoteAudio(), 1500);
+            const sweepWithRetry = async (attempts = 0) => {
+                await this._subscribeToAllRemoteAudio();
+                const missed = (this.agoraClient?.remoteUsers || []).some(
+                    u => u.hasAudio && !this.agoraRemoteUsers.has(String(u.uid))
+                );
+                if (missed && attempts < 3) {
+                    setTimeout(() => sweepWithRetry(attempts + 1), 2000);
+                }
+            };
+            setTimeout(() => sweepWithRetry(), 1500);
             this._startRecurringAudioHealthCheck();
             this._setupRoomInteractionListener();
         } catch (error) {
@@ -3731,7 +3739,7 @@ class AudioRoomsManager {
         }
 
         const serverUrl = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : window.location.origin;
-        this.lobbySocket = io(serverUrl, { transports: ['websocket', 'polling'], upgrade: true, reconnection: true, reconnectionAttempts: 10, reconnectionDelay: 1000, timeout: 10000 });
+        this.lobbySocket = io(serverUrl, { transports: ['websocket'], reconnection: true, reconnectionAttempts: 10, reconnectionDelay: 1000, timeout: 10000 });
         this.socket = this.lobbySocket;
         this._registerRoomHandlers();
 
