@@ -2282,8 +2282,9 @@ body.in-room * {
     position: fixed;
     z-index: 10004;
     border: 2px solid var(--mint, #00E5A8);
-    border-radius: 16px;
+    border-radius: 12px;
     pointer-events: none;
+    transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
 }
 
 .mobile-walkthrough-tooltip {
@@ -2297,6 +2298,7 @@ body.in-room * {
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    color: #fff;
 }
 .mobile-walkthrough-tooltip .walk-tip-footer {
     flex-shrink: 0;

@@ -2162,6 +2162,38 @@ class AudioRoomsManager {
 
         setTimeout(() => overlay.addEventListener('click', dismiss), 300);
 
+        const _isVisible = (el) => {
+            if (!el) return false;
+            const r = el.getBoundingClientRect();
+            if (r.width === 0 && r.height === 0) return false;
+            const style = window.getComputedStyle(el);
+            if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+            if (r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth) return false;
+            return true;
+        };
+
+        const _findTarget = (selector) => {
+            for (const sel of selector.split(',')) {
+                const el = document.querySelector(sel.trim());
+                if (_isVisible(el)) return el;
+            }
+            return null;
+        };
+
+        const _getSafeInsets = () => {
+            const probe = document.createElement('div');
+            probe.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px);left:0;visibility:hidden;pointer-events:none;';
+            document.body.appendChild(probe);
+            const probeRect = probe.getBoundingClientRect();
+            const sat = probeRect.top;
+            const sab = window.innerHeight - probeRect.bottom;
+            probe.remove();
+            return {
+                top: Math.max(sat, 0) + 44,
+                bottom: Math.max(sab, 0) + 44
+            };
+        };
+
         const showStep = (idx) => {
             if (highlight) highlight.remove();
             if (tooltip) tooltip.remove();
@@ -2178,12 +2210,22 @@ class AudioRoomsManager {
             }
 
             const step = steps[idx];
-            const targetEl = document.querySelector(step.target.split(',')[0].trim())
-                || document.querySelector(step.target.split(',')[1]?.trim());
+            const targetEl = _findTarget(step.target);
+
+            if (!targetEl) {
+                currentStep = idx + 1;
+                showStep(currentStep);
+                return;
+            }
+
+            const safe = _getSafeInsets();
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            const margin = 12;
+            const gap = 12;
 
             tooltip = document.createElement('div');
             tooltip.className = 'mobile-walkthrough-tooltip';
-            tooltip.style.cssText = 'position:fixed;z-index:10005;background:linear-gradient(145deg,rgba(45,20,80,0.98),rgba(25,8,50,0.99));border:2px solid rgba(139,47,255,0.6);border-radius:16px;padding:1rem 1.1rem;box-shadow:0 16px 50px rgba(0,0,0,0.7),0 0 30px rgba(139,47,255,0.25);color:#fff;';
 
             const tipHeader = this._el('div', {className: 'walk-tip-header'},
                 this._el('div', {className: 'walk-tip-icon'}, this._icon('fas ' + step.icon)),
@@ -2205,92 +2247,68 @@ class AudioRoomsManager {
             navDiv.appendChild(nextBtn);
             tooltip.append(tipHeader, tipText, this._el('div', {className: 'walk-tip-footer'}, dotsDiv, navDiv));
 
-            if (targetEl) {
-                overlay.style.opacity = '0';
-
-                const rect = targetEl.getBoundingClientRect();
-                highlight = document.createElement('div');
-                highlight.className = 'mobile-walkthrough-highlight';
-                highlight.style.top = (rect.top - 6) + 'px';
-                highlight.style.left = (rect.left - 6) + 'px';
-                highlight.style.width = (rect.width + 12) + 'px';
-                highlight.style.height = (rect.height + 12) + 'px';
-                highlight.style.boxShadow = '0 0 0 9999px rgba(6, 4, 9, 0.85), 0 0 20px rgba(0, 229, 168, 0.4)';
-                document.body.appendChild(highlight);
-
-                const gap = 16;
-                const pad = 8;
-                const highlightBottom = rect.bottom + pad;
-                const highlightTop = rect.top - pad;
-                const spaceBelow = window.innerHeight - highlightBottom;
-                const spaceAbove = highlightTop;
-                const minTipHeight = 190;
-
-                const safeTop = 60;
-                const safeBottom = 80;
-
-                let useAbove = step.position === 'above' && spaceAbove >= minTipHeight;
-                let useBelow = step.position === 'below' || (!useAbove && spaceBelow >= minTipHeight);
-
-                if (step.position === 'center') {
-                    tooltip.style.top = '50%';
-                    tooltip.style.transform = 'translateY(-50%)';
-                    tooltip.style.maxHeight = '40vh';
-                } else if (useAbove) {
-                    const tipTop = Math.max(safeTop, highlightTop - gap - 200);
-                    tooltip.style.top = tipTop + 'px';
-                    tooltip.style.maxHeight = Math.max(highlightTop - gap - tipTop, minTipHeight) + 'px';
-                    tooltip.classList.add('arrow-below');
-                } else if (useBelow) {
-                    const tipTop = Math.min(highlightBottom + gap, window.innerHeight - minTipHeight - safeBottom);
-                    const maxH = Math.max(window.innerHeight - tipTop - safeBottom, minTipHeight);
-                    tooltip.style.top = Math.max(safeTop, tipTop) + 'px';
-                    tooltip.style.maxHeight = maxH + 'px';
-                    tooltip.classList.add('arrow-above');
-                } else {
-                    const tipTop = Math.max(safeTop, Math.min(highlightBottom + gap, window.innerHeight - minTipHeight - safeBottom));
-                    tooltip.style.top = tipTop + 'px';
-                    tooltip.style.maxHeight = (window.innerHeight - tipTop - safeBottom) + 'px';
-                    tooltip.classList.add('arrow-above');
-                }
-                tooltip.style.left = '16px';
-                tooltip.style.right = '16px';
-
-                const targetCenterX = rect.left + rect.width / 2;
-                const tooltipLeft = 16;
-                const tooltipWidth = window.innerWidth - 32;
-                const arrowPct = ((targetCenterX - tooltipLeft) / tooltipWidth) * 100;
-                tooltip.style.setProperty('--arrow-left', Math.max(10, Math.min(90, arrowPct)) + '%');
-            } else {
-                overlay.style.opacity = '1';
-                tooltip.style.top = '50%';
-                tooltip.style.left = '16px';
-                tooltip.style.right = '16px';
-                tooltip.style.transform = 'translateY(-50%)';
-            }
-
+            tooltip.style.cssText = 'position:fixed;z-index:10005;left:' + margin + 'px;right:' + margin + 'px;visibility:hidden;';
             document.body.appendChild(tooltip);
 
-            requestAnimationFrame(() => {
-                const tipRect = tooltip.getBoundingClientRect();
-                if (tipRect.bottom > window.innerHeight - 20) {
-                    tooltip.style.top = Math.max(safeTop, window.innerHeight - tipRect.height - safeBottom) + 'px';
-                    tooltip.style.transform = '';
-                }
-                if (tipRect.top < safeTop) {
-                    tooltip.style.top = safeTop + 'px';
-                    tooltip.style.transform = '';
-                }
-                const footerEl = tooltip.querySelector('.walk-tip-footer');
-                if (footerEl) {
-                    const footerRect = footerEl.getBoundingClientRect();
-                    if (footerRect.bottom > window.innerHeight - 20) {
-                        const overflow = footerRect.bottom - (window.innerHeight - 20);
-                        const currentTop = parseFloat(tooltip.style.top);
-                        tooltip.style.top = Math.max(safeTop, currentTop - overflow) + 'px';
-                    }
-                }
-            });
+            const tipH = tooltip.getBoundingClientRect().height;
+
+            const rect = targetEl.getBoundingClientRect();
+            overlay.style.opacity = '0';
+
+            highlight = document.createElement('div');
+            highlight.className = 'mobile-walkthrough-highlight';
+            const hlPad = 6;
+            const hlTop = rect.top - hlPad;
+            const hlLeft = Math.max(0, rect.left - hlPad);
+            const hlW = Math.min(rect.width + hlPad * 2, vw - hlLeft);
+            const hlH = rect.height + hlPad * 2;
+            highlight.style.cssText = 'position:fixed;z-index:10004;pointer-events:none;border:2px solid var(--mint,#00E5A8);border-radius:12px;'
+                + 'top:' + hlTop + 'px;left:' + hlLeft + 'px;width:' + hlW + 'px;height:' + hlH + 'px;'
+                + 'box-shadow:0 0 0 9999px rgba(6,4,9,0.85),0 0 20px rgba(0,229,168,0.4);';
+            document.body.appendChild(highlight);
+
+            const hlBottom = hlTop + hlH;
+            const maxH = vh - safe.top - safe.bottom;
+            const effectiveTipH = Math.min(tipH, maxH);
+            const spaceAbove = hlTop - gap - safe.top;
+            const spaceBelow = vh - hlBottom - gap - safe.bottom;
+
+            let finalTop;
+            let arrowClass;
+
+            const preferAbove = step.position === 'above';
+            const preferBelow = step.position === 'below';
+
+            if (preferBelow && spaceBelow >= effectiveTipH) {
+                finalTop = hlBottom + gap;
+                arrowClass = 'arrow-above';
+            } else if (preferAbove && spaceAbove >= effectiveTipH) {
+                finalTop = hlTop - gap - effectiveTipH;
+                arrowClass = 'arrow-below';
+            } else if (spaceBelow >= effectiveTipH) {
+                finalTop = hlBottom + gap;
+                arrowClass = 'arrow-above';
+            } else if (spaceAbove >= effectiveTipH) {
+                finalTop = hlTop - gap - effectiveTipH;
+                arrowClass = 'arrow-below';
+            } else if (spaceBelow >= spaceAbove) {
+                finalTop = hlBottom + gap;
+                arrowClass = 'arrow-above';
+            } else {
+                finalTop = hlTop - gap - effectiveTipH;
+                arrowClass = 'arrow-below';
+            }
+
+            finalTop = Math.max(safe.top, Math.min(finalTop, vh - effectiveTipH - safe.bottom));
+
+            tooltip.style.cssText = 'position:fixed;z-index:10005;left:' + margin + 'px;right:' + margin + 'px;'
+                + 'top:' + finalTop + 'px;max-height:' + maxH + 'px;';
+            tooltip.classList.add(arrowClass);
+
+            const targetCenterX = rect.left + rect.width / 2;
+            const tooltipWidth = vw - margin * 2;
+            const arrowPct = ((targetCenterX - margin) / tooltipWidth) * 100;
+            tooltip.style.setProperty('--arrow-left', Math.max(10, Math.min(90, arrowPct)) + '%');
 
             tooltip.querySelector('.walk-tip-skip').onclick = dismiss;
             tooltip.querySelector('.walk-btn-next').onclick = () => {
