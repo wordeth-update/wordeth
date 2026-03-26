@@ -123,6 +123,11 @@ const userSchema = new mongoose.Schema({
     termsVersion: {
         type: String,
         default: null
+    },
+    stripeCustomerId: {
+        type: String,
+        default: null,
+        index: true
     }
 }, {
     timestamps: true

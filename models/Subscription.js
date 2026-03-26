@@ -63,6 +63,11 @@ const subscriptionSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    stripeSubscriptionId: {
+        type: String,
+        default: null,
+        index: true
+    },
     metadata: {
         type: Map,
         of: mongoose.Schema.Types.Mixed,

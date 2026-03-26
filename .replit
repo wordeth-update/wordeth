@@ -13,6 +13,8 @@ integrations = ["javascript_object_storage:2.0.0", "stripe:1.0.0"]
 NODE_ENV = "development"
 PORT = "5000"
 JWT_SECRET = "1a7c40046c7d7aa62490768869490de09cbc7911e017470a2e5a0fecab7715e9cc12e7166638b5e2e7038c3497d70a8803e70128e648bbf388c5ec06c7db0311"
+STRIPE_PUBLISHABLE_KEY = "pk_test_51TF0zuPHJ9YwdWxk30L1zjk6LSpC74zNgwAq7TVb85EncYA8dBhQcJclDDkDhLyrcuQa862sfeHT5Z0KWUJUyIkv00RdzbHtpz"
+STRIPE_SECRET_KEY = "sk_test_51TF0zuPHJ9YwdWxkpymbiHKtp6tYT0NtwQ6SmAkiftDuRZMsD4TVIp35KvT8WXYA0tI53IjFafn0bUhvVMI4m5JO00XDjWnTmK"
 
 [workflows]
 runButton = "Project"

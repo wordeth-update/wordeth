@@ -64,6 +64,8 @@ const tokenRoutes = require('./routes/tokens'); // Token economy
 const boostRoutes = require('./routes/boost'); // Token boost for replays
 const ratingsRoutes = require('./routes/ratings'); // Room ratings
 const replayRoutes = require('./routes/replays'); // Replay system
+const stripeRoutes = require('./routes/stripe'); // Stripe payments
+const { createWebhookHandler } = require('./routes/stripe');
 const trackingMiddleware = require('./middleware/tracking'); // Event tracking
 
 const app = express();
@@ -90,15 +92,15 @@ app.use(helmet({
         directives: {
             defaultSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://cdn.inksoft.com", "https://stores.inksoft.com", "https://unpkg.com"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'", "https://cdnjs.cloudflare.com", "https://cdn.inksoft.com", "https://stores.inksoft.com", "https://www.youtube.com", "https://s.ytimg.com", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://storage.googleapis.com", "https://download.agora.io"],
-            scriptSrcElem: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://cdn.inksoft.com", "https://stores.inksoft.com", "https://www.youtube.com", "https://s.ytimg.com", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://storage.googleapis.com", "https://download.agora.io"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'", "https://cdnjs.cloudflare.com", "https://cdn.inksoft.com", "https://stores.inksoft.com", "https://www.youtube.com", "https://s.ytimg.com", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://storage.googleapis.com", "https://download.agora.io", "https://js.stripe.com"],
+            scriptSrcElem: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://cdn.inksoft.com", "https://stores.inksoft.com", "https://www.youtube.com", "https://s.ytimg.com", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://storage.googleapis.com", "https://download.agora.io", "https://js.stripe.com"],
             imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'", "wss:", "ws:", "https:"],
+            connectSrc: ["'self'", "wss:", "ws:", "https:", "https://api.stripe.com"],
             fontSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com", "https://cdn.inksoft.com"],
             objectSrc: ["'none'"],
             mediaSrc: ["'self'", "blob:"],
             workerSrc: ["'self'", "blob:", "https://cdn.jsdelivr.net", "https://unpkg.com"],
-            frameSrc: ["https://stores.inksoft.com", "https://cdn.inksoft.com", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com", "https://youtube-nocookie.com"],
+            frameSrc: ["https://stores.inksoft.com", "https://cdn.inksoft.com", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com", "https://youtube-nocookie.com", "https://checkout.stripe.com"],
         },
     },
     crossOriginEmbedderPolicy: false,
@@ -187,6 +189,12 @@ app.use(cors({
     credentials: true
 }));
 
+// Stripe webhook route MUST be registered before express.json() — needs raw body
+app.post('/api/stripe/webhook',
+    express.raw({ type: 'application/json' }),
+    createWebhookHandler(process.env.STRIPE_WEBHOOK_SECRET)
+);
+
 // Middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -269,6 +277,7 @@ app.use('/api/tokens', tokenRoutes); // Token economy
 app.use('/api/boost', boostRoutes); // Token boost for replays
 app.use('/api/ratings', ratingsRoutes); // Room ratings
 app.use('/api/replays', replayRoutes); // Replay system
+app.use('/api/stripe', stripeRoutes); // Stripe payments & checkout
 function generateRoomId() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const bytes = crypto.randomBytes(18);

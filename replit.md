@@ -40,7 +40,15 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 ### Subscription & Entitlement System
 - **Configuration-driven plans**: Stored in MongoDB, allowing flexible pricing tiers with dynamic feature entitlements.
 - **RBAC middleware**: Enforces access control based on roles and account types.
-- **Payment Processing**: Natively built billing engine with an integrated payment gateway.
+- **Payment Processing**: Stripe Checkout for subscriptions and one-time token pack purchases, with webhook-driven activation.
+
+### Stripe Integration
+- **Client**: `services/stripeClient.js` — uses `STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABLE_KEY` env vars (user's own Stripe account).
+- **Routes**: `routes/stripe.js` — checkout session creation, billing portal, and webhook handler.
+- **Webhook**: Registered BEFORE `express.json()` in `server.js` at `/api/stripe/webhook` using `express.raw()`.
+- **Flow**: Frontend calls `POST /api/stripe/create-checkout-session` → redirects to Stripe Checkout → Stripe sends `checkout.session.completed` webhook → server activates subscription/credits tokens.
+- **Models**: `User.stripeCustomerId`, `Subscription.stripeSubscriptionId` link Wordeth records to Stripe objects.
+- **Events handled**: `checkout.session.completed`, `invoice.payment_succeeded`, `customer.subscription.updated`, `customer.subscription.deleted`.
 
 ### Token Economy System
 - **User Tokens**: Monthly grants based on subscription tier, non-expiring.
@@ -85,5 +93,5 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 
 ## External Dependencies
 
-- **NPM Packages**: express, mongoose, bcryptjs, jsonwebtoken, cors, helmet, express-rate-limit, express-validator, dotenv, axios, multer, @replit/object-storage, puppeteer, agora-access-token.
-- **External APIs & Services**: Licensed lyrics APIs (internal), YouTube, MongoDB, Replit Object Storage, InkSoft, Google Fonts, Font Awesome, Agora RTC.
+- **NPM Packages**: express, mongoose, bcryptjs, jsonwebtoken, cors, helmet, express-rate-limit, express-validator, dotenv, axios, multer, @replit/object-storage, puppeteer, agora-access-token, stripe.
+- **External APIs & Services**: Licensed lyrics APIs (internal), YouTube, MongoDB, Replit Object Storage, InkSoft, Google Fonts, Font Awesome, Agora RTC, Stripe.
