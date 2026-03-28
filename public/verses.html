@@ -36,6 +36,21 @@
                 <img src="assets/mic-icon.svg" alt="Search" class="mic-icon">
             </button>
         </div>
+        <div class="notif-bell-wrap" id="notif-bell-wrap" style="display:none;">
+            <button class="notif-bell-btn" id="notif-bell-btn" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="notif-bell-badge" id="notif-bell-badge" style="display:none;">0</span>
+            </button>
+            <div class="notif-dropdown" id="notif-dropdown" style="display:none;">
+                <div class="notif-dropdown-header">
+                    <span>Notifications</span>
+                    <button class="notif-mark-all" id="notif-mark-all">Mark all read</button>
+                </div>
+                <div class="notif-dropdown-list" id="notif-dropdown-list">
+                    <p class="notif-empty">No notifications yet</p>
+                </div>
+            </div>
+        </div>
         <div class="nav-auth">
             <a href="/signin.html" class="nav-signin-btn">Sign In</a>
         </div>
@@ -190,6 +205,10 @@
                 <div id="live-view">
                     <div class="section-header">
                         <h2>Live Music Rooms</h2>
+                        <div class="room-search-wrap">
+                            <input type="text" class="room-search-input" id="room-search-input" placeholder="Search rooms...">
+                            <i class="fas fa-search room-search-icon"></i>
+                        </div>
                         <div class="filter-tabs">
                             <button class="filter-tab active" data-filter="all">All</button>
                             <button class="filter-tab" data-filter="hip-hop">Hip-Hop</button>
@@ -981,34 +1000,74 @@
     <script>
     function viewUserProfile(userId) {
         if (!userId) return;
-        const modal = document.getElementById('user-profile-modal');
-        const loading = document.getElementById('user-profile-modal-loading');
-        const body = document.getElementById('user-profile-modal-body');
-        const closeBtn = document.getElementById('user-profile-modal-close');
+        var modal = document.getElementById('user-profile-modal');
+        var loading = document.getElementById('user-profile-modal-loading');
+        var body = document.getElementById('user-profile-modal-body');
+        var closeBtn = document.getElementById('user-profile-modal-close');
         if (!modal) return;
         modal.style.display = 'flex';
         loading.style.display = 'block';
         body.style.display = 'none';
-        closeBtn.onclick = () => { modal.style.display = 'none'; };
-        modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
-        const baseUrl = typeof apiUrl === 'function' ? apiUrl('/api/user/profile/' + userId) : '/api/user/profile/' + userId;
+        closeBtn.onclick = function() { modal.style.display = 'none'; };
+        modal.onclick = function(e) { if (e.target === modal) modal.style.display = 'none'; };
+        var baseUrl = typeof apiUrl === 'function' ? apiUrl('/api/user/profile/' + userId) : '/api/user/profile/' + userId;
+        var tkn = localStorage.getItem('authToken');
+        var curId = ''; try { curId = JSON.parse(localStorage.getItem('user') || '{}')._id || ''; } catch(e) {}
         fetch(baseUrl)
-            .then(res => { if (!res.ok) throw new Error('Not found'); return res.json(); })
-            .then(user => {
+            .then(function(res) { if (!res.ok) throw new Error('Not found'); return res.json(); })
+            .then(function(user) {
                 loading.style.display = 'none';
                 body.style.display = 'block';
-                const joined = user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : '';
-                const safeAvatar = (user.avatar && (user.avatar.startsWith('data:image/') || user.avatar.startsWith('assets/') || user.avatar.startsWith('http'))) ? user.avatar : 'assets/default-avatar.png';
-                body.innerHTML = '<div class="user-profile-view"><div class="user-profile-view-avatar"><img id="vpv-img" src="assets/default-avatar.png" alt="Profile"></div><h2 id="vpv-name"></h2><p class="user-profile-view-bio" id="vpv-bio"></p><div class="user-profile-view-stats"><div class="stat"><span class="stat-value">' + (parseInt(user.followingCount)||0) + '</span><span class="stat-label">Following</span></div><div class="stat"><span class="stat-value">' + (parseInt(user.followersCount)||0) + '</span><span class="stat-label">Followers</span></div><div class="stat"><span class="stat-value">' + (parseInt(user.searchCount)||0) + '</span><span class="stat-label">Searches</span></div></div>' + (joined ? '<p class="user-profile-view-joined">Joined ' + joined + '</p>' : '') + '</div>';
-                const n = document.getElementById('vpv-name'); if(n) n.textContent = user.name || 'Unknown';
-                const b = document.getElementById('vpv-bio'); if(b) b.textContent = user.bio || 'No bio yet';
-                const i = document.getElementById('vpv-img'); if(i) { i.src = safeAvatar; i.onerror = function(){ this.src='assets/default-avatar.png'; }; }
+                var joined = user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : '';
+                var safeAvatar = (user.avatar && (user.avatar.startsWith('data:image/') || user.avatar.startsWith('assets/') || user.avatar.startsWith('http') || user.avatar.startsWith('/api/'))) ? user.avatar : 'assets/default-avatar.png';
+                var isSelf = curId && curId === user._id;
+                var followHtml = (!isSelf && tkn) ? '<button class="vpv-follow-btn" id="vpv-follow-btn"><i class="fas fa-user-plus"></i> Follow</button>' : '';
+                var roomHtml = '';
+                if (user.showRoomHistory && user.roomHistory && user.roomHistory.length > 0) {
+                    var items = user.roomHistory.slice(0,10).map(function(r) {
+                        var ago = _vpvTimeAgo(r.joinedAt);
+                        var tb = r.tokenPrice > 0 ? '<span class="vpv-token-badge"><i class="fas fa-coins"></i> ' + r.tokenPrice + '</span>' : '';
+                        return '<div class="vpv-room-item"><div class="vpv-room-info"><strong>' + escapeHtml(r.roomName || 'Unnamed Room') + '</strong><span>' + escapeHtml(r.hostName || '') + '</span></div><div class="vpv-room-meta">' + tb + '<span class="vpv-room-time">' + ago + '</span></div></div>';
+                    }).join('');
+                    roomHtml = '<div class="vpv-rooms-section"><h4><i class="fas fa-headphones"></i> Recent Rooms</h4>' + items + '</div>';
+                }
+                body.innerHTML = '<div class="user-profile-view"><div class="user-profile-view-avatar"><img id="vpv-img" src="assets/default-avatar.png" alt="Profile"></div><h2 id="vpv-name"></h2><p class="user-profile-view-bio" id="vpv-bio"></p>' + followHtml + '<div class="user-profile-view-stats"><div class="stat"><span class="stat-value">' + (parseInt(user.followingCount)||0) + '</span><span class="stat-label">Following</span></div><div class="stat"><span class="stat-value">' + (parseInt(user.followersCount)||0) + '</span><span class="stat-label">Followers</span></div><div class="stat"><span class="stat-value">' + (parseInt(user.searchCount)||0) + '</span><span class="stat-label">Searches</span></div></div>' + (joined ? '<p class="user-profile-view-joined">Joined ' + joined + '</p>' : '') + roomHtml + '</div>';
+                var n = document.getElementById('vpv-name'); if(n) n.textContent = user.name || 'Unknown';
+                var b = document.getElementById('vpv-bio'); if(b) b.textContent = user.bio || 'No bio yet';
+                var i = document.getElementById('vpv-img'); if(i) { i.src = safeAvatar; i.onerror = function(){ this.src='assets/default-avatar.png'; }; }
+                var fb = document.getElementById('vpv-follow-btn');
+                if (fb) {
+                    fb.addEventListener('click', function() {
+                        fb.disabled = true;
+                        fb.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                        fetch(typeof apiUrl === 'function' ? apiUrl('/api/user/friends/' + userId) : '/api/user/friends/' + userId, {
+                            method: 'POST', headers: { 'Authorization': 'Bearer ' + tkn }
+                        }).then(function(r) {
+                            if (!r.ok) throw new Error('fail');
+                            return r.json();
+                        }).then(function(d) {
+                            fb.innerHTML = '<i class="fas fa-check"></i> Following';
+                            fb.classList.add('following');
+                        }).catch(function() {
+                            fb.innerHTML = '<i class="fas fa-user-plus"></i> Follow';
+                            fb.disabled = false;
+                        });
+                    });
+                }
             })
-            .catch(() => {
+            .catch(function() {
                 loading.style.display = 'none';
                 body.style.display = 'block';
                 body.innerHTML = '<p style="text-align:center;padding:2rem;color:#aaa;">Could not load this profile.</p>';
             });
+    }
+    function _vpvTimeAgo(d) {
+        var s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+        if (s < 60) return 'just now';
+        var m = Math.floor(s / 60); if (m < 60) return m + 'm ago';
+        var h = Math.floor(m / 60); if (h < 24) return h + 'h ago';
+        var dy = Math.floor(h / 24); if (dy < 30) return dy + 'd ago';
+        return new Date(d).toLocaleDateString();
     }
     </script>
         <footer class="site-footer">

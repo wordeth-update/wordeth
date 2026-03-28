@@ -601,6 +601,9 @@ function viewUserProfile(userId) {
     loading.style.display = 'flex';
     body.style.display = 'none';
 
+    const token = localStorage.getItem('authToken');
+    const currentUserId = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}')._id; } catch(e) { return null; } })();
+
     fetch(apiUrl(`/api/user/profile/${userId}`))
         .then(res => {
             if (!res.ok) throw new Error('Not found');
@@ -610,10 +613,23 @@ function viewUserProfile(userId) {
             loading.style.display = 'none';
             body.style.display = 'block';
             const joined = user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : '';
-            
+
             const esc = (str) => { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; };
-            const safeAvatar = (user.avatar && (user.avatar.startsWith('data:image/') || user.avatar.startsWith('assets/') || user.avatar.startsWith('http'))) ? user.avatar : 'assets/default-avatar.png';
-            
+            const safeAvatar = (user.avatar && (user.avatar.startsWith('data:image/') || user.avatar.startsWith('assets/') || user.avatar.startsWith('http') || user.avatar.startsWith('/api/'))) ? user.avatar : 'assets/default-avatar.png';
+
+            const isSelf = currentUserId && currentUserId === user._id;
+            const followBtnHtml = (!isSelf && token) ? `<button class="vpv-follow-btn" id="vpv-follow-btn" data-uid="${esc(user._id)}"><i class="fas fa-user-plus"></i> Follow</button>` : '';
+
+            let roomHistoryHtml = '';
+            if (user.showRoomHistory && user.roomHistory && user.roomHistory.length > 0) {
+                const roomItems = user.roomHistory.slice(0, 10).map(r => {
+                    const ago = _vpvTimeAgo(r.joinedAt);
+                    const tokenBadge = r.tokenPrice > 0 ? `<span class="vpv-token-badge"><i class="fas fa-coins"></i> ${r.tokenPrice}</span>` : '';
+                    return `<div class="vpv-room-item"><div class="vpv-room-info"><strong>${esc(r.roomName || 'Unnamed Room')}</strong><span>${esc(r.hostName || '')}</span></div><div class="vpv-room-meta">${tokenBadge}<span class="vpv-room-time">${ago}</span></div></div>`;
+                }).join('');
+                roomHistoryHtml = `<div class="vpv-rooms-section"><h4><i class="fas fa-headphones"></i> Recent Rooms</h4>${roomItems}</div>`;
+            }
+
             body.innerHTML = `
                 <div class="user-profile-view">
                     <div class="user-profile-view-avatar">
@@ -621,21 +637,48 @@ function viewUserProfile(userId) {
                     </div>
                     <h2 id="user-profile-view-name"></h2>
                     <p class="user-profile-view-bio" id="user-profile-view-bio"></p>
+                    ${followBtnHtml}
                     <div class="user-profile-view-stats">
                         <div class="stat"><span class="stat-value">${parseInt(user.followingCount) || 0}</span><span class="stat-label">Following</span></div>
                         <div class="stat"><span class="stat-value">${parseInt(user.followersCount) || 0}</span><span class="stat-label">Followers</span></div>
                         <div class="stat"><span class="stat-value">${parseInt(user.searchCount) || 0}</span><span class="stat-label">Searches</span></div>
                     </div>
                     ${joined ? `<p class="user-profile-view-joined">Joined ${esc(joined)}</p>` : ''}
+                    ${roomHistoryHtml}
                 </div>
             `;
-            
+
             const nameEl = document.getElementById('user-profile-view-name');
             const bioEl = document.getElementById('user-profile-view-bio');
             const imgEl = document.getElementById('user-profile-view-img');
             if (nameEl) nameEl.textContent = user.name || 'Unknown';
             if (bioEl) bioEl.textContent = user.bio || 'No bio yet';
             if (imgEl) { imgEl.src = safeAvatar; imgEl.onerror = function() { this.src = 'assets/default-avatar.png'; }; }
+
+            const followBtn = document.getElementById('vpv-follow-btn');
+            if (followBtn) {
+                followBtn.addEventListener('click', async () => {
+                    followBtn.disabled = true;
+                    followBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    try {
+                        const res = await fetch(apiUrl(`/api/user/friends/${userId}`), {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            followBtn.innerHTML = '<i class="fas fa-check"></i> Following';
+                            followBtn.classList.add('following');
+                        } else {
+                            followBtn.innerHTML = data.message || 'Error';
+                            followBtn.disabled = false;
+                        }
+                    } catch(e) {
+                        followBtn.innerHTML = '<i class="fas fa-user-plus"></i> Follow';
+                        followBtn.disabled = false;
+                    }
+                });
+            }
         })
         .catch(err => {
             loading.style.display = 'none';
@@ -649,4 +692,16 @@ function viewUserProfile(userId) {
     modal.addEventListener('click', (e) => {
         if (e.target === modal) modal.style.display = 'none';
     });
+}
+
+function _vpvTimeAgo(dateStr) {
+    const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+    if (seconds < 60) return 'just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return minutes + 'm ago';
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours + 'h ago';
+    const days = Math.floor(hours / 24);
+    if (days < 30) return days + 'd ago';
+    return new Date(dateStr).toLocaleDateString();
 }

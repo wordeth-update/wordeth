@@ -1116,3 +1116,81 @@
     border: none;
     color: #1a1a2e;
 }
+
+.vpv-follow-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1.5rem;
+    border-radius: 20px;
+    border: 1px solid var(--mint, #98ff98);
+    background: transparent;
+    color: var(--mint, #98ff98);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin: 0.5rem 0 0.75rem;
+    transition: all 0.2s;
+}
+.vpv-follow-btn:hover {
+    background: var(--mint, #98ff98);
+    color: #1a1a2e;
+}
+.vpv-follow-btn.following {
+    background: rgba(152, 255, 152, 0.15);
+    border-color: rgba(152, 255, 152, 0.3);
+    color: rgba(255,255,255,0.7);
+    cursor: default;
+}
+.vpv-follow-btn:disabled { opacity: 0.6; cursor: wait; }
+
+.vpv-rooms-section {
+    width: 100%;
+    margin-top: 1rem;
+    text-align: left;
+}
+.vpv-rooms-section h4 {
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.vpv-room-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.6rem;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.04);
+    margin-bottom: 0.35rem;
+}
+.vpv-room-item:hover { background: rgba(255,255,255,0.07); }
+.vpv-room-info strong {
+    display: block;
+    font-size: 0.85rem;
+    color: #fff;
+}
+.vpv-room-info span {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.45);
+}
+.vpv-room-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+.vpv-token-badge {
+    font-size: 0.72rem;
+    background: rgba(255, 215, 0, 0.15);
+    color: #ffd700;
+    padding: 0.15rem 0.45rem;
+    border-radius: 6px;
+    font-weight: 600;
+}
+.vpv-room-time {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.35);
+}

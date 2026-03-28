@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const auth = require('../middleware/auth');
 const User = require('../models/User');
 const UsageEvent = require('../models/UsageEvent');
+const Notification = require('../models/Notification');
 
 const upload = multer({
     storage: multer.memoryStorage(),
@@ -294,6 +295,14 @@ router.post('/friends/:id', auth, async (req, res) => {
         userToFollow.followers.push(req.user._id);
         await Promise.all([req.user.save(), userToFollow.save()]);
 
+        Notification.create({
+            userId: userToFollow._id,
+            type: 'new_follower',
+            fromUserId: req.user._id,
+            fromUserName: req.user.name || '',
+            fromUserAvatar: req.user.avatar || ''
+        }).catch(err => console.error('[Notification] new_follower error:', err));
+
         res.json({ message: 'Followed successfully', following: req.user.following });
     } catch (error) {
         console.error('Follow error:', error);
@@ -367,6 +376,43 @@ router.post('/admin/flush', auth, requireRole('ADMIN'), async (req, res) => {
     } catch (error) {
         console.error('Data flush error:', error);
         res.status(500).json({ error: 'Failed to flush user data' });
+    }
+});
+
+router.get('/notifications', auth, async (req, res) => {
+    try {
+        const notifications = await Notification.find({ userId: req.user._id })
+            .sort({ createdAt: -1 })
+            .limit(50)
+            .lean();
+        const unreadCount = await Notification.countDocuments({ userId: req.user._id, read: false });
+        res.json({ notifications, unreadCount });
+    } catch (error) {
+        console.error('Notifications fetch error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.put('/notifications/read-all', auth, async (req, res) => {
+    try {
+        await Notification.updateMany({ userId: req.user._id, read: false }, { $set: { read: true } });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.put('/notifications/:id/read', auth, async (req, res) => {
+    try {
+        const notif = await Notification.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user._id },
+            { $set: { read: true } },
+            { new: true }
+        );
+        if (!notif) return res.status(404).json({ message: 'Not found' });
+        res.json(notif);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
     }
 });
 

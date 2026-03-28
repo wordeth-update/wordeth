@@ -3,6 +3,7 @@ const User = require('../models/User');
 const TokenLedger = require('../models/TokenLedger');
 const EventsLedger = require('../models/EventsLedger');
 const Replay = require('../models/Replay');
+const Notification = require('../models/Notification');
 
 let rooms = new Map();
 const connectedUsers = new Map();
@@ -529,6 +530,40 @@ function setupSignaling(io) {
             }
 
             console.log(`${socket.userName} joined room ${roomId} (${room.participants.size} participants)`);
+
+            if (socket.userId && socket.userId !== socket.id) {
+                const notifType = shouldBeHost ? 'follower_created_room' : 'follower_joined_room';
+                User.findById(socket.userId).select('followers name avatar').lean().then(joiner => {
+                    if (!joiner || !joiner.followers || joiner.followers.length === 0) return;
+                    const bulkNotifs = joiner.followers.map(followerId => ({
+                        userId: followerId,
+                        type: notifType,
+                        fromUserId: joiner._id,
+                        fromUserName: joiner.name || '',
+                        fromUserAvatar: joiner.avatar || '',
+                        roomId,
+                        roomName: room.name || ''
+                    }));
+                    Notification.insertMany(bulkNotifs).then(docs => {
+                        for (const doc of docs) {
+                            const followerSockets = connectedUsers.get(doc.userId.toString());
+                            if (followerSockets && followerSockets.size > 0) {
+                                for (const sid of followerSockets) {
+                                    io.to(sid).emit('notification', {
+                                        _id: doc._id,
+                                        type: doc.type,
+                                        fromUserName: doc.fromUserName,
+                                        fromUserAvatar: doc.fromUserAvatar,
+                                        roomId: doc.roomId,
+                                        roomName: doc.roomName,
+                                        createdAt: doc.createdAt
+                                    });
+                                }
+                            }
+                        }
+                    }).catch(err => console.error('[Notification] room notify error:', err));
+                }).catch(err => console.error('[Notification] lookup error:', err));
+            }
 
             saveRoom(roomId, room);
             io.emit('rooms-updated', getActiveRooms());

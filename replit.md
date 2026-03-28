@@ -95,6 +95,23 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Screenshots**: Auto-captured via Puppeteer to `public/features/` (12 PNG screenshots of platform pages)
 - **Content**: Comprehensive visual showcase of all platform features, organized into 13 sections with embedded screenshots, CSS component recreations, and the Wordeth design system
 
+### Notification System
+- **Model**: `models/Notification.js` — stores persistent notifications with types: `new_follower`, `follower_created_room`, `follower_joined_room`.
+- **API**: `GET /api/user/notifications` (auth, returns latest 50 + unread count), `PUT /api/user/notifications/:id/read`, `PUT /api/user/notifications/read-all`.
+- **Real-time**: Socket.io emits `notification` events to online followers when a user creates/joins a room. Follow action creates `new_follower` notification.
+- **UI**: Notification bell dynamically injected by `notifications.js` into nav bar. Shows unread badge count, dropdown list with notification items, mark-all-read. Polls every 30s + real-time socket updates.
+- **CSS**: `public/css/notifications.css` — bell, badge, dropdown, item styles.
+
+### Room Discovery
+- **Search**: Room search input on Verses page filters rooms by name with debounced input.
+- **Trending Badge**: Rooms with 5+ participants display a "Trending" badge with fire icon.
+- **Filter Persistence**: Genre filters and search query persist across real-time room updates via `_applyRoomFilters()`.
+
+### Enhanced Profile Modal
+- **Follow Button**: `viewUserProfile()` modal shows a Follow button for logged-in users viewing others' profiles.
+- **Room History**: Modal displays recent room history (up to 10) when the user has `showRoomHistory` enabled, with token badges and time-ago timestamps.
+- **Implementations**: Both `public/js/profile.js` and `public/verses.html` inline script have synchronized implementations.
+
 ### Key Features Architecture
 - **Verses (Audio Rooms)**: Uses Agora RTC SDK in `rtc` mode for scalable audio/video, with Socket.io for room management. Supports server-side token generation, Web Audio API for filters, and listener-first stage access with promotion paths.
 - **Auth UX**: Custom styling for autofill, rounded inputs, and focus states.

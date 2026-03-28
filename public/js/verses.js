@@ -343,6 +343,7 @@ class AudioRoomsManager {
             await this.connectToServer();
             await this.loadActiveRooms();
             this.loadReplays();
+            this.initRoomSearch();
         } catch (e) {
             console.error('Initialization error:', e);
         } finally {
@@ -1146,6 +1147,8 @@ class AudioRoomsManager {
             statUsers.textContent = total.toLocaleString();
         }
         if (statRooms) statRooms.textContent = rooms.length;
+
+        this._applyRoomFilters();
     }
 
     createRoomCard(room) {
@@ -1194,12 +1197,19 @@ class AudioRoomsManager {
         const joinBtn = this._el('button', {className: 'join-room-btn primary'}, this._icon('fas fa-play'), this._text(room.isLocked ? ' Locked' : ' Join Room'));
         if (room.isLocked) joinBtn.disabled = true;
 
+        const isTrending = count >= 5;
+        if (isTrending) {
+            const trendBadge = this._el('span', {className: 'room-trending-badge'}, this._icon('fas fa-fire'), this._text(' Trending'));
+            roomInfo.insertBefore(trendBadge, roomInfo.firstChild);
+        }
+
         const cardClass = tokenPrice > 0 ? 'room-card room-card-gated' : 'room-card';
         const card = this._el('div', {className: cardClass},
             this._el('div', {className: 'room-preview'}, participantsPreview, roomInfo),
             this._el('div', {className: 'room-actions'}, joinBtn));
         card.dataset.roomId = room.id;
         card.dataset.genre = genre;
+        card.dataset.roomName = (room.name || '').toLowerCase();
         if (tokenPrice > 0) card.dataset.tokenPrice = tokenPrice;
         return card;
     }
@@ -1344,20 +1354,36 @@ class AudioRoomsManager {
     filterRooms(filter) {
         this.currentFilterTab = filter;
         
-        // Update active tab
-        document.querySelectorAll('.filter-tab').forEach(tab => {
+        document.querySelectorAll('#live-view .filter-tab').forEach(tab => {
             tab.classList.remove('active');
         });
-        document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+        const activeTab = document.querySelector(`#live-view [data-filter="${filter}"]`);
+        if (activeTab) activeTab.classList.add('active');
         
-        // Filter room cards
+        this._applyRoomFilters();
+    }
+
+    _applyRoomFilters() {
+        const searchVal = (this._roomSearchQuery || '').toLowerCase();
+        const genreFilter = this.currentFilterTab || 'all';
         const roomCards = document.querySelectorAll('.room-card');
         roomCards.forEach(card => {
-            if (filter === 'all' || card.dataset.genre === filter) {
-                card.style.display = 'block';
-            } else {
-                card.style.display = 'none';
-            }
+            const matchGenre = genreFilter === 'all' || card.dataset.genre === genreFilter;
+            const matchSearch = !searchVal || (card.dataset.roomName || '').includes(searchVal);
+            card.style.display = (matchGenre && matchSearch) ? 'block' : 'none';
+        });
+    }
+
+    initRoomSearch() {
+        const input = document.getElementById('room-search-input');
+        if (!input) return;
+        let debounce;
+        input.addEventListener('input', () => {
+            clearTimeout(debounce);
+            debounce = setTimeout(() => {
+                this._roomSearchQuery = input.value;
+                this._applyRoomFilters();
+            }, 200);
         });
     }
 
