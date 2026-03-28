@@ -505,11 +505,32 @@ router.delete('/music-snippet', auth, async (req, res) => {
 
 router.get('/audio-bank', async (req, res) => {
     try {
-        const genre = req.query.genre;
+        const { genre, mood, search, sort, featured } = req.query;
         const query = { active: true };
         if (genre && genre !== 'all') query.genre = genre;
-        const tracks = await AudioBank.find(query).sort({ totalRentals: -1 }).limit(50).lean();
-        res.json({ tracks });
+        if (mood && mood !== 'all') query.mood = mood;
+        if (featured === 'true') query.featured = true;
+        if (search && search.trim().length >= 2) {
+            const term = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            query.$or = [
+                { title: { $regex: term, $options: 'i' } },
+                { artist: { $regex: term, $options: 'i' } },
+                { tags: { $regex: term, $options: 'i' } }
+            ];
+        }
+
+        let sortObj = { totalRentals: -1 };
+        if (sort === 'newest') sortObj = { createdAt: -1 };
+        else if (sort === 'price_low') sortObj = { tokenPrice: 1 };
+        else if (sort === 'price_high') sortObj = { tokenPrice: -1 };
+        else if (sort === 'popular') sortObj = { totalRentals: -1 };
+
+        const tracks = await AudioBank.find(query).sort(sortObj).limit(60).lean();
+
+        const genresAgg = await AudioBank.distinct('genre', { active: true });
+        const moodsAgg = await AudioBank.distinct('mood', { active: true });
+
+        res.json({ tracks, genres: genresAgg, moods: moodsAgg });
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
     }

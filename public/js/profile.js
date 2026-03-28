@@ -714,40 +714,227 @@ function loadCustomizeTab() {
     var bankClose = document.getElementById('audio-bank-close');
     if (browseBtn && bankModal) {
         browseBtn.addEventListener('click', function() {
-            bankModal.style.display = 'block';
-            _loadAudioBank(base, token, bankModal);
+            bankModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            _abLoadTracks(base, token, bankModal);
         });
     }
     if (bankClose && bankModal) {
-        bankClose.addEventListener('click', function() { bankModal.style.display = 'none'; });
+        bankClose.addEventListener('click', function() {
+            bankModal.style.display = 'none';
+            document.body.style.overflow = '';
+            _abStopPreview();
+        });
     }
+    bankModal && bankModal.addEventListener('click', function(e) {
+        if (e.target === bankModal) {
+            bankModal.style.display = 'none';
+            document.body.style.overflow = '';
+            _abStopPreview();
+        }
+    });
+
+    var abSearchInput = document.getElementById('ab-search-input');
+    var abGenre = document.getElementById('ab-genre-filter');
+    var abMood = document.getElementById('ab-mood-filter');
+    var abSort = document.getElementById('ab-sort-filter');
+    var _abDebounce = null;
+    function _abOnFilter() {
+        clearTimeout(_abDebounce);
+        _abDebounce = setTimeout(function() { _abLoadTracks(base, token, bankModal); }, 300);
+    }
+    if (abSearchInput) abSearchInput.addEventListener('input', _abOnFilter);
+    if (abGenre) abGenre.addEventListener('change', function() { _abLoadTracks(base, token, bankModal); });
+    if (abMood) abMood.addEventListener('change', function() { _abLoadTracks(base, token, bankModal); });
+    if (abSort) abSort.addEventListener('change', function() { _abLoadTracks(base, token, bankModal); });
 }
 
-function _loadAudioBank(base, token, bankModal) {
+var _abCurrentAudio = null;
+var _abCurrentTrackId = null;
+var _abAnimFrame = null;
+var _abTrackMap = {};
+
+function _abStopPreview() {
+    if (_abCurrentAudio) {
+        _abCurrentAudio.pause();
+        _abCurrentAudio.src = '';
+        _abCurrentAudio = null;
+    }
+    _abCurrentTrackId = null;
+    if (_abAnimFrame) cancelAnimationFrame(_abAnimFrame);
+    var np = document.getElementById('ab-now-playing');
+    if (np) np.style.display = 'none';
+    document.querySelectorAll('.bank-track').forEach(function(t) { t.classList.remove('ab-playing'); });
+    document.querySelectorAll('.bank-play-btn i').forEach(function(i) { i.className = 'fas fa-play'; });
+}
+
+function _abPlayPreview(track) {
+    var audio = document.getElementById('ab-audio-player');
+    if (!audio) return;
+    var url = track.previewUrl || track.audioUrl;
+    if (!url) return;
+
+    function _abUpdateProgress() {
+        if (!audio || audio.paused) return;
+        var pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+        var bar = document.getElementById('ab-np-progress-bar');
+        var timeEl = document.getElementById('ab-np-time');
+        if (bar) bar.style.width = pct + '%';
+        if (timeEl) {
+            var sec = Math.floor(audio.currentTime);
+            timeEl.textContent = Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+        }
+        _abAnimFrame = requestAnimationFrame(_abUpdateProgress);
+    }
+
+    if (_abCurrentTrackId === track._id) {
+        var trackEl = document.querySelector('.bank-track[data-id="' + track._id + '"]');
+        if (audio.paused) {
+            audio.play();
+            document.getElementById('ab-np-play-btn').innerHTML = '<i class="fas fa-pause"></i>';
+            if (trackEl) {
+                trackEl.classList.add('ab-playing');
+                var pi = trackEl.querySelector('.bank-play-btn i');
+                if (pi) pi.className = 'fas fa-pause';
+            }
+            _abUpdateProgress();
+        } else {
+            audio.pause();
+            document.getElementById('ab-np-play-btn').innerHTML = '<i class="fas fa-play"></i>';
+            if (trackEl) {
+                trackEl.classList.remove('ab-playing');
+                var pi2 = trackEl.querySelector('.bank-play-btn i');
+                if (pi2) pi2.className = 'fas fa-play';
+            }
+        }
+        return;
+    }
+
+    _abStopPreview();
+    _abCurrentTrackId = track._id;
+    _abCurrentAudio = audio;
+    audio.src = url;
+    audio.play().catch(function() {});
+
+    var np = document.getElementById('ab-now-playing');
+    var npArt = document.getElementById('ab-np-art');
+    var npTitle = document.getElementById('ab-np-title');
+    var npArtist = document.getElementById('ab-np-artist');
+    if (np) np.style.display = 'flex';
+    if (npArt) { npArt.src = track.coverArt || 'assets/default-cover.svg'; npArt.alt = track.title; }
+    if (npTitle) npTitle.textContent = track.title;
+    if (npArtist) npArtist.textContent = track.artist;
+    document.getElementById('ab-np-play-btn').innerHTML = '<i class="fas fa-pause"></i>';
+
+    var newTrackEl = document.querySelector('.bank-track[data-id="' + track._id + '"]');
+    if (newTrackEl) newTrackEl.classList.add('ab-playing');
+    var playIcon = newTrackEl && newTrackEl.querySelector('.bank-play-btn i');
+    if (playIcon) playIcon.className = 'fas fa-pause';
+
+    _abUpdateProgress();
+
+    audio.onended = function() { _abStopPreview(); };
+
+    var npPlayBtn = document.getElementById('ab-np-play-btn');
+    npPlayBtn.onclick = function() { _abPlayPreview(track); };
+}
+
+function _abLoadTracks(base, token, bankModal) {
     var list = document.getElementById('audio-bank-list');
-    fetch(base + '/api/user/audio-bank')
+    var countEl = document.getElementById('ab-results-count');
+    var search = (document.getElementById('ab-search-input') || {}).value || '';
+    var genre = (document.getElementById('ab-genre-filter') || {}).value || 'all';
+    var mood = (document.getElementById('ab-mood-filter') || {}).value || 'all';
+    var sort = (document.getElementById('ab-sort-filter') || {}).value || 'popular';
+
+    var params = '?sort=' + sort;
+    if (genre !== 'all') params += '&genre=' + encodeURIComponent(genre);
+    if (mood !== 'all') params += '&mood=' + encodeURIComponent(mood);
+    if (search.trim().length >= 2) params += '&search=' + encodeURIComponent(search.trim());
+
+    list.innerHTML = '<div class="ab-loading"><div class="loading-spinner"></div><p>Loading tracks...</p></div>';
+
+    fetch(base + '/api/user/audio-bank' + params)
         .then(function(r) { return r.json(); })
         .then(function(data) {
             var tracks = data.tracks || [];
+            var genres = data.genres || [];
+            var moods = data.moods || [];
+
+            var genreSelect = document.getElementById('ab-genre-filter');
+            if (genreSelect && genreSelect.options.length <= 1) {
+                genres.forEach(function(g) {
+                    var opt = document.createElement('option');
+                    opt.value = g;
+                    opt.textContent = g.charAt(0).toUpperCase() + g.slice(1);
+                    genreSelect.appendChild(opt);
+                });
+            }
+            var moodSelect = document.getElementById('ab-mood-filter');
+            if (moodSelect && moodSelect.options.length <= 1) {
+                moods.forEach(function(m) {
+                    var opt = document.createElement('option');
+                    opt.value = m;
+                    opt.textContent = m.charAt(0).toUpperCase() + m.slice(1);
+                    moodSelect.appendChild(opt);
+                });
+            }
+
+            if (countEl) countEl.textContent = tracks.length + ' track' + (tracks.length !== 1 ? 's' : '') + ' found';
+
             if (tracks.length === 0) {
-                list.innerHTML = '<p class="customize-hint">No tracks available yet. Check back soon!</p>';
+                list.innerHTML = '<div class="ab-empty"><i class="fas fa-music"></i><p>No tracks match your filters</p></div>';
                 return;
             }
+
+            _abTrackMap = {};
+            tracks.forEach(function(t) {
+                _abTrackMap[t._id] = { _id: t._id, title: t.title, artist: t.artist, coverArt: t.coverArt || '', audioUrl: t.audioUrl, previewUrl: t.previewUrl || '' };
+            });
+
             list.innerHTML = tracks.map(function(t) {
+                var coverSrc = t.coverArt || 'assets/default-cover.svg';
+                var durationStr = t.duration ? Math.floor(t.duration / 60) + ':' + String(t.duration % 60).padStart(2, '0') : '0:30';
+                var moodTag = t.mood ? '<span class="ab-mood-tag">' + escHtml(t.mood) + '</span>' : '';
+                var featuredBadge = t.featured ? '<span class="ab-featured-badge"><i class="fas fa-star"></i></span>' : '';
+                var rentals = t.totalRentals > 0 ? '<span class="ab-rentals"><i class="fas fa-users"></i> ' + t.totalRentals + '</span>' : '';
                 return '<div class="bank-track" data-id="' + t._id + '">'
-                    + '<div class="bank-track-info">'
-                    + '<strong>' + escHtml(t.title) + '</strong>'
-                    + '<span>' + escHtml(t.artist) + ' &bull; ' + escHtml(t.genre) + '</span>'
+                    + '<div class="bt-cover">'
+                    + '<img src="' + escHtml(coverSrc) + '" alt="' + escHtml(t.title) + '" onerror="this.src=\'assets/default-cover.svg\'">'
+                    + '<button class="bank-play-btn"><i class="fas fa-play"></i></button>'
+                    + featuredBadge
                     + '</div>'
-                    + '<div class="bank-track-price">'
-                    + '<span><i class="fas fa-coins"></i> ' + t.tokenPrice + ' tokens</span>'
-                    + '<span>' + t.rentalDays + ' days</span>'
+                    + '<div class="bt-details">'
+                    + '<div class="bt-title">' + escHtml(t.title) + '</div>'
+                    + '<div class="bt-artist">' + escHtml(t.artist) + '</div>'
+                    + '<div class="bt-meta">'
+                    + '<span class="ab-genre-tag">' + escHtml(t.genre) + '</span>'
+                    + moodTag
+                    + '<span class="ab-duration"><i class="fas fa-clock"></i> ' + durationStr + '</span>'
+                    + (t.bpm ? '<span class="ab-bpm">' + t.bpm + ' BPM</span>' : '')
+                    + rentals
                     + '</div>'
+                    + '</div>'
+                    + '<div class="bt-action">'
+                    + '<div class="bt-price"><i class="fas fa-coins"></i> ' + t.tokenPrice + '</div>'
+                    + '<div class="bt-rental-period">' + t.rentalDays + ' days</div>'
                     + '<button class="btn-primary-sm bank-rent-btn">Rent</button>'
+                    + '</div>'
                     + '</div>';
             }).join('');
+
+            list.querySelectorAll('.bank-play-btn').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var trackEl = btn.closest('.bank-track');
+                    var trackData = _abTrackMap[trackEl.dataset.id];
+                    if (trackData) _abPlayPreview(trackData);
+                });
+            });
+
             list.querySelectorAll('.bank-rent-btn').forEach(function(btn) {
-                btn.addEventListener('click', function() {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
                     var trackId = btn.closest('.bank-track').dataset.id;
                     btn.disabled = true;
                     btn.textContent = 'Renting...';
@@ -756,24 +943,23 @@ function _loadAudioBank(base, token, bankModal) {
                         headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ trackId: trackId })
                     }).then(function(r) {
-                        if (!r.ok) throw new Error('Rent failed');
+                        if (!r.ok) return r.json().then(function(d) { throw new Error(d.message || 'Rent failed'); });
                         return r.json();
                     }).then(function(data) {
                         if (data.musicSnippet) {
+                            _abStopPreview();
                             renderSnippet(data.musicSnippet);
                             bankModal.style.display = 'none';
-                        } else {
-                            btn.textContent = data.message || 'Error';
-                            setTimeout(function() { btn.textContent = 'Rent'; btn.disabled = false; }, 2000);
+                            document.body.style.overflow = '';
                         }
-                    }).catch(function() {
-                        btn.textContent = 'Error';
-                        setTimeout(function() { btn.textContent = 'Rent'; btn.disabled = false; }, 2000);
+                    }).catch(function(err) {
+                        btn.textContent = err.message || 'Error';
+                        setTimeout(function() { btn.textContent = 'Rent'; btn.disabled = false; }, 2500);
                     });
                 });
             });
         })
-        .catch(function() { list.innerHTML = '<p class="customize-hint">Could not load tracks</p>'; });
+        .catch(function() { list.innerHTML = '<div class="ab-empty"><i class="fas fa-exclamation-circle"></i><p>Could not load tracks</p></div>'; });
 }
 
 var escHtml = window.escapeHtml || function(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; };

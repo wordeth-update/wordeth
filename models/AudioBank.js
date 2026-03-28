@@ -11,15 +11,29 @@ const audioBankSchema = new mongoose.Schema({
     },
     genre: {
         type: String,
-        default: 'general'
+        default: 'general',
+        index: true
+    },
+    mood: {
+        type: String,
+        default: 'chill',
+        index: true
     },
     audioUrl: {
         type: String,
         required: true
     },
+    previewUrl: {
+        type: String,
+        default: ''
+    },
     duration: {
         type: Number,
         default: 30
+    },
+    bpm: {
+        type: Number,
+        default: 0
     },
     tokenPrice: {
         type: Number,
@@ -40,6 +54,10 @@ const audioBankSchema = new mongoose.Schema({
         default: true,
         index: true
     },
+    featured: {
+        type: Boolean,
+        default: false
+    },
     totalRentals: {
         type: Number,
         default: 0
@@ -47,5 +65,7 @@ const audioBankSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
+audioBankSchema.index({ title: 'text', artist: 'text', tags: 'text' });
 
 module.exports = mongoose.model('AudioBank', audioBankSchema);

@@ -127,10 +127,11 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 
 ### Enhanced Profile Customization
 - **User Model Extensions**: `extendedBio` (2000 char), `profilePhotos[]` (up to 6, url+caption), `musicSnippet` (url, title, artist, isRented, expiresAt).
-- **AudioBank Model**: `models/AudioBank.js` — admin-seeded curated tracks for token rental.
+- **AudioBank Model**: `models/AudioBank.js` — admin-seeded curated tracks with genre, mood, BPM, cover art, preview URL, featured flag, and token rental pricing. Text index on title/artist/tags.
 - **API**: `PUT /api/user/profile-customize`, `POST /api/user/profile-photo`, `DELETE /api/user/profile-photo/:index`, `POST /api/user/music-snippet` (audioUpload multer), `DELETE /api/user/music-snippet`, `GET /api/user/audio-bank`, `POST /api/user/rent-snippet`.
 - **Multer**: Separate `upload` (image-only) and `audioUpload` (audio files, 10MB limit) middleware in `routes/user.js`.
 - **UI**: "Customize" tab on profile page with extended bio textarea, photo gallery with upload/delete, music snippet upload or Audio Bank rental.
+- **Audio Bank Browser**: Full-screen modal with search bar, genre/mood filter dropdowns, sort options (popular/newest/price), track cards with cover art and metadata tags, inline preview playback with now-playing bar (progress + play/pause), and one-click token rental. In-memory track map for reliability. Mobile-responsive layout.
 - **TokenLedger**: `snippet_rental` type for audio bank rentals.
 
 ### Key Features Architecture

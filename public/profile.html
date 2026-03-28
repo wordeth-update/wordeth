@@ -283,13 +283,57 @@
                         </div>
                     </div>
                     <div class="audio-bank-modal" id="audio-bank-modal" style="display:none;">
-                        <div class="audio-bank-header">
-                            <h3>Audio Bank</h3>
-                            <button class="audio-bank-close" id="audio-bank-close"><i class="fas fa-times"></i></button>
+                        <div class="audio-bank-container">
+                            <div class="audio-bank-header">
+                                <h3><i class="fas fa-compact-disc"></i> Audio Bank</h3>
+                                <button class="audio-bank-close" id="audio-bank-close"><i class="fas fa-times"></i></button>
+                            </div>
+                            <div class="audio-bank-search">
+                                <div class="ab-search-bar">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="ab-search-input" placeholder="Search tracks, artists, tags..." autocomplete="off">
+                                </div>
+                            </div>
+                            <div class="audio-bank-filters">
+                                <div class="ab-filter-row">
+                                    <select id="ab-genre-filter" class="ab-select">
+                                        <option value="all">All Genres</option>
+                                    </select>
+                                    <select id="ab-mood-filter" class="ab-select">
+                                        <option value="all">All Moods</option>
+                                    </select>
+                                    <select id="ab-sort-filter" class="ab-select">
+                                        <option value="popular">Most Popular</option>
+                                        <option value="newest">Newest</option>
+                                        <option value="price_low">Price: Low to High</option>
+                                        <option value="price_high">Price: High to Low</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="audio-bank-results">
+                                <div class="ab-results-count" id="ab-results-count"></div>
+                                <div class="audio-bank-list" id="audio-bank-list">
+                                    <div class="ab-loading"><div class="loading-spinner"></div><p>Loading tracks...</p></div>
+                                </div>
+                            </div>
+                            <div class="ab-now-playing" id="ab-now-playing" style="display:none;">
+                                <div class="ab-np-info">
+                                    <img id="ab-np-art" src="" alt="">
+                                    <div>
+                                        <strong id="ab-np-title">-</strong>
+                                        <span id="ab-np-artist">-</span>
+                                    </div>
+                                </div>
+                                <div class="ab-np-controls">
+                                    <button id="ab-np-play-btn" class="ab-np-btn"><i class="fas fa-pause"></i></button>
+                                    <div class="ab-np-progress">
+                                        <div class="ab-np-progress-bar" id="ab-np-progress-bar"></div>
+                                    </div>
+                                    <span id="ab-np-time">0:00</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="audio-bank-list" id="audio-bank-list">
-                            <p class="customize-hint">Loading tracks...</p>
-                        </div>
+                        <audio id="ab-audio-player" preload="none"></audio>
                     </div>
                 </div>
             </div>
