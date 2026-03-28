@@ -127,12 +127,20 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 
 ### Enhanced Profile Customization
 - **User Model Extensions**: `extendedBio` (2000 char), `profilePhotos[]` (up to 6, url+caption), `musicSnippet` (url, title, artist, isRented, expiresAt).
-- **AudioBank Model**: `models/AudioBank.js` — admin-seeded curated tracks with genre, mood, BPM, cover art, preview URL, featured flag, and token rental pricing. Text index on title/artist/tags.
+- **AudioBank Model**: `models/AudioBank.js` — curated tracks with genre, mood, BPM, cover art, preview URL, featured flag, token rental pricing, `submittedBy`/`submittedByKeyId` for rights holder attribution. Text index on title/artist/tags.
 - **API**: `PUT /api/user/profile-customize`, `POST /api/user/profile-photo`, `DELETE /api/user/profile-photo/:index`, `POST /api/user/music-snippet` (audioUpload multer), `DELETE /api/user/music-snippet`, `GET /api/user/audio-bank`, `POST /api/user/rent-snippet`.
 - **Multer**: Separate `upload` (image-only) and `audioUpload` (audio files, 10MB limit) middleware in `routes/user.js`.
 - **UI**: "Customize" tab on profile page with extended bio textarea, photo gallery with upload/delete, music snippet upload or Audio Bank rental.
 - **Audio Bank Browser**: Full-screen modal with search bar, genre/mood filter dropdowns, sort options (popular/newest/price), track cards with cover art and metadata tags, inline preview playback with now-playing bar (progress + play/pause), and one-click token rental. In-memory track map for reliability. Mobile-responsive layout.
 - **TokenLedger**: `snippet_rental` type for audio bank rentals.
+
+### Audio Bank Rights Holder API
+- **Model**: `models/ApiKey.js` — hashed API keys (SHA-256), `wdth_` prefix, permissions array, rate limit, active flag, usage tracking.
+- **Routes**: `routes/audiobank.js` — rights holder endpoints (`POST/GET/PUT/DELETE /api/audiobank/tracks` with `X-API-Key` auth) and admin endpoints (track management, API key CRUD).
+- **Tenant Isolation**: Rights holder queries are scoped to `submittedByKeyId: req.apiKey._id` — keys can only access their own submitted tracks.
+- **Admin Endpoints**: `GET/POST/PUT/DELETE /api/audiobank/admin/tracks`, `PUT .../approve|reject|feature`, `GET/POST/DELETE /api/audiobank/admin/api-keys`, `PUT .../toggle`.
+- **Admin UI**: `public/admin-audiobank.html` + `public/js/admin-audiobank.js` + `public/css/admin-audiobank.css` — web-only (no mobile sync). Four tabs: Tracks (search/filter/approve/reject/feature/delete), Upload Track, API Keys (create/toggle/delete with one-time key reveal), API Docs (full endpoint documentation with cURL examples).
+- **Security**: API key auth wrapped in try/catch, input validation with 400 errors for numeric fields, admin routes protected by `auth + requireRole('ADMIN')`.
 
 ### Key Features Architecture
 - **Verses (Audio Rooms)**: Uses Agora RTC SDK in `rtc` mode for scalable audio/video, with Socket.io for room management. Supports server-side token generation, Web Audio API for filters, and listener-first stage access with promotion paths.

@@ -61,6 +61,14 @@ const audioBankSchema = new mongoose.Schema({
     totalRentals: {
         type: Number,
         default: 0
+    },
+    submittedBy: {
+        type: String,
+        default: ''
+    },
+    submittedByKeyId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'ApiKey'
     }
 }, {
     timestamps: true

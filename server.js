@@ -67,6 +67,7 @@ const replayRoutes = require('./routes/replays'); // Replay system
 const stripeRoutes = require('./routes/stripe'); // Stripe payments
 const messagesRoutes = require('./routes/messages'); // Direct messaging
 const wagersRoutes = require('./routes/wagers'); // Token wagering
+const audiobankRoutes = require('./routes/audiobank'); // Audio Bank API & admin
 const { createWebhookHandler } = require('./routes/stripe');
 const trackingMiddleware = require('./middleware/tracking'); // Event tracking
 
@@ -282,6 +283,7 @@ app.use('/api/replays', replayRoutes); // Replay system
 app.use('/api/stripe', stripeRoutes); // Stripe payments & checkout
 app.use('/api/messages', messagesRoutes); // Direct messaging
 app.use('/api/wagers', wagersRoutes); // Token wagering
+app.use('/api/audiobank', audiobankRoutes); // Audio Bank API & admin
 function generateRoomId() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const bytes = crypto.randomBytes(18);

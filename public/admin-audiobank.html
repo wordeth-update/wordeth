@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Bank Management - Wordeth Admin</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/admin-audiobank.css">
+</head>
+<body>
+    <nav class="admin-nav">
+        <div class="nav-brand">
+            <img src="images/logo.png" alt="Wordeth" class="logo">
+            <span class="nav-title">Audio Bank Admin</span>
+        </div>
+        <div class="nav-links">
+            <a href="/w-admin.html"><i class="fas fa-arrow-left"></i> Dashboard</a>
+        </div>
+    </nav>
+
+    <div class="admin-container">
+        <div class="admin-auth" id="admin-auth">
+            <div class="auth-card">
+                <h2>Admin Authentication</h2>
+                <p>Sign in to manage the Audio Bank</p>
+                <input type="email" id="admin-email" placeholder="Admin email">
+                <input type="password" id="admin-password" placeholder="Password">
+                <button class="btn-primary" id="admin-login-btn">Sign In</button>
+                <p class="auth-error" id="auth-error" style="display:none;"></p>
+            </div>
+        </div>
+
+        <div class="admin-content" id="admin-content" style="display:none;">
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-total">0</div>
+                    <div class="stat-label">Total Tracks</div>
+                </div>
+                <div class="stat-card active">
+                    <div class="stat-value" id="stat-active">0</div>
+                    <div class="stat-label">Active</div>
+                </div>
+                <div class="stat-card pending">
+                    <div class="stat-value" id="stat-pending">0</div>
+                    <div class="stat-label">Pending Review</div>
+                </div>
+            </div>
+
+            <div class="admin-tabs">
+                <button class="admin-tab active" data-tab="tracks"><i class="fas fa-music"></i> Tracks</button>
+                <button class="admin-tab" data-tab="upload"><i class="fas fa-upload"></i> Upload Track</button>
+                <button class="admin-tab" data-tab="api-keys"><i class="fas fa-key"></i> API Keys</button>
+                <button class="admin-tab" data-tab="docs"><i class="fas fa-book"></i> API Docs</button>
+            </div>
+
+            <div class="tab-panel active" id="panel-tracks">
+                <div class="tracks-toolbar">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="tracks-search" placeholder="Search tracks...">
+                    </div>
+                    <select id="tracks-status-filter" class="admin-select">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="pending">Pending</option>
+                    </select>
+                    <select id="tracks-genre-filter" class="admin-select">
+                        <option value="all">All Genres</option>
+                    </select>
+                </div>
+                <div class="tracks-table-wrap">
+                    <table class="tracks-table">
+                        <thead>
+                            <tr>
+                                <th>Track</th>
+                                <th>Genre / Mood</th>
+                                <th>Price</th>
+                                <th>Rentals</th>
+                                <th>Status</th>
+                                <th>Source</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tracks-tbody"></tbody>
+                    </table>
+                </div>
+                <div class="tracks-empty" id="tracks-empty" style="display:none;">
+                    <i class="fas fa-compact-disc"></i>
+                    <p>No tracks found</p>
+                </div>
+            </div>
+
+            <div class="tab-panel" id="panel-upload">
+                <div class="upload-form">
+                    <h3>Upload New Track</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Title *</label>
+                            <input type="text" id="upload-title" placeholder="Track title" maxlength="200">
+                        </div>
+                        <div class="form-group">
+                            <label>Artist</label>
+                            <input type="text" id="upload-artist" placeholder="Artist name" maxlength="200">
+                        </div>
+                        <div class="form-group">
+                            <label>Genre</label>
+                            <select id="upload-genre" class="admin-select">
+                                <option value="general">General</option>
+                                <option value="hip-hop">Hip-Hop</option>
+                                <option value="r&b">R&B</option>
+                                <option value="pop">Pop</option>
+                                <option value="rock">Rock</option>
+                                <option value="electronic">Electronic</option>
+                                <option value="jazz">Jazz</option>
+                                <option value="classical">Classical</option>
+                                <option value="latin">Latin</option>
+                                <option value="afrobeats">Afrobeats</option>
+                                <option value="country">Country</option>
+                                <option value="folk">Folk</option>
+                                <option value="lo-fi">Lo-fi</option>
+                                <option value="ambient">Ambient</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Mood</label>
+                            <select id="upload-mood" class="admin-select">
+                                <option value="chill">Chill</option>
+                                <option value="energetic">Energetic</option>
+                                <option value="happy">Happy</option>
+                                <option value="sad">Sad</option>
+                                <option value="dark">Dark</option>
+                                <option value="romantic">Romantic</option>
+                                <option value="confident">Confident</option>
+                                <option value="dreamy">Dreamy</option>
+                                <option value="groovy">Groovy</option>
+                                <option value="intense">Intense</option>
+                                <option value="peaceful">Peaceful</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>BPM</label>
+                            <input type="number" id="upload-bpm" placeholder="120" min="1" max="300">
+                        </div>
+                        <div class="form-group">
+                            <label>Duration (seconds)</label>
+                            <input type="number" id="upload-duration" placeholder="30" min="1" max="60" value="30">
+                        </div>
+                        <div class="form-group">
+                            <label>Token Price *</label>
+                            <input type="number" id="upload-price" placeholder="5" min="1" value="5">
+                        </div>
+                        <div class="form-group">
+                            <label>Rental Days</label>
+                            <input type="number" id="upload-rental-days" placeholder="30" min="1" value="30">
+                        </div>
+                    </div>
+                    <div class="form-group full">
+                        <label>Tags (comma-separated)</label>
+                        <input type="text" id="upload-tags" placeholder="chill, background, beats">
+                    </div>
+                    <div class="file-uploads">
+                        <div class="file-upload-box">
+                            <label>Audio File * (max 15MB)</label>
+                            <input type="file" id="upload-audio" accept="audio/*">
+                            <div class="file-info" id="audio-file-info">No file selected</div>
+                        </div>
+                        <div class="file-upload-box">
+                            <label>Preview Clip (optional, shorter clip)</label>
+                            <input type="file" id="upload-preview" accept="audio/*">
+                            <div class="file-info" id="preview-file-info">No file selected</div>
+                        </div>
+                        <div class="file-upload-box">
+                            <label>Cover Art (optional, image)</label>
+                            <input type="file" id="upload-cover" accept="image/*">
+                            <div class="file-info" id="cover-file-info">No file selected</div>
+                        </div>
+                    </div>
+                    <button class="btn-primary" id="upload-submit-btn"><i class="fas fa-upload"></i> Upload Track</button>
+                    <div class="upload-status" id="upload-status" style="display:none;"></div>
+                </div>
+            </div>
+
+            <div class="tab-panel" id="panel-api-keys">
+                <div class="api-keys-header">
+                    <h3>Rights Holder API Keys</h3>
+                    <button class="btn-primary" id="create-key-btn"><i class="fas fa-plus"></i> Create API Key</button>
+                </div>
+                <div class="create-key-form" id="create-key-form" style="display:none;">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Contact Name *</label>
+                            <input type="text" id="key-name" placeholder="John Smith">
+                        </div>
+                        <div class="form-group">
+                            <label>Organization *</label>
+                            <input type="text" id="key-org" placeholder="Label / Distributor name">
+                        </div>
+                        <div class="form-group">
+                            <label>Email *</label>
+                            <input type="email" id="key-email" placeholder="contact@label.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Permissions</label>
+                            <div class="perm-checks">
+                                <label><input type="checkbox" value="audiobank:submit" checked> Submit Tracks</label>
+                                <label><input type="checkbox" value="audiobank:read" checked> Read Tracks</label>
+                                <label><input type="checkbox" value="audiobank:update"> Update Tracks</label>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn-primary" id="generate-key-btn"><i class="fas fa-key"></i> Generate Key</button>
+                </div>
+                <div class="key-reveal" id="key-reveal" style="display:none;">
+                    <div class="key-reveal-card">
+                        <h4><i class="fas fa-exclamation-triangle"></i> Save This Key Now</h4>
+                        <p>This key will not be shown again after you close this.</p>
+                        <code id="revealed-key"></code>
+                        <button class="btn-secondary" id="copy-key-btn"><i class="fas fa-copy"></i> Copy</button>
+                    </div>
+                </div>
+                <div class="api-keys-list" id="api-keys-list"></div>
+            </div>
+
+            <div class="tab-panel" id="panel-docs">
+                <div class="api-docs">
+                    <h3><i class="fas fa-book"></i> Audio Bank API Documentation</h3>
+                    <p class="docs-intro">Rights holders can use this API to submit tracks to the Wordeth Audio Bank. All submissions require admin approval before going live.</p>
+
+                    <div class="doc-section">
+                        <h4>Authentication</h4>
+                        <p>Include your API key in the <code>X-API-Key</code> header with every request.</p>
+                        <pre>X-API-Key: wdth_your_api_key_here</pre>
+                    </div>
+
+                    <div class="doc-section">
+                        <h4>Base URL</h4>
+                        <pre id="api-base-url"></pre>
+                    </div>
+
+                    <div class="doc-endpoint">
+                        <div class="endpoint-header">
+                            <span class="method post">POST</span>
+                            <code>/api/audiobank/tracks</code>
+                            <span class="endpoint-desc">Submit a new track</span>
+                        </div>
+                        <div class="endpoint-body">
+                            <p><strong>Content-Type:</strong> multipart/form-data</p>
+                            <table class="params-table">
+                                <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+                                <tr><td>audio</td><td>file</td><td>Yes</td><td>Audio file (max 15MB)</td></tr>
+                                <tr><td>title</td><td>string</td><td>Yes</td><td>Track title</td></tr>
+                                <tr><td>tokenPrice</td><td>number</td><td>Yes</td><td>Rental price in tokens (min 1)</td></tr>
+                                <tr><td>artist</td><td>string</td><td>No</td><td>Artist name</td></tr>
+                                <tr><td>genre</td><td>string</td><td>No</td><td>Genre category</td></tr>
+                                <tr><td>mood</td><td>string</td><td>No</td><td>Mood tag</td></tr>
+                                <tr><td>bpm</td><td>number</td><td>No</td><td>Beats per minute</td></tr>
+                                <tr><td>duration</td><td>number</td><td>No</td><td>Duration in seconds (default: 30)</td></tr>
+                                <tr><td>rentalDays</td><td>number</td><td>No</td><td>Rental period in days (default: 30)</td></tr>
+                                <tr><td>tags</td><td>string</td><td>No</td><td>Comma-separated tags</td></tr>
+                                <tr><td>preview</td><td>file</td><td>No</td><td>Preview clip file</td></tr>
+                                <tr><td>cover</td><td>file</td><td>No</td><td>Cover art image</td></tr>
+                            </table>
+                            <h5>Example (cURL)</h5>
+                            <pre>curl -X POST <span class="api-url-placeholder"></span>/api/audiobank/tracks \
+  -H "X-API-Key: wdth_your_key" \
+  -F "audio=@mysong.mp3" \
+  -F "title=Summer Vibes" \
+  -F "artist=DJ Cool" \
+  -F "genre=electronic" \
+  -F "mood=energetic" \
+  -F "tokenPrice=10" \
+  -F "tags=summer,dance,upbeat"</pre>
+                            <h5>Response</h5>
+                            <pre>{
+  "success": true,
+  "track": {
+    "id": "...",
+    "title": "Summer Vibes",
+    "artist": "DJ Cool",
+    "status": "pending_review",
+    "message": "Track submitted successfully."
+  }
+}</pre>
+                        </div>
+                    </div>
+
+                    <div class="doc-endpoint">
+                        <div class="endpoint-header">
+                            <span class="method get">GET</span>
+                            <code>/api/audiobank/tracks</code>
+                            <span class="endpoint-desc">List your submitted tracks</span>
+                        </div>
+                        <div class="endpoint-body">
+                            <p>Query params: <code>status</code> (active/pending), <code>genre</code>, <code>mood</code>, <code>page</code>, <code>limit</code></p>
+                        </div>
+                    </div>
+
+                    <div class="doc-endpoint">
+                        <div class="endpoint-header">
+                            <span class="method put">PUT</span>
+                            <code>/api/audiobank/tracks/:id</code>
+                            <span class="endpoint-desc">Update track metadata</span>
+                        </div>
+                        <div class="endpoint-body">
+                            <p>JSON body with any fields to update: title, artist, genre, mood, bpm, tokenPrice, rentalDays, tags, duration</p>
+                        </div>
+                    </div>
+
+                    <div class="doc-endpoint">
+                        <div class="endpoint-header">
+                            <span class="method delete">DELETE</span>
+                            <code>/api/audiobank/tracks/:id</code>
+                            <span class="endpoint-desc">Deactivate a track</span>
+                        </div>
+                    </div>
+
+                    <div class="doc-section">
+                        <h4>Error Codes</h4>
+                        <table class="params-table">
+                            <tr><th>Code</th><th>Description</th></tr>
+                            <tr><td>AUTH_MISSING</td><td>No API key provided</td></tr>
+                            <tr><td>AUTH_INVALID</td><td>API key is invalid or deactivated</td></tr>
+                            <tr><td>PERM_DENIED</td><td>Key does not have required permission</td></tr>
+                            <tr><td>VALIDATION</td><td>Missing or invalid required fields</td></tr>
+                            <tr><td>UPLOAD_FAIL</td><td>File upload to storage failed</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/admin-audiobank.js"></script>
+</body>
+</html>
