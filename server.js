@@ -65,6 +65,8 @@ const boostRoutes = require('./routes/boost'); // Token boost for replays
 const ratingsRoutes = require('./routes/ratings'); // Room ratings
 const replayRoutes = require('./routes/replays'); // Replay system
 const stripeRoutes = require('./routes/stripe'); // Stripe payments
+const messagesRoutes = require('./routes/messages'); // Direct messaging
+const wagersRoutes = require('./routes/wagers'); // Token wagering
 const { createWebhookHandler } = require('./routes/stripe');
 const trackingMiddleware = require('./middleware/tracking'); // Event tracking
 
@@ -278,6 +280,8 @@ app.use('/api/boost', boostRoutes); // Token boost for replays
 app.use('/api/ratings', ratingsRoutes); // Room ratings
 app.use('/api/replays', replayRoutes); // Replay system
 app.use('/api/stripe', stripeRoutes); // Stripe payments & checkout
+app.use('/api/messages', messagesRoutes); // Direct messaging
+app.use('/api/wagers', wagersRoutes); // Token wagering
 function generateRoomId() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const bytes = crypto.randomBytes(18);

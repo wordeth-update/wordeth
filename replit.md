@@ -112,6 +112,27 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Room History**: Modal displays recent room history (up to 10) when the user has `showRoomHistory` enabled, with token badges and time-ago timestamps.
 - **Implementations**: Both `public/js/profile.js` and `public/verses.html` inline script have synchronized implementations.
 
+### Direct Messaging System
+- **Model**: `models/Message.js` — text + audio messages with 24h audio expiry (TTL index on `audioExpiry`).
+- **API**: `GET /api/messages/conversations`, `GET /api/messages/:userId`, `POST /api/messages/:userId`, `PUT /api/messages/:id/read`.
+- **Real-time**: Socket.io `new-message` events via `global._io` / `global._connectedUsers` (shared with signaling.js).
+- **Audio**: MediaRecorder capture, upload to Object Storage, auto-expire after 24h.
+- **UI**: `public/messages.html` + `public/js/messages.js` + `public/css/messages.css`. Accessible from nav + profile. `?user=userId` auto-opens chat. `window.openChatWith(userId)` globally available.
+
+### Token Wagering System
+- **Model**: `models/Wager.js` — types: `tournament_match`, `verse_game`. Tracks participants, amounts, status (pending/active/resolved/cancelled), winnerId.
+- **API**: `POST /api/wagers/create`, `POST /api/wagers/:id/accept`, `POST /api/wagers/:id/resolve`, `POST /api/wagers/:id/cancel`, `GET /api/wagers/list`.
+- **Token Flow**: Deduction on create/accept via TokenLedger (`wager_create`, `wager_accept`), credit on win (`wager_win`), refund on cancel (`wager_refund`).
+- **Socket Events**: `wager-created`, `wager-accepted`, `wager-resolved` emitted to rooms.
+
+### Enhanced Profile Customization
+- **User Model Extensions**: `extendedBio` (2000 char), `profilePhotos[]` (up to 6, url+caption), `musicSnippet` (url, title, artist, isRented, expiresAt).
+- **AudioBank Model**: `models/AudioBank.js` — admin-seeded curated tracks for token rental.
+- **API**: `PUT /api/user/profile-customize`, `POST /api/user/profile-photo`, `DELETE /api/user/profile-photo/:index`, `POST /api/user/music-snippet` (audioUpload multer), `DELETE /api/user/music-snippet`, `GET /api/user/audio-bank`, `POST /api/user/rent-snippet`.
+- **Multer**: Separate `upload` (image-only) and `audioUpload` (audio files, 10MB limit) middleware in `routes/user.js`.
+- **UI**: "Customize" tab on profile page with extended bio textarea, photo gallery with upload/delete, music snippet upload or Audio Bank rental.
+- **TokenLedger**: `snippet_rental` type for audio bank rentals.
+
 ### Key Features Architecture
 - **Verses (Audio Rooms)**: Uses Agora RTC SDK in `rtc` mode for scalable audio/video, with Socket.io for room management. Supports server-side token generation, Web Audio API for filters, and listener-first stage access with promotion paths.
 - **Auth UX**: Custom styling for autofill, rounded inputs, and focus states.

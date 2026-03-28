@@ -6,6 +6,8 @@ const auth = require('../middleware/auth');
 const User = require('../models/User');
 const UsageEvent = require('../models/UsageEvent');
 const Notification = require('../models/Notification');
+const AudioBank = require('../models/AudioBank');
+const TokenLedger = require('../models/TokenLedger');
 
 const upload = multer({
     storage: multer.memoryStorage(),
@@ -15,6 +17,19 @@ const upload = multer({
     fileFilter: (req, file, cb) => {
         if (!file.mimetype.startsWith('image/')) {
             return cb(new Error('Please upload an image file'));
+        }
+        cb(null, true);
+    }
+});
+
+const audioUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 10 * 1024 * 1024
+    },
+    fileFilter: (req, file, cb) => {
+        if (!file.mimetype.startsWith('audio/') && !file.mimetype.includes('webm') && !file.mimetype.includes('ogg')) {
+            return cb(new Error('Please upload an audio file'));
         }
         cb(null, true);
     }
@@ -70,7 +85,7 @@ router.get('/profile', auth, async (req, res) => {
 router.get('/profile/:id', async (req, res) => {
     try {
         const user = await User.findById(req.params.id)
-            .select('name bio avatar createdAt following followers searchHistory showRoomHistory roomHistory');
+            .select('name bio avatar createdAt following followers searchHistory showRoomHistory roomHistory extendedBio profilePhotos musicSnippet');
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -87,6 +102,19 @@ router.get('/profile/:id', async (req, res) => {
         };
         if (user.showRoomHistory) {
             profile.roomHistory = user.roomHistory || [];
+        }
+        profile.extendedBio = user.extendedBio || '';
+        profile.profilePhotos = user.profilePhotos || [];
+        if (user.musicSnippet && user.musicSnippet.url) {
+            const snippet = user.musicSnippet;
+            if (!snippet.isRented || !snippet.expiresAt || snippet.expiresAt > new Date()) {
+                profile.musicSnippet = {
+                    url: snippet.url,
+                    title: snippet.title || '',
+                    artist: snippet.artist || '',
+                    isRented: snippet.isRented || false
+                };
+            }
         }
         res.json(profile);
     } catch (error) {
@@ -376,6 +404,161 @@ router.post('/admin/flush', auth, requireRole('ADMIN'), async (req, res) => {
     } catch (error) {
         console.error('Data flush error:', error);
         res.status(500).json({ error: 'Failed to flush user data' });
+    }
+});
+
+router.put('/profile-customize', auth, async (req, res) => {
+    try {
+        const { extendedBio } = req.body;
+        if (extendedBio !== undefined) {
+            if (extendedBio.length > 2000) {
+                return res.status(400).json({ message: 'Extended bio must be 2000 characters or fewer' });
+            }
+            req.user.extendedBio = extendedBio.trim();
+        }
+        await req.user.save();
+        res.json({ success: true, extendedBio: req.user.extendedBio });
+    } catch (error) {
+        console.error('Profile customize error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.post('/profile-photo', auth, upload.single('photo'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ message: 'No photo provided' });
+        if (req.user.profilePhotos && req.user.profilePhotos.length >= 6) {
+            return res.status(400).json({ message: 'Maximum 6 profile photos allowed' });
+        }
+        const { Client } = require('@replit/object-storage');
+        const client = new Client();
+        const key = `profile-photos/${req.user._id}-${Date.now()}.jpg`;
+        await client.uploadFromBytes(key, req.file.buffer);
+        const { ok, value } = await client.getSignedDownloadUrl(key);
+        if (!ok) return res.status(500).json({ message: 'Upload failed' });
+
+        req.user.profilePhotos.push({
+            url: value,
+            caption: (req.body.caption || '').substring(0, 100)
+        });
+        await req.user.save();
+        res.json({ success: true, profilePhotos: req.user.profilePhotos });
+    } catch (error) {
+        console.error('Profile photo error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.delete('/profile-photo/:index', auth, async (req, res) => {
+    try {
+        const idx = parseInt(req.params.index);
+        if (isNaN(idx) || idx < 0 || idx >= (req.user.profilePhotos || []).length) {
+            return res.status(400).json({ message: 'Invalid photo index' });
+        }
+        req.user.profilePhotos.splice(idx, 1);
+        await req.user.save();
+        res.json({ success: true, profilePhotos: req.user.profilePhotos });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.post('/music-snippet', auth, audioUpload.single('audio'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ message: 'No audio file provided' });
+        const { Client } = require('@replit/object-storage');
+        const client = new Client();
+        const key = `music-snippets/${req.user._id}-${Date.now()}.webm`;
+        await client.uploadFromBytes(key, req.file.buffer);
+        const { ok, value } = await client.getSignedDownloadUrl(key);
+        if (!ok) return res.status(500).json({ message: 'Upload failed' });
+
+        req.user.musicSnippet = {
+            url: value,
+            title: (req.body.title || '').substring(0, 100),
+            artist: (req.body.artist || '').substring(0, 100),
+            isRented: false,
+            rentedFromId: null,
+            expiresAt: null,
+            uploadedAt: new Date()
+        };
+        await req.user.save();
+        res.json({ success: true, musicSnippet: req.user.musicSnippet });
+    } catch (error) {
+        console.error('Music snippet upload error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.delete('/music-snippet', auth, async (req, res) => {
+    try {
+        req.user.musicSnippet = {
+            url: null, title: '', artist: '',
+            isRented: false, rentedFromId: null, expiresAt: null, uploadedAt: null
+        };
+        await req.user.save();
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.get('/audio-bank', async (req, res) => {
+    try {
+        const genre = req.query.genre;
+        const query = { active: true };
+        if (genre && genre !== 'all') query.genre = genre;
+        const tracks = await AudioBank.find(query).sort({ totalRentals: -1 }).limit(50).lean();
+        res.json({ tracks });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.post('/rent-snippet', auth, async (req, res) => {
+    try {
+        const { trackId } = req.body;
+        if (!trackId) return res.status(400).json({ message: 'Track ID required' });
+
+        const track = await AudioBank.findById(trackId);
+        if (!track || !track.active) return res.status(404).json({ message: 'Track not found' });
+
+        if (req.user.tokenBalance < track.tokenPrice) {
+            return res.status(400).json({ message: 'Insufficient tokens' });
+        }
+
+        const balBefore = req.user.tokenBalance;
+        req.user.tokenBalance -= track.tokenPrice;
+        req.user.musicSnippet = {
+            url: track.audioUrl,
+            title: track.title,
+            artist: track.artist,
+            isRented: true,
+            rentedFromId: track._id,
+            expiresAt: new Date(Date.now() + track.rentalDays * 24 * 60 * 60 * 1000),
+            uploadedAt: new Date()
+        };
+        await req.user.save();
+
+        await TokenLedger.create({
+            userId: req.user._id,
+            type: 'snippet_rental',
+            amount: -track.tokenPrice,
+            balanceBefore: balBefore,
+            balanceAfter: req.user.tokenBalance
+        });
+
+        track.totalRentals += 1;
+        await track.save();
+
+        res.json({
+            success: true,
+            musicSnippet: req.user.musicSnippet,
+            newBalance: req.user.tokenBalance
+        });
+    } catch (error) {
+        console.error('Rent snippet error:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 

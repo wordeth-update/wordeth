@@ -236,6 +236,7 @@ function _initProfile() {
 
     async function loadTabContent(tab) {
         if (tab === 'settings') return;
+        if (tab === 'customize') { loadCustomizeTab(); return; }
 
         const endpoint = tab === 'rooms' ? '/api/user/room-history' : `/api/user/${tab}`;
 
@@ -582,6 +583,243 @@ function _initProfile() {
 
     loadProfile();
     loadTabContent('history');
+}
+
+var _customizeInitialized = false;
+
+function loadCustomizeTab() {
+    var token = localStorage.getItem('authToken');
+    if (!token) return;
+    var base = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : '';
+
+    fetch(base + '/api/user/profile', { headers: { 'Authorization': 'Bearer ' + token } })
+        .then(function(r) { if (!r.ok) throw new Error('Failed'); return r.json(); })
+        .then(function(profile) {
+            var bioInput = document.getElementById('extended-bio-input');
+            var bioCount = document.getElementById('extended-bio-count');
+            if (bioInput && profile.extendedBio) bioInput.value = profile.extendedBio;
+            if (bioInput && bioCount) bioCount.textContent = (bioInput.value || '').length + '/2000';
+            renderPhotoGallery(profile.profilePhotos || []);
+            renderSnippet(profile.musicSnippet);
+        })
+        .catch(function() {});
+
+    if (_customizeInitialized) return;
+    _customizeInitialized = true;
+
+    var bioInput = document.getElementById('extended-bio-input');
+    var bioCount = document.getElementById('extended-bio-count');
+    if (bioInput && bioCount) {
+        bioInput.addEventListener('input', function() {
+            bioCount.textContent = bioInput.value.length + '/2000';
+        });
+    }
+
+    var saveBtn = document.getElementById('save-extended-bio');
+    if (saveBtn && bioInput) {
+        saveBtn.addEventListener('click', function() {
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+            fetch(base + '/api/user/profile-customize', {
+                method: 'PUT',
+                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ extendedBio: bioInput.value })
+            }).then(function(r) {
+                if (!r.ok) throw new Error('Save failed');
+                return r.json();
+            }).then(function() {
+                saveBtn.textContent = 'Saved!';
+                setTimeout(function() { saveBtn.textContent = 'Save'; saveBtn.disabled = false; }, 1500);
+            }).catch(function() {
+                saveBtn.textContent = 'Error';
+                setTimeout(function() { saveBtn.textContent = 'Save'; saveBtn.disabled = false; }, 1500);
+            });
+        });
+    }
+
+    var addPhotoBtn = document.getElementById('add-photo-btn');
+    var photoInput = document.getElementById('photo-upload-input');
+    if (addPhotoBtn && photoInput) {
+        addPhotoBtn.addEventListener('click', function() { photoInput.click(); });
+        photoInput.addEventListener('change', function() {
+            if (!photoInput.files[0]) return;
+            var fd = new FormData();
+            fd.append('photo', photoInput.files[0]);
+            addPhotoBtn.disabled = true;
+            addPhotoBtn.textContent = 'Uploading...';
+            fetch(base + '/api/user/profile-photo', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token },
+                body: fd
+            }).then(function(r) {
+                if (!r.ok) throw new Error('Upload failed');
+                return r.json();
+            }).then(function(data) {
+                if (data.profilePhotos) renderPhotoGallery(data.profilePhotos);
+                addPhotoBtn.innerHTML = '<i class="fas fa-plus"></i> Add Photo';
+                addPhotoBtn.disabled = false;
+                photoInput.value = '';
+            }).catch(function() {
+                addPhotoBtn.innerHTML = '<i class="fas fa-plus"></i> Add Photo';
+                addPhotoBtn.disabled = false;
+            });
+        });
+    }
+
+    var snippetUploadBtn = document.getElementById('snippet-upload-btn');
+    var snippetInput = document.getElementById('snippet-upload-input');
+    if (snippetUploadBtn && snippetInput) {
+        snippetUploadBtn.addEventListener('click', function() { snippetInput.click(); });
+        snippetInput.addEventListener('change', function() {
+            if (!snippetInput.files[0]) return;
+            var fd = new FormData();
+            fd.append('audio', snippetInput.files[0]);
+            fd.append('title', document.getElementById('snippet-title-input').value || '');
+            fd.append('artist', document.getElementById('snippet-artist-input').value || '');
+            snippetUploadBtn.disabled = true;
+            snippetUploadBtn.textContent = 'Uploading...';
+            fetch(base + '/api/user/music-snippet', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token },
+                body: fd
+            }).then(function(r) {
+                if (!r.ok) throw new Error('Upload failed');
+                return r.json();
+            }).then(function(data) {
+                if (data.musicSnippet) renderSnippet(data.musicSnippet);
+                snippetUploadBtn.innerHTML = '<i class="fas fa-upload"></i> Choose Audio File';
+                snippetUploadBtn.disabled = false;
+            }).catch(function() {
+                snippetUploadBtn.innerHTML = '<i class="fas fa-upload"></i> Choose Audio File';
+                snippetUploadBtn.disabled = false;
+            });
+        });
+    }
+
+    var removeSnippetBtn = document.getElementById('remove-snippet-btn');
+    if (removeSnippetBtn) {
+        removeSnippetBtn.addEventListener('click', function() {
+            fetch(base + '/api/user/music-snippet', {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            }).then(function(r) {
+                if (!r.ok) throw new Error('Delete failed');
+                renderSnippet(null);
+            }).catch(function() {});
+        });
+    }
+
+    var browseBtn = document.getElementById('browse-audio-bank-btn');
+    var bankModal = document.getElementById('audio-bank-modal');
+    var bankClose = document.getElementById('audio-bank-close');
+    if (browseBtn && bankModal) {
+        browseBtn.addEventListener('click', function() {
+            bankModal.style.display = 'block';
+            _loadAudioBank(base, token, bankModal);
+        });
+    }
+    if (bankClose && bankModal) {
+        bankClose.addEventListener('click', function() { bankModal.style.display = 'none'; });
+    }
+}
+
+function _loadAudioBank(base, token, bankModal) {
+    var list = document.getElementById('audio-bank-list');
+    fetch(base + '/api/user/audio-bank')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var tracks = data.tracks || [];
+            if (tracks.length === 0) {
+                list.innerHTML = '<p class="customize-hint">No tracks available yet. Check back soon!</p>';
+                return;
+            }
+            list.innerHTML = tracks.map(function(t) {
+                return '<div class="bank-track" data-id="' + t._id + '">'
+                    + '<div class="bank-track-info">'
+                    + '<strong>' + escHtml(t.title) + '</strong>'
+                    + '<span>' + escHtml(t.artist) + ' &bull; ' + escHtml(t.genre) + '</span>'
+                    + '</div>'
+                    + '<div class="bank-track-price">'
+                    + '<span><i class="fas fa-coins"></i> ' + t.tokenPrice + ' tokens</span>'
+                    + '<span>' + t.rentalDays + ' days</span>'
+                    + '</div>'
+                    + '<button class="btn-primary-sm bank-rent-btn">Rent</button>'
+                    + '</div>';
+            }).join('');
+            list.querySelectorAll('.bank-rent-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var trackId = btn.closest('.bank-track').dataset.id;
+                    btn.disabled = true;
+                    btn.textContent = 'Renting...';
+                    fetch(base + '/api/user/rent-snippet', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ trackId: trackId })
+                    }).then(function(r) {
+                        if (!r.ok) throw new Error('Rent failed');
+                        return r.json();
+                    }).then(function(data) {
+                        if (data.musicSnippet) {
+                            renderSnippet(data.musicSnippet);
+                            bankModal.style.display = 'none';
+                        } else {
+                            btn.textContent = data.message || 'Error';
+                            setTimeout(function() { btn.textContent = 'Rent'; btn.disabled = false; }, 2000);
+                        }
+                    }).catch(function() {
+                        btn.textContent = 'Error';
+                        setTimeout(function() { btn.textContent = 'Rent'; btn.disabled = false; }, 2000);
+                    });
+                });
+            });
+        })
+        .catch(function() { list.innerHTML = '<p class="customize-hint">Could not load tracks</p>'; });
+}
+
+var escHtml = window.escapeHtml || function(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; };
+
+function renderPhotoGallery(photos) {
+    var gallery = document.getElementById('photo-gallery');
+    if (!gallery) return;
+    var token = localStorage.getItem('authToken');
+    var base = typeof apiUrl === 'function' ? apiUrl('').replace(/\/$/, '') : '';
+    if (!photos || photos.length === 0) {
+        gallery.innerHTML = '<p class="customize-hint" style="margin:0;">No photos yet</p>';
+        return;
+    }
+    gallery.innerHTML = photos.map(function(p, i) {
+        return '<div class="photo-gallery-item">'
+            + '<img src="' + escHtml(p.url) + '" alt="' + escHtml(p.caption || '') + '" onerror="this.style.display=\'none\'">'
+            + '<button class="photo-delete-btn" data-idx="' + i + '"><i class="fas fa-times"></i></button>'
+            + '</div>';
+    }).join('');
+    gallery.querySelectorAll('.photo-delete-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var idx = btn.dataset.idx;
+            fetch(base + '/api/user/profile-photo/' + idx, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.profilePhotos) renderPhotoGallery(data.profilePhotos);
+            });
+        });
+    });
+}
+
+function renderSnippet(snippet) {
+    var current = document.getElementById('snippet-current');
+    var options = document.getElementById('snippet-options');
+    var titleEl = document.getElementById('snippet-title');
+    var artistEl = document.getElementById('snippet-artist');
+    if (snippet && snippet.url) {
+        if (current) current.style.display = 'flex';
+        if (options) options.style.display = 'none';
+        if (titleEl) titleEl.textContent = snippet.title || 'Untitled';
+        if (artistEl) artistEl.textContent = snippet.artist || '';
+    } else {
+        if (current) current.style.display = 'none';
+        if (options) options.style.display = 'block';
+    }
 }
 
 if (document.readyState === 'loading') {

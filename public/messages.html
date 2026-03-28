@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Messages - Wordeth</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/messages.css">
+    <link rel="stylesheet" href="css/notifications.css">
+    <link rel="stylesheet" href="css/cookie-consent.css">
+    <link rel="stylesheet" href="css/mini-player.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/png" href="images/logo.png">
+</head>
+<body>
+    <nav class="main-nav">
+        <div class="nav-logo">
+            <a href="/"><img src="images/logo.png" alt="Wordeth Logo" class="logo"></a>
+        </div>
+        <div class="nav-links">
+            <a href="verses.html">Verses</a>
+            <a href="lyrics.html">Lyrics</a>
+            <a href="merch.html">Merch</a>
+            <a href="messages.html" class="active">Messages</a>
+        </div>
+        <div class="nav-auth">
+            <a href="/signin.html" class="nav-signin-btn">Sign In</a>
+        </div>
+        <button class="menu-toggle" id="menuToggle">
+            <span></span><span></span><span></span>
+        </button>
+    </nav>
+
+    <main class="messages-container" id="messages-container">
+        <div class="msg-sidebar" id="msg-sidebar">
+            <div class="msg-sidebar-header">Messages</div>
+            <div class="msg-conversations" id="msg-conversations">
+                <div class="msg-empty">
+                    <i class="fas fa-comments"></i>
+                    <p>No conversations yet</p>
+                </div>
+            </div>
+        </div>
+        <div class="msg-chat hidden" id="msg-chat">
+            <div class="msg-chat-header" id="msg-chat-header">
+                <button class="msg-chat-back" id="msg-chat-back"><i class="fas fa-arrow-left"></i></button>
+                <img src="assets/default-avatar.png" alt="" id="msg-chat-avatar">
+                <span class="msg-chat-header-name" id="msg-chat-name">Select a conversation</span>
+            </div>
+            <div class="msg-chat-messages" id="msg-chat-messages">
+                <div class="msg-empty">
+                    <i class="fas fa-envelope-open"></i>
+                    <p>Select a conversation to start messaging</p>
+                </div>
+            </div>
+            <div class="msg-input-area" id="msg-input-area" style="display:none;">
+                <button class="msg-btn msg-audio-btn" id="msg-audio-btn" title="Record audio"><i class="fas fa-microphone"></i></button>
+                <input type="text" class="msg-text-input" id="msg-text-input" placeholder="Type a message...">
+                <button class="msg-btn msg-send-btn" id="msg-send-btn" disabled><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/api-url.js"></script>
+    <script src="js/spa-router.js"></script>
+    <script data-cfasync="false" src="js/nav-auth.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/cookie-consent.js"></script>
+    <script src="js/messages.js"></script>
+</body>
+</html>

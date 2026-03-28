@@ -124,6 +124,25 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    extendedBio: {
+        type: String,
+        default: '',
+        maxlength: 2000
+    },
+    profilePhotos: [{
+        url: { type: String, required: true },
+        caption: { type: String, default: '' },
+        uploadedAt: { type: Date, default: Date.now }
+    }],
+    musicSnippet: {
+        url: { type: String, default: null },
+        title: { type: String, default: '' },
+        artist: { type: String, default: '' },
+        isRented: { type: Boolean, default: false },
+        rentedFromId: { type: mongoose.Schema.Types.ObjectId, ref: 'AudioBank', default: null },
+        expiresAt: { type: Date, default: null },
+        uploadedAt: { type: Date, default: null }
+    },
     agreedToTerms: {
         type: Boolean,
         default: false
@@ -169,6 +188,14 @@ userSchema.methods.getPublicProfile = function() {
         role: this.role,
         createdAt: this.createdAt,
         showRoomHistory: this.showRoomHistory || false,
+        extendedBio: this.extendedBio || '',
+        profilePhotos: this.profilePhotos || [],
+        musicSnippet: this.musicSnippet && this.musicSnippet.url ? {
+            url: this.musicSnippet.url,
+            title: this.musicSnippet.title,
+            artist: this.musicSnippet.artist,
+            isRented: this.musicSnippet.isRented
+        } : null,
         creatorProfile: this.creatorProfile ? {
             displayName: this.creatorProfile.displayName,
             handle: this.creatorProfile.handle,

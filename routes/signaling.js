@@ -133,6 +133,8 @@ async function initRooms() {
 
 function setupSignaling(io) {
     _io = io;
+    global._io = io;
+    global._connectedUsers = connectedUsers;
     let roomsReady = false;
     const roomsReadyPromise = initRooms()
         .then(() => {

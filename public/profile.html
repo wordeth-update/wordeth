@@ -180,6 +180,9 @@
                 <button class="tab-btn" data-tab="merch">
                     <i class="fas fa-tshirt"></i> Merch
                 </button>
+                <button class="tab-btn" data-tab="customize">
+                    <i class="fas fa-palette"></i> Customize
+                </button>
                 <button class="tab-btn" data-tab="settings">
                     <i class="fas fa-cog"></i> Settings
                 </button>
@@ -227,6 +230,68 @@
                     <a href="/merch.html" class="btn-primary-sm">Create Merch</a>
                 </div>
                 <div class="merch-grid" id="merch-grid"></div>
+            </div>
+
+            <div class="tab-content" id="customize">
+                <div class="customize-section">
+                    <h3><i class="fas fa-pen-fancy"></i> Extended Bio</h3>
+                    <p class="customize-hint">Tell your story in detail (up to 2000 characters)</p>
+                    <textarea id="extended-bio-input" class="customize-textarea" maxlength="2000" placeholder="Share more about yourself, your music journey, your influences..."></textarea>
+                    <div class="customize-actions">
+                        <span id="extended-bio-count">0/2000</span>
+                        <button class="btn-primary-sm" id="save-extended-bio">Save</button>
+                    </div>
+                </div>
+                <div class="customize-section">
+                    <h3><i class="fas fa-images"></i> Photo Gallery</h3>
+                    <p class="customize-hint">Add up to 6 photos to your profile</p>
+                    <div class="photo-gallery" id="photo-gallery"></div>
+                    <div class="photo-upload-area" id="photo-upload-area">
+                        <input type="file" id="photo-upload-input" accept="image/*" style="display:none;">
+                        <button class="btn-secondary-sm" id="add-photo-btn"><i class="fas fa-plus"></i> Add Photo</button>
+                    </div>
+                </div>
+                <div class="customize-section">
+                    <h3><i class="fas fa-music"></i> Profile Music Snippet</h3>
+                    <p class="customize-hint">Add a :30 music clip that auto-plays on your profile</p>
+                    <div id="snippet-current" class="snippet-current" style="display:none;">
+                        <div class="snippet-info">
+                            <i class="fas fa-play-circle snippet-play-icon"></i>
+                            <div>
+                                <strong id="snippet-title">-</strong>
+                                <span id="snippet-artist">-</span>
+                            </div>
+                        </div>
+                        <button class="btn-danger-sm" id="remove-snippet-btn"><i class="fas fa-trash"></i></button>
+                    </div>
+                    <div class="snippet-options" id="snippet-options">
+                        <div class="snippet-option">
+                            <h4>Upload Your Own Music</h4>
+                            <p>Upload a :30 clip of your own non-licensed music</p>
+                            <input type="file" id="snippet-upload-input" accept="audio/*" style="display:none;">
+                            <div class="snippet-upload-fields" id="snippet-upload-fields">
+                                <input type="text" id="snippet-title-input" placeholder="Song title" class="customize-input" maxlength="100">
+                                <input type="text" id="snippet-artist-input" placeholder="Artist name" class="customize-input" maxlength="100">
+                                <button class="btn-secondary-sm" id="snippet-upload-btn"><i class="fas fa-upload"></i> Choose Audio File</button>
+                            </div>
+                        </div>
+                        <div class="snippet-divider">or</div>
+                        <div class="snippet-option">
+                            <h4>Rent from Audio Bank</h4>
+                            <p>Browse curated tracks and rent with tokens</p>
+                            <button class="btn-primary-sm" id="browse-audio-bank-btn"><i class="fas fa-store"></i> Browse Audio Bank</button>
+                        </div>
+                    </div>
+                    <div class="audio-bank-modal" id="audio-bank-modal" style="display:none;">
+                        <div class="audio-bank-header">
+                            <h3>Audio Bank</h3>
+                            <button class="audio-bank-close" id="audio-bank-close"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="audio-bank-list" id="audio-bank-list">
+                            <p class="customize-hint">Loading tracks...</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="tab-content" id="settings">
