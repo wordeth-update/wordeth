@@ -36,6 +36,7 @@
 
     <main>
     <div class="dashboard-container" id="dashboardContainer" style="display:none;">
+
         <div class="dashboard-header">
             <div class="header-left">
                 <div class="creator-avatar" id="creatorAvatar">W</div>
@@ -47,26 +48,53 @@
                     </div>
                 </div>
             </div>
-            <div class="header-actions">
-                <a href="profile.html" class="btn-secondary"><i class="fas fa-user-edit"></i> Edit Profile</a>
-                <button class="btn-secondary" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
+            <a href="profile.html" class="btn-edit-profile"><i class="fas fa-pen"></i> Edit Profile</a>
+        </div>
+
+        <div class="earnings-row">
+            <div class="earnings-card primary">
+                <span class="earnings-label">Total Earned</span>
+                <span class="earnings-value" id="totalEarned">$0.00</span>
+            </div>
+            <div class="earnings-card">
+                <span class="earnings-label"><i class="fas fa-coins"></i> Token Earnings</span>
+                <span class="earnings-value" id="tokenEarningsVal">0</span>
+            </div>
+            <div class="earnings-card">
+                <span class="earnings-label"><i class="fas fa-shopping-bag"></i> Merch Sales</span>
+                <span class="earnings-value" id="merchSalesCount">0</span>
             </div>
         </div>
 
-        <div class="plan-banner" id="planBanner">
-            <div class="plan-info">
-                <div class="plan-name-row">
-                    <span class="plan-label">Current Plan</span>
-                    <h2 id="planName">Free</h2>
-                </div>
-                <div class="plan-details">
-                    <span id="planPrice" class="plan-price"></span>
-                    <span id="planCycle" class="plan-cycle"></span>
-                </div>
+        <a href="verses.html" class="cta-create-room">
+            <i class="fas fa-plus"></i> Create New Room
+        </a>
+
+        <div class="quick-actions">
+            <a href="verses.html" class="action-card">
+                <i class="fas fa-headphones"></i>
+                <span>Go Live</span>
+            </a>
+            <a href="merch.html" class="action-card">
+                <i class="fas fa-tshirt"></i>
+                <span>Merch</span>
+            </a>
+            <a href="lyrics.html" class="action-card">
+                <i class="fas fa-music"></i>
+                <span>Lyrics</span>
+            </a>
+            <a href="profile.html" class="action-card">
+                <i class="fas fa-user-cog"></i>
+                <span>Profile</span>
+            </a>
+        </div>
+
+        <div class="plan-strip" id="planStrip">
+            <div class="plan-strip-left">
+                <span class="plan-strip-name" id="planName">Free</span>
+                <span class="plan-strip-price" id="planPrice"></span>
             </div>
-            <div class="plan-cta">
-                <button class="btn-upgrade" id="upgradePlanBtn"><i class="fas fa-arrow-up"></i> Upgrade Plan</button>
-            </div>
+            <a href="pricing.html" class="plan-strip-link">Manage Plan <i class="fas fa-chevron-right"></i></a>
         </div>
 
         <div class="graduation-banner" id="graduationBanner" style="display:none;">
@@ -78,114 +106,6 @@
             <div class="graduation-meters" id="graduationMeters"></div>
         </div>
 
-        <div class="payout-info-bar" id="payoutInfoBar">
-            <div class="payout-rate-display">
-                <span class="payout-label">Your Payout Rate</span>
-                <span class="payout-value" id="creatorPayoutRate">--</span>
-            </div>
-            <div class="payout-rate-display">
-                <span class="payout-label">Platform Fee</span>
-                <span class="payout-value secondary" id="creatorPlatformFee">--</span>
-            </div>
-            <div class="payout-rate-display">
-                <span class="payout-label">Total Payout</span>
-                <span class="payout-value highlight" id="creatorTotalPayout">$0</span>
-            </div>
-        </div>
-
-        <div class="token-earnings-card" id="tokenEarningsCard" style="display:none;">
-            <h4><i class="fas fa-coins"></i> Token Earnings</h4>
-            <div class="token-earnings-stats">
-                <div class="token-earnings-stat">
-                    <span class="te-value" id="creatorTokenEarnings">0</span>
-                    <span class="te-label">Tokens Earned</span>
-                </div>
-                <div class="token-earnings-stat">
-                    <span class="te-value" id="creatorTokenValue">$0.00</span>
-                    <span class="te-label">Payout Value</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
-                <div class="stat-value" id="statEarnings">$0.00</div>
-                <div class="stat-label">Total Earnings</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-shopping-cart"></i></div>
-                <div class="stat-value" id="statSales">0</div>
-                <div class="stat-label">Total Sales</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-layer-group"></i></div>
-                <div class="stat-value" id="statTemplates">0</div>
-                <div class="stat-label">Templates</div>
-                <div class="stat-limit" id="templateLimit"></div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-hdd"></i></div>
-                <div class="stat-value" id="statStorage">0 MB</div>
-                <div class="stat-label">Storage Used</div>
-                <div class="stat-limit" id="storageLimit"></div>
-            </div>
-        </div>
-
-        <div class="dashboard-tabs">
-            <button class="tab-btn active" data-tab="overview">Overview</button>
-            <button class="tab-btn" data-tab="entitlements">My Plan Details</button>
-            <button class="tab-btn" data-tab="upgrade">Plans & Pricing</button>
-        </div>
-
-        <div class="tab-content active" id="tab-overview">
-            <div class="section-card">
-                <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
-                <div class="quick-actions">
-                    <a href="merch.html" class="action-card">
-                        <i class="fas fa-tshirt"></i>
-                        <span>Manage Merch</span>
-                    </a>
-                    <a href="verses.html" class="action-card">
-                        <i class="fas fa-headphones"></i>
-                        <span>Go Live</span>
-                    </a>
-                    <a href="lyrics.html" class="action-card">
-                        <i class="fas fa-music"></i>
-                        <span>Lyrics</span>
-                    </a>
-                    <a href="profile.html" class="action-card">
-                        <i class="fas fa-user-cog"></i>
-                        <span>Settings</span>
-                    </a>
-                </div>
-            </div>
-
-            <div class="section-card">
-                <h3><i class="fas fa-link"></i> Social Links</h3>
-                <div class="social-links-grid" id="socialLinksGrid">
-                    <p class="empty-state">No social links added yet. <a href="profile.html">Add them in your profile.</a></p>
-                </div>
-            </div>
-
-            <div class="section-card">
-                <h3><i class="fas fa-tags"></i> Genres</h3>
-                <div class="genre-display" id="genreDisplay">
-                    <span class="empty-state">No genres selected</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="tab-content" id="tab-entitlements">
-            <div class="section-card">
-                <h3><i class="fas fa-key"></i> What's Included in Your Plan</h3>
-                <div class="entitlements-list" id="entitlementsList"></div>
-            </div>
-        </div>
-
-        <div class="tab-content" id="tab-upgrade">
-            <div class="plans-grid" id="plansGrid"></div>
-        </div>
     </div>
 
     <div class="loading-screen" id="loadingScreen">
@@ -195,6 +115,7 @@
 
     </main>
     <script src="js/utils.js"></script>
+    <script src="js/nav-auth.js"></script>
     <script src="js/tournament-nav.js"></script>
     <script src="js/creator-dashboard.js"></script>
     <script src="js/cookie-consent.js"></script>
