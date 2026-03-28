@@ -822,7 +822,6 @@ class AudioRoomsManager {
         
         document.getElementById('share-room-btn')?.addEventListener('click', () => this.shareRoom());
         document.getElementById('share-room-mobile-btn')?.addEventListener('click', () => this.shareRoom());
-
         // New feature event listeners
         this.lockRoomBtn?.addEventListener('click', () => this.toggleRoomLock());
         this.audioFilterBtn?.addEventListener('click', () => this.showAudioFiltersModal());

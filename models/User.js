@@ -112,6 +112,18 @@ const userSchema = new mongoose.Schema({
             default: Date.now
         }
     }],
+    roomHistory: [{
+        roomId: { type: String, required: true },
+        roomName: { type: String, default: '' },
+        hostName: { type: String, default: '' },
+        hostId: { type: String, default: '' },
+        tokenPrice: { type: Number, default: 0 },
+        joinedAt: { type: Date, default: Date.now }
+    }],
+    showRoomHistory: {
+        type: Boolean,
+        default: false
+    },
     agreedToTerms: {
         type: Boolean,
         default: false
@@ -156,6 +168,7 @@ userSchema.methods.getPublicProfile = function() {
         accountType: this.accountType || 'fan',
         role: this.role,
         createdAt: this.createdAt,
+        showRoomHistory: this.showRoomHistory || false,
         creatorProfile: this.creatorProfile ? {
             displayName: this.creatorProfile.displayName,
             handle: this.creatorProfile.handle,

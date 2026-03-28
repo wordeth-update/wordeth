@@ -66,6 +66,19 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Post-Room Rating**: Users can rate rooms (1-5 stars) and add tags after attending for a minimum duration.
 - **Aggregation**: Ratings update both the Replay's average rating and the creator's overall `creatorRating`.
 
+### Recent Rooms History
+- **User Model**: `roomHistory` array (capped at 50) with `roomId`, `roomName`, `hostName`, `hostId`, `tokenPrice`, `joinedAt`.
+- **Privacy**: `showRoomHistory` boolean (default: false). Public profiles only expose room history when enabled.
+- **Recording**: Room joins are persisted atomically via `$push/$slice` in `routes/signaling.js`, with dedup (skips if latest entry is same room).
+- **API**: `GET /api/user/room-history` (auth), `PUT /api/user/room-history-visibility` (auth, `{visible: bool}`).
+- **UI**: "Rooms" tab on profile page; privacy toggle in Settings tab.
+
+### Platform Invite QR Code
+- **Location**: Profile page — "Invite Friends" button in profile header.
+- **Library**: `qrcode-generator` (CDN, loaded in profile.html).
+- **URL**: Generates QR for platform homepage with `?ref=username` parameter.
+- **Actions**: Copy invite link or save QR image as PNG.
+
 ### Account Types
 - **Valid types**: `fan` (default), `artist`, `designer`, `label`, `creator`.
 - **Creator account**: For non-music artist professionals to host, set token prices, and earn.

@@ -464,6 +464,30 @@ function setupSignaling(io) {
             if (socket.userId && socket.userId !== socket.id) {
                 if (!room.participantHistory) room.participantHistory = new Set();
                 room.participantHistory.add(socket.userId);
+
+                const hostParticipant = Array.from(room.participants.values()).find(p => p.isHost);
+                const safeRoomName = (room.name || '').slice(0, 200);
+                const safeHostName = (hostParticipant?.userName || '').slice(0, 100);
+                User.findOneAndUpdate(
+                    {
+                        _id: socket.userId,
+                        $or: [
+                            { 'roomHistory.0.roomId': { $ne: roomId } },
+                            { roomHistory: { $size: 0 } },
+                            { roomHistory: { $exists: false } }
+                        ]
+                    },
+                    { $push: { roomHistory: { $each: [{
+                        roomId,
+                        roomName: safeRoomName,
+                        hostName: safeHostName,
+                        hostId: room.creatorUserId || '',
+                        tokenPrice: room.tokenPrice || 0,
+                        joinedAt: new Date()
+                    }], $position: 0, $slice: 50 } } }
+                ).catch(err => {
+                    if (err) console.error('[roomHistory] Failed to record:', err);
+                });
             }
             if (!room.peakParticipants) room.peakParticipants = 0;
             if (room.participants.size > room.peakParticipants) {

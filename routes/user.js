@@ -69,11 +69,11 @@ router.get('/profile', auth, async (req, res) => {
 router.get('/profile/:id', async (req, res) => {
     try {
         const user = await User.findById(req.params.id)
-            .select('name bio avatar createdAt following followers searchHistory');
+            .select('name bio avatar createdAt following followers searchHistory showRoomHistory roomHistory');
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-        res.json({
+        const profile = {
             _id: user._id,
             name: user.name,
             bio: user.bio || '',
@@ -81,8 +81,13 @@ router.get('/profile/:id', async (req, res) => {
             createdAt: user.createdAt,
             followingCount: user.following?.length || 0,
             followersCount: user.followers?.length || 0,
-            searchCount: user.searchHistory?.length || 0
-        });
+            searchCount: user.searchHistory?.length || 0,
+            showRoomHistory: user.showRoomHistory || false
+        };
+        if (user.showRoomHistory) {
+            profile.roomHistory = user.roomHistory || [];
+        }
+        res.json(profile);
     } catch (error) {
         console.error('Public profile error:', error);
         res.status(500).json({ message: 'Server error' });
@@ -220,6 +225,28 @@ router.post('/history', auth, async (req, res) => {
         req.user.searchHistory = req.user.searchHistory.slice(0, 100);
         await req.user.save();
         res.json(req.user.searchHistory);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.get('/room-history', auth, async (req, res) => {
+    try {
+        res.json(req.user.roomHistory || []);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.put('/room-history-visibility', auth, async (req, res) => {
+    try {
+        const { visible } = req.body;
+        if (typeof visible !== 'boolean') {
+            return res.status(400).json({ message: 'visible must be a boolean' });
+        }
+        req.user.showRoomHistory = visible;
+        await req.user.save();
+        res.json({ showRoomHistory: req.user.showRoomHistory });
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
     }

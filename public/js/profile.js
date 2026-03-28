@@ -31,6 +31,7 @@ function _initProfile() {
         settingsEmail: document.getElementById('settings-email'),
         settingsJoined: document.getElementById('settings-joined'),
         deleteBtn: document.getElementById('delete-account-btn'),
+        roomHistoryToggle: document.getElementById('room-history-toggle'),
     };
 
     async function apiFetch(url, options = {}) {
@@ -75,6 +76,9 @@ function _initProfile() {
             if (els.settingsJoined) els.settingsJoined.textContent = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
         }
         if (els.settingsEmail) els.settingsEmail.textContent = user.email || '-';
+        if (els.roomHistoryToggle) {
+            els.roomHistoryToggle.checked = user.showRoomHistory || false;
+        }
 
         localStorage.setItem('user', JSON.stringify({ _id: user._id, name: user.name, email: user.email, avatar: user.avatar }));
     }
@@ -218,11 +222,25 @@ function _initProfile() {
         });
     });
 
+    function timeAgo(dateStr) {
+        const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+        if (seconds < 60) return 'just now';
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return minutes + 'm ago';
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return hours + 'h ago';
+        const days = Math.floor(hours / 24);
+        if (days < 30) return days + 'd ago';
+        return new Date(dateStr).toLocaleDateString();
+    }
+
     async function loadTabContent(tab) {
         if (tab === 'settings') return;
 
+        const endpoint = tab === 'rooms' ? '/api/user/room-history' : `/api/user/${tab}`;
+
         try {
-            const res = await apiFetch(`/api/user/${tab}`);
+            const res = await apiFetch(endpoint);
             if (!res) return;
             const data = await res.json();
             if (!res.ok) return;
@@ -247,6 +265,20 @@ function _initProfile() {
                                 <p>${escHtml(item.artist || '')}</p>
                             </div>
                             <span class="timestamp">${new Date(item.timestamp).toLocaleDateString()}</span>
+                        </div>
+                    `).join('');
+                    break;
+                case 'rooms':
+                    listEl.innerHTML = data.map(item => `
+                        <div class="room-history-item">
+                            <div class="room-history-info">
+                                <h3>${escHtml(item.roomName || 'Unnamed Room')}</h3>
+                                <p><i class="fas fa-user"></i> ${escHtml(item.hostName || 'Unknown host')}</p>
+                            </div>
+                            <div class="room-history-meta">
+                                ${item.tokenPrice > 0 ? `<span class="token-badge"><i class="fas fa-coins"></i> ${item.tokenPrice}</span>` : ''}
+                                <span class="timestamp">${timeAgo(item.joinedAt)}</span>
+                            </div>
                         </div>
                     `).join('');
                     break;
@@ -315,6 +347,124 @@ function _initProfile() {
                 els.deleteBtn.disabled = false;
                 els.deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Delete Account';
             }
+        });
+    }
+
+    if (els.roomHistoryToggle) {
+        els.roomHistoryToggle.addEventListener('change', async () => {
+            const visible = els.roomHistoryToggle.checked;
+            try {
+                const res = await apiFetch('/api/user/room-history-visibility', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ visible })
+                });
+                if (!res || !res.ok) {
+                    els.roomHistoryToggle.checked = !visible;
+                    showToast('Failed to update setting', true);
+                    return;
+                }
+                showToast(visible ? 'Room history is now public' : 'Room history is now private');
+            } catch (e) {
+                els.roomHistoryToggle.checked = !visible;
+                showToast('Failed to update setting', true);
+            }
+        });
+    }
+
+    const inviteBtn = document.getElementById('invite-qr-btn');
+    const inviteModal = document.getElementById('invite-qr-modal');
+    const inviteClose = document.getElementById('invite-qr-close');
+    const inviteCanvas = document.getElementById('invite-qr-canvas');
+    const inviteCopyBtn = document.getElementById('invite-copy-link-btn');
+    const inviteSaveBtn = document.getElementById('invite-save-qr-btn');
+
+    function getInviteUrl() {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const refName = user.name || '';
+        const base = window.location.origin;
+        return refName
+            ? `${base}/?ref=${encodeURIComponent(refName)}`
+            : base;
+    }
+
+    function drawInviteQR() {
+        if (!inviteCanvas || typeof qrcode === 'undefined') return;
+        const url = getInviteUrl();
+        const size = 240;
+        inviteCanvas.width = size;
+        inviteCanvas.height = size;
+        const ctx = inviteCanvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, size, size);
+
+        const qr = qrcode(0, 'M');
+        qr.addData(url);
+        qr.make();
+
+        const modCount = qr.getModuleCount();
+        const quietZone = 4;
+        const totalMods = modCount + quietZone * 2;
+        const cellSize = size / totalMods;
+
+        ctx.fillStyle = '#1a1a2e';
+        for (let r = 0; r < modCount; r++) {
+            for (let c = 0; c < modCount; c++) {
+                if (qr.isDark(r, c)) {
+                    ctx.fillRect(
+                        (c + quietZone) * cellSize,
+                        (r + quietZone) * cellSize,
+                        cellSize + 0.5,
+                        cellSize + 0.5
+                    );
+                }
+            }
+        }
+    }
+
+    if (inviteBtn) {
+        inviteBtn.addEventListener('click', () => {
+            drawInviteQR();
+            if (inviteModal) inviteModal.style.display = 'flex';
+        });
+    }
+
+    if (inviteClose) {
+        inviteClose.addEventListener('click', () => {
+            if (inviteModal) inviteModal.style.display = 'none';
+        });
+    }
+
+    if (inviteModal) {
+        inviteModal.addEventListener('click', (e) => {
+            if (e.target === inviteModal) inviteModal.style.display = 'none';
+        });
+    }
+
+    if (inviteCopyBtn) {
+        inviteCopyBtn.addEventListener('click', () => {
+            const url = getInviteUrl();
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('Invite link copied!');
+            }).catch(() => {
+                const input = document.createElement('input');
+                input.value = url;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+                showToast('Invite link copied!');
+            });
+        });
+    }
+
+    if (inviteSaveBtn) {
+        inviteSaveBtn.addEventListener('click', () => {
+            if (!inviteCanvas) return;
+            const link = document.createElement('a');
+            link.download = 'wordeth-invite.png';
+            link.href = inviteCanvas.toDataURL('image/png');
+            link.click();
         });
     }
 

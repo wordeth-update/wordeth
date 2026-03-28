@@ -896,3 +896,223 @@
     font-size: 0.8rem;
     margin-top: 0.5rem;
 }
+
+.room-history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1rem;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+    margin-bottom: 0.5rem;
+    transition: background 0.2s;
+}
+
+.room-history-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.room-history-info h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 0.2rem;
+}
+
+.room-history-info p {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+}
+
+.room-history-info p i {
+    margin-right: 4px;
+}
+
+.room-history-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-shrink: 0;
+}
+
+.room-history-meta .token-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255, 215, 0, 0.15);
+    color: #ffd700;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 12px;
+}
+
+.room-history-meta .timestamp {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    white-space: nowrap;
+}
+
+.rooms-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.settings-toggle-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 26px;
+    flex-shrink: 0;
+    margin-left: 1rem;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 26px;
+    transition: background 0.3s;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    left: 3px;
+    bottom: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.3s;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background: var(--mint, #98ff98);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(22px);
+}
+
+.invite-qr-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding: 0.55rem 1.2rem;
+    background: linear-gradient(135deg, var(--purple, #7c3aed), var(--mint, #98ff98));
+    color: #fff;
+    border: none;
+    border-radius: 24px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.invite-qr-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.invite-qr-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+}
+
+.invite-qr-modal-content {
+    max-width: 360px;
+    width: 90%;
+    background: var(--card-bg, #1e1e3f);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.invite-qr-modal-content .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.invite-qr-modal-content .modal-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0;
+}
+
+.invite-qr-modal-content .close-modal {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1.4rem;
+    cursor: pointer;
+}
+
+.invite-qr-body {
+    padding: 1.5rem 1.2rem;
+    text-align: center;
+}
+
+.invite-qr-body canvas {
+    border-radius: 12px;
+    background: #fff;
+    display: block;
+    margin: 0 auto;
+}
+
+.invite-qr-label {
+    margin-top: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+}
+
+.invite-qr-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.invite-qr-actions button {
+    flex: 1;
+    padding: 0.6rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.invite-qr-actions .btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+.invite-qr-actions .submit-btn {
+    background: var(--mint, #98ff98);
+    border: none;
+    color: #1a1a2e;
+}

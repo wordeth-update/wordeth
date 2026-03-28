@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="css/cookie-consent.css">
     <link rel="stylesheet" href="css/notifications.css?v=1770526814">
     <link rel="stylesheet" href="css/mini-player.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <link rel="stylesheet" href="css/tournaments.css">
 </head>
 <body>
@@ -118,6 +119,26 @@
                         </div>
                     </div>
                     <p class="profile-joined" id="user-joined"></p>
+                    <button class="invite-qr-btn" id="invite-qr-btn">
+                        <i class="fas fa-qrcode"></i> Invite Friends
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal invite-qr-modal" id="invite-qr-modal" style="display:none;">
+                <div class="modal-content invite-qr-modal-content">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-qrcode"></i> Invite to Wordeth</h3>
+                        <button class="close-modal" id="invite-qr-close">&times;</button>
+                    </div>
+                    <div class="invite-qr-body">
+                        <canvas id="invite-qr-canvas" width="240" height="240"></canvas>
+                        <p class="invite-qr-label">Scan to join the music community</p>
+                        <div class="invite-qr-actions">
+                            <button class="btn-secondary" id="invite-copy-link-btn"><i class="fas fa-link"></i> Copy Link</button>
+                            <button class="submit-btn" id="invite-save-qr-btn"><i class="fas fa-download"></i> Save QR</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -150,6 +171,9 @@
                 <button class="tab-btn active" data-tab="history">
                     <i class="fas fa-history"></i> History
                 </button>
+                <button class="tab-btn" data-tab="rooms">
+                    <i class="fas fa-headphones"></i> Rooms
+                </button>
                 <button class="tab-btn" data-tab="friends">
                     <i class="fas fa-users"></i> Friends
                 </button>
@@ -168,6 +192,15 @@
                     <a href="/lyrics.html" class="btn-primary-sm">Search Lyrics</a>
                 </div>
                 <div class="history-list" id="history-list"></div>
+            </div>
+
+            <div class="tab-content" id="rooms">
+                <div class="tab-empty" id="rooms-empty">
+                    <i class="fas fa-headphones"></i>
+                    <p>No recent rooms yet. Join a Verse to get started!</p>
+                    <a href="/verses.html" class="btn-primary-sm">Browse Verses</a>
+                </div>
+                <div class="rooms-list" id="rooms-list"></div>
             </div>
 
             <div class="tab-content" id="friends">
@@ -210,6 +243,19 @@
                             <strong>Member Since</strong>
                             <p id="settings-joined">-</p>
                         </div>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Privacy</h3>
+                    <div class="settings-item settings-toggle-item">
+                        <div>
+                            <strong>Show Room History on Profile</strong>
+                            <p>Let others see your recent rooms when they visit your profile</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="room-history-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
                     </div>
                 </div>
                 <div class="settings-section settings-danger">
