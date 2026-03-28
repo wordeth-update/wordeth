@@ -8279,6 +8279,11 @@ class AudioRoomsManager {
 
     _setupTokenListeners() {
         document.getElementById('token-buy-btn')?.addEventListener('click', () => this.showBuyTokensModal());
+        document.getElementById('token-gate-buy')?.addEventListener('click', () => {
+            const gateModal = document.getElementById('token-gate-modal');
+            if (gateModal) gateModal.classList.remove('active');
+            this.showBuyTokensModal();
+        });
         document.querySelectorAll('.token-pack-option').forEach(btn => {
             btn.addEventListener('click', () => {
                 const packId = btn.dataset.packId;

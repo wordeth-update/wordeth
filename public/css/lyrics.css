@@ -265,9 +265,9 @@
     border-radius: 20px;
     width: 90%;
     max-width: 800px;
-    max-height: 90vh;
+    max-height: 85vh;
     overflow-y: auto;
-    margin: 5vh auto;
+    margin: 80px auto 2vh;
     border: 1px solid rgba(0,229,168,0.2);
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
@@ -416,7 +416,8 @@ a.merch-cta-btn {
     
     .modal-content {
         width: 95%;
-        margin: 2.5vh auto;
+        margin: 72px auto 2vh;
+        max-height: calc(100vh - 80px);
     }
     
     .modal-header {

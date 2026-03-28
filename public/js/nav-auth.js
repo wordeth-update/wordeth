@@ -33,13 +33,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     desktopBtn.parentNode.appendChild(dashLink);
                 }
 
-                const subLink = document.createElement('a');
-                subLink.textContent = 'My Plan';
-                subLink.href = '/subscription.html';
-                subLink.className = 'nav-sub-btn';
-                subLink.style.cssText = 'color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.85rem; margin-left: 0.75rem;';
-                desktopBtn.parentNode.appendChild(subLink);
-
                 const signoutLink = document.createElement('a');
                 signoutLink.textContent = 'Sign Out';
                 signoutLink.href = '#';
@@ -68,29 +61,32 @@ document.addEventListener('DOMContentLoaded', function() {
             profileSpan.textContent = 'My Profile';
             profileLink.append(profileIcon, profileSpan);
 
+            mobileAuthSection.append(profileLink);
+
             const mobileAcctType = (user.accountType || 'fan').toLowerCase();
             if (['artist', 'designer', 'creator'].includes(mobileAcctType)) {
                 const dashLink = document.createElement('a');
                 dashLink.href = '/creator-dashboard.html';
-                dashLink.className = 'mobile-creator-link';
-                dashLink.textContent = 'Creator Dashboard';
-                mobileAuthSection.append(profileLink, dashLink);
-            } else {
-                mobileAuthSection.append(profileLink);
+                dashLink.className = 'mobile-signin-btn mobile-creator-link';
+                const dashIcon = document.createElement('i');
+                dashIcon.className = 'fas fa-chart-line';
+                const dashSpan = document.createElement('span');
+                dashSpan.textContent = 'Creator Dashboard';
+                dashLink.append(dashIcon, dashSpan);
+                mobileAuthSection.append(dashLink);
             }
-
-            const subLink = document.createElement('a');
-            subLink.href = '/subscription.html';
-            subLink.className = 'mobile-sub-link';
-            subLink.textContent = 'My Plan';
 
             const signoutLink = document.createElement('a');
             signoutLink.href = '#';
-            signoutLink.className = 'mobile-signout-link';
-            signoutLink.textContent = 'Sign Out';
+            signoutLink.className = 'mobile-signin-btn mobile-signout-link';
+            const signoutIcon = document.createElement('i');
+            signoutIcon.className = 'fas fa-sign-out-alt';
+            const signoutSpan = document.createElement('span');
+            signoutSpan.textContent = 'Sign Out';
+            signoutLink.append(signoutIcon, signoutSpan);
             signoutLink.addEventListener('click', handleSignOut);
 
-            mobileAuthSection.append(subLink, signoutLink);
+            mobileAuthSection.append(signoutLink);
         }
     }
 
