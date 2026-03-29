@@ -95,24 +95,6 @@
     margin: 0;
 }
 
-.edit-profile-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #fff;
-    padding: 0.4rem 1rem;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    transition: background 0.2s, border-color 0.2s;
-}
-
-.edit-profile-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: var(--mint);
-}
 
 .profile-email {
     color: rgba(255, 255, 255, 0.5);

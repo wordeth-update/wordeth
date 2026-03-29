@@ -18,7 +18,6 @@ function _initProfile() {
         statFollowing: document.getElementById('stat-following'),
         statFollowers: document.getElementById('stat-followers'),
         statSearches: document.getElementById('stat-searches'),
-        editBtn: document.getElementById('edit-profile-btn'),
         editName: document.getElementById('edit-name'),
         editBio: document.getElementById('edit-bio'),
         editSave: document.getElementById('edit-save'),
@@ -78,17 +77,6 @@ function _initProfile() {
 
         localStorage.setItem('user', JSON.stringify({ _id: user._id, name: user.name, email: user.email, avatar: user.avatar }));
     }
-
-    els.editBtn.addEventListener('click', () => {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        const customizeTab = document.querySelector('.tab-btn[data-tab="customize"]');
-        const customizePanel = document.getElementById('customize');
-        if (customizeTab) customizeTab.classList.add('active');
-        if (customizePanel) customizePanel.classList.add('active');
-        loadCustomizeTab();
-        if (customizePanel) customizePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
 
     els.editBio.addEventListener('input', () => {
         els.bioCharCount.textContent = els.editBio.value.length;
