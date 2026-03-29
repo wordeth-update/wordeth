@@ -142,31 +142,6 @@
                 </div>
             </div>
 
-            <div class="profile-edit-modal" id="edit-modal" style="display:none;">
-                <div class="edit-modal-content">
-                    <div class="edit-modal-header">
-                        <h2>Edit Profile</h2>
-                        <button class="edit-modal-close" id="edit-modal-close">&times;</button>
-                    </div>
-                    <form id="edit-profile-form">
-                        <div class="form-group">
-                            <label for="edit-name">Name</label>
-                            <input type="text" id="edit-name" minlength="2" maxlength="50" required>
-                            <small class="name-status" id="edit-name-status"></small>
-                        </div>
-                        <div class="form-group">
-                            <label for="edit-bio">Bio</label>
-                            <textarea id="edit-bio" maxlength="300" rows="3" placeholder="Tell us about yourself..."></textarea>
-                            <small class="char-count"><span id="bio-char-count">0</span>/300</small>
-                        </div>
-                        <div class="edit-modal-actions">
-                            <button type="button" class="btn-secondary" id="edit-cancel">Cancel</button>
-                            <button type="submit" class="submit-btn" id="edit-save">Save Changes</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
             <div class="profile-tabs">
                 <button class="tab-btn active" data-tab="history">
                     <i class="fas fa-history"></i> History
@@ -181,7 +156,7 @@
                     <i class="fas fa-tshirt"></i> Merch
                 </button>
                 <button class="tab-btn" data-tab="customize">
-                    <i class="fas fa-palette"></i> Customize
+                    <i class="fas fa-pen"></i> Edit Profile
                 </button>
                 <button class="tab-btn" data-tab="settings">
                     <i class="fas fa-cog"></i> Settings
@@ -233,6 +208,24 @@
             </div>
 
             <div class="tab-content" id="customize">
+                <div class="customize-section">
+                    <h3><i class="fas fa-user"></i> Basic Info</h3>
+                    <div class="edit-inline-fields">
+                        <div class="form-group">
+                            <label for="edit-name">Display Name</label>
+                            <input type="text" id="edit-name" class="customize-input" minlength="2" maxlength="50" required>
+                            <small class="name-status" id="edit-name-status"></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-bio">Bio</label>
+                            <textarea id="edit-bio" class="customize-textarea" maxlength="300" rows="2" placeholder="Tell us about yourself..."></textarea>
+                            <small class="char-count"><span id="bio-char-count">0</span>/300</small>
+                        </div>
+                        <div class="customize-actions">
+                            <button class="btn-primary-sm" id="edit-save">Save</button>
+                        </div>
+                    </div>
+                </div>
                 <div class="customize-section">
                     <h3><i class="fas fa-pen-fancy"></i> Extended Bio</h3>
                     <p class="customize-hint">Tell your story in detail (up to 2000 characters)</p>

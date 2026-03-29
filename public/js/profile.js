@@ -19,10 +19,6 @@ function _initProfile() {
         statFollowers: document.getElementById('stat-followers'),
         statSearches: document.getElementById('stat-searches'),
         editBtn: document.getElementById('edit-profile-btn'),
-        editModal: document.getElementById('edit-modal'),
-        editClose: document.getElementById('edit-modal-close'),
-        editCancel: document.getElementById('edit-cancel'),
-        editForm: document.getElementById('edit-profile-form'),
         editName: document.getElementById('edit-name'),
         editBio: document.getElementById('edit-bio'),
         editSave: document.getElementById('edit-save'),
@@ -84,28 +80,21 @@ function _initProfile() {
     }
 
     els.editBtn.addEventListener('click', () => {
-        els.editName.value = currentUser?.name || '';
-        els.editBio.value = currentUser?.bio || '';
-        els.bioCharCount.textContent = (currentUser?.bio || '').length;
-        els.editModal.style.display = 'flex';
-    });
-
-    function closeModal() {
-        els.editModal.style.display = 'none';
-    }
-
-    els.editClose.addEventListener('click', closeModal);
-    els.editCancel.addEventListener('click', closeModal);
-    els.editModal.addEventListener('click', (e) => {
-        if (e.target === els.editModal) closeModal();
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        const customizeTab = document.querySelector('.tab-btn[data-tab="customize"]');
+        const customizePanel = document.getElementById('customize');
+        if (customizeTab) customizeTab.classList.add('active');
+        if (customizePanel) customizePanel.classList.add('active');
+        loadCustomizeTab();
+        if (customizePanel) customizePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 
     els.editBio.addEventListener('input', () => {
         els.bioCharCount.textContent = els.editBio.value.length;
     });
 
-    els.editForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+    els.editSave.addEventListener('click', async () => {
         els.editSave.disabled = true;
         els.editSave.textContent = 'Saving...';
 
@@ -124,7 +113,6 @@ function _initProfile() {
             if (res.ok) {
                 currentUser = data;
                 renderProfile(data);
-                closeModal();
                 showToast('Profile updated!');
             } else {
                 showToast(data.message || 'Update failed', true);
@@ -134,7 +122,7 @@ function _initProfile() {
         }
 
         els.editSave.disabled = false;
-        els.editSave.textContent = 'Save Changes';
+        els.editSave.textContent = 'Save';
     });
 
     let nameCheckTimeout;
@@ -595,6 +583,12 @@ function loadCustomizeTab() {
     fetch(base + '/api/user/profile', { headers: { 'Authorization': 'Bearer ' + token } })
         .then(function(r) { if (!r.ok) throw new Error('Failed'); return r.json(); })
         .then(function(profile) {
+            var editNameEl = document.getElementById('edit-name');
+            var editBioEl = document.getElementById('edit-bio');
+            var bioCharCount = document.getElementById('bio-char-count');
+            if (editNameEl) editNameEl.value = profile.name || '';
+            if (editBioEl) editBioEl.value = profile.bio || '';
+            if (bioCharCount) bioCharCount.textContent = (profile.bio || '').length;
             var bioInput = document.getElementById('extended-bio-input');
             var bioCount = document.getElementById('extended-bio-count');
             if (bioInput && profile.extendedBio) bioInput.value = profile.extendedBio;

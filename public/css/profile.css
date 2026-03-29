@@ -158,85 +158,15 @@
     margin-top: 0.5rem;
 }
 
-.profile-edit-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
+.edit-inline-fields .form-group {
+    margin-bottom: 1rem;
 }
 
-.edit-modal-content {
-    background: var(--purple-dark);
-    border-radius: 16px;
-    padding: 2rem;
-    width: 100%;
-    max-width: 480px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.edit-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-}
-
-.edit-modal-header h2 {
+.edit-inline-fields .form-group label {
     color: var(--mint);
-    margin: 0;
-    font-size: 1.3rem;
-}
-
-.edit-modal-close {
-    background: none;
-    border: none;
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 1.8rem;
-    cursor: pointer;
-    line-height: 1;
-    padding: 0;
-}
-
-.edit-modal-close:hover {
-    color: #fff;
-}
-
-.edit-modal-content .form-group {
-    margin-bottom: 1.25rem;
-}
-
-.edit-modal-content .form-group label {
-    color: var(--mint);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     display: block;
-    margin-bottom: 0.4rem;
-}
-
-.edit-modal-content .form-group input,
-.edit-modal-content .form-group textarea {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    background: rgba(0, 0, 0, 0.2);
-    color: #fff;
-    font-size: 1rem;
-    font-family: inherit;
-    box-sizing: border-box;
-    resize: vertical;
-}
-
-.edit-modal-content .form-group input:focus,
-.edit-modal-content .form-group textarea:focus {
-    outline: none;
-    border-color: var(--mint);
+    margin-bottom: 0.35rem;
 }
 
 .char-count {
@@ -245,13 +175,6 @@
     color: rgba(255, 255, 255, 0.4);
     font-size: 0.8rem;
     margin-top: 0.25rem;
-}
-
-.edit-modal-actions {
-    display: flex;
-    gap: 0.75rem;
-    justify-content: flex-end;
-    margin-top: 1.5rem;
 }
 
 .profile-tabs {
