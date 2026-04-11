@@ -1,0 +1,74 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "PgsrdRtmA4iZJ-CTVb1d9"
+uri = "file://public/images/merch/tshirt-front.png"
+type = "image"
+title = "white tshirt front mockup"
+
+[[generated]]
+id = "J9Ddr3AfUsg-NmWRtA53Z"
+uri = "file://public/images/merch/tshirt-back.png"
+type = "image"
+title = "white tshirt back mockup"
+
+[[generated]]
+id = "DIjPW_bHscx9CDYroU6ik"
+uri = "file://public/images/merch/hoodie-front.png"
+type = "image"
+title = "white hoodie front mockup"
+
+[[generated]]
+id = "MvQs1dOErzMg80l9iWkBL"
+uri = "file://public/images/merch/hoodie-back.png"
+type = "image"
+title = "white hoodie back mockup"
+
+[[generated]]
+id = "W791ZQrEuhhvhRlLaktCC"
+uri = "file://public/images/merch/tank-front.png"
+type = "image"
+title = "white tank top front mockup"
+
+[[generated]]
+id = "kOyVTdgI3F5rh3-EHFCNT"
+uri = "file://public/images/merch/tank-back.png"
+type = "image"
+title = "white tank top back mockup"
+
+[[generated]]
+id = "Ldp1LRntW1CfvzT4ySVpg"
+uri = "file://public/images/merch/longsleeve-front.png"
+type = "image"
+title = "white longsleeve front mockup"
+
+[[generated]]
+id = "XLKYDCXDc0Adoh4D9E8TN"
+uri = "file://public/images/merch/longsleeve-back.png"
+type = "image"
+title = "white longsleeve back mockup"
+
+[[generated]]
+id = "N6LYhzL1pfxk_o6-ITe8r"
+uri = "file://public/images/merch/sweatshirt-front.png"
+type = "image"
+title = "white sweatshirt front mockup"
+
+[[generated]]
+id = "WEXqLZRyTUFos2vHlLs0s"
+uri = "file://public/images/merch/sweatshirt-back.png"
+type = "image"
+title = "white sweatshirt back mockup"
+
+[[generated]]
+id = "YiBx6lIOhAsCV0MWpRStq"
+uri = "file://public/images/merch/hat-front.png"
+type = "image"
+title = "white baseball cap front mockup"
+
+[[generated]]
+id = "apBDCwuN6FoRWhvnntvSq"
+uri = "file://public/images/merch/hat-back.png"
+type = "image"
+title = "white baseball cap back mockup"

@@ -1,11 +1,17 @@
 var MerchDesigner = (function() {
     var PRODUCTS = [
-        { id: 'tshirt', name: 'T-Shirt', icon: 'fa-tshirt', basePrice: 29.99, printW: 200, printH: 250, printTop: 90, printLeft: 90 },
-        { id: 'hoodie', name: 'Hoodie', icon: 'fa-vest-patches', basePrice: 54.99, printW: 180, printH: 220, printTop: 100, printLeft: 100 },
-        { id: 'tank', name: 'Tank Top', icon: 'fa-shirt', basePrice: 24.99, printW: 180, printH: 230, printTop: 80, printLeft: 100 },
-        { id: 'longsleeve', name: 'Long Sleeve', icon: 'fa-mitten', basePrice: 34.99, printW: 200, printH: 250, printTop: 90, printLeft: 90 },
-        { id: 'sweatshirt', name: 'Sweatshirt', icon: 'fa-vest-patches', basePrice: 44.99, printW: 190, printH: 230, printTop: 95, printLeft: 95 },
-        { id: 'hat', name: 'Cap', icon: 'fa-hat-cowboy', basePrice: 24.99, printW: 140, printH: 80, printTop: 50, printLeft: 120 }
+        { id: 'tshirt', name: 'T-Shirt', icon: 'fa-tshirt', basePrice: 29.99,
+          printAreaPct: { top: 25, left: 22, width: 56, height: 38 } },
+        { id: 'hoodie', name: 'Hoodie', icon: 'fa-vest-patches', basePrice: 54.99,
+          printAreaPct: { top: 32, left: 24, width: 52, height: 30 } },
+        { id: 'tank', name: 'Tank Top', icon: 'fa-shirt', basePrice: 24.99,
+          printAreaPct: { top: 22, left: 22, width: 56, height: 40 } },
+        { id: 'longsleeve', name: 'Long Sleeve', icon: 'fa-mitten', basePrice: 34.99,
+          printAreaPct: { top: 25, left: 22, width: 56, height: 38 } },
+        { id: 'sweatshirt', name: 'Sweatshirt', icon: 'fa-vest-patches', basePrice: 44.99,
+          printAreaPct: { top: 28, left: 24, width: 52, height: 34 } },
+        { id: 'hat', name: 'Cap', icon: 'fa-hat-cowboy', basePrice: 24.99,
+          printAreaPct: { top: 18, left: 25, width: 50, height: 35 } }
     ];
 
     var COLORS = [
@@ -41,6 +47,10 @@ var MerchDesigner = (function() {
         initialized: false
     };
 
+    function getImagePath(productId, view) {
+        return 'images/merch/' + productId + '-' + view + '.png';
+    }
+
     function init(artist) {
         state.artist = artist;
         state.view = 'front';
@@ -56,17 +66,21 @@ var MerchDesigner = (function() {
         if (state.canvas) {
             state.canvas.clear();
             state.canvas.renderAll();
-            resizeCanvas();
-            updateGarmentSVG();
         } else {
             initCanvas();
         }
+        updateGarment();
         if (!state.initialized) {
             initTools();
             state.initialized = true;
         }
         updatePrice();
         checkForLyrics();
+        document.querySelectorAll('.view-toggle-btn').forEach(function(b) {
+            b.classList.toggle('active', b.dataset.view === 'front');
+        });
+        var viewToggle = document.querySelector('.view-toggle');
+        if (viewToggle) viewToggle.style.display = 'flex';
     }
 
     function renderProductSelector() {
@@ -89,11 +103,11 @@ var MerchDesigner = (function() {
         document.querySelectorAll('.product-type-btn').forEach(function(b) { b.classList.remove('active'); });
         var active = document.querySelector('.product-type-btn[data-product="' + product.id + '"]');
         if (active) active.classList.add('active');
-        updateGarmentSVG();
-        resizeCanvas();
+        updateGarment();
         updatePrice();
         if (product.id === 'hat') {
             document.querySelector('.view-toggle').style.display = 'none';
+            if (state.view === 'back') switchView('front');
         } else {
             document.querySelector('.view-toggle').style.display = 'flex';
         }
@@ -118,7 +132,7 @@ var MerchDesigner = (function() {
         document.querySelectorAll('.color-swatch').forEach(function(s) { s.classList.remove('active'); });
         var active = document.querySelector('.color-swatch[data-color="' + color.id + '"]');
         if (active) active.classList.add('active');
-        updateGarmentSVG();
+        applyColorTint();
     }
 
     function renderSizeSelector() {
@@ -136,42 +150,52 @@ var MerchDesigner = (function() {
         });
     }
 
-    function getGarmentSVG(productId, fillColor) {
-        var c = fillColor || '#1a1a1a';
-        switch (productId) {
-            case 'tshirt':
-                return '<svg viewBox="0 0 380 420" xmlns="http://www.w3.org/2000/svg"><path d="M90 40 L50 80 L10 70 L30 140 L70 120 L70 400 L310 400 L310 120 L350 140 L370 70 L330 80 L290 40 Q250 10 190 10 Q130 10 90 40Z" fill="' + c + '" stroke="rgba(255,255,255,0.12)" stroke-width="2"/></svg>';
-            case 'hoodie':
-                return '<svg viewBox="0 0 380 440" xmlns="http://www.w3.org/2000/svg"><path d="M100 50 L60 90 L10 80 L30 200 L80 180 L80 420 L300 420 L300 180 L350 200 L370 80 L320 90 L280 50 Q240 20 190 20 Q140 20 100 50Z" fill="' + c + '" stroke="rgba(255,255,255,0.12)" stroke-width="2"/><path d="M150 20 Q155 60 190 80 Q225 60 230 20" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2"/><ellipse cx="190" cy="30" rx="40" ry="15" fill="' + c + '" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/></svg>';
-            case 'tank':
-                return '<svg viewBox="0 0 380 420" xmlns="http://www.w3.org/2000/svg"><path d="M120 30 L100 50 L100 400 L280 400 L280 50 L260 30 Q230 5 190 5 Q150 5 120 30Z" fill="' + c + '" stroke="rgba(255,255,255,0.12)" stroke-width="2"/></svg>';
-            case 'longsleeve':
-                return '<svg viewBox="0 0 420 440" xmlns="http://www.w3.org/2000/svg"><path d="M110 50 L60 90 L10 80 L5 360 L55 360 L60 180 L80 160 L80 420 L340 420 L340 160 L360 180 L365 360 L415 360 L410 80 L360 90 L310 50 Q270 20 210 20 Q150 20 110 50Z" fill="' + c + '" stroke="rgba(255,255,255,0.12)" stroke-width="2"/></svg>';
-            case 'sweatshirt':
-                return '<svg viewBox="0 0 380 440" xmlns="http://www.w3.org/2000/svg"><path d="M100 55 L55 95 L10 85 L30 200 L75 180 L75 420 L305 420 L305 180 L350 200 L370 85 L325 95 L280 55 Q240 25 190 25 Q140 25 100 55Z" fill="' + c + '" stroke="rgba(255,255,255,0.12)" stroke-width="2"/><line x1="190" y1="100" x2="190" y2="250" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/></svg>';
-            case 'hat':
-                return '<svg viewBox="0 0 380 260" xmlns="http://www.w3.org/2000/svg"><path d="M40 180 Q40 80 190 60 Q340 80 340 180 L340 200 L40 200Z" fill="' + c + '" stroke="rgba(255,255,255,0.12)" stroke-width="2"/><path d="M20 200 L360 200 L380 220 L360 230 L20 230 L0 220Z" fill="' + c + '" stroke="rgba(255,255,255,0.12)" stroke-width="2" opacity="0.85"/></svg>';
-            default:
-                return '<svg viewBox="0 0 380 420" xmlns="http://www.w3.org/2000/svg"><rect x="60" y="20" width="260" height="380" rx="20" fill="' + c + '" stroke="rgba(255,255,255,0.12)" stroke-width="2"/></svg>';
+    function updateGarment() {
+        var img = document.getElementById('garmentMockupImg');
+        var overlay = document.getElementById('garmentColorOverlay');
+        if (!img) return;
+
+        img.src = getImagePath(state.product.id, state.view);
+        applyColorTint();
+        positionCanvas();
+    }
+
+    function applyColorTint() {
+        var img = document.getElementById('garmentMockupImg');
+        var overlay = document.getElementById('garmentColorOverlay');
+        if (!img || !overlay) return;
+
+        if (state.color.id === 'white') {
+            overlay.style.display = 'none';
+            img.style.filter = 'none';
+        } else {
+            overlay.style.display = 'block';
+            overlay.style.backgroundColor = state.color.hex;
         }
     }
 
-    function updateGarmentSVG() {
-        var wrap = document.getElementById('garmentSVG');
-        if (!wrap) return;
-        wrap.innerHTML = getGarmentSVG(state.product.id, state.color.hex);
+    function positionCanvas() {
+        if (!state.canvas) return;
         var preview = document.getElementById('garmentPreview');
-        if (preview) {
-            var bgLum = getLuminance(state.color.hex);
-            preview.style.background = bgLum > 0.3 ? 'linear-gradient(135deg, #1a1a2e 0%, #2d1b4e 100%)' : 'linear-gradient(135deg, #2a2a3e 0%, #3d2b5e 100%)';
-        }
-    }
+        var wrap = document.querySelector('.canvas-container-wrap');
+        if (!preview || !wrap) return;
 
-    function getLuminance(hex) {
-        var r = parseInt(hex.slice(1, 3), 16) / 255;
-        var g = parseInt(hex.slice(3, 5), 16) / 255;
-        var b = parseInt(hex.slice(5, 7), 16) / 255;
-        return 0.299 * r + 0.587 * g + 0.114 * b;
+        var pa = state.product.printAreaPct;
+        var previewW = preview.offsetWidth;
+        var previewH = preview.offsetHeight;
+
+        var canvasW = Math.round(previewW * pa.width / 100);
+        var canvasH = Math.round(previewH * pa.height / 100);
+        var canvasTop = Math.round(previewH * pa.top / 100);
+        var canvasLeft = Math.round(previewW * pa.left / 100);
+
+        state.canvas.setWidth(canvasW);
+        state.canvas.setHeight(canvasH);
+        wrap.style.width = canvasW + 'px';
+        wrap.style.height = canvasH + 'px';
+        wrap.style.top = canvasTop + 'px';
+        wrap.style.left = canvasLeft + 'px';
+        state.canvas.renderAll();
     }
 
     function initCanvas() {
@@ -182,32 +206,22 @@ var MerchDesigner = (function() {
             selection: true,
             preserveObjectStacking: true
         });
-        resizeCanvas();
-        updateGarmentSVG();
 
         state.canvas.on('selection:created', onSelectionChange);
         state.canvas.on('selection:updated', onSelectionChange);
         state.canvas.on('selection:cleared', function() {
             document.getElementById('deleteSelectedBtn').classList.remove('delete-active');
         });
+
+        window.addEventListener('resize', function() {
+            if (document.getElementById('designerSection').classList.contains('active')) {
+                positionCanvas();
+            }
+        });
     }
 
     function onSelectionChange() {
         document.getElementById('deleteSelectedBtn').classList.add('delete-active');
-    }
-
-    function resizeCanvas() {
-        if (!state.canvas) return;
-        state.canvas.setWidth(state.product.printW);
-        state.canvas.setHeight(state.product.printH);
-        var wrap = document.querySelector('.canvas-container-wrap');
-        if (wrap) {
-            wrap.style.width = state.product.printW + 'px';
-            wrap.style.height = state.product.printH + 'px';
-            wrap.style.top = state.product.printTop + 'px';
-            wrap.style.left = state.product.printLeft + 'px';
-        }
-        state.canvas.renderAll();
     }
 
     function initTools() {
@@ -228,8 +242,10 @@ var MerchDesigner = (function() {
             var reader = new FileReader();
             reader.onload = function(ev) {
                 fabric.Image.fromURL(ev.target.result, function(img) {
-                    var scale = Math.min((state.product.printW * 0.8) / img.width, (state.product.printH * 0.6) / img.height, 1);
-                    img.set({ scaleX: scale, scaleY: scale, left: 20, top: 20 });
+                    var cw = state.canvas.getWidth();
+                    var ch = state.canvas.getHeight();
+                    var scale = Math.min((cw * 0.8) / img.width, (ch * 0.6) / img.height, 1);
+                    img.set({ scaleX: scale, scaleY: scale, left: cw * 0.1, top: ch * 0.1 });
                     state.canvas.add(img);
                     state.canvas.setActiveObject(img);
                     state.canvas.renderAll();
@@ -316,11 +332,12 @@ var MerchDesigner = (function() {
 
         var font = document.getElementById('fontSelect').value || 'Inter';
         var size = parseInt(document.getElementById('fontSizeRange').value) || 24;
+        var cw = state.canvas.getWidth();
 
         var textObj = new fabric.Textbox(text, {
             left: 10,
             top: 10,
-            width: state.product.printW - 20,
+            width: cw - 20,
             fontFamily: font,
             fontSize: size,
             fill: color,
@@ -345,6 +362,10 @@ var MerchDesigner = (function() {
         document.querySelectorAll('.view-toggle-btn').forEach(function(b) {
             b.classList.toggle('active', b.dataset.view === view);
         });
+
+        var img = document.getElementById('garmentMockupImg');
+        if (img) img.src = getImagePath(state.product.id, view);
+
         var saved = view === 'front' ? state.frontObjects : state.backObjects;
         if (saved && saved.objects && saved.objects.length > 0) {
             state.canvas.loadFromJSON(saved, function() { state.canvas.renderAll(); });

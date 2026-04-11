@@ -206,34 +206,39 @@
     aspect-ratio: 3/4;
     border-radius: 16px;
     overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.3s;
+    background: linear-gradient(145deg, #e8e8ec 0%, #d0d0d8 100%);
 }
 
-.garment-svg-wrap {
+.garment-mockup-img {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 60%;
-    height: 70%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-}
-
-.garment-svg-wrap svg {
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
-    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+    object-fit: contain;
+    padding: 5%;
+    z-index: 1;
+    pointer-events: none;
+    user-select: none;
+}
+
+.garment-color-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    mix-blend-mode: multiply;
+    z-index: 2;
+    pointer-events: none;
+    display: none;
 }
 
 .canvas-container-wrap {
     position: absolute;
-    z-index: 10;
+    z-index: 5;
+    border: 1px dashed rgba(0,0,0,0.12);
+    border-radius: 4px;
 }
 
 .view-toggle {
