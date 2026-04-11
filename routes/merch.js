@@ -1,218 +1,118 @@
 const express = require('express');
 const router = express.Router();
-const InksoftService = require('../services/inksoft/inksoftService');
 const auth = require('../middleware/auth');
+const mongoose = require('mongoose');
 
-const inksoftService = new InksoftService();
+const merchOrderSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    product: { type: String, required: true },
+    productName: { type: String, required: true },
+    color: { type: String, required: true },
+    colorName: { type: String },
+    size: { type: String, required: true },
+    quantity: { type: Number, required: true, min: 1 },
+    unitPrice: { type: Number, required: true },
+    totalPrice: { type: Number, required: true },
+    artistName: String,
+    artistId: String,
+    frontDesign: String,
+    backDesign: String,
+    designPreview: String,
+    status: { type: String, default: 'pending', enum: ['pending', 'confirmed', 'production', 'shipped', 'delivered', 'cancelled'] },
+    trackingNumber: String,
+    notes: String
+}, { timestamps: true });
 
-// Get all products
-router.get('/products', async (req, res) => {
-    try {
-        const { category, limit } = req.query;
-        const products = await inksoftService.getProducts(category, limit);
-        res.json({
-            success: true,
-            data: products
-        });
-    } catch (error) {
-        console.error('Error fetching products:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch products'
-        });
-    }
-});
+const MerchOrder = mongoose.models.MerchOrder || mongoose.model('MerchOrder', merchOrderSchema);
 
-// Get product details
-router.get('/products/:productId', async (req, res) => {
-    try {
-        const { productId } = req.params;
-        const variants = await inksoftService.getProductVariants(productId);
-        res.json({
-            success: true,
-            data: variants
-        });
-    } catch (error) {
-        console.error('Error fetching product details:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch product details'
-        });
-    }
-});
+const PRODUCT_CATALOG = {
+    tshirt:     { name: 'T-Shirt',     price: 29.99 },
+    hoodie:     { name: 'Hoodie',      price: 54.99 },
+    tank:       { name: 'Tank Top',    price: 24.99 },
+    longsleeve: { name: 'Long Sleeve', price: 34.99 },
+    sweatshirt: { name: 'Sweatshirt',  price: 44.99 },
+    hat:        { name: 'Cap',         price: 24.99 }
+};
 
-// Get available fonts
-router.get('/fonts', async (req, res) => {
-    try {
-        const fonts = await inksoftService.getFonts();
-        res.json({
-            success: true,
-            data: fonts
-        });
-    } catch (error) {
-        console.error('Error fetching fonts:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch fonts'
-        });
-    }
-});
+const VALID_COLORS = ['black','white','navy','gray','forest','burgundy','sand','slate'];
+const VALID_SIZES = ['XS','S','M','L','XL','2XL','3XL'];
+const MAX_DESIGN_BYTES = 500000;
 
-// Create custom design with lyrics
-router.post('/designs', auth, async (req, res) => {
-    try {
-        const { productId, lyrics, options } = req.body;
-        
-        if (!productId || !lyrics) {
-            return res.status(400).json({
-                success: false,
-                message: 'Product ID and lyrics are required'
-            });
-        }
-
-        const design = await inksoftService.createLyricsDesign(productId, lyrics, options);
-        
-        res.json({
-            success: true,
-            data: design
-        });
-    } catch (error) {
-        console.error('Error creating design:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to create design'
-        });
-    }
-});
-
-// Generate design preview
-router.get('/designs/:designId/preview', async (req, res) => {
-    try {
-        const { designId } = req.params;
-        const previewUrl = await inksoftService.generatePreviewUrl(designId);
-        
-        res.json({
-            success: true,
-            data: { previewUrl }
-        });
-    } catch (error) {
-        console.error('Error generating preview:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to generate preview'
-        });
-    }
-});
-
-// Calculate shipping
-router.post('/shipping/calculate', async (req, res) => {
-    try {
-        const { productId, quantity, zipCode, country } = req.body;
-        
-        if (!productId || !quantity || !zipCode) {
-            return res.status(400).json({
-                success: false,
-                message: 'Product ID, quantity, and zip code are required'
-            });
-        }
-
-        const shipping = await inksoftService.calculateShipping(productId, quantity, zipCode, country);
-        
-        res.json({
-            success: true,
-            data: shipping
-        });
-    } catch (error) {
-        console.error('Error calculating shipping:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to calculate shipping'
-        });
-    }
-});
-
-// Create order
 router.post('/orders', auth, async (req, res) => {
     try {
-        const { designId, productId, quantity, customerInfo, shippingInfo } = req.body;
-        
-        if (!designId || !productId || !quantity || !customerInfo || !shippingInfo) {
-            return res.status(400).json({
-                success: false,
-                message: 'All order information is required'
-            });
+        const { product, color, size, quantity, artistName, artistId, frontDesign, backDesign, designPreview } = req.body;
+
+        const catalogItem = PRODUCT_CATALOG[product];
+        if (!catalogItem) {
+            return res.status(400).json({ success: false, message: 'Invalid product type' });
         }
 
-        const order = await inksoftService.createOrder(designId, productId, quantity, customerInfo, shippingInfo);
-        
-        res.json({
-            success: true,
-            data: order
+        if (!VALID_COLORS.includes(color)) {
+            return res.status(400).json({ success: false, message: 'Invalid color' });
+        }
+
+        if (!VALID_SIZES.includes(size)) {
+            return res.status(400).json({ success: false, message: 'Invalid size' });
+        }
+
+        var qty = parseInt(quantity, 10);
+        if (isNaN(qty) || qty < 1 || qty > 50) {
+            return res.status(400).json({ success: false, message: 'Quantity must be between 1 and 50' });
+        }
+
+        var unitPrice = catalogItem.price;
+        var totalPrice = +(unitPrice * qty).toFixed(2);
+
+        var frontStr = typeof frontDesign === 'string' ? frontDesign.substring(0, MAX_DESIGN_BYTES) : null;
+        var backStr = typeof backDesign === 'string' ? backDesign.substring(0, MAX_DESIGN_BYTES) : null;
+        var previewStr = typeof designPreview === 'string' ? designPreview.substring(0, MAX_DESIGN_BYTES) : null;
+
+        const order = await MerchOrder.create({
+            userId: req.user.id,
+            product,
+            productName: catalogItem.name,
+            color,
+            colorName: color.charAt(0).toUpperCase() + color.slice(1),
+            size,
+            quantity: qty,
+            unitPrice,
+            totalPrice,
+            artistName: artistName ? String(artistName).substring(0, 200) : null,
+            artistId: artistId ? String(artistId).substring(0, 100) : null,
+            frontDesign: frontStr,
+            backDesign: backStr,
+            designPreview: previewStr,
+            status: 'pending'
         });
+
+        res.json({ success: true, data: { orderId: order._id, status: order.status }, message: 'Order placed successfully' });
     } catch (error) {
-        console.error('Error creating order:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to create order'
-        });
+        console.error('Error creating merch order:', error);
+        res.status(500).json({ success: false, message: 'Failed to place order' });
     }
 });
 
-// Get order status
-router.get('/orders/:orderId', auth, async (req, res) => {
-    try {
-        const { orderId } = req.params;
-        const orderStatus = await inksoftService.getOrderStatus(orderId);
-        
-        res.json({
-            success: true,
-            data: orderStatus
-        });
-    } catch (error) {
-        console.error('Error fetching order status:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch order status'
-        });
-    }
-});
-
-// Get user's order history
 router.get('/orders', auth, async (req, res) => {
     try {
-        const userId = req.user.id;
-        // This would need to be implemented based on how you store order references
-        // For now, returning a placeholder
-        res.json({
-            success: true,
-            data: [],
-            message: 'Order history feature coming soon'
-        });
+        const orders = await MerchOrder.find({ userId: req.user.id }).sort({ createdAt: -1 }).limit(50).select('-frontDesign -backDesign -designPreview');
+        res.json({ success: true, data: orders });
     } catch (error) {
         console.error('Error fetching order history:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch order history'
-        });
+        res.status(500).json({ success: false, message: 'Failed to fetch order history' });
     }
 });
 
-// Health check
-router.get('/health', async (req, res) => {
+router.get('/orders/:orderId', auth, async (req, res) => {
     try {
-        const health = await inksoftService.healthCheck();
-        res.json({
-            success: true,
-            data: health
-        });
+        const order = await MerchOrder.findOne({ _id: req.params.orderId, userId: req.user.id }).select('-designPreview');
+        if (!order) {
+            return res.status(404).json({ success: false, message: 'Order not found' });
+        }
+        res.json({ success: true, data: order });
     } catch (error) {
-        console.error('Error checking health:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Health check failed'
-        });
+        console.error('Error fetching order:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch order' });
     }
 });
 
 module.exports = router;
-

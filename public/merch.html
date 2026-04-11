@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/enhanced.css">
+    <link rel="stylesheet" href="css/merch-designer.css">
     <style>
         .merch-hero {
             padding: 120px 2rem 3rem;
@@ -117,16 +118,6 @@
             background-clip: unset;
         }
 
-        .section-header a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.9rem;
-        }
-
-        .section-header a:hover {
-            color: var(--mint);
-        }
-
         .artist-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -179,162 +170,12 @@
             margin-top: 0.5rem;
         }
 
-        .designer-section {
-            display: none;
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        .designer-section.active {
-            display: block;
-        }
-
-        .designer-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            padding: 1rem;
-            background: var(--purple-dark);
-            border-radius: 15px;
-        }
-
-        .designer-artist-info {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .designer-artist-avatar {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-
-        .designer-artist-name {
-            color: white;
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
-
-        .designer-artist-type {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        .back-to-artists {
-            padding: 0.75rem 1.5rem;
-            border-radius: 25px;
-            border: 1px solid var(--mint);
-            background: transparent;
-            color: var(--mint);
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .back-to-artists:hover {
-            background: var(--mint);
-            color: var(--black);
-        }
-
-        .embed-container {
-            background: linear-gradient(145deg, #1a1230 0%, #0d0a14 100%);
-            border-radius: 20px;
-            overflow: hidden;
-            border: 1px solid rgba(150, 197, 176, 0.12);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 60px rgba(95, 14, 130, 0.08);
-        }
-
-        #inksoftEmbed {
-            width: 100%;
-            height: 720px;
-            padding: 0;
-            margin: 0;
-            border: 0;
-            border-radius: 16px;
-        }
-
         .browse-section {
             transition: opacity 0.3s ease;
         }
 
         .browse-section.hidden {
             display: none;
-        }
-
-        .quick-design-container {
-            background: linear-gradient(145deg, #1a1230 0%, #0d0a14 100%);
-            border-radius: 20px;
-            overflow: hidden;
-            margin-bottom: 2rem;
-            border: 1px solid rgba(150, 197, 176, 0.12);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 60px rgba(95, 14, 130, 0.08);
-        }
-
-        .quick-design-embed {
-            width: 100%;
-            height: 720px;
-            border-radius: 16px;
-        }
-
-        .lyrics-prefill-banner {
-            background: linear-gradient(135deg, var(--purple-accent), var(--mint));
-            padding: 1.5rem 2rem;
-            border-radius: 15px;
-            margin-bottom: 2rem;
-            display: none;
-        }
-
-        .lyrics-prefill-banner.active {
-            display: block;
-        }
-
-        .lyrics-prefill-banner h3 {
-            color: white;
-            margin-bottom: 0.5rem;
-        }
-
-        .lyrics-prefill-text {
-            background: rgba(0,0,0,0.2);
-            padding: 1rem;
-            border-radius: 10px;
-            color: white;
-            font-style: italic;
-            margin-bottom: 0.5rem;
-        }
-
-        .lyrics-prefill-meta {
-            display: none;
-            color: rgba(255,255,255,0.7);
-            font-size: 0.85rem;
-            margin-bottom: 1rem;
-            padding-left: 0.25rem;
-        }
-
-        .lyrics-prefill-actions {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .lyrics-prefill-actions button {
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        .use-lyrics-btn {
-            background: linear-gradient(135deg, var(--mint) 0%, var(--purple-accent) 100%);
-            color: var(--black);
-        }
-
-        .clear-lyrics-btn {
-            background: transparent;
-            border: 1px solid white !important;
-            color: white;
         }
 
         .search-results {
@@ -367,6 +208,116 @@
             color: var(--text-secondary);
         }
 
+        .quick-design-cta {
+            max-width: 800px;
+            margin: 0 auto 3rem;
+            padding: 2rem;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(95,14,130,0.3), rgba(0,255,163,0.08));
+            border: 1px solid rgba(0,255,163,0.15);
+            border-radius: 16px;
+        }
+
+        .quick-design-cta h3 {
+            color: var(--mint);
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .quick-design-cta p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .quick-design-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 2rem;
+            border-radius: 25px;
+            border: none;
+            background: var(--mint);
+            color: #000;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .quick-design-btn:hover {
+            box-shadow: 0 8px 24px rgba(0,229,168,0.4);
+            transform: translateY(-2px);
+        }
+
+        .lyrics-prefill-banner {
+            background: linear-gradient(135deg, var(--purple-accent), var(--mint));
+            padding: 1.5rem 2rem;
+            border-radius: 15px;
+            margin: 0 2rem 2rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            display: none;
+        }
+
+        .lyrics-prefill-banner.active {
+            display: block;
+        }
+
+        .lyrics-prefill-banner h3 {
+            color: white;
+            margin-bottom: 0.5rem;
+        }
+
+        .lyrics-prefill-text {
+            background: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: 10px;
+            color: white;
+            font-style: italic;
+            margin-bottom: 0.5rem;
+        }
+
+        .lyrics-prefill-meta {
+            display: none;
+            color: rgba(255,255,255,0.7);
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+
+        .lyrics-prefill-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .lyrics-prefill-actions button {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .use-lyrics-btn {
+            background: linear-gradient(135deg, var(--mint) 0%, var(--purple-accent) 100%);
+            color: var(--black);
+        }
+
+        .clear-lyrics-btn {
+            background: transparent;
+            border: 1px solid white !important;
+            color: white;
+        }
+
+        .designer-section {
+            display: none;
+        }
+
+        .designer-section.active {
+            display: block;
+        }
+
         @media (max-width: 768px) {
             .merch-hero h1 {
                 font-size: 1.8rem;
@@ -379,16 +330,6 @@
             .artist-grid {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 1rem;
-            }
-
-            #inksoftEmbed {
-                height: 600px;
-            }
-
-            .designer-header {
-                flex-direction: column;
-                gap: 1rem;
-                text-align: center;
             }
         }
     </style>
@@ -455,9 +396,19 @@
     <main>
     <div class="browse-section" id="browseSection">
         <section class="merch-hero">
-            <h1>Artist Merch Store</h1>
-            <p>Design custom merch with your favorite artists' templates</p>
+            <h1>Design Your Merch</h1>
+            <p>Create custom apparel with your favorite artists, designers &amp; labels</p>
         </section>
+
+        <div class="lyrics-prefill-banner" id="lyricsPrefillBanner">
+            <h3><i class="fas fa-music"></i> Lyrics Ready to Use</h3>
+            <div class="lyrics-prefill-text" id="lyricsPrefillText"></div>
+            <div class="lyrics-prefill-meta" id="lyricsPrefillMeta"></div>
+            <div class="lyrics-prefill-actions">
+                <button class="use-lyrics-btn" id="useLyricsBtn"><i class="fas fa-check"></i> Use These Lyrics</button>
+                <button class="clear-lyrics-btn" id="clearLyricsBtn"><i class="fas fa-times"></i> Clear</button>
+            </div>
+        </div>
 
         <section class="artist-search-section">
             <div class="artist-search-container">
@@ -483,6 +434,12 @@
                 <i class="fas fa-search" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
                 <p>No artists found matching your search</p>
             </div>
+        </div>
+
+        <div class="quick-design-cta">
+            <h3><i class="fas fa-paint-brush"></i> Start From Scratch</h3>
+            <p>Skip browsing — jump straight into the design studio and create something unique</p>
+            <button class="quick-design-btn" id="quickDesignBtn"><i class="fas fa-palette"></i> Open Design Studio</button>
         </div>
 
         <section class="artist-garden" id="artistGarden">
@@ -512,185 +469,225 @@
             </div>
             <div class="artist-grid" id="labelsGrid"></div>
         </section>
-
-        <section class="artist-garden" id="startDesigningSection">
-            <div class="section-header">
-                <h2><i class="fas fa-paint-brush"></i> Start Designing Now</h2>
-            </div>
-            <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Jump right in and create custom merch with the Wordeth store</p>
-            
-            <div class="lyrics-prefill-banner" id="lyricsPrefillBanner">
-                <h3><i class="fas fa-music"></i> Lyrics Ready to Use</h3>
-                <div class="lyrics-prefill-text" id="lyricsPrefillText"></div>
-                <div class="lyrics-prefill-meta" id="lyricsPrefillMeta"></div>
-                <div class="lyrics-prefill-actions">
-                    <button class="use-lyrics-btn" id="useLyricsBtn"><i class="fas fa-check"></i> Use These Lyrics</button>
-                    <button class="clear-lyrics-btn" id="clearLyricsBtn"><i class="fas fa-times"></i> Clear</button>
-                </div>
-            </div>
-            
-            <div class="quick-design-container">
-                <div class="quick-design-embed" id="quickDesignEmbed"></div>
-            </div>
-        </section>
     </div>
 
     <section class="designer-section" id="designerSection">
-        <div class="designer-header">
-            <div class="designer-artist-info">
-                <img src="" alt="Artist" class="designer-artist-avatar" id="designerArtistAvatar">
-                <div>
-                    <div class="designer-artist-name" id="designerArtistName"></div>
-                    <div class="designer-artist-type" id="designerArtistType"></div>
+        <div class="designer-studio">
+            <div class="designer-studio-header">
+                <button class="designer-back-btn" id="backToArtists"><i class="fas fa-arrow-left"></i> Back to Browse</button>
+                <div class="designer-artist-badge" id="designerArtistBadge" style="display:none;">
+                    <img src="" alt="" id="designerArtistAvatar">
+                    <div>
+                        <div class="artist-badge-name" id="designerArtistName"></div>
+                        <div class="artist-badge-type" id="designerArtistType"></div>
+                    </div>
                 </div>
             </div>
-            <button class="back-to-artists" id="backToArtists">
-                <i class="fas fa-arrow-left"></i> Back to Artists
-            </button>
-        </div>
-        <div class="embed-container">
-            <div id="inksoftEmbed"></div>
+
+            <div class="designer-layout">
+                <div class="designer-sidebar">
+                    <div class="sidebar-section">
+                        <div class="sidebar-section-title">Product</div>
+                        <div class="product-type-grid" id="productTypeGrid"></div>
+                    </div>
+                    <div class="sidebar-section">
+                        <div class="sidebar-section-title">Color</div>
+                        <div class="color-swatches" id="colorSwatches"></div>
+                    </div>
+                    <div class="sidebar-section">
+                        <div class="sidebar-section-title">Size</div>
+                        <div class="size-grid" id="sizeGrid"></div>
+                    </div>
+                </div>
+
+                <div class="designer-canvas-area">
+                    <div class="garment-preview" id="garmentPreview">
+                        <div class="garment-svg-wrap" id="garmentSVG"></div>
+                        <div class="canvas-container-wrap">
+                            <canvas id="designCanvas"></canvas>
+                        </div>
+                    </div>
+                    <div class="view-toggle">
+                        <button class="view-toggle-btn active" data-view="front">Front</button>
+                        <button class="view-toggle-btn" data-view="back">Back</button>
+                    </div>
+                    <div class="canvas-actions">
+                        <button class="canvas-action-btn" id="deleteSelectedBtn"><i class="fas fa-trash-alt"></i> Delete</button>
+                        <button class="canvas-action-btn" id="clearCanvasBtn"><i class="fas fa-eraser"></i> Clear All</button>
+                    </div>
+                </div>
+
+                <div class="tools-panel">
+                    <div class="tools-tabs">
+                        <button class="tools-tab active" data-tool="text"><i class="fas fa-font"></i> Text</button>
+                        <button class="tools-tab" data-tool="art"><i class="fas fa-image"></i> Art</button>
+                    </div>
+                    <div class="tools-content">
+                        <div class="tool-panel active" id="toolPanel-text">
+                            <div class="lyrics-prefill-designer" id="lyricsDesignBanner" style="display:none;">
+                                <h4><i class="fas fa-music"></i> Lyrics loaded</h4>
+                                <p>Click below to add them to your design</p>
+                                <button class="tool-btn" id="useLyricsDesignBtn">Add Lyrics as Text</button>
+                            </div>
+                            <div class="tool-group">
+                                <label class="tool-label">Text</label>
+                                <textarea class="tool-textarea" id="textInput" placeholder="Type your text here..." rows="3"></textarea>
+                            </div>
+                            <div class="tool-group">
+                                <label class="tool-label">Font</label>
+                                <select class="tool-select" id="fontSelect"></select>
+                            </div>
+                            <div class="tool-group">
+                                <label class="tool-label">Size</label>
+                                <input type="range" class="tool-range" id="fontSizeRange" min="10" max="72" value="24">
+                            </div>
+                            <div class="tool-group">
+                                <label class="tool-label">Color</label>
+                                <div class="tool-color-row" id="textColorPicker"></div>
+                            </div>
+                            <button class="tool-btn" id="addTextBtn"><i class="fas fa-plus"></i> Add Text</button>
+                        </div>
+                        <div class="tool-panel" id="toolPanel-art">
+                            <div class="tool-group">
+                                <div class="upload-zone" id="uploadArtZone">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <span>Upload artwork or photo</span>
+                                    <input type="file" id="uploadArtInput" accept="image/*" style="display:none;">
+                                </div>
+                            </div>
+                            <p style="font-size:0.72rem; color:var(--text-secondary); text-align:center; margin-top:0.5rem;">PNG, JPG, SVG up to 10MB</p>
+                        </div>
+                    </div>
+                    <div class="sidebar-section order-section">
+                        <div class="order-price">
+                            <div class="order-price-amount" id="orderPrice">$29.99</div>
+                            <div class="order-price-note">+ shipping at checkout</div>
+                        </div>
+                        <div class="qty-row">
+                            <button class="qty-btn" id="qtyMinus">-</button>
+                            <span class="qty-value" id="qtyValue">1</span>
+                            <button class="qty-btn" id="qtyPlus">+</button>
+                        </div>
+                        <button class="order-btn" id="orderBtn"><i class="fas fa-shopping-bag"></i> Place Order</button>
+                        <div class="order-note">Custom-made to order. Ships in 5-10 business days.</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
     </main>
 
-        <footer class="site-footer">
-          <div class="footer-inner">
-              <div class="footer-top-row">
-                  <a href="/" class="footer-logo-link"><img src="images/logo.png" alt="Wordeth"></a>
-                  <nav class="footer-nav">
-                      <div class="footer-group">
-                          <button class="footer-heading" aria-expanded="false">Explore <i class="fas fa-chevron-down"></i></button>
-                          <div class="footer-links">
-                              <a href="/verses.html">Verses</a>
-                              <a href="/lyrics.html">Lyrics</a>
-                              <a href="/merch.html">Merch</a>
-                              <a href="/pricing.html">Pricing</a>
-                          </div>
+    <footer class="site-footer">
+      <div class="footer-inner">
+          <div class="footer-top-row">
+              <a href="/" class="footer-logo-link"><img src="images/logo.png" alt="Wordeth"></a>
+              <nav class="footer-nav">
+                  <div class="footer-group">
+                      <button class="footer-heading" aria-expanded="false">Explore <i class="fas fa-chevron-down"></i></button>
+                      <div class="footer-links">
+                          <a href="/verses.html">Verses</a>
+                          <a href="/lyrics.html">Lyrics</a>
+                          <a href="/merch.html">Merch</a>
+                          <a href="/pricing.html">Pricing</a>
                       </div>
-                      <div class="footer-group">
-                          <button class="footer-heading" aria-expanded="false">Account <i class="fas fa-chevron-down"></i></button>
-                          <div class="footer-links">
-                              <a href="/signin.html">Sign In</a>
-                              <a href="/signup.html">Sign Up</a>
-                              <a href="/profile.html">Profile</a>
-                              <a href="/creator-register.html">Creator Hub</a>
-                          </div>
-                      </div>
-                      <div class="footer-group">
-                          <button class="footer-heading" aria-expanded="false">Legal <i class="fas fa-chevron-down"></i></button>
-                          <div class="footer-links">
-                              <a href="/terms.html">Terms</a>
-                              <a href="/privacy.html">Privacy</a>
-                              <a href="/ad-admin.html">Advertise</a>
-                          </div>
-                      </div>
-                  </nav>
-                  <div class="footer-social">
-                      <a href="javascript:void(0)" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
-                      <a href="javascript:void(0)" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
-                      <a href="javascript:void(0)" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
-                      <a href="javascript:void(0)" aria-label="Spotify"><i class="fab fa-spotify"></i></a>
                   </div>
-              </div>
-              <div class="footer-bottom-row">
-                  <span>&copy; 2025 Wordeth</span>
-                  <a href="#" onclick="window.WordethConsent && window.WordethConsent.revokeConsent(); return false;">Cookie Preferences</a>
+                  <div class="footer-group">
+                      <button class="footer-heading" aria-expanded="false">Account <i class="fas fa-chevron-down"></i></button>
+                      <div class="footer-links">
+                          <a href="/signin.html">Sign In</a>
+                          <a href="/signup.html">Sign Up</a>
+                          <a href="/profile.html">Profile</a>
+                          <a href="/creator-register.html">Creator Hub</a>
+                      </div>
+                  </div>
+                  <div class="footer-group">
+                      <button class="footer-heading" aria-expanded="false">Legal <i class="fas fa-chevron-down"></i></button>
+                      <div class="footer-links">
+                          <a href="/terms.html">Terms</a>
+                          <a href="/privacy.html">Privacy</a>
+                          <a href="/ad-admin.html">Advertise</a>
+                      </div>
+                  </div>
+              </nav>
+              <div class="footer-social">
+                  <a href="javascript:void(0)" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                  <a href="javascript:void(0)" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                  <a href="javascript:void(0)" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                  <a href="javascript:void(0)" aria-label="Spotify"><i class="fab fa-spotify"></i></a>
               </div>
           </div>
-      </footer>
+          <div class="footer-bottom-row">
+              <span>&copy; 2025 Wordeth</span>
+              <a href="#" onclick="window.WordethConsent && window.WordethConsent.revokeConsent(); return false;">Cookie Preferences</a>
+          </div>
+      </div>
+    </footer>
 
     <script src="js/tournament-nav.js"></script>
-
     <script src="js/utils.js"></script>
     <script src="js/config.js"></script>
     <script src="js/nav-auth.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <script src="js/merch-designer.js"></script>
     <script>
     (function() {
         var artists = [
-            { id: 1, name: 'Drake', type: 'music', image: 'https://placehold.co/400x400/5F0E82/ffffff?text=Drake', badge: 'Featured', designId: null },
-            { id: 2, name: 'Kendrick Lamar', type: 'music', image: 'https://placehold.co/400x400/96C5B0/333333?text=Kendrick', badge: 'Featured', designId: null },
-            { id: 3, name: 'Tyler, The Creator', type: 'music', image: 'https://placehold.co/400x400/E74C3C/ffffff?text=Tyler', badge: 'Hot', designId: null },
-            { id: 4, name: 'SZA', type: 'music', image: 'https://placehold.co/400x400/3498DB/ffffff?text=SZA', designId: null },
-            { id: 5, name: 'Travis Scott', type: 'music', image: 'https://placehold.co/400x400/2C3E50/ffffff?text=Travis', designId: null },
-            { id: 6, name: 'Megan Thee Stallion', type: 'music', image: 'https://placehold.co/400x400/E91E63/ffffff?text=Megan', designId: null },
-            { id: 7, name: 'StreetWear Studios', type: 'designer', image: 'https://placehold.co/400x400/1ABC9C/ffffff?text=SWS', badge: 'Top Designer', designId: null },
-            { id: 8, name: 'Urban Canvas', type: 'designer', image: 'https://placehold.co/400x400/9B59B6/ffffff?text=UC', designId: null },
-            { id: 9, name: 'Neon Dreams Design', type: 'designer', image: 'https://placehold.co/400x400/F39C12/333333?text=NDD', designId: null },
-            { id: 10, name: 'Def Jam Records', type: 'label', image: 'https://placehold.co/400x400/C0392B/ffffff?text=Def+Jam', badge: 'Label', designId: null },
-            { id: 11, name: 'Top Dawg Entertainment', type: 'label', image: 'https://placehold.co/400x400/34495E/ffffff?text=TDE', designId: null },
-            { id: 12, name: 'Dreamville', type: 'label', image: 'https://placehold.co/400x400/27AE60/ffffff?text=Dreamville', designId: null },
+            { id: 1, name: 'Drake', type: 'music', image: 'https://placehold.co/400x400/5F0E82/ffffff?text=Drake', badge: 'Featured' },
+            { id: 2, name: 'Kendrick Lamar', type: 'music', image: 'https://placehold.co/400x400/96C5B0/333333?text=Kendrick', badge: 'Featured' },
+            { id: 3, name: 'Tyler, The Creator', type: 'music', image: 'https://placehold.co/400x400/E74C3C/ffffff?text=Tyler', badge: 'Hot' },
+            { id: 4, name: 'SZA', type: 'music', image: 'https://placehold.co/400x400/3498DB/ffffff?text=SZA' },
+            { id: 5, name: 'Travis Scott', type: 'music', image: 'https://placehold.co/400x400/2C3E50/ffffff?text=Travis' },
+            { id: 6, name: 'Megan Thee Stallion', type: 'music', image: 'https://placehold.co/400x400/E91E63/ffffff?text=Megan' },
+            { id: 7, name: 'StreetWear Studios', type: 'designer', image: 'https://placehold.co/400x400/1ABC9C/ffffff?text=SWS', badge: 'Top Designer' },
+            { id: 8, name: 'Urban Canvas', type: 'designer', image: 'https://placehold.co/400x400/9B59B6/ffffff?text=UC' },
+            { id: 9, name: 'Neon Dreams Design', type: 'designer', image: 'https://placehold.co/400x400/F39C12/333333?text=NDD' },
+            { id: 10, name: 'Def Jam Records', type: 'label', image: 'https://placehold.co/400x400/C0392B/ffffff?text=Def+Jam', badge: 'Label' },
+            { id: 11, name: 'Top Dawg Entertainment', type: 'label', image: 'https://placehold.co/400x400/34495E/ffffff?text=TDE' },
+            { id: 12, name: 'Dreamville', type: 'label', image: 'https://placehold.co/400x400/27AE60/ffffff?text=Dreamville' },
         ];
 
-        var inksoftLoaded = false;
-
         function createArtistCard(artist) {
-            const card = document.createElement('div');
+            var card = document.createElement('div');
             card.className = 'artist-card';
             card.dataset.artistId = artist.id;
-            card.innerHTML = `
-                <img src="${artist.image}" alt="${artist.name}" class="artist-card-image">
-                <div class="artist-card-info">
-                    <div class="artist-card-name">${artist.name}</div>
-                    <div class="artist-card-type">${artist.type.charAt(0).toUpperCase() + artist.type.slice(1)} Artist</div>
-                    ${artist.badge ? `<span class="artist-card-badge">${artist.badge}</span>` : ''}
-                </div>
-            `;
-            card.addEventListener('click', () => openDesigner(artist));
+            card.innerHTML =
+                '<img src="' + artist.image + '" alt="' + artist.name + '" class="artist-card-image">'
+                + '<div class="artist-card-info">'
+                + '<div class="artist-card-name">' + artist.name + '</div>'
+                + '<div class="artist-card-type">' + artist.type.charAt(0).toUpperCase() + artist.type.slice(1) + ' Artist</div>'
+                + (artist.badge ? '<span class="artist-card-badge">' + artist.badge + '</span>' : '')
+                + '</div>';
+            card.addEventListener('click', function() { openDesigner(artist); });
             return card;
         }
 
         function populateGrids() {
-            const featuredGrid = document.getElementById('featuredGrid');
-            const musicGrid = document.getElementById('musicArtistsGrid');
-            const designersGrid = document.getElementById('designersGrid');
-            const labelsGrid = document.getElementById('labelsGrid');
+            var featuredGrid = document.getElementById('featuredGrid');
+            var musicGrid = document.getElementById('musicArtistsGrid');
+            var designersGrid = document.getElementById('designersGrid');
+            var labelsGrid = document.getElementById('labelsGrid');
 
-            const featured = artists.filter(a => a.badge);
-            const music = artists.filter(a => a.type === 'music');
-            const designers = artists.filter(a => a.type === 'designer');
-            const labels = artists.filter(a => a.type === 'label');
-
-            featured.forEach(a => featuredGrid.appendChild(createArtistCard(a)));
-            music.forEach(a => musicGrid.appendChild(createArtistCard(a)));
-            designers.forEach(a => designersGrid.appendChild(createArtistCard(a)));
-            labels.forEach(a => labelsGrid.appendChild(createArtistCard(a)));
+            artists.filter(function(a) { return a.badge; }).forEach(function(a) { featuredGrid.appendChild(createArtistCard(a)); });
+            artists.filter(function(a) { return a.type === 'music'; }).forEach(function(a) { musicGrid.appendChild(createArtistCard(a)); });
+            artists.filter(function(a) { return a.type === 'designer'; }).forEach(function(a) { designersGrid.appendChild(createArtistCard(a)); });
+            artists.filter(function(a) { return a.type === 'label'; }).forEach(function(a) { labelsGrid.appendChild(createArtistCard(a)); });
         }
 
         function openDesigner(artist) {
             document.getElementById('browseSection').classList.add('hidden');
             document.getElementById('designerSection').classList.add('active');
-            
-            document.getElementById('designerArtistAvatar').src = artist.image;
-            document.getElementById('designerArtistName').textContent = artist.name;
-            document.getElementById('designerArtistType').textContent = artist.type.charAt(0).toUpperCase() + artist.type.slice(1) + ' Artist';
 
-            if (!inksoftLoaded) {
-                loadInksoft(artist.designId);
-                inksoftLoaded = true;
+            if (artist) {
+                document.getElementById('designerArtistAvatar').src = artist.image;
+                document.getElementById('designerArtistName').textContent = artist.name;
+                document.getElementById('designerArtistType').textContent = artist.type.charAt(0).toUpperCase() + artist.type.slice(1);
+                document.getElementById('designerArtistBadge').style.display = 'flex';
+            } else {
+                document.getElementById('designerArtistBadge').style.display = 'none';
             }
 
+            MerchDesigner.init(artist);
             window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function loadInksoft(designId) {
-            let scriptElement = document.createElement('script');
-            scriptElement.type = 'text/javascript';
-            scriptElement.async = true;
-            scriptElement.src = 'https://cdn.inksoft.com/FrontendApps/storefront/assets/scripts/designer-embed.js';
-            scriptElement.onload = function() {
-                const options = {
-                    targetElementId: 'inksoftEmbed',
-                    domain: 'https://stores.inksoft.com',
-                    cdnDomain: 'https://cdn.inksoft.com',
-                    storeUri: 'DS679149076'
-                };
-                if (designId) {
-                    options.designId = designId;
-                }
-                window.inksoftApi.launchEmbeddedDesignStudio(options);
-            };
-            document.body.appendChild(scriptElement);
         }
 
         function closeDesigner() {
@@ -698,140 +695,111 @@
             document.getElementById('designerSection').classList.remove('active');
         }
 
-        function searchArtists(query, filter = 'all') {
-            const searchResults = document.getElementById('searchResults');
-            const searchResultsGrid = document.getElementById('searchResultsGrid');
-            const noResults = document.getElementById('noResults');
-            const resultCount = document.getElementById('resultCount');
-            const artistGarden = document.getElementById('artistGarden');
+        function searchArtists(query, filter) {
+            filter = filter || 'all';
+            var searchResults = document.getElementById('searchResults');
+            var searchResultsGrid = document.getElementById('searchResultsGrid');
+            var noResults = document.getElementById('noResults');
+            var resultCount = document.getElementById('resultCount');
 
             if (!query.trim()) {
                 searchResults.classList.remove('active');
-                document.querySelectorAll('.artist-garden').forEach(g => g.style.display = 'block');
+                document.querySelectorAll('.artist-garden').forEach(function(g) { g.style.display = 'block'; });
+                document.querySelector('.quick-design-cta').style.display = 'block';
                 return;
             }
 
-            const filtered = artists.filter(a => {
-                const matchesQuery = a.name.toLowerCase().includes(query.toLowerCase());
-                const matchesFilter = filter === 'all' || a.type === filter;
-                return matchesQuery && matchesFilter;
+            var filtered = artists.filter(function(a) {
+                var matchQ = a.name.toLowerCase().includes(query.toLowerCase());
+                var matchF = filter === 'all' || a.type === filter;
+                return matchQ && matchF;
             });
 
             searchResultsGrid.innerHTML = '';
-            
             if (filtered.length > 0) {
-                filtered.forEach(a => searchResultsGrid.appendChild(createArtistCard(a)));
+                filtered.forEach(function(a) { searchResultsGrid.appendChild(createArtistCard(a)); });
                 noResults.style.display = 'none';
-                resultCount.textContent = `(${filtered.length} found)`;
+                resultCount.textContent = '(' + filtered.length + ' found)';
             } else {
                 noResults.style.display = 'block';
                 resultCount.textContent = '(0 found)';
             }
 
             searchResults.classList.add('active');
-            document.querySelectorAll('.artist-garden').forEach(g => g.style.display = 'none');
+            document.querySelectorAll('.artist-garden').forEach(function(g) { g.style.display = 'none'; });
+            document.querySelector('.quick-design-cta').style.display = 'none';
         }
 
-        // Event Listeners
         document.getElementById('backToArtists').addEventListener('click', closeDesigner);
 
-        document.getElementById('artistSearch').addEventListener('input', (e) => {
-            const activeFilter = document.querySelector('.filter-tag.active').dataset.filter;
+        document.getElementById('quickDesignBtn').addEventListener('click', function() {
+            openDesigner(null);
+        });
+
+        document.getElementById('artistSearch').addEventListener('input', function(e) {
+            var activeFilter = document.querySelector('.filter-tag.active').dataset.filter;
             searchArtists(e.target.value, activeFilter);
         });
 
-        document.getElementById('searchBtn').addEventListener('click', () => {
-            const query = document.getElementById('artistSearch').value;
-            const activeFilter = document.querySelector('.filter-tag.active').dataset.filter;
+        document.getElementById('searchBtn').addEventListener('click', function() {
+            var query = document.getElementById('artistSearch').value;
+            var activeFilter = document.querySelector('.filter-tag.active').dataset.filter;
             searchArtists(query, activeFilter);
         });
 
-        document.querySelectorAll('.filter-tag').forEach(tag => {
-            tag.addEventListener('click', () => {
-                document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.filter-tag').forEach(function(tag) {
+            tag.addEventListener('click', function() {
+                document.querySelectorAll('.filter-tag').forEach(function(t) { t.classList.remove('active'); });
                 tag.classList.add('active');
-                const query = document.getElementById('artistSearch').value;
+                var query = document.getElementById('artistSearch').value;
                 searchArtists(query, tag.dataset.filter);
             });
         });
 
-        // Check for lyrics from URL parameter
         function checkForLyrics() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const lyrics = urlParams.get('lyrics');
-            const song = urlParams.get('song');
-            const artist = urlParams.get('artist');
-            
+            var urlParams = new URLSearchParams(window.location.search);
+            var lyrics = urlParams.get('lyrics');
+            var song = urlParams.get('song');
+            var artist = urlParams.get('artist');
+
             if (lyrics) {
-                const banner = document.getElementById('lyricsPrefillBanner');
-                const textEl = document.getElementById('lyricsPrefillText');
-                const metaEl = document.getElementById('lyricsPrefillMeta');
-                
+                var banner = document.getElementById('lyricsPrefillBanner');
+                var textEl = document.getElementById('lyricsPrefillText');
+                var metaEl = document.getElementById('lyricsPrefillMeta');
+
                 textEl.textContent = decodeURIComponent(lyrics);
-                
+
                 if (song || artist) {
-                    const songName = song ? decodeURIComponent(song) : '';
-                    const artistName = artist ? decodeURIComponent(artist) : '';
-                    let metaLine = '';
-                    if (songName && artistName) {
-                        metaLine = `"${songName}" by ${artistName}`;
-                    } else if (songName) {
-                        metaLine = `"${songName}"`;
-                    } else if (artistName) {
-                        metaLine = `by ${artistName}`;
-                    }
+                    var songName = song ? decodeURIComponent(song) : '';
+                    var artistName = artist ? decodeURIComponent(artist) : '';
+                    var metaLine = '';
+                    if (songName && artistName) metaLine = '"' + songName + '" by ' + artistName;
+                    else if (songName) metaLine = '"' + songName + '"';
+                    else if (artistName) metaLine = 'by ' + artistName;
                     metaEl.textContent = metaLine;
                     metaEl.style.display = 'block';
                 }
-                
+
                 banner.classList.add('active');
-                
                 window.selectedLyrics = decodeURIComponent(lyrics);
             }
         }
 
-        // Use lyrics button - copy to clipboard for paste into designer
-        document.getElementById('useLyricsBtn').addEventListener('click', () => {
+        document.getElementById('useLyricsBtn').addEventListener('click', function() {
             if (window.selectedLyrics) {
-                navigator.clipboard.writeText(window.selectedLyrics).then(() => {
-                    const btn = document.getElementById('useLyricsBtn');
-                    btn.innerHTML = '<i class="fas fa-clipboard-check"></i> Copied! Paste in Designer';
-                    setTimeout(() => {
-                        btn.innerHTML = '<i class="fas fa-check"></i> Use These Lyrics';
-                    }, 3000);
-                });
+                openDesigner(null);
             }
         });
 
-        // Clear lyrics button
-        document.getElementById('clearLyricsBtn').addEventListener('click', () => {
+        document.getElementById('clearLyricsBtn').addEventListener('click', function() {
             document.getElementById('lyricsPrefillBanner').classList.remove('active');
             document.getElementById('lyricsPrefillMeta').style.display = 'none';
             window.selectedLyrics = null;
-            // Remove URL params
             window.history.replaceState({}, document.title, window.location.pathname);
         });
 
-        // Load InkSoft in quick design section on page load
-        function loadQuickDesigner() {
-            let scriptElement = document.createElement('script');
-            scriptElement.type = 'text/javascript';
-            scriptElement.async = true;
-            scriptElement.src = 'https://cdn.inksoft.com/FrontendApps/storefront/assets/scripts/designer-embed.js';
-            scriptElement.onload = function() {
-                window.inksoftApi.launchEmbeddedDesignStudio({
-                    targetElementId: 'quickDesignEmbed',
-                    domain: 'https://stores.inksoft.com',
-                    cdnDomain: 'https://cdn.inksoft.com',
-                    storeUri: 'DS679149076'
-                });
-            };
-            document.body.appendChild(scriptElement);
-        }
-
         populateGrids();
         checkForLyrics();
-        loadQuickDesigner();
     })();
     </script>
     <script src="js/cookie-consent.js"></script>

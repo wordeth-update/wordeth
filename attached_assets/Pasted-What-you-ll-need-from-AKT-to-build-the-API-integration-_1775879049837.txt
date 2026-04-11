@@ -1,0 +1,23 @@
+What you'll need from AKT to build the API integration:
+
+When you have that deeper conversation with Clay's team, here's what to ask for:
+
+API access or documentation — Does AKT already have an API or order management system that accepts external orders? Many fulfillment companies use platforms like ShipStation, ShipBob, or custom systems. If they have one, you need their API docs, endpoints, and authentication credentials.
+If they don't have an API — You'll need to agree on a method. Options include: a shared order portal you build for them, email/webhook-based order submission, or integration through a third-party platform they already use.
+Product catalog / blank inventory list — What blanks (t-shirts, hoodies, hats, etc.) do they stock? You need SKUs, sizes, colors, pricing, and ideally images of each blank garment.
+Decoration specifications — Print areas and dimensions for each garment type, supported print methods (DTG, screen print, embroidery), file format requirements (AI, PSD, PNG at specific DPI), color limitations per method.
+Pricing structure — Per-unit production costs by method and quantity tiers, so you can calculate margins and the revenue split.
+Turnaround times — Production timelines by order type so you can set customer expectations.
+Shipping integration — Do they provide tracking numbers? Through which carriers? Do they handle returns?
+Building your own apparel customization tool (replacing InkSoft):
+
+This is absolutely doable. What you'd be building is a product customizer — essentially a visual editor where users pick a garment, place designs on it, preview the result, and submit the order. The core pieces are:
+
+Garment selector — Browse available blanks by type, color, size
+Design canvas — A visual editor (built with HTML5 Canvas or a library like Fabric.js) where users place artwork, text, and graphics onto the garment mockup
+Mockup viewer — Real-time preview showing front/back/sleeve views with the design applied
+Order builder — Size/quantity selection, pricing calculator, cart, and checkout
+Order submission — Sends the finalized design specs and order details to AKT for review
+This would be fully QWordeth-branded, on your domain, with your look and feel — no InkSoft branding or monthly fees. The trade-off is development time upfront versus the ongoing $500/month you'd save.
+
+Would you like me to start building this apparel customization tool as a new project? I can create a working prototype with the garment selector, design placement canvas, and mockup preview. Just let me know if this should be a standalone app or part of an existing project, and whether QWordeth has specific brand colors/fonts I should use.
