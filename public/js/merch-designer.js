@@ -2,15 +2,15 @@ var MerchDesigner = (function() {
     var PRODUCTS = [
         { id: 'tshirt', name: 'T-Shirt', icon: 'fa-tshirt', basePrice: 29.99,
           printAreaPct: { top: 25, left: 22, width: 56, height: 38 } },
-        { id: 'hoodie', name: 'Hoodie', icon: 'fa-vest-patches', basePrice: 54.99,
+        { id: 'hoodie', name: 'Hoodie', icon: 'fa-tshirt', basePrice: 54.99,
           printAreaPct: { top: 32, left: 24, width: 52, height: 30 } },
-        { id: 'tank', name: 'Tank Top', icon: 'fa-shirt', basePrice: 24.99,
+        { id: 'tank', name: 'Tank Top', icon: 'fa-tshirt', basePrice: 24.99,
           printAreaPct: { top: 22, left: 22, width: 56, height: 40 } },
-        { id: 'longsleeve', name: 'Long Sleeve', icon: 'fa-mitten', basePrice: 34.99,
+        { id: 'longsleeve', name: 'Long Sleeve', icon: 'fa-tshirt', basePrice: 34.99,
           printAreaPct: { top: 25, left: 22, width: 56, height: 38 } },
-        { id: 'sweatshirt', name: 'Sweatshirt', icon: 'fa-vest-patches', basePrice: 44.99,
+        { id: 'sweatshirt', name: 'Sweatshirt', icon: 'fa-tshirt', basePrice: 44.99,
           printAreaPct: { top: 28, left: 24, width: 52, height: 34 } },
-        { id: 'hat', name: 'Cap', icon: 'fa-hat-cowboy', basePrice: 24.99,
+        { id: 'hat', name: 'Cap', icon: 'fa-hat-cowboy-side', basePrice: 24.99,
           printAreaPct: { top: 18, left: 25, width: 50, height: 35 } }
     ];
 
@@ -88,7 +88,8 @@ var MerchDesigner = (function() {
         if (!grid) return;
         grid.innerHTML = PRODUCTS.map(function(p) {
             return '<button class="product-type-btn' + (p.id === state.product.id ? ' active' : '') + '" data-product="' + p.id + '">'
-                + '<i class="fas ' + p.icon + '"></i><span>' + p.name + '</span></button>';
+                + '<img src="' + getImagePath(p.id, 'front') + '" class="product-type-thumb" alt="' + p.name + '">'
+                + '<span>' + p.name + '</span></button>';
         }).join('');
         grid.querySelectorAll('.product-type-btn').forEach(function(btn) {
             btn.addEventListener('click', function() {
@@ -356,11 +357,24 @@ var MerchDesigner = (function() {
 
     function switchView(view) {
         if (view === state.view) return;
+        var thumbEl = document.getElementById('otherSideThumb');
+
         if (state.view === 'front') {
             state.frontObjects = state.canvas.toJSON();
+            if (state.canvas.getObjects().length > 0) {
+                state.frontThumbDataURL = state.canvas.toDataURL({ format: 'png', multiplier: 0.4 });
+            } else {
+                state.frontThumbDataURL = null;
+            }
         } else {
             state.backObjects = state.canvas.toJSON();
+            if (state.canvas.getObjects().length > 0) {
+                state.backThumbDataURL = state.canvas.toDataURL({ format: 'png', multiplier: 0.4 });
+            } else {
+                state.backThumbDataURL = null;
+            }
         }
+
         state.view = view;
         document.querySelectorAll('.view-toggle-btn').forEach(function(b) {
             b.classList.toggle('active', b.dataset.view === view);
@@ -375,6 +389,29 @@ var MerchDesigner = (function() {
         } else {
             state.canvas.clear();
             state.canvas.renderAll();
+        }
+
+        updateOtherSideThumb();
+    }
+
+    function updateOtherSideThumb() {
+        var thumbEl = document.getElementById('otherSideThumb');
+        if (!thumbEl) return;
+
+        var otherView = state.view === 'front' ? 'back' : 'front';
+        var dataURL = otherView === 'front' ? state.frontThumbDataURL : state.backThumbDataURL;
+
+        if (dataURL) {
+            var garmentSrc = getImagePath(state.product.id, otherView);
+            thumbEl.innerHTML = '<div class="thumb-label">' + otherView.charAt(0).toUpperCase() + otherView.slice(1) + '</div>'
+                + '<div class="thumb-garment-wrap">'
+                + '<img src="' + garmentSrc + '" class="thumb-garment" style="filter:' + state.color.filter + '">'
+                + '<img src="' + dataURL + '" class="thumb-design">'
+                + '</div>';
+            thumbEl.style.display = 'block';
+            thumbEl.onclick = function() { switchView(otherView); };
+        } else {
+            thumbEl.style.display = 'none';
         }
     }
 
