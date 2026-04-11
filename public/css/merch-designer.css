@@ -206,7 +206,8 @@
     aspect-ratio: 3/4;
     border-radius: 16px;
     overflow: hidden;
-    background: linear-gradient(145deg, #e8e8ec 0%, #d0d0d8 100%);
+    background: #e0e0e4;
+    transition: background 0.3s;
 }
 
 .garment-mockup-img {
@@ -220,24 +221,14 @@
     z-index: 1;
     pointer-events: none;
     user-select: none;
+    transition: filter 0.3s;
 }
 
-.garment-color-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    mix-blend-mode: multiply;
-    z-index: 2;
-    pointer-events: none;
-    display: none;
-}
 
 .canvas-container-wrap {
     position: absolute;
     z-index: 5;
-    border: 1px dashed rgba(0,0,0,0.12);
+    border: 1px dashed rgba(255,255,255,0.2);
     border-radius: 4px;
 }
 

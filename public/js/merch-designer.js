@@ -15,14 +15,14 @@ var MerchDesigner = (function() {
     ];
 
     var COLORS = [
-        { id: 'black', hex: '#1a1a1a', name: 'Black' },
-        { id: 'white', hex: '#f5f5f5', name: 'White' },
-        { id: 'navy', hex: '#1b2838', name: 'Navy' },
-        { id: 'gray', hex: '#6b7280', name: 'Gray' },
-        { id: 'forest', hex: '#1a472a', name: 'Forest' },
-        { id: 'burgundy', hex: '#6b1c2a', name: 'Burgundy' },
-        { id: 'sand', hex: '#c2b280', name: 'Sand' },
-        { id: 'slate', hex: '#3d4f5f', name: 'Slate' }
+        { id: 'black', hex: '#1a1a1a', name: 'Black', filter: 'brightness(0.22)' },
+        { id: 'white', hex: '#f5f5f5', name: 'White', filter: 'none' },
+        { id: 'navy', hex: '#1b2838', name: 'Navy', filter: 'brightness(0.22) sepia(1) hue-rotate(180deg) saturate(3)' },
+        { id: 'gray', hex: '#6b7280', name: 'Gray', filter: 'brightness(0.55) saturate(0.1)' },
+        { id: 'forest', hex: '#1a472a', name: 'Forest', filter: 'brightness(0.25) sepia(1) hue-rotate(80deg) saturate(4)' },
+        { id: 'burgundy', hex: '#6b1c2a', name: 'Burgundy', filter: 'brightness(0.28) sepia(1) hue-rotate(320deg) saturate(4)' },
+        { id: 'sand', hex: '#c2b280', name: 'Sand', filter: 'brightness(0.82) sepia(0.4) saturate(0.8)' },
+        { id: 'slate', hex: '#3d4f5f', name: 'Slate', filter: 'brightness(0.38) sepia(1) hue-rotate(170deg) saturate(1.5)' }
     ];
 
     var SIZES = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
@@ -152,7 +152,6 @@ var MerchDesigner = (function() {
 
     function updateGarment() {
         var img = document.getElementById('garmentMockupImg');
-        var overlay = document.getElementById('garmentColorOverlay');
         if (!img) return;
 
         img.src = getImagePath(state.product.id, state.view);
@@ -162,15 +161,19 @@ var MerchDesigner = (function() {
 
     function applyColorTint() {
         var img = document.getElementById('garmentMockupImg');
-        var overlay = document.getElementById('garmentColorOverlay');
-        if (!img || !overlay) return;
+        if (!img) return;
+        img.style.filter = state.color.filter;
 
-        if (state.color.id === 'white') {
-            overlay.style.display = 'none';
-            img.style.filter = 'none';
-        } else {
-            overlay.style.display = 'block';
-            overlay.style.backgroundColor = state.color.hex;
+        var preview = document.getElementById('garmentPreview');
+        if (preview) {
+            var isDark = ['black', 'navy', 'forest', 'burgundy', 'slate'].indexOf(state.color.id) !== -1;
+            preview.style.background = isDark ? '#48484e' : '#e0e0e4';
+        }
+
+        var dashed = document.querySelector('.canvas-container-wrap');
+        if (dashed) {
+            var light = ['white', 'sand'].indexOf(state.color.id) !== -1;
+            dashed.style.borderColor = light ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.2)';
         }
     }
 
