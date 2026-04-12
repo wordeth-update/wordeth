@@ -53,6 +53,7 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
 const lyricsRoutes = require('./routes/lyrics'); // Re-enabled with Genius API key
 const merchRoutes = require('./routes/merch');
+const templateRoutes = require('./routes/templates');
 const adsRoutes = require('./routes/ads'); // Advertising system
 const analyticsRoutes = require('./routes/analytics'); // Usage metrics
 const partnerRoutes = require('./routes/partner'); // Label partner dashboards
@@ -269,6 +270,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/lyrics', lyricsRoutes); // Re-enabled with Genius API key
 app.use('/api/merch', merchRoutes);
+app.use('/api/templates', templateRoutes);
 app.use('/api/ads', adsRoutes); // Advertising system
 app.use('/api/analytics', analyticsRoutes); // Usage metrics & admin dashboard
 app.use('/api/partner', partnerRoutes); // Label partner dashboards

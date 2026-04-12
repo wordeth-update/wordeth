@@ -8,7 +8,8 @@ const SPA_PAGES = [
 
 const EXCLUDED_PAGES = [
   '/partner-dashboard.html', '/partner-login.html', '/partner-upload.html',
-  '/admin-ads.html', '/admin-usage.html', '/w-admin.html', '/privacy-admin.html'
+  '/admin-ads.html', '/admin-usage.html', '/w-admin.html', '/privacy-admin.html',
+  '/admin-templates.html', '/designer-upload.html'
 ];
 
 const SHARED_STYLES = [

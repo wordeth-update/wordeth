@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Design Template - Wordeth</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --surface2: #1a1a28;
+            --border: #2a2a3a;
+            --text: #e8e8f0;
+            --text-muted: #8888a0;
+            --accent: #00ffa3;
+            --accent-dim: rgba(0,255,163,0.1);
+            --purple: #7c3aed;
+            --red: #ef4444;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .upload-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 2rem;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+        .upload-nav .logo { height: 36px; }
+        .upload-nav .nav-title {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-left: 0.75rem;
+            color: var(--accent);
+        }
+        .upload-nav .nav-brand { display: flex; align-items: center; }
+        .container {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 4rem;
+        }
+
+        .token-gate {
+            text-align: center;
+            padding: 4rem 1rem;
+        }
+        .token-gate h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        .token-gate p { color: var(--text-muted); margin-bottom: 2rem; }
+        .token-input-wrap {
+            display: flex;
+            gap: 0.75rem;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .token-input-wrap input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--text);
+            font-size: 0.95rem;
+            font-family: monospace;
+        }
+        .token-input-wrap input:focus { outline: none; border-color: var(--accent); }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .btn-accent {
+            background: var(--accent);
+            color: #000;
+        }
+        .btn-accent:hover { opacity: 0.85; }
+        .btn-accent:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-secondary {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { border-color: var(--accent); }
+        .token-error {
+            color: var(--red);
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            display: none;
+        }
+        .token-success {
+            color: var(--accent);
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            display: none;
+        }
+
+        .upload-form { display: none; }
+        .upload-form h2 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.6rem;
+            margin-bottom: 0.25rem;
+        }
+        .upload-form .subtitle {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+
+        .form-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .form-section h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .form-group { margin-bottom: 1rem; }
+        .form-group:last-child { margin-bottom: 0; }
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 0.35rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.65rem 0.85rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--text);
+            font-size: 0.9rem;
+            font-family: 'Outfit', sans-serif;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .form-group select { cursor: pointer; }
+        .form-group select option { background: var(--surface); }
+
+        .product-check-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+        }
+        .product-check {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+        }
+        .product-check:hover { border-color: var(--accent); }
+        .product-check.checked {
+            border-color: var(--accent);
+            background: var(--accent-dim);
+        }
+        .product-check input[type="checkbox"] { display: none; }
+        .product-check .check-icon {
+            width: 18px; height: 18px; border-radius: 4px;
+            border: 2px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; flex-shrink: 0;
+        }
+        .product-check.checked .check-icon {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #000;
+        }
+
+        .design-upload-area {
+            display: flex;
+            gap: 1.5rem;
+        }
+        .design-side {
+            flex: 1;
+            text-align: center;
+        }
+        .design-side h4 {
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-muted);
+        }
+        .design-dropzone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 2rem 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--surface2);
+            position: relative;
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .design-dropzone:hover { border-color: var(--accent); }
+        .design-dropzone.has-image { padding: 0.5rem; }
+        .design-dropzone i { font-size: 2rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+        .design-dropzone span { font-size: 0.8rem; color: var(--text-muted); }
+        .design-dropzone img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+        }
+        .design-dropzone input { display: none; }
+
+        .preview-upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            background: var(--surface2);
+        }
+        .preview-upload-zone:hover { border-color: var(--accent); }
+        .preview-upload-zone i { font-size: 1.5rem; color: var(--text-muted); margin-bottom: 0.5rem; display: block; }
+        .preview-upload-zone span { font-size: 0.8rem; color: var(--text-muted); display: block; }
+        .preview-upload-zone img { max-width: 200px; max-height: 150px; border-radius: 8px; margin-top: 0.5rem; }
+        .preview-upload-zone input { display: none; }
+
+        .tags-input-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            padding: 0.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            min-height: 42px;
+            align-items: center;
+            cursor: text;
+        }
+        .tags-input-wrap:focus-within { border-color: var(--accent); }
+        .tag-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 20px;
+            background: var(--accent-dim);
+            color: var(--accent);
+            font-size: 0.78rem;
+            font-weight: 500;
+        }
+        .tag-pill .tag-remove {
+            cursor: pointer;
+            opacity: 0.6;
+            font-size: 0.7rem;
+        }
+        .tag-pill .tag-remove:hover { opacity: 1; }
+        .tags-input-wrap input {
+            border: none;
+            background: transparent;
+            color: var(--text);
+            font-size: 0.85rem;
+            outline: none;
+            min-width: 100px;
+            flex: 1;
+            padding: 0.2rem;
+        }
+
+        .submit-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 1rem;
+        }
+        .submit-bar .info { color: var(--text-muted); font-size: 0.8rem; }
+
+        .submit-success {
+            display: none;
+            text-align: center;
+            padding: 3rem 1rem;
+        }
+        .submit-success i { font-size: 3rem; color: var(--accent); margin-bottom: 1rem; }
+        .submit-success h2 {
+            font-family: 'Syne', sans-serif;
+            margin-bottom: 0.5rem;
+        }
+        .submit-success p { color: var(--text-muted); margin-bottom: 0.5rem; }
+        .submit-success .template-id-display {
+            font-family: monospace;
+            font-size: 1.1rem;
+            color: var(--accent);
+            margin: 1rem 0;
+        }
+
+        .toast-msg {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface2);
+            color: var(--text);
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            font-size: 0.85rem;
+            z-index: 9999;
+            animation: toastIn 0.3s ease;
+        }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } }
+
+        @media (max-width: 640px) {
+            .form-row { grid-template-columns: 1fr; }
+            .product-check-grid { grid-template-columns: repeat(2, 1fr); }
+            .design-upload-area { flex-direction: column; }
+            .token-input-wrap { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="upload-nav">
+        <div class="nav-brand">
+            <img src="images/logo.png" alt="Wordeth" class="logo">
+            <span class="nav-title">Designer Upload</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="token-gate" id="tokenGate">
+            <h1>Upload Design Templates</h1>
+            <p>Enter your designer upload token to get started</p>
+            <div class="token-input-wrap">
+                <input type="text" id="uploadTokenInput" placeholder="wdth_dsgn_...">
+                <button class="btn btn-accent" id="validateTokenBtn">Verify</button>
+            </div>
+            <p class="token-error" id="tokenError"></p>
+            <p class="token-success" id="tokenSuccess"></p>
+        </div>
+
+        <div class="upload-form" id="uploadForm">
+            <h2>Submit a Design Template</h2>
+            <p class="subtitle">Your template will be reviewed before being made available to users</p>
+
+            <div class="form-section">
+                <h3>Designer Info</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Your Name *</label>
+                        <input type="text" id="designerName" placeholder="Designer name" maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label>Email (optional)</label>
+                        <input type="email" id="designerEmail" placeholder="you@example.com" maxlength="200">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>Template Details</h3>
+                <div class="form-group">
+                    <label>Title *</label>
+                    <input type="text" id="templateTitle" placeholder="Give your design a name" maxlength="120">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="templateDesc" placeholder="Describe your design..." maxlength="500"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Genre *</label>
+                        <select id="templateGenre">
+                            <option value="">Select genre</option>
+                            <option>Hip-Hop</option>
+                            <option>R&B</option>
+                            <option>Pop</option>
+                            <option>Rock</option>
+                            <option>Jazz</option>
+                            <option>Electronic</option>
+                            <option>Country</option>
+                            <option>Latin</option>
+                            <option>Afrobeats</option>
+                            <option>Indie</option>
+                            <option>Metal</option>
+                            <option>Classical</option>
+                            <option>Reggae</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Artist Name (optional)</label>
+                        <input type="text" id="templateArtist" placeholder="Associated artist" maxlength="100">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Label Name (optional)</label>
+                        <input type="text" id="templateLabel" placeholder="Associated label" maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label>Tags</label>
+                        <div class="tags-input-wrap" id="tagsWrap">
+                            <input type="text" id="tagsInput" placeholder="Type and press Enter">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>Products</h3>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">Select which product types this design works on</p>
+                <div class="product-check-grid" id="productCheckGrid">
+                    <label class="product-check checked" data-product="tshirt">
+                        <input type="checkbox" value="tshirt" checked>
+                        <span class="check-icon"><i class="fas fa-check" style="font-size:10px;"></i></span>
+                        T-Shirt
+                    </label>
+                    <label class="product-check" data-product="hoodie">
+                        <input type="checkbox" value="hoodie">
+                        <span class="check-icon"><i class="fas fa-check" style="font-size:10px;"></i></span>
+                        Hoodie
+                    </label>
+                    <label class="product-check" data-product="tank">
+                        <input type="checkbox" value="tank">
+                        <span class="check-icon"><i class="fas fa-check" style="font-size:10px;"></i></span>
+                        Tank Top
+                    </label>
+                    <label class="product-check" data-product="longsleeve">
+                        <input type="checkbox" value="longsleeve">
+                        <span class="check-icon"><i class="fas fa-check" style="font-size:10px;"></i></span>
+                        Long Sleeve
+                    </label>
+                    <label class="product-check" data-product="sweatshirt">
+                        <input type="checkbox" value="sweatshirt">
+                        <span class="check-icon"><i class="fas fa-check" style="font-size:10px;"></i></span>
+                        Sweatshirt
+                    </label>
+                    <label class="product-check" data-product="hat">
+                        <input type="checkbox" value="hat">
+                        <span class="check-icon"><i class="fas fa-check" style="font-size:10px;"></i></span>
+                        Cap
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>Design Files</h3>
+                <div class="design-upload-area">
+                    <div class="design-side">
+                        <h4>Front Design *</h4>
+                        <div class="design-dropzone" id="frontDropzone">
+                            <input type="file" accept="image/*" id="frontFileInput">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>Click or drop image</span>
+                        </div>
+                    </div>
+                    <div class="design-side">
+                        <h4>Back Design (optional)</h4>
+                        <div class="design-dropzone" id="backDropzone">
+                            <input type="file" accept="image/*" id="backFileInput">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>Click or drop image</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>Preview Image (optional)</h3>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">Upload a styled mockup preview of how the design looks on a product</p>
+                <div class="preview-upload-zone" id="previewDropzone">
+                    <input type="file" accept="image/*" id="previewFileInput">
+                    <i class="fas fa-image"></i>
+                    <span>Click or drop preview image</span>
+                </div>
+            </div>
+
+            <div class="submit-bar">
+                <span class="info"><i class="fas fa-info-circle"></i> Templates are reviewed before going live</span>
+                <button class="btn btn-accent" id="submitTemplateBtn" style="min-width: 180px;">
+                    <i class="fas fa-paper-plane"></i> Submit Template
+                </button>
+            </div>
+        </div>
+
+        <div class="submit-success" id="submitSuccess">
+            <i class="fas fa-check-circle"></i>
+            <h2>Template Submitted!</h2>
+            <p>Your design has been submitted for review. You'll be notified once it's approved.</p>
+            <div class="template-id-display" id="resultTemplateId"></div>
+            <button class="btn btn-accent" id="submitAnotherBtn" style="margin-top: 1rem;">
+                <i class="fas fa-plus"></i> Submit Another
+            </button>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        var uploadToken = '';
+        var frontDataURL = null;
+        var backDataURL = null;
+        var previewFile = null;
+        var tags = [];
+
+        var base = (typeof apiUrl === 'function') ? apiUrl('') : (window.location.origin);
+        base = base.replace(/\/$/, '');
+
+        var params = new URLSearchParams(window.location.search);
+        var preToken = params.get('token');
+        if (preToken) {
+            document.getElementById('uploadTokenInput').value = preToken;
+        }
+
+        document.getElementById('validateTokenBtn').addEventListener('click', validateToken);
+        document.getElementById('uploadTokenInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') validateToken();
+        });
+
+        function validateToken() {
+            var token = document.getElementById('uploadTokenInput').value.trim();
+            var errEl = document.getElementById('tokenError');
+            var sucEl = document.getElementById('tokenSuccess');
+            errEl.style.display = 'none';
+            sucEl.style.display = 'none';
+
+            if (!token) { errEl.textContent = 'Please enter a token'; errEl.style.display = 'block'; return; }
+
+            fetch(base + '/api/templates/validate-token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: token })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    uploadToken = token;
+                    sucEl.textContent = 'Token verified (' + data.data.remaining + ' uploads remaining)';
+                    sucEl.style.display = 'block';
+                    setTimeout(function() {
+                        document.getElementById('tokenGate').style.display = 'none';
+                        document.getElementById('uploadForm').style.display = 'block';
+                    }, 600);
+                } else {
+                    errEl.textContent = data.message || 'Invalid token';
+                    errEl.style.display = 'block';
+                }
+            })
+            .catch(function() {
+                errEl.textContent = 'Connection error';
+                errEl.style.display = 'block';
+            });
+        }
+
+        document.querySelectorAll('.product-check').forEach(function(el) {
+            el.addEventListener('click', function(e) {
+                e.preventDefault();
+                var cb = el.querySelector('input[type="checkbox"]');
+                cb.checked = !cb.checked;
+                el.classList.toggle('checked', cb.checked);
+            });
+        });
+
+        function setupDropzone(dropzoneId, inputId, side) {
+            var zone = document.getElementById(dropzoneId);
+            var input = document.getElementById(inputId);
+            zone.addEventListener('click', function() { input.click(); });
+            zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.style.borderColor = 'var(--accent)'; });
+            zone.addEventListener('dragleave', function() { zone.style.borderColor = ''; });
+            zone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                zone.style.borderColor = '';
+                if (e.dataTransfer.files[0]) handleDesignFile(e.dataTransfer.files[0], zone, side);
+            });
+            input.addEventListener('change', function() {
+                if (input.files[0]) handleDesignFile(input.files[0], zone, side);
+                input.value = '';
+            });
+        }
+
+        function handleDesignFile(file, zone, side) {
+            if (!file.type.startsWith('image/')) { showToast('Please upload an image file'); return; }
+            if (file.size > 5 * 1024 * 1024) { showToast('File must be under 5MB'); return; }
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                if (side === 'front') frontDataURL = e.target.result;
+                else backDataURL = e.target.result;
+                zone.innerHTML = '<img src="' + e.target.result + '" alt="Design">';
+                zone.classList.add('has-image');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        setupDropzone('frontDropzone', 'frontFileInput', 'front');
+        setupDropzone('backDropzone', 'backFileInput', 'back');
+
+        var previewZone = document.getElementById('previewDropzone');
+        var previewInput = document.getElementById('previewFileInput');
+        previewZone.addEventListener('click', function() { previewInput.click(); });
+        previewInput.addEventListener('change', function() {
+            if (previewInput.files[0]) {
+                previewFile = previewInput.files[0];
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    previewZone.innerHTML = '<img src="' + e.target.result + '" alt="Preview">';
+                };
+                reader.readAsDataURL(previewFile);
+            }
+        });
+
+        var tagsInput = document.getElementById('tagsInput');
+        tagsInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                var val = tagsInput.value.trim().replace(/,/g, '');
+                if (val && tags.length < 10 && !tags.includes(val.toLowerCase())) {
+                    tags.push(val.toLowerCase());
+                    renderTags();
+                }
+                tagsInput.value = '';
+            }
+        });
+        document.getElementById('tagsWrap').addEventListener('click', function() { tagsInput.focus(); });
+
+        function renderTags() {
+            var wrap = document.getElementById('tagsWrap');
+            var pills = wrap.querySelectorAll('.tag-pill');
+            pills.forEach(function(p) { p.remove(); });
+            tags.forEach(function(t, i) {
+                var pill = document.createElement('span');
+                pill.className = 'tag-pill';
+                pill.innerHTML = t + ' <span class="tag-remove" data-idx="' + i + '"><i class="fas fa-times"></i></span>';
+                wrap.insertBefore(pill, tagsInput);
+            });
+            wrap.querySelectorAll('.tag-remove').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    tags.splice(parseInt(btn.dataset.idx), 1);
+                    renderTags();
+                });
+            });
+        }
+
+        document.getElementById('submitTemplateBtn').addEventListener('click', submitTemplate);
+
+        function submitTemplate() {
+            var btn = document.getElementById('submitTemplateBtn');
+            var title = document.getElementById('templateTitle').value.trim();
+            var designerName = document.getElementById('designerName').value.trim();
+            var genre = document.getElementById('templateGenre').value;
+
+            if (!designerName) { showToast('Please enter your name'); return; }
+            if (!title) { showToast('Please enter a template title'); return; }
+            if (!genre) { showToast('Please select a genre'); return; }
+            if (!frontDataURL) { showToast('Please upload a front design'); return; }
+
+            var products = [];
+            document.querySelectorAll('.product-check input:checked').forEach(function(cb) {
+                products.push(cb.value);
+            });
+            if (products.length === 0) { showToast('Select at least one product type'); return; }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+            var formData = new FormData();
+            formData.append('uploadToken', uploadToken);
+            formData.append('title', title);
+            formData.append('description', document.getElementById('templateDesc').value.trim());
+            formData.append('designerName', designerName);
+            formData.append('designerEmail', document.getElementById('designerEmail').value.trim());
+            formData.append('genre', genre);
+            formData.append('artistName', document.getElementById('templateArtist').value.trim());
+            formData.append('labelName', document.getElementById('templateLabel').value.trim());
+            formData.append('products', JSON.stringify(products));
+            formData.append('frontDesign', frontDataURL);
+            formData.append('backDesign', backDataURL || '');
+            formData.append('tags', JSON.stringify(tags));
+
+            if (previewFile) {
+                formData.append('previewImage', previewFile);
+            }
+
+            fetch(base + '/api/templates/submit', {
+                method: 'POST',
+                body: formData
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Template';
+                if (data.success) {
+                    document.getElementById('uploadForm').style.display = 'none';
+                    document.getElementById('submitSuccess').style.display = 'block';
+                    document.getElementById('resultTemplateId').textContent = 'Template ID: ' + data.data.templateId;
+                } else {
+                    showToast(data.message || 'Submission failed');
+                }
+            })
+            .catch(function() {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Template';
+                showToast('Connection error. Please try again.');
+            });
+        }
+
+        document.getElementById('submitAnotherBtn').addEventListener('click', function() {
+            document.getElementById('submitSuccess').style.display = 'none';
+            document.getElementById('uploadForm').style.display = 'block';
+            document.getElementById('templateTitle').value = '';
+            document.getElementById('templateDesc').value = '';
+            document.getElementById('templateArtist').value = '';
+            document.getElementById('templateLabel').value = '';
+            frontDataURL = null;
+            backDataURL = null;
+            previewFile = null;
+            tags = [];
+            renderTags();
+            document.getElementById('frontDropzone').innerHTML = '<input type="file" accept="image/*" id="frontFileInput"><i class="fas fa-cloud-upload-alt"></i><span>Click or drop image</span>';
+            document.getElementById('backDropzone').innerHTML = '<input type="file" accept="image/*" id="backFileInput"><i class="fas fa-cloud-upload-alt"></i><span>Click or drop image</span>';
+            document.getElementById('previewDropzone').innerHTML = '<input type="file" accept="image/*" id="previewFileInput"><i class="fas fa-image"></i><span>Click or drop preview image</span>';
+            document.getElementById('frontDropzone').classList.remove('has-image');
+            document.getElementById('backDropzone').classList.remove('has-image');
+            setupDropzone('frontDropzone', 'frontFileInput', 'front');
+            setupDropzone('backDropzone', 'backFileInput', 'back');
+            var pz = document.getElementById('previewDropzone');
+            var pi = document.getElementById('previewFileInput');
+            pz.addEventListener('click', function() { pi.click(); });
+            pi.addEventListener('change', function() {
+                if (pi.files[0]) {
+                    previewFile = pi.files[0];
+                    var r2 = new FileReader();
+                    r2.onload = function(ev) { pz.innerHTML = '<img src="' + ev.target.result + '" alt="Preview">'; };
+                    r2.readAsDataURL(previewFile);
+                }
+            });
+        });
+
+        function showToast(msg) {
+            var old = document.querySelector('.toast-msg');
+            if (old) old.remove();
+            var el = document.createElement('div');
+            el.className = 'toast-msg';
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(function() { el.remove(); }, 3000);
+        }
+    })();
+    </script>
+</body>
+</html>

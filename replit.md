@@ -106,10 +106,19 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Admin UI**: Web-only interface for track management, upload, API key management, and API documentation.
 
 ### Custom Merch Design Studio
-- **Frontend**: Utilizes Fabric.js for text placement, image upload, and front/back views.
-- **Product Catalog**: Offers 6 product types with multiple colors and sizes, rendered with SVG outlines.
+- **Frontend**: Utilizes Fabric.js for text placement, image upload, and front/back views with real product mockup photos and CSS filter colorization.
+- **Product Catalog**: Offers 6 product types with multiple colors and sizes, rendered with AI-generated mockup photos.
 - **Model**: `MerchOrder` schema for tracking user, product, design, and order status.
 - **API**: For creating, retrieving, and managing merch orders.
+- **Other-Side Thumbnail**: Shows a preview of the opposite side's design when viewing front/back.
+
+### Design Template System
+- **Model**: `DesignTemplate` with templateId, genre, artist/label associations, approval workflow, sales tracking, and featured flag.
+- **Designer Upload Page**: Shareable page (`designer-upload.html`) gated by upload tokens, supporting front/back design uploads, preview images, genre/artist/label categorization, and tags.
+- **Upload Tokens**: Admin-generated tokens (`wdth_dsgn_...`) with 50-upload limit per token. Shareable via URL with `?token=` parameter.
+- **Admin Queue**: Admin page (`admin-templates.html`) for reviewing pending templates, approving/rejecting with reasons, featuring approved templates, and archiving.
+- **Public Browse API**: Endpoints for browsing approved templates by genre, artist, label; trending (weekly sales), and featured templates.
+- **Routes**: `routes/templates.js` mounted at `/api/templates`.
 
 ### Key Features Architecture
 - **Verses (Audio Rooms)**: Uses Agora RTC SDK for scalable audio/video, with Socket.io for room management. Supports server-side token generation and Web Audio API for filters.
