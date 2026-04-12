@@ -25,6 +25,19 @@
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        .mobile-block {
+            display: none; text-align: center; padding: 4rem 2rem; min-height: 100vh;
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+        .mobile-block i { font-size: 3rem; color: var(--accent); margin-bottom: 1.5rem; }
+        .mobile-block h2 { font-family: 'Syne', sans-serif; font-size: 1.5rem; margin-bottom: 0.75rem; }
+        .mobile-block p { color: var(--text-muted); max-width: 400px; line-height: 1.6; }
+        @media (max-width: 1024px) {
+            .mobile-block { display: flex !important; }
+            .desktop-content { display: none !important; }
+        }
+
         .upload-nav {
             display: flex; align-items: center; justify-content: space-between;
             padding: 1rem 2rem; background: var(--surface); border-bottom: 1px solid var(--border);
@@ -32,7 +45,7 @@
         .upload-nav .logo { height: 36px; }
         .upload-nav .nav-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; margin-left: 0.75rem; color: var(--accent); }
         .upload-nav .nav-brand { display: flex; align-items: center; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 
         .token-gate { text-align: center; padding: 4rem 1rem; }
         .token-gate h1 { font-family: 'Syne', sans-serif; font-size: 2rem; margin-bottom: 0.5rem; }
@@ -58,7 +71,7 @@
         .studio-wrap h2 { font-family: 'Syne', sans-serif; font-size: 1.5rem; margin-bottom: 0.25rem; }
         .studio-wrap .subtitle { color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem; }
 
-        .studio-layout { display: grid; grid-template-columns: 260px 1fr 280px; gap: 1.25rem; align-items: start; }
+        .studio-layout { display: grid; grid-template-columns: 240px 1fr 260px; gap: 1.25rem; align-items: start; }
 
         .studio-sidebar, .studio-tools {
             background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
@@ -78,17 +91,18 @@
 
         .color-row { display: flex; gap: 0.35rem; flex-wrap: wrap; }
         .color-dot {
-            width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent;
+            width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent;
             cursor: pointer; transition: all 0.2s;
         }
         .color-dot.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
 
-        .view-btns { display: flex; gap: 0.4rem; }
+        .view-btns { display: flex; gap: 0.3rem; flex-wrap: wrap; }
         .view-btn {
-            flex: 1; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border);
-            background: transparent; color: var(--text-muted); cursor: pointer; text-align: center; font-size: 0.8rem;
+            flex: 1; min-width: 60px; padding: 0.4rem 0.3rem; border-radius: 6px; border: 1px solid var(--border);
+            background: transparent; color: var(--text-muted); cursor: pointer; text-align: center; font-size: 0.72rem;
         }
         .view-btn.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+        .view-btn.disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
 
         .form-group { margin-bottom: 0.85rem; }
         .form-group label { display: block; font-size: 0.72rem; font-weight: 500; color: var(--text-muted); margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -114,6 +128,40 @@
             position: absolute; z-index: 5; border: 1px dashed rgba(0,0,0,0.15); border-radius: 4px;
         }
 
+        .elements-locks-bar {
+            width: 100%; max-width: 480px; margin-top: 1rem;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; align-items: start;
+        }
+        .el-panel, .lock-panel {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem;
+        }
+        .element-list { max-height: 180px; overflow-y: auto; }
+        .element-item {
+            display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.5rem;
+            border-radius: 6px; background: var(--surface2); margin-bottom: 0.25rem;
+            font-size: 0.75rem; cursor: pointer; transition: background 0.15s;
+        }
+        .element-item:hover { background: rgba(255,255,255,0.08); }
+        .element-item.selected { background: var(--accent-dim); }
+        .element-item .el-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .element-item .el-type { font-size: 0.62rem; color: var(--text-muted); text-transform: uppercase; }
+
+        .lock-panel h4 { font-size: 0.72rem; color: var(--orange); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .lock-toggle {
+            display: flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0;
+            font-size: 0.75rem; cursor: pointer; user-select: none;
+        }
+        .lock-toggle input[type="checkbox"] { display: none; }
+        .lock-icon {
+            width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--border);
+            display: flex; align-items: center; justify-content: center; font-size: 9px;
+            transition: all 0.2s; color: transparent; flex-shrink: 0;
+        }
+        .lock-toggle input:checked + .lock-icon {
+            background: var(--orange); border-color: var(--orange); color: #000;
+        }
+        .no-selection-msg { color: var(--text-muted); font-size: 0.75rem; text-align: center; padding: 0.5rem; }
+
         .tools-tab-row { display: flex; gap: 0.3rem; margin-bottom: 0.75rem; }
         .tool-tab {
             flex: 1; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border);
@@ -125,48 +173,21 @@
 
         .text-color-row { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
         .text-color-btn {
-            width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; cursor: pointer;
+            width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; cursor: pointer;
         }
         .text-color-btn.active { border-color: #fff; box-shadow: 0 0 0 1px var(--accent); }
 
         .upload-zone {
-            border: 2px dashed var(--border); border-radius: 10px; padding: 1.5rem; text-align: center;
+            border: 2px dashed var(--border); border-radius: 10px; padding: 1.25rem; text-align: center;
             cursor: pointer; transition: all 0.2s; background: var(--surface2);
         }
         .upload-zone:hover { border-color: var(--accent); }
-        .upload-zone i { font-size: 1.3rem; color: var(--text-muted); margin-bottom: 0.3rem; display: block; }
+        .upload-zone i { font-size: 1.2rem; color: var(--text-muted); margin-bottom: 0.3rem; display: block; }
         .upload-zone span { font-size: 0.78rem; color: var(--text-muted); }
         .upload-zone input { display: none; }
 
-        .element-list { max-height: 200px; overflow-y: auto; }
-        .element-item {
-            display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.6rem;
-            border-radius: 6px; background: var(--surface2); margin-bottom: 0.3rem;
-            font-size: 0.78rem; cursor: pointer; transition: background 0.15s;
-        }
-        .element-item:hover { background: rgba(255,255,255,0.08); }
-        .element-item.selected { background: var(--accent-dim); }
-        .element-item .el-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .element-item .el-type { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; }
-
-        .lock-controls { margin-top: 0.75rem; padding: 0.75rem; background: var(--surface2); border-radius: 8px; }
-        .lock-controls h4 { font-size: 0.75rem; color: var(--orange); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px; }
-        .lock-toggle {
-            display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0;
-            font-size: 0.8rem; cursor: pointer; user-select: none;
-        }
-        .lock-toggle input[type="checkbox"] { display: none; }
-        .lock-icon {
-            width: 20px; height: 20px; border-radius: 4px; border: 2px solid var(--border);
-            display: flex; align-items: center; justify-content: center; font-size: 10px;
-            transition: all 0.2s; color: transparent;
-        }
-        .lock-toggle input:checked + .lock-icon {
-            background: var(--orange); border-color: var(--orange); color: #000;
-        }
-
-        .action-btns { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
-        .action-btns button { flex: 1; }
+        .action-btns { display: flex; gap: 0.35rem; margin-top: 0.5rem; flex-wrap: wrap; }
+        .action-btns button { flex: 1; min-width: 0; }
 
         .tags-wrap {
             display: flex; flex-wrap: wrap; gap: 0.3rem; padding: 0.4rem;
@@ -198,185 +219,226 @@
             animation: toastIn 0.3s ease;
         }
         @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } }
-
-        @media (max-width: 900px) {
-            .studio-layout { grid-template-columns: 1fr; }
-        }
-        @media (max-width: 640px) {
-            .form-row { grid-template-columns: 1fr; }
-            .token-input-wrap { flex-direction: column; }
-        }
     </style>
 </head>
 <body>
-    <nav class="upload-nav">
-        <div class="nav-brand">
-            <img src="images/logo.png" alt="Wordeth" class="logo">
-            <span class="nav-title">Designer Upload</span>
-        </div>
-    </nav>
+    <div class="mobile-block">
+        <i class="fas fa-desktop"></i>
+        <h2>Desktop Only</h2>
+        <p>The design studio requires a desktop browser for the best experience. Please open this page on a computer with a screen width of at least 1024px.</p>
+    </div>
 
-    <div class="container">
-        <div class="token-gate" id="tokenGate">
-            <h1>Upload Design Templates</h1>
-            <p>Enter your designer upload token to get started</p>
-            <div class="token-input-wrap">
-                <input type="text" id="uploadTokenInput" placeholder="wdth_dsgn_...">
-                <button class="btn btn-accent" id="validateTokenBtn">Verify</button>
+    <div class="desktop-content">
+        <nav class="upload-nav">
+            <div class="nav-brand">
+                <img src="images/logo.png" alt="Wordeth" class="logo">
+                <span class="nav-title">Designer Upload</span>
             </div>
-            <p class="token-error" id="tokenError"></p>
-            <p class="token-success" id="tokenSuccess"></p>
-        </div>
+        </nav>
 
-        <div class="studio-wrap" id="studioWrap">
-            <h2>Design Your Template</h2>
-            <p class="subtitle">Place your design on the product, then lock elements you don't want users to change</p>
+        <div class="container">
+            <div class="token-gate" id="tokenGate">
+                <h1>Upload Design Templates</h1>
+                <p>Enter your designer upload token to get started</p>
+                <div class="token-input-wrap">
+                    <input type="text" id="uploadTokenInput" placeholder="wdth_dsgn_...">
+                    <button class="btn btn-accent" id="validateTokenBtn">Verify</button>
+                </div>
+                <p class="token-error" id="tokenError"></p>
+                <p class="token-success" id="tokenSuccess"></p>
+            </div>
 
-            <div class="studio-layout">
-                <div class="studio-sidebar">
-                    <div class="sidebar-section">
-                        <div class="section-title">Product</div>
-                        <div class="product-grid" id="productGrid"></div>
-                    </div>
-                    <div class="sidebar-section">
-                        <div class="section-title">Color</div>
-                        <div class="color-row" id="colorRow"></div>
-                    </div>
-                    <div class="sidebar-section">
-                        <div class="section-title">View</div>
-                        <div class="view-btns">
-                            <button class="view-btn active" data-view="front">Front</button>
-                            <button class="view-btn" data-view="back">Back</button>
+            <div class="studio-wrap" id="studioWrap">
+                <h2>Design Your Template</h2>
+                <p class="subtitle">Place your design on the product, then lock elements you don't want users to change</p>
+
+                <div class="studio-layout">
+                    <div class="studio-sidebar">
+                        <div class="sidebar-section">
+                            <div class="section-title">Product</div>
+                            <div class="product-grid" id="productGrid"></div>
                         </div>
-                    </div>
-                    <div class="sidebar-section">
-                        <div class="section-title">Template Info</div>
-                        <div class="form-group"><label>Title *</label><input type="text" id="tplTitle" maxlength="120" placeholder="Template name"></div>
-                        <div class="form-group"><label>Description</label><textarea id="tplDesc" maxlength="500" placeholder="Describe your design..."></textarea></div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Your Name *</label><input type="text" id="tplDesigner" maxlength="100" placeholder="Designer name"></div>
-                            <div class="form-group"><label>Email</label><input type="email" id="tplEmail" maxlength="200" placeholder="Optional"></div>
+                        <div class="sidebar-section">
+                            <div class="section-title">Color</div>
+                            <div class="color-row" id="colorRow"></div>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Genre *</label>
-                                <select id="tplGenre">
-                                    <option value="">Select genre</option>
-                                    <option>Hip-Hop</option><option>R&B</option><option>Pop</option><option>Rock</option>
-                                    <option>Jazz</option><option>Electronic</option><option>Country</option><option>Latin</option>
-                                    <option>Afrobeats</option><option>Indie</option><option>Metal</option><option>Classical</option>
-                                    <option>Reggae</option><option>Other</option>
-                                </select>
+                        <div class="sidebar-section">
+                            <div class="section-title">View</div>
+                            <div class="view-btns" id="viewBtns"></div>
+                        </div>
+                        <div class="sidebar-section">
+                            <div class="section-title">Template Info</div>
+                            <div class="form-group"><label>Title *</label><input type="text" id="tplTitle" maxlength="120" placeholder="Template name"></div>
+                            <div class="form-group"><label>Description</label><textarea id="tplDesc" maxlength="500" placeholder="Describe your design..."></textarea></div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Your Name *</label><input type="text" id="tplDesigner" maxlength="100" placeholder="Designer name"></div>
+                                <div class="form-group"><label>Email</label><input type="email" id="tplEmail" maxlength="200" placeholder="Optional"></div>
                             </div>
-                            <div class="form-group"><label>Artist</label><input type="text" id="tplArtist" maxlength="100" placeholder="Optional"></div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Genre *</label>
+                                    <select id="tplGenre">
+                                        <option value="">Select genre</option>
+                                        <option>Hip-Hop</option><option>R&B</option><option>Pop</option><option>Rock</option>
+                                        <option>Jazz</option><option>Electronic</option><option>Country</option><option>Latin</option>
+                                        <option>Afrobeats</option><option>Indie</option><option>Metal</option><option>Classical</option>
+                                        <option>Reggae</option><option>Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group"><label>Artist</label><input type="text" id="tplArtist" maxlength="100" placeholder="Optional"></div>
+                            </div>
+                            <div class="form-group"><label>Label</label><input type="text" id="tplLabel" maxlength="100" placeholder="Optional"></div>
+                            <div class="form-group">
+                                <label>Tags</label>
+                                <div class="tags-wrap" id="tagsWrap">
+                                    <input type="text" id="tagsInput" placeholder="Type + Enter">
+                                </div>
+                            </div>
                         </div>
-                        <div class="form-group"><label>Label</label><input type="text" id="tplLabel" maxlength="100" placeholder="Optional"></div>
-                        <div class="form-group">
-                            <label>Tags</label>
-                            <div class="tags-wrap" id="tagsWrap">
-                                <input type="text" id="tagsInput" placeholder="Type + Enter">
+                    </div>
+
+                    <div class="canvas-area">
+                        <div class="garment-preview" id="garmentPreview">
+                            <img src="images/merch/tshirt-front.png" class="mockup-img" id="mockupImg">
+                            <div class="canvas-wrap" id="canvasWrap">
+                                <canvas id="designCanvas"></canvas>
+                            </div>
+                        </div>
+                        <div class="elements-locks-bar">
+                            <div class="el-panel">
+                                <div class="section-title">Elements</div>
+                                <div class="element-list" id="elementList"></div>
+                            </div>
+                            <div class="lock-panel" id="lockPanel">
+                                <div class="section-title" style="color:var(--orange);"><i class="fas fa-lock"></i> Locks</div>
+                                <div id="lockControls">
+                                    <div class="no-selection-msg">Select an element</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="studio-tools">
+                        <div class="sidebar-section">
+                            <div class="tools-tab-row">
+                                <button class="tool-tab active" data-tool="text"><i class="fas fa-font"></i> Text</button>
+                                <button class="tool-tab" data-tool="image"><i class="fas fa-image"></i> Image</button>
+                            </div>
+                            <div class="tool-panel active" id="panel-text">
+                                <div class="form-group"><label>Text</label><input type="text" id="txtInput" placeholder="Enter text..."></div>
+                                <div class="form-group">
+                                    <label>Font</label>
+                                    <select id="txtFont">
+                                        <option>Inter</option><option>Arial</option><option>Georgia</option>
+                                        <option>Courier New</option><option>Impact</option><option>Comic Sans MS</option>
+                                        <option>Trebuchet MS</option><option>Verdana</option><option>Palatino</option><option>Garamond</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Size</label>
+                                    <input type="range" id="txtSize" min="10" max="72" value="24" style="width:100%;">
+                                </div>
+                                <div class="form-group">
+                                    <label>Color</label>
+                                    <div class="text-color-row" id="txtColorRow"></div>
+                                </div>
+                                <button class="btn btn-accent btn-sm" id="addTextBtn" style="width:100%;"><i class="fas fa-plus"></i> Add Text</button>
+                            </div>
+                            <div class="tool-panel" id="panel-image">
+                                <div class="upload-zone" id="imgUploadZone">
+                                    <input type="file" accept="image/*" id="imgFileInput">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <span>Upload artwork</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sidebar-section">
+                            <div class="action-btns">
+                                <button class="btn btn-sm btn-secondary" id="duplicateElBtn"><i class="fas fa-copy"></i> Duplicate</button>
+                                <button class="btn btn-sm btn-secondary" id="deleteElBtn"><i class="fas fa-trash"></i> Delete</button>
+                                <button class="btn btn-sm btn-secondary" id="clearAllBtn"><i class="fas fa-eraser"></i> Clear</button>
+                            </div>
+                        </div>
+                        <div class="sidebar-section">
+                            <div class="section-title">Preview Image (optional)</div>
+                            <div class="upload-zone" id="previewUploadZone" style="padding:1rem;">
+                                <input type="file" accept="image/*" id="previewFileInput">
+                                <i class="fas fa-image"></i>
+                                <span>Styled mockup preview</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="canvas-area">
-                    <div class="garment-preview" id="garmentPreview">
-                        <img src="images/merch/tshirt-front.png" class="mockup-img" id="mockupImg">
-                        <div class="canvas-wrap" id="canvasWrap">
-                            <canvas id="designCanvas"></canvas>
-                        </div>
-                    </div>
-                    <div style="margin-top: 1rem;">
-                        <div class="section-title">Elements & Locks</div>
-                        <div class="element-list" id="elementList"></div>
-                        <div class="lock-controls" id="lockControls" style="display:none;">
-                            <h4><i class="fas fa-lock"></i> Lock Settings</h4>
-                            <label class="lock-toggle"><input type="checkbox" id="lockPosition"><span class="lock-icon"><i class="fas fa-check"></i></span> Lock Position & Size</label>
-                            <label class="lock-toggle"><input type="checkbox" id="lockContent"><span class="lock-icon"><i class="fas fa-check"></i></span> Lock Text Content</label>
-                            <label class="lock-toggle"><input type="checkbox" id="lockFont"><span class="lock-icon"><i class="fas fa-check"></i></span> Lock Font & Style</label>
-                            <label class="lock-toggle"><input type="checkbox" id="lockColor"><span class="lock-icon"><i class="fas fa-check"></i></span> Lock Color</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="studio-tools">
-                    <div class="sidebar-section">
-                        <div class="tools-tab-row">
-                            <button class="tool-tab active" data-tool="text"><i class="fas fa-font"></i> Text</button>
-                            <button class="tool-tab" data-tool="image"><i class="fas fa-image"></i> Image</button>
-                        </div>
-                        <div class="tool-panel active" id="panel-text">
-                            <div class="form-group"><label>Text</label><input type="text" id="txtInput" placeholder="Enter text..."></div>
-                            <div class="form-group">
-                                <label>Font</label>
-                                <select id="txtFont">
-                                    <option>Inter</option><option>Arial</option><option>Georgia</option>
-                                    <option>Courier New</option><option>Impact</option><option>Comic Sans MS</option>
-                                    <option>Trebuchet MS</option><option>Verdana</option><option>Palatino</option><option>Garamond</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Size</label>
-                                <input type="range" id="txtSize" min="10" max="72" value="24" style="width:100%;">
-                            </div>
-                            <div class="form-group">
-                                <label>Color</label>
-                                <div class="text-color-row" id="txtColorRow"></div>
-                            </div>
-                            <button class="btn btn-accent btn-sm" id="addTextBtn" style="width:100%;"><i class="fas fa-plus"></i> Add Text</button>
-                        </div>
-                        <div class="tool-panel" id="panel-image">
-                            <div class="upload-zone" id="imgUploadZone">
-                                <input type="file" accept="image/*" id="imgFileInput">
-                                <i class="fas fa-cloud-upload-alt"></i>
-                                <span>Upload artwork</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="sidebar-section">
-                        <div class="action-btns">
-                            <button class="btn btn-sm btn-secondary" id="deleteElBtn"><i class="fas fa-trash"></i> Delete</button>
-                            <button class="btn btn-sm btn-secondary" id="clearAllBtn"><i class="fas fa-eraser"></i> Clear</button>
-                        </div>
-                    </div>
-                    <div class="sidebar-section">
-                        <div class="section-title">Preview Image (optional)</div>
-                        <div class="upload-zone" id="previewUploadZone" style="padding:1rem;">
-                            <input type="file" accept="image/*" id="previewFileInput">
-                            <i class="fas fa-image"></i>
-                            <span>Styled mockup preview</span>
-                        </div>
-                    </div>
+                <div class="submit-section">
+                    <span class="info"><i class="fas fa-info-circle"></i> Templates are reviewed before going live</span>
+                    <button class="btn btn-accent" id="submitBtn" style="min-width:180px;">
+                        <i class="fas fa-paper-plane"></i> Submit Template
+                    </button>
                 </div>
             </div>
 
-            <div class="submit-section">
-                <span class="info"><i class="fas fa-info-circle"></i> Templates are reviewed before going live</span>
-                <button class="btn btn-accent" id="submitBtn" style="min-width:180px;">
-                    <i class="fas fa-paper-plane"></i> Submit Template
-                </button>
+            <div class="submit-success" id="submitSuccess">
+                <i class="fas fa-check-circle"></i>
+                <h2>Template Submitted!</h2>
+                <p>Your design has been submitted for review.</p>
+                <div class="tid" id="resultId"></div>
+                <button class="btn btn-accent" id="anotherBtn" style="margin-top:1rem;"><i class="fas fa-plus"></i> Submit Another</button>
             </div>
-        </div>
-
-        <div class="submit-success" id="submitSuccess">
-            <i class="fas fa-check-circle"></i>
-            <h2>Template Submitted!</h2>
-            <p>Your design has been submitted for review.</p>
-            <div class="tid" id="resultId"></div>
-            <button class="btn btn-accent" id="anotherBtn" style="margin-top:1rem;"><i class="fas fa-plus"></i> Submit Another</button>
         </div>
     </div>
 
     <script>
     (function() {
+        var VIEWS_BY_PRODUCT = {
+            tshirt:     ['front','back','left','right'],
+            hoodie:     ['front','back','left','right'],
+            tank:       ['front','back'],
+            longsleeve: ['front','back','left','right'],
+            sweatshirt: ['front','back','left','right'],
+            hat:        ['front','back','left','right']
+        };
+        var VIEW_LABELS = {
+            front: 'Front', back: 'Back', left: 'Left Side', right: 'Right Side'
+        };
+        var VIEW_ICONS = {
+            front: 'fa-shirt', back: 'fa-rotate', left: 'fa-arrow-left', right: 'fa-arrow-right'
+        };
         var PRODUCTS = [
-            { id: 'tshirt', name: 'T-Shirt', pct: { top: 25, left: 22, width: 56, height: 38 } },
-            { id: 'hoodie', name: 'Hoodie', pct: { top: 32, left: 24, width: 52, height: 30 } },
-            { id: 'tank', name: 'Tank Top', pct: { top: 22, left: 22, width: 56, height: 40 } },
-            { id: 'longsleeve', name: 'Long Sleeve', pct: { top: 25, left: 22, width: 56, height: 38 } },
-            { id: 'sweatshirt', name: 'Sweatshirt', pct: { top: 28, left: 24, width: 52, height: 34 } },
-            { id: 'hat', name: 'Cap', pct: { top: 18, left: 25, width: 50, height: 35 } }
+            { id: 'tshirt', name: 'T-Shirt', pct: {
+                front: { top: 25, left: 22, width: 56, height: 38 },
+                back:  { top: 25, left: 22, width: 56, height: 38 },
+                left:  { top: 28, left: 20, width: 40, height: 45 },
+                right: { top: 28, left: 40, width: 40, height: 45 }
+            }},
+            { id: 'hoodie', name: 'Hoodie', pct: {
+                front: { top: 32, left: 24, width: 52, height: 30 },
+                back:  { top: 32, left: 24, width: 52, height: 30 },
+                left:  { top: 30, left: 18, width: 42, height: 40 },
+                right: { top: 30, left: 40, width: 42, height: 40 }
+            }},
+            { id: 'tank', name: 'Tank Top', pct: {
+                front: { top: 22, left: 22, width: 56, height: 40 },
+                back:  { top: 22, left: 22, width: 56, height: 40 }
+            }},
+            { id: 'longsleeve', name: 'Long Sleeve', pct: {
+                front: { top: 25, left: 22, width: 56, height: 38 },
+                back:  { top: 25, left: 22, width: 56, height: 38 },
+                left:  { top: 25, left: 15, width: 45, height: 50 },
+                right: { top: 25, left: 40, width: 45, height: 50 }
+            }},
+            { id: 'sweatshirt', name: 'Sweatshirt', pct: {
+                front: { top: 28, left: 24, width: 52, height: 34 },
+                back:  { top: 28, left: 24, width: 52, height: 34 },
+                left:  { top: 28, left: 18, width: 42, height: 42 },
+                right: { top: 28, left: 40, width: 42, height: 42 }
+            }},
+            { id: 'hat', name: 'Cap', pct: {
+                front: { top: 18, left: 25, width: 50, height: 35 },
+                back:  { top: 18, left: 25, width: 50, height: 35 },
+                left:  { top: 20, left: 18, width: 50, height: 40 },
+                right: { top: 20, left: 32, width: 50, height: 40 }
+            }}
         ];
         var COLORS = [
             { id: 'black', hex: '#1a1a1a', filter: 'brightness(0.22)' },
@@ -389,14 +451,14 @@
             { id: 'slate', hex: '#3d4f5f', filter: 'brightness(0.38) sepia(1) hue-rotate(170deg) saturate(1.5)' }
         ];
         var TEXT_COLORS = ['#ffffff','#000000','#00ffa3','#ff4444','#ffd700','#3b82f6','#a855f7','#ec4899','#f97316','#14b8a6'];
+        var EXTRA_PROPS = ['wdthLockPosition','wdthLockContent','wdthLockFont','wdthLockColor','wdthElementName'];
 
         var uploadToken = '';
         var product = PRODUCTS[0];
         var color = COLORS[0];
         var view = 'front';
         var canvas = null;
-        var frontJSON = null;
-        var backJSON = null;
+        var viewData = {};
         var previewFile = null;
         var tags = [];
         var base = window.location.origin;
@@ -434,6 +496,7 @@
             renderProducts();
             renderColors();
             renderTextColors();
+            renderViews();
             initCanvas();
             updateMockup();
             bindTools();
@@ -450,12 +513,52 @@
             }).join('');
             g.querySelectorAll('.product-btn').forEach(function(btn) {
                 btn.addEventListener('click', function() {
+                    saveCurrentView();
                     product = PRODUCTS.find(function(p) { return p.id === btn.dataset.id; }) || PRODUCTS[0];
                     g.querySelectorAll('.product-btn').forEach(function(b) { b.classList.remove('active'); });
                     btn.classList.add('active');
+                    var avail = VIEWS_BY_PRODUCT[product.id];
+                    if (avail.indexOf(view) === -1) view = 'front';
+                    renderViews();
+                    loadCurrentView();
                     updateMockup();
                 });
             });
+        }
+
+        function renderViews() {
+            var container = document.getElementById('viewBtns');
+            var avail = VIEWS_BY_PRODUCT[product.id];
+            container.innerHTML = avail.map(function(v) {
+                return '<button class="view-btn' + (v === view ? ' active' : '') + '" data-view="' + v + '">'
+                    + VIEW_LABELS[v] + '</button>';
+            }).join('');
+            container.querySelectorAll('.view-btn').forEach(function(b) {
+                b.addEventListener('click', function() {
+                    var newView = b.dataset.view;
+                    if (newView === view) return;
+                    saveCurrentView();
+                    view = newView;
+                    container.querySelectorAll('.view-btn').forEach(function(bb) { bb.classList.toggle('active', bb.dataset.view === view); });
+                    loadCurrentView();
+                    updateMockup();
+                });
+            });
+        }
+
+        function viewKey() { return product.id + '_' + view; }
+        function saveCurrentView() {
+            if (!canvas) return;
+            viewData[viewKey()] = canvas.toJSON(EXTRA_PROPS);
+        }
+        function loadCurrentView() {
+            if (!canvas) return;
+            var saved = viewData[viewKey()];
+            if (saved && saved.objects && saved.objects.length > 0) {
+                canvas.loadFromJSON(saved, function() { canvas.renderAll(); updateElementList(); });
+            } else {
+                canvas.clear(); canvas.renderAll(); updateElementList();
+            }
         }
 
         function renderColors() {
@@ -488,13 +591,15 @@
 
         function initCanvas() {
             canvas = new fabric.Canvas('designCanvas', { backgroundColor: 'transparent', selection: true, preserveObjectStacking: true });
-            canvas.on('selection:created', updateElementList);
-            canvas.on('selection:updated', updateElementList);
-            canvas.on('selection:cleared', function() { updateElementList(); document.getElementById('lockControls').style.display = 'none'; });
+            canvas.on('selection:created', onSelect);
+            canvas.on('selection:updated', onSelect);
+            canvas.on('selection:cleared', function() { updateElementList(); showLockControls(null); });
             canvas.on('object:added', updateElementList);
             canvas.on('object:removed', updateElementList);
             positionCanvas();
         }
+
+        function onSelect() { updateElementList(); var a = canvas.getActiveObject(); if (a) showLockControls(a); }
 
         function updateMockup() {
             document.getElementById('mockupImg').src = 'images/merch/' + product.id + '-' + view + '.png';
@@ -506,7 +611,8 @@
             if (!canvas) return;
             var preview = document.getElementById('garmentPreview');
             var wrap = document.getElementById('canvasWrap');
-            var pa = product.pct;
+            var pa = product.pct[view];
+            if (!pa) pa = product.pct.front;
             var pw = preview.offsetWidth; var ph = preview.offsetHeight;
             var cw = Math.round(pw * pa.width / 100);
             var ch = Math.round(ph * pa.height / 100);
@@ -516,22 +622,6 @@
             wrap.style.left = Math.round(pw * pa.left / 100) + 'px';
             canvas.renderAll();
         }
-
-        document.querySelectorAll('.view-btn').forEach(function(b) {
-            b.addEventListener('click', function() {
-                var newView = b.dataset.view;
-                if (newView === view) return;
-                if (view === 'front') frontJSON = canvas.toJSON(['wdthLockPosition','wdthLockContent','wdthLockFont','wdthLockColor','wdthElementName']);
-                else backJSON = canvas.toJSON(['wdthLockPosition','wdthLockContent','wdthLockFont','wdthLockColor','wdthElementName']);
-                view = newView;
-                document.querySelectorAll('.view-btn').forEach(function(bb) { bb.classList.toggle('active', bb.dataset.view === view); });
-                document.getElementById('mockupImg').src = 'images/merch/' + product.id + '-' + view + '.png';
-                var saved = view === 'front' ? frontJSON : backJSON;
-                if (saved && saved.objects && saved.objects.length > 0) {
-                    canvas.loadFromJSON(saved, function() { canvas.renderAll(); updateElementList(); });
-                } else { canvas.clear(); canvas.renderAll(); updateElementList(); }
-            });
-        });
 
         function bindTools() {
             document.querySelectorAll('.tool-tab').forEach(function(t) {
@@ -591,13 +681,29 @@
                 imgInput.value = '';
             });
 
+            document.getElementById('duplicateElBtn').addEventListener('click', function() {
+                var active = canvas.getActiveObject();
+                if (!active) { showToast('Select an element to duplicate'); return; }
+                active.clone(function(cloned) {
+                    cloned.set({ left: cloned.left + 15, top: cloned.top + 15 });
+                    cloned.wdthElementName = (active.wdthElementName || 'Copy') + ' copy';
+                    cloned.wdthLockPosition = active.wdthLockPosition || false;
+                    cloned.wdthLockContent = active.wdthLockContent || false;
+                    cloned.wdthLockFont = active.wdthLockFont || false;
+                    cloned.wdthLockColor = active.wdthLockColor || false;
+                    canvas.add(cloned);
+                    canvas.setActiveObject(cloned);
+                    canvas.renderAll();
+                }, EXTRA_PROPS);
+            });
+
             document.getElementById('deleteElBtn').addEventListener('click', function() {
                 var active = canvas.getActiveObject();
                 if (active) { canvas.remove(active); canvas.renderAll(); }
             });
             document.getElementById('clearAllBtn').addEventListener('click', function() {
                 if (canvas.getObjects().length === 0) return;
-                if (confirm('Clear all elements?')) { canvas.clear(); canvas.renderAll(); }
+                if (confirm('Clear all elements on this view?')) { canvas.clear(); canvas.renderAll(); }
             });
 
             var pvZone = document.getElementById('previewUploadZone');
@@ -634,7 +740,7 @@
             tags.forEach(function(t, i) {
                 var pill = document.createElement('span');
                 pill.className = 'tag-pill';
-                pill.innerHTML = t + ' <span class="tag-rm" data-i="' + i + '"><i class="fas fa-times"></i></span>';
+                pill.innerHTML = escHtml(t) + ' <span class="tag-rm" data-i="' + i + '"><i class="fas fa-times"></i></span>';
                 w.insertBefore(pill, inp);
             });
             w.querySelectorAll('.tag-rm').forEach(function(btn) {
@@ -646,16 +752,16 @@
             var list = document.getElementById('elementList');
             var objs = canvas.getObjects();
             var active = canvas.getActiveObject();
-            if (objs.length === 0) { list.innerHTML = '<div style="padding:0.5rem;color:var(--text-muted);font-size:0.78rem;text-align:center;">No elements yet</div>'; return; }
+            if (objs.length === 0) { list.innerHTML = '<div class="no-selection-msg">No elements yet</div>'; return; }
             list.innerHTML = objs.map(function(obj, i) {
                 var name = obj.wdthElementName || (obj.type === 'textbox' ? obj.text.substring(0, 20) : 'Image');
-                var type = obj.type === 'textbox' ? 'TEXT' : 'IMG';
+                var type = obj.type === 'textbox' ? 'TXT' : 'IMG';
                 var isActive = active === obj;
                 var locks = [];
-                if (obj.wdthLockPosition) locks.push('<i class="fas fa-arrows-alt" style="color:var(--orange);font-size:9px;" title="Position locked"></i>');
-                if (obj.wdthLockContent) locks.push('<i class="fas fa-pen" style="color:var(--orange);font-size:9px;" title="Content locked"></i>');
-                if (obj.wdthLockFont) locks.push('<i class="fas fa-font" style="color:var(--orange);font-size:9px;" title="Font locked"></i>');
-                if (obj.wdthLockColor) locks.push('<i class="fas fa-palette" style="color:var(--orange);font-size:9px;" title="Color locked"></i>');
+                if (obj.wdthLockPosition) locks.push('<i class="fas fa-arrows-alt" style="color:var(--orange);font-size:8px;" title="Position"></i>');
+                if (obj.wdthLockContent) locks.push('<i class="fas fa-pen" style="color:var(--orange);font-size:8px;" title="Content"></i>');
+                if (obj.wdthLockFont) locks.push('<i class="fas fa-font" style="color:var(--orange);font-size:8px;" title="Font"></i>');
+                if (obj.wdthLockColor) locks.push('<i class="fas fa-palette" style="color:var(--orange);font-size:8px;" title="Color"></i>');
                 return '<div class="element-item' + (isActive ? ' selected' : '') + '" data-idx="' + i + '">'
                     + '<span class="el-type">' + type + '</span>'
                     + '<span class="el-name">' + escHtml(name) + '</span>'
@@ -669,30 +775,27 @@
                     if (obj) { canvas.setActiveObject(obj); canvas.renderAll(); showLockControls(obj); }
                 });
             });
-            if (active) showLockControls(active);
         }
 
         function showLockControls(obj) {
             var lc = document.getElementById('lockControls');
-            lc.style.display = 'block';
-            document.getElementById('lockPosition').checked = !!obj.wdthLockPosition;
-            document.getElementById('lockContent').checked = !!obj.wdthLockContent;
-            document.getElementById('lockFont').checked = !!obj.wdthLockFont;
-            document.getElementById('lockColor').checked = !!obj.wdthLockColor;
-            var contentRow = document.getElementById('lockContent').closest('.lock-toggle');
-            var fontRow = document.getElementById('lockFont').closest('.lock-toggle');
-            if (obj.type === 'textbox') {
-                contentRow.style.display = 'flex';
-                fontRow.style.display = 'flex';
-            } else {
-                contentRow.style.display = 'none';
-                fontRow.style.display = 'none';
+            if (!obj) {
+                lc.innerHTML = '<div class="no-selection-msg">Select an element</div>';
+                return;
             }
+            var isText = obj.type === 'textbox';
+            lc.innerHTML = '<label class="lock-toggle"><input type="checkbox" id="lockPosition"' + (obj.wdthLockPosition ? ' checked' : '') + '><span class="lock-icon"><i class="fas fa-check"></i></span> Position & Size</label>'
+                + (isText ? '<label class="lock-toggle"><input type="checkbox" id="lockContent"' + (obj.wdthLockContent ? ' checked' : '') + '><span class="lock-icon"><i class="fas fa-check"></i></span> Text Content</label>' : '')
+                + (isText ? '<label class="lock-toggle"><input type="checkbox" id="lockFont"' + (obj.wdthLockFont ? ' checked' : '') + '><span class="lock-icon"><i class="fas fa-check"></i></span> Font & Style</label>' : '')
+                + '<label class="lock-toggle"><input type="checkbox" id="lockColor"' + (obj.wdthLockColor ? ' checked' : '') + '><span class="lock-icon"><i class="fas fa-check"></i></span> Color</label>';
+            bindLocks();
         }
 
         function bindLocks() {
             ['lockPosition', 'lockContent', 'lockFont', 'lockColor'].forEach(function(lockId) {
-                document.getElementById(lockId).addEventListener('change', function() {
+                var el = document.getElementById(lockId);
+                if (!el) return;
+                el.addEventListener('change', function() {
                     var obj = canvas.getActiveObject();
                     if (!obj) return;
                     var prop = 'wdth' + lockId.charAt(0).toUpperCase() + lockId.slice(1);
@@ -703,7 +806,14 @@
         }
 
         function getCanvasJSON() {
-            return canvas.toJSON(['wdthLockPosition', 'wdthLockContent', 'wdthLockFont', 'wdthLockColor', 'wdthElementName']);
+            return canvas.toJSON(EXTRA_PROPS);
+        }
+
+        function getViewDesign(prodId, viewName) {
+            var key = prodId + '_' + viewName;
+            var d = viewData[key];
+            if (d && d.objects && d.objects.length > 0) return d;
+            return null;
         }
 
         function submitTemplate() {
@@ -715,15 +825,12 @@
             if (!title) { showToast('Please enter a template title'); return; }
             if (!genre) { showToast('Please select a genre'); return; }
 
-            if (view === 'front') frontJSON = getCanvasJSON();
-            else backJSON = getCanvasJSON();
+            saveCurrentView();
 
-            var currentFront = view === 'front' ? getCanvasJSON() : frontJSON;
-            if (!currentFront || !currentFront.objects || currentFront.objects.length === 0) {
-                showToast('Add at least one design element to the front'); return;
+            var frontD = getViewDesign(product.id, 'front');
+            if (!frontD) {
+                showToast('Add at least one design element to the front view'); return;
             }
-
-            var selectedProducts = [product.id];
 
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
@@ -737,14 +844,20 @@
             formData.append('genre', genre);
             formData.append('artistName', document.getElementById('tplArtist').value.trim());
             formData.append('labelName', document.getElementById('tplLabel').value.trim());
-            formData.append('products', JSON.stringify(selectedProducts));
+            formData.append('products', JSON.stringify([product.id]));
             formData.append('defaultProduct', product.id);
             formData.append('defaultColor', color.id);
-            formData.append('frontDesign', JSON.stringify(currentFront));
-            var currentBack = view === 'back' ? getCanvasJSON() : backJSON;
-            if (currentBack && currentBack.objects && currentBack.objects.length > 0) {
-                formData.append('backDesign', JSON.stringify(currentBack));
-            }
+            formData.append('frontDesign', JSON.stringify(frontD));
+
+            var backD = getViewDesign(product.id, 'back');
+            if (backD) formData.append('backDesign', JSON.stringify(backD));
+
+            var leftD = getViewDesign(product.id, 'left');
+            if (leftD) formData.append('leftDesign', JSON.stringify(leftD));
+
+            var rightD = getViewDesign(product.id, 'right');
+            if (rightD) formData.append('rightDesign', JSON.stringify(rightD));
+
             formData.append('tags', JSON.stringify(tags));
             if (previewFile) formData.append('previewImage', previewFile);
 
@@ -773,7 +886,7 @@
             document.getElementById('tplArtist').value = '';
             document.getElementById('tplLabel').value = '';
             canvas.clear(); canvas.renderAll();
-            frontJSON = null; backJSON = null;
+            viewData = {};
             previewFile = null; tags = [];
             renderTags(); updateElementList();
         }

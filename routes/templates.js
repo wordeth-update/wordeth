@@ -81,7 +81,7 @@ router.post('/validate-token', async (req, res) => {
 
 router.post('/submit', upload.single('previewImage'), async (req, res) => {
     try {
-        const { uploadToken, title, description, designerName, designerEmail, genre, artistName, artistId, labelName, labelId, products, frontDesign, backDesign, tags, defaultProduct, defaultColor } = req.body;
+        const { uploadToken, title, description, designerName, designerEmail, genre, artistName, artistId, labelName, labelId, products, frontDesign, backDesign, leftDesign, rightDesign, tags, defaultProduct, defaultColor } = req.body;
 
         if (!uploadToken || !uploadToken.startsWith('wdth_dsgn_') || uploadToken.length < 40) {
             return res.status(400).json({ success: false, message: 'Invalid upload token' });
@@ -147,6 +147,31 @@ router.post('/submit', upload.single('previewImage'), async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Back design must be valid Fabric.js JSON' });
             }
         }
+        const SIDE_VIEW_PRODUCTS = ['tshirt', 'hoodie', 'longsleeve', 'sweatshirt', 'hat'];
+        var sideViews = { leftDesign, rightDesign };
+        for (var svKey of ['leftDesign', 'rightDesign']) {
+            var svVal = sideViews[svKey];
+            if (svVal) {
+                var resolvedProduct = defaultProduct || (typeof products === 'string' ? JSON.parse(products) : products)?.[0];
+                if (resolvedProduct && !SIDE_VIEW_PRODUCTS.includes(resolvedProduct)) {
+                    return res.status(400).json({ success: false, message: svKey + ' is not supported for this product type' });
+                }
+                if (typeof svVal !== 'string') {
+                    return res.status(400).json({ success: false, message: svKey + ' must be a string' });
+                }
+                if (svVal.length > MAX_DESIGN_BYTES) {
+                    return res.status(400).json({ success: false, message: svKey + ' data exceeds maximum size' });
+                }
+                try {
+                    var parsedSV = JSON.parse(svVal);
+                    if (!parsedSV.objects || !Array.isArray(parsedSV.objects)) {
+                        return res.status(400).json({ success: false, message: svKey + ' must be valid Fabric.js JSON with objects array' });
+                    }
+                } catch (e) {
+                    return res.status(400).json({ success: false, message: svKey + ' must be valid Fabric.js JSON' });
+                }
+            }
+        }
 
         let productList = [];
         try {
@@ -204,6 +229,8 @@ router.post('/submit', upload.single('previewImage'), async (req, res) => {
             defaultColor: defaultColor || 'black',
             frontDesign: frontDesign,
             backDesign: backDesign || null,
+            leftDesign: leftDesign || null,
+            rightDesign: rightDesign || null,
             previewImageUrl,
             previewObjectPath,
             tags: tagList,

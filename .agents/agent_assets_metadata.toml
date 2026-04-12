@@ -72,3 +72,63 @@ id = "apBDCwuN6FoRWhvnntvSq"
 uri = "file://public/images/merch/hat-back.png"
 type = "image"
 title = "white baseball cap back mockup"
+
+[[generated]]
+id = "E7jBLR0OEs5uN5r2rpkOe"
+uri = "file://public/images/merch/tshirt-left.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "TudqE1KqRg47mL2cBnstf"
+uri = "file://public/images/merch/tshirt-right.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "KS2gckzh6dqjQqBNjXL6f"
+uri = "file://public/images/merch/hoodie-left.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "AkCWyK7XwROSpcJyPpqpX"
+uri = "file://public/images/merch/hoodie-right.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "PgLaeNVpCeF7ztF70XlnP"
+uri = "file://public/images/merch/longsleeve-left.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "lOQzEP-a6woGxkW2gW91c"
+uri = "file://public/images/merch/longsleeve-right.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "67x_MghPyvQTn48819wkv"
+uri = "file://public/images/merch/sweatshirt-left.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "YCf18dEj6_G54ZIPwIoBb"
+uri = "file://public/images/merch/sweatshirt-right.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "SAFQVCJAdxkr0kZQUWFw5"
+uri = "file://public/images/merch/hat-left.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "qR9ZIozUG9kYAVo-7wxRw"
+uri = "file://public/images/merch/hat-right.png"
+type = "image"
+title = "generated_image"

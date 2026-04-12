@@ -566,6 +566,15 @@ var MerchDesigner = (function() {
             state.backObjects = backObj;
         }
 
+        if (templateData.leftDesign) {
+            var leftObj = typeof templateData.leftDesign === 'string' ? JSON.parse(templateData.leftDesign) : templateData.leftDesign;
+            state.leftObjects = leftObj;
+        }
+        if (templateData.rightDesign) {
+            var rightObj = typeof templateData.rightDesign === 'string' ? JSON.parse(templateData.rightDesign) : templateData.rightDesign;
+            state.rightObjects = rightObj;
+        }
+
         showToast('Template loaded! Locked elements are protected.');
     }
 

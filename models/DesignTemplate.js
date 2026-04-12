@@ -78,6 +78,14 @@ const designTemplateSchema = new mongoose.Schema({
         type: String,
         default: null
     },
+    leftDesign: {
+        type: String,
+        default: null
+    },
+    rightDesign: {
+        type: String,
+        default: null
+    },
     previewImageUrl: {
         type: String,
         default: ''

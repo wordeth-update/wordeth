@@ -113,14 +113,16 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Other-Side Thumbnail**: Shows a preview of the opposite side's design when viewing front/back.
 
 ### Design Template System
-- **Model**: `DesignTemplate` with templateId, genre, artist/label associations, approval workflow, sales tracking, featured flag, `defaultProduct`, `defaultColor`, and Fabric.js JSON for `frontDesign`/`backDesign`.
-- **Designer Upload Studio**: Full Fabric.js design studio (`designer-upload.html`) gated by upload tokens. Features product mockup preview, text/image tools, per-element lock toggles (position, content, font, color), front/back views, and color selection.
+- **Model**: `DesignTemplate` with templateId, genre, artist/label associations, approval workflow, sales tracking, featured flag, `defaultProduct`, `defaultColor`, and Fabric.js JSON for `frontDesign`/`backDesign`/`leftDesign`/`rightDesign`.
+- **Designer Upload Studio**: Desktop-only Fabric.js design studio (`designer-upload.html`) gated by upload tokens. Features product mockup preview, text/image tools, per-element lock toggles (position, content, font, color), multi-view support (front/back/left/right per product), color selection, and element duplication.
+- **Multi-View System**: Products support different view combinations: shirts/hoodies/sweatshirts have front/back/left/right (sleeve views); tanks have front/back only; hats have front/back/left/right (side panels). Each view has its own canvas state and print area positioning. Mockup images at `public/images/merch/{product}-{view}.png`.
 - **Per-Element Locking**: Designers set lock flags per Fabric.js object: `wdthLockPosition` (immovable), `wdthLockContent` (text not editable), `wdthLockFont` (font fixed), `wdthLockColor` (color fixed). Lock metadata is serialized with Fabric.js JSON and enforced in the user-facing merch designer.
-- **Template Loading in Merch Designer**: `MerchDesigner.loadTemplate(data)` applies Fabric.js JSON, marks objects as `wdthIsTemplateElement`, enforces locks (movement, editing, deletion), and preserves lock state across view switches. Users can add new elements freely but cannot delete/modify locked template elements.
+- **Horizontal Elements & Locks Layout**: Elements list and lock controls are displayed side-by-side below the canvas for better workspace ergonomics.
+- **Template Loading in Merch Designer**: `MerchDesigner.loadTemplate(data)` applies Fabric.js JSON for all views, marks objects as `wdthIsTemplateElement`, enforces locks (movement, editing, deletion), and preserves lock state across view switches. Users can add new elements freely but cannot delete/modify locked template elements.
 - **Upload Tokens**: Admin-generated tokens (`wdth_dsgn_...`) with 50-upload limit per token. Shareable via URL with `?token=` parameter.
 - **Admin Queue**: Admin page (`admin-templates.html`) for reviewing pending templates, approving/rejecting with reasons, featuring approved templates, and archiving.
 - **Public Browse API**: Endpoints for browsing approved templates by genre, artist, label; trending (weekly sales), and featured templates.
-- **Routes**: `routes/templates.js` mounted at `/api/templates`. Validates Fabric.js JSON structure (requires `objects` array), rejects oversize payloads, validates both front and back designs.
+- **Routes**: `routes/templates.js` mounted at `/api/templates`. Validates Fabric.js JSON structure (requires `objects` array), rejects oversize payloads, validates front/back/left/right designs.
 
 ### Key Features Architecture
 - **Verses (Audio Rooms)**: Uses Agora RTC SDK for scalable audio/video, with Socket.io for room management. Supports server-side token generation and Web Audio API for filters.
