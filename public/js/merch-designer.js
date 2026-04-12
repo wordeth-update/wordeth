@@ -167,8 +167,7 @@ var MerchDesigner = (function() {
 
         var preview = document.getElementById('garmentPreview');
         if (preview) {
-            var isDark = ['black', 'navy', 'forest', 'burgundy', 'slate'].indexOf(state.color.id) !== -1;
-            preview.style.background = isDark ? '#48484e' : '#e0e0e4';
+            preview.style.background = '#ffffff';
         }
 
         var dashed = document.querySelector('.canvas-container-wrap');
