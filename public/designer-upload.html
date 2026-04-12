@@ -335,14 +335,14 @@
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label>Size</label>
-                                    <input type="range" id="txtSize" min="10" max="72" value="24" style="width:100%;">
-                                </div>
-                                <div class="form-group">
                                     <label>Color</label>
                                     <div class="text-color-row" id="txtColorRow"></div>
                                 </div>
                                 <button class="btn btn-accent btn-sm" id="addTextBtn" style="width:100%;"><i class="fas fa-plus"></i> Add Text</button>
+                                <div class="form-group" id="liveSizeGroup" style="display:none; margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border);">
+                                    <label>Resize Selected Text <span style="font-weight:400; color:var(--accent);" id="liveSizeVal">24px</span></label>
+                                    <input type="range" id="txtSize" min="10" max="120" value="24" style="width:100%;">
+                                </div>
                             </div>
                             <div class="tool-panel" id="panel-image">
                                 <div class="upload-zone" id="imgUploadZone">
@@ -593,13 +593,25 @@
             canvas = new fabric.Canvas('designCanvas', { backgroundColor: 'transparent', selection: true, preserveObjectStacking: true });
             canvas.on('selection:created', onSelect);
             canvas.on('selection:updated', onSelect);
-            canvas.on('selection:cleared', function() { updateElementList(); showLockControls(null); });
+            canvas.on('selection:cleared', function() { updateElementList(); showLockControls(null); document.getElementById('liveSizeGroup').style.display = 'none'; });
             canvas.on('object:added', updateElementList);
             canvas.on('object:removed', updateElementList);
             positionCanvas();
         }
 
-        function onSelect() { updateElementList(); var a = canvas.getActiveObject(); if (a) showLockControls(a); }
+        function onSelect() {
+            updateElementList();
+            var a = canvas.getActiveObject();
+            if (a) showLockControls(a);
+            var sg = document.getElementById('liveSizeGroup');
+            if (a && a.type === 'textbox') {
+                sg.style.display = 'block';
+                document.getElementById('txtSize').value = Math.round(a.fontSize);
+                document.getElementById('liveSizeVal').textContent = Math.round(a.fontSize) + 'px';
+            } else {
+                sg.style.display = 'none';
+            }
+        }
 
         function updateMockup() {
             document.getElementById('mockupImg').src = 'images/merch/' + product.id + '-' + view + '.png';
@@ -639,10 +651,9 @@
                 var activeC = document.querySelector('#txtColorRow .text-color-btn.active');
                 var col = activeC ? activeC.dataset.c : '#ffffff';
                 var font = document.getElementById('txtFont').value;
-                var size = parseInt(document.getElementById('txtSize').value) || 24;
                 var cw = canvas.getWidth();
                 var obj = new fabric.Textbox(text, {
-                    left: 10, top: 10, width: cw - 20, fontFamily: font, fontSize: size,
+                    left: 10, top: 10, width: cw - 20, fontFamily: font, fontSize: 24,
                     fill: col, textAlign: 'center', editable: true
                 });
                 obj.wdthElementName = text.substring(0, 30);
@@ -654,6 +665,15 @@
                 canvas.setActiveObject(obj);
                 canvas.renderAll();
                 document.getElementById('txtInput').value = '';
+            });
+
+            document.getElementById('txtSize').addEventListener('input', function() {
+                var active = canvas.getActiveObject();
+                if (!active || active.type !== 'textbox') return;
+                var newSize = parseInt(this.value) || 24;
+                active.set('fontSize', newSize);
+                canvas.renderAll();
+                document.getElementById('liveSizeVal').textContent = newSize + 'px';
             });
 
             var imgZone = document.getElementById('imgUploadZone');

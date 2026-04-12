@@ -1,17 +1,17 @@
 var MerchDesigner = (function() {
     var PRODUCTS = [
         { id: 'tshirt', name: 'T-Shirt', icon: 'fa-tshirt', basePrice: 29.99,
-          printAreaPct: { top: 25, left: 22, width: 56, height: 38 } },
+          pct: { front: { top: 25, left: 22, width: 56, height: 38 }, back: { top: 25, left: 22, width: 56, height: 38 }, left: { top: 28, left: 15, width: 25, height: 35 }, right: { top: 28, left: 60, width: 25, height: 35 } } },
         { id: 'hoodie', name: 'Hoodie', icon: 'fa-tshirt', basePrice: 54.99,
-          printAreaPct: { top: 32, left: 24, width: 52, height: 30 } },
+          pct: { front: { top: 32, left: 24, width: 52, height: 30 }, back: { top: 28, left: 24, width: 52, height: 34 }, left: { top: 30, left: 12, width: 28, height: 32 }, right: { top: 30, left: 60, width: 28, height: 32 } } },
         { id: 'tank', name: 'Tank Top', icon: 'fa-tshirt', basePrice: 24.99,
-          printAreaPct: { top: 22, left: 22, width: 56, height: 40 } },
+          pct: { front: { top: 22, left: 22, width: 56, height: 40 }, back: { top: 22, left: 22, width: 56, height: 40 } } },
         { id: 'longsleeve', name: 'Long Sleeve', icon: 'fa-tshirt', basePrice: 34.99,
-          printAreaPct: { top: 25, left: 22, width: 56, height: 38 } },
+          pct: { front: { top: 25, left: 22, width: 56, height: 38 }, back: { top: 25, left: 22, width: 56, height: 38 }, left: { top: 28, left: 10, width: 22, height: 38 }, right: { top: 28, left: 68, width: 22, height: 38 } } },
         { id: 'sweatshirt', name: 'Sweatshirt', icon: 'fa-tshirt', basePrice: 44.99,
-          printAreaPct: { top: 28, left: 24, width: 52, height: 34 } },
+          pct: { front: { top: 28, left: 24, width: 52, height: 34 }, back: { top: 26, left: 24, width: 52, height: 36 }, left: { top: 30, left: 12, width: 28, height: 32 }, right: { top: 30, left: 60, width: 28, height: 32 } } },
         { id: 'hat', name: 'Cap', icon: 'fa-hat-cowboy-side', basePrice: 24.99,
-          printAreaPct: { top: 18, left: 25, width: 50, height: 35 } }
+          pct: { front: { top: 18, left: 25, width: 50, height: 35 }, back: { top: 18, left: 25, width: 50, height: 35 }, left: { top: 20, left: 10, width: 35, height: 35 }, right: { top: 20, left: 55, width: 35, height: 35 } } }
     ];
 
     var COLORS = [
@@ -44,7 +44,18 @@ var MerchDesigner = (function() {
         view: 'front',
         frontObjects: [],
         backObjects: [],
+        leftObjects: [],
+        rightObjects: [],
         initialized: false
+    };
+
+    var VIEWS_BY_PRODUCT = {
+        tshirt: ['front','back','left','right'],
+        hoodie: ['front','back','left','right'],
+        longsleeve: ['front','back','left','right'],
+        sweatshirt: ['front','back','left','right'],
+        hat: ['front','back','left','right'],
+        tank: ['front','back']
     };
 
     function getImagePath(productId, view) {
@@ -56,6 +67,8 @@ var MerchDesigner = (function() {
         state.view = 'front';
         state.frontObjects = [];
         state.backObjects = [];
+        state.leftObjects = [];
+        state.rightObjects = [];
         state.qty = 1;
         state.product = PRODUCTS[0];
         state.color = COLORS[0];
@@ -70,6 +83,7 @@ var MerchDesigner = (function() {
             initCanvas();
         }
         updateGarment();
+        updateViewButtons();
         if (!state.initialized) {
             initTools();
             state.initialized = true;
@@ -106,11 +120,10 @@ var MerchDesigner = (function() {
         if (active) active.classList.add('active');
         updateGarment();
         updatePrice();
-        if (product.id === 'hat') {
-            document.querySelector('.view-toggle').style.display = 'none';
-            if (state.view === 'back') switchView('front');
-        } else {
-            document.querySelector('.view-toggle').style.display = 'flex';
+        updateViewButtons();
+        var views = VIEWS_BY_PRODUCT[product.id] || ['front','back'];
+        if (views.indexOf(state.view) < 0) {
+            switchView('front');
         }
     }
 
@@ -183,7 +196,7 @@ var MerchDesigner = (function() {
         var wrap = document.querySelector('.canvas-container-wrap');
         if (!preview || !wrap) return;
 
-        var pa = state.product.printAreaPct;
+        var pa = state.product.pct[state.view] || state.product.pct.front;
         var previewW = preview.offsetWidth;
         var previewH = preview.offsetHeight;
 
@@ -214,6 +227,8 @@ var MerchDesigner = (function() {
         state.canvas.on('selection:updated', onSelectionChange);
         state.canvas.on('selection:cleared', function() {
             document.getElementById('deleteSelectedBtn').classList.remove('delete-active');
+            var sg = document.getElementById('liveSizeGroup');
+            if (sg) sg.style.display = 'none';
         });
 
         window.addEventListener('resize', function() {
@@ -225,6 +240,19 @@ var MerchDesigner = (function() {
 
     function onSelectionChange() {
         document.getElementById('deleteSelectedBtn').classList.add('delete-active');
+        var active = state.canvas.getActiveObject();
+        var sg = document.getElementById('liveSizeGroup');
+        if (sg) {
+            if (active && active.type === 'textbox') {
+                sg.style.display = 'block';
+                var sr = document.getElementById('fontSizeRange');
+                if (sr) sr.value = Math.round(active.fontSize);
+                var sv = document.getElementById('liveSizeVal');
+                if (sv) sv.textContent = Math.round(active.fontSize) + 'px';
+            } else {
+                sg.style.display = 'none';
+            }
+        }
     }
 
     function initTools() {
@@ -323,6 +351,19 @@ var MerchDesigner = (function() {
             fontSelect.innerHTML = FONTS.map(function(f) { return '<option value="' + f + '">' + f + '</option>'; }).join('');
         }
 
+        var sizeRange = document.getElementById('fontSizeRange');
+        if (sizeRange) {
+            sizeRange.addEventListener('input', function() {
+                var active = state.canvas.getActiveObject();
+                if (!active || active.type !== 'textbox') return;
+                var newSize = parseInt(this.value) || 24;
+                active.set('fontSize', newSize);
+                state.canvas.renderAll();
+                var valEl = document.getElementById('liveSizeVal');
+                if (valEl) valEl.textContent = newSize + 'px';
+            });
+        }
+
         if (document.getElementById('useLyricsDesignBtn')) {
             document.getElementById('useLyricsDesignBtn').addEventListener('click', function() {
                 if (window.selectedLyrics) {
@@ -346,7 +387,7 @@ var MerchDesigner = (function() {
         if (activeColor) color = activeColor.dataset.color;
 
         var font = document.getElementById('fontSelect').value || 'Inter';
-        var size = parseInt(document.getElementById('fontSizeRange').value) || 24;
+        var size = 24;
         var cw = state.canvas.getWidth();
 
         var textObj = new fabric.Textbox(text, {
@@ -366,25 +407,31 @@ var MerchDesigner = (function() {
         input.value = '';
     }
 
+    function getViewObjects(v) {
+        if (v === 'front') return state.frontObjects;
+        if (v === 'back') return state.backObjects;
+        if (v === 'left') return state.leftObjects;
+        if (v === 'right') return state.rightObjects;
+        return [];
+    }
+    function setViewObjects(v, data) {
+        if (v === 'front') state.frontObjects = data;
+        else if (v === 'back') state.backObjects = data;
+        else if (v === 'left') state.leftObjects = data;
+        else if (v === 'right') state.rightObjects = data;
+    }
+    function getThumbDataURL(v) { return state[v + 'ThumbDataURL'] || null; }
+    function setThumbDataURL(v, url) { state[v + 'ThumbDataURL'] = url; }
+
     function switchView(view) {
         if (view === state.view) return;
-        var thumbEl = document.getElementById('otherSideThumb');
 
         var extraProps = ['wdthLockPosition','wdthLockContent','wdthLockFont','wdthLockColor','wdthElementName','wdthIsTemplateElement','wdthOriginalFont','wdthOriginalFill'];
-        if (state.view === 'front') {
-            state.frontObjects = state.canvas.toJSON(extraProps);
-            if (state.canvas.getObjects().length > 0) {
-                state.frontThumbDataURL = state.canvas.toDataURL({ format: 'png', multiplier: 0.4 });
-            } else {
-                state.frontThumbDataURL = null;
-            }
+        setViewObjects(state.view, state.canvas.toJSON(extraProps));
+        if (state.canvas.getObjects().length > 0) {
+            setThumbDataURL(state.view, state.canvas.toDataURL({ format: 'png', multiplier: 0.4 }));
         } else {
-            state.backObjects = state.canvas.toJSON(extraProps);
-            if (state.canvas.getObjects().length > 0) {
-                state.backThumbDataURL = state.canvas.toDataURL({ format: 'png', multiplier: 0.4 });
-            } else {
-                state.backThumbDataURL = null;
-            }
+            setThumbDataURL(state.view, null);
         }
 
         state.view = view;
@@ -395,7 +442,9 @@ var MerchDesigner = (function() {
         var img = document.getElementById('garmentMockupImg');
         if (img) img.src = getImagePath(state.product.id, view);
 
-        var saved = view === 'front' ? state.frontObjects : state.backObjects;
+        positionCanvas();
+
+        var saved = getViewObjects(view);
         if (saved && saved.objects && saved.objects.length > 0) {
             state.canvas.loadFromJSON(saved, function() { applyLockEnforcement(); state.canvas.renderAll(); });
         } else {
@@ -406,12 +455,23 @@ var MerchDesigner = (function() {
         updateOtherSideThumb();
     }
 
+    function updateViewButtons() {
+        var views = VIEWS_BY_PRODUCT[state.product.id] || ['front','back'];
+        document.querySelectorAll('.view-toggle-btn').forEach(function(b) {
+            if (views.indexOf(b.dataset.view) >= 0) {
+                b.style.display = '';
+            } else {
+                b.style.display = 'none';
+            }
+        });
+    }
+
     function updateOtherSideThumb() {
         var thumbEl = document.getElementById('otherSideThumb');
         if (!thumbEl) return;
 
         var otherView = state.view === 'front' ? 'back' : 'front';
-        var dataURL = otherView === 'front' ? state.frontThumbDataURL : state.backThumbDataURL;
+        var dataURL = getThumbDataURL(otherView);
 
         if (dataURL) {
             var garmentSrc = getImagePath(state.product.id, otherView);
@@ -466,15 +526,35 @@ var MerchDesigner = (function() {
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
-        if (state.view === 'front') {
-            state.frontObjects = state.canvas.toJSON();
-        } else {
-            state.backObjects = state.canvas.toJSON();
-        }
+        var extraProps = ['wdthLockPosition','wdthLockContent','wdthLockFont','wdthLockColor','wdthElementName','wdthIsTemplateElement','wdthOriginalFont','wdthOriginalFill'];
+        setViewObjects(state.view, state.canvas.toJSON(extraProps));
 
         var designImage = getDesignDataURL();
         var base = typeof apiUrl === 'function' ? apiUrl('') : '';
         base = base.replace(/\/$/, '');
+
+        var orderBody = {
+            product: state.product.id,
+            productName: state.product.name,
+            color: state.color.id,
+            colorName: state.color.name,
+            size: state.size,
+            quantity: state.qty,
+            unitPrice: state.product.basePrice,
+            totalPrice: state.product.basePrice * state.qty,
+            artistName: state.artist ? state.artist.name : null,
+            artistId: state.artist ? state.artist.id : null,
+            frontDesign: JSON.stringify(state.frontObjects),
+            backDesign: JSON.stringify(state.backObjects),
+            designPreview: designImage
+        };
+        var views = VIEWS_BY_PRODUCT[state.product.id] || ['front','back'];
+        if (views.indexOf('left') >= 0 && state.leftObjects && state.leftObjects.objects && state.leftObjects.objects.length > 0) {
+            orderBody.leftDesign = JSON.stringify(state.leftObjects);
+        }
+        if (views.indexOf('right') >= 0 && state.rightObjects && state.rightObjects.objects && state.rightObjects.objects.length > 0) {
+            orderBody.rightDesign = JSON.stringify(state.rightObjects);
+        }
 
         fetch(base + '/api/merch/orders', {
             method: 'POST',
@@ -482,21 +562,7 @@ var MerchDesigner = (function() {
                 'Authorization': 'Bearer ' + token,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                product: state.product.id,
-                productName: state.product.name,
-                color: state.color.id,
-                colorName: state.color.name,
-                size: state.size,
-                quantity: state.qty,
-                unitPrice: state.product.basePrice,
-                totalPrice: state.product.basePrice * state.qty,
-                artistName: state.artist ? state.artist.name : null,
-                artistId: state.artist ? state.artist.id : null,
-                frontDesign: JSON.stringify(state.frontObjects),
-                backDesign: JSON.stringify(state.backObjects),
-                designPreview: designImage
-            })
+            body: JSON.stringify(orderBody)
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
@@ -508,6 +574,8 @@ var MerchDesigner = (function() {
                 state.canvas.renderAll();
                 state.frontObjects = [];
                 state.backObjects = [];
+                state.leftObjects = [];
+                state.rightObjects = [];
                 state.qty = 1;
                 updatePrice();
             } else {

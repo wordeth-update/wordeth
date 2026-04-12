@@ -511,6 +511,8 @@
                     <div class="view-toggle">
                         <button class="view-toggle-btn active" data-view="front">Front</button>
                         <button class="view-toggle-btn" data-view="back">Back</button>
+                        <button class="view-toggle-btn" data-view="left" style="display:none;">Left</button>
+                        <button class="view-toggle-btn" data-view="right" style="display:none;">Right</button>
                     </div>
                     <div class="canvas-actions">
                         <button class="canvas-action-btn" id="deleteSelectedBtn"><i class="fas fa-trash-alt"></i> Delete</button>
@@ -539,14 +541,14 @@
                                 <select class="tool-select" id="fontSelect"></select>
                             </div>
                             <div class="tool-group">
-                                <label class="tool-label">Size</label>
-                                <input type="range" class="tool-range" id="fontSizeRange" min="10" max="72" value="24">
-                            </div>
-                            <div class="tool-group">
                                 <label class="tool-label">Color</label>
                                 <div class="tool-color-row" id="textColorPicker"></div>
                             </div>
                             <button class="tool-btn" id="addTextBtn"><i class="fas fa-plus"></i> Add Text</button>
+                            <div class="tool-group" id="liveSizeGroup" style="display:none; margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.08);">
+                                <label class="tool-label">Resize Selected Text <span style="font-weight:400; color:var(--accent);" id="liveSizeVal">24px</span></label>
+                                <input type="range" class="tool-range" id="fontSizeRange" min="10" max="120" value="24">
+                            </div>
                         </div>
                         <div class="tool-panel" id="toolPanel-art">
                             <div class="tool-group">

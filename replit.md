@@ -106,11 +106,16 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Admin UI**: Web-only interface for track management, upload, API key management, and API documentation.
 
 ### Custom Merch Design Studio
-- **Frontend**: Utilizes Fabric.js for text placement, image upload, and front/back views with real product mockup photos and CSS filter colorization.
-- **Product Catalog**: Offers 6 product types with multiple colors and sizes, rendered with AI-generated mockup photos.
-- **Model**: `MerchOrder` schema for tracking user, product, design, and order status.
-- **API**: For creating, retrieving, and managing merch orders.
+- **Frontend**: Utilizes Fabric.js for text placement, image upload, and multi-view support (front/back/left/right per product) with real product mockup photos and CSS filter colorization.
+- **Product Catalog**: Offers 6 product types with multiple colors and sizes, rendered with AI-generated mockup photos. Per-view print area positioning for each product/view combination.
+- **Model**: `MerchOrder` schema for tracking user, product, design (front/back/left/right Fabric.js JSON), and order status.
+- **API**: For creating, retrieving, and managing merch orders. Supports `leftDesign`/`rightDesign` fields. Includes admin fulfillment export endpoint.
+- **Text Size Slider**: Live-resize control that only appears when a text element is selected on the canvas, acting as a real-time font size adjuster (not a pre-placement setting).
 - **Other-Side Thumbnail**: Shows a preview of the opposite side's design when viewing front/back.
+- **Fulfillment Export System**: Admin-only API endpoints for print fulfillment:
+  - `GET /api/merch/orders/:id/fulfillment` — Full spec sheet with Fabric.js JSON per view, print area coordinates, product/color/size details, and print specifications.
+  - `GET /api/merch/fulfillment/queue` — Paginated order queue filtered by status, for admin order management.
+  - `PATCH /api/merch/orders/:id/status` — Admin order status updates with tracking number and notes support.
 
 ### Design Template System
 - **Model**: `DesignTemplate` with templateId, genre, artist/label associations, approval workflow, sales tracking, featured flag, `defaultProduct`, `defaultColor`, and Fabric.js JSON for `frontDesign`/`backDesign`/`leftDesign`/`rightDesign`.
