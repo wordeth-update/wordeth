@@ -21,336 +21,189 @@
             --accent-dim: rgba(0,255,163,0.1);
             --purple: #7c3aed;
             --red: #ef4444;
+            --orange: #f59e0b;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Outfit', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-        }
+        body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
         .upload-nav {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1rem 2rem;
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 1rem 2rem; background: var(--surface); border-bottom: 1px solid var(--border);
         }
         .upload-nav .logo { height: 36px; }
-        .upload-nav .nav-title {
-            font-family: 'Syne', sans-serif;
-            font-weight: 700;
-            font-size: 1.1rem;
-            margin-left: 0.75rem;
-            color: var(--accent);
-        }
+        .upload-nav .nav-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; margin-left: 0.75rem; color: var(--accent); }
         .upload-nav .nav-brand { display: flex; align-items: center; }
-        .container {
-            max-width: 860px;
-            margin: 0 auto;
-            padding: 2rem 1.5rem 4rem;
-        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 
-        .token-gate {
-            text-align: center;
-            padding: 4rem 1rem;
-        }
-        .token-gate h1 {
-            font-family: 'Syne', sans-serif;
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
+        .token-gate { text-align: center; padding: 4rem 1rem; }
+        .token-gate h1 { font-family: 'Syne', sans-serif; font-size: 2rem; margin-bottom: 0.5rem; }
         .token-gate p { color: var(--text-muted); margin-bottom: 2rem; }
-        .token-input-wrap {
-            display: flex;
-            gap: 0.75rem;
-            max-width: 500px;
-            margin: 0 auto;
-        }
+        .token-input-wrap { display: flex; gap: 0.75rem; max-width: 500px; margin: 0 auto; }
         .token-input-wrap input {
-            flex: 1;
-            padding: 0.75rem 1rem;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            background: var(--surface2);
-            color: var(--text);
-            font-size: 0.95rem;
-            font-family: monospace;
+            flex: 1; padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid var(--border);
+            background: var(--surface2); color: var(--text); font-size: 0.95rem; font-family: monospace;
         }
         .token-input-wrap input:focus { outline: none; border-color: var(--accent); }
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s;
-        }
-        .btn-accent {
-            background: var(--accent);
-            color: #000;
-        }
+        .token-error { color: var(--red); margin-top: 1rem; font-size: 0.85rem; display: none; }
+        .token-success { color: var(--accent); margin-top: 1rem; font-size: 0.85rem; display: none; }
+
+        .btn { padding: 0.65rem 1.25rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.85rem; transition: all 0.2s; }
+        .btn-accent { background: var(--accent); color: #000; }
         .btn-accent:hover { opacity: 0.85; }
         .btn-accent:disabled { opacity: 0.4; cursor: not-allowed; }
-        .btn-secondary {
-            background: var(--surface2);
-            color: var(--text);
-            border: 1px solid var(--border);
-        }
+        .btn-sm { padding: 0.4rem 0.85rem; font-size: 0.78rem; border-radius: 6px; }
+        .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
         .btn-secondary:hover { border-color: var(--accent); }
-        .token-error {
-            color: var(--red);
-            margin-top: 1rem;
-            font-size: 0.85rem;
-            display: none;
-        }
-        .token-success {
-            color: var(--accent);
-            margin-top: 1rem;
-            font-size: 0.85rem;
-            display: none;
-        }
 
-        .upload-form { display: none; }
-        .upload-form h2 {
-            font-family: 'Syne', sans-serif;
-            font-size: 1.6rem;
-            margin-bottom: 0.25rem;
-        }
-        .upload-form .subtitle {
-            color: var(--text-muted);
-            margin-bottom: 2rem;
-        }
+        .studio-wrap { display: none; }
+        .studio-wrap h2 { font-family: 'Syne', sans-serif; font-size: 1.5rem; margin-bottom: 0.25rem; }
+        .studio-wrap .subtitle { color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem; }
 
-        .form-section {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 1.5rem;
-            margin-bottom: 1.25rem;
+        .studio-layout { display: grid; grid-template-columns: 260px 1fr 280px; gap: 1.25rem; align-items: start; }
+
+        .studio-sidebar, .studio-tools {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
         }
-        .form-section h3 {
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--accent);
-            margin-bottom: 1rem;
+        .sidebar-section { padding: 1rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .sidebar-section:last-child { border-bottom: none; }
+        .section-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 0.65rem; font-weight: 600; }
+
+        .product-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
+        .product-btn {
+            background: rgba(255,255,255,0.05); border: 2px solid transparent; border-radius: 8px;
+            padding: 0.5rem 0.25rem; text-align: center; cursor: pointer; transition: all 0.2s;
+            color: var(--text-muted); font-size: 0.7rem;
         }
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
+        .product-btn img { width: 32px; height: 32px; object-fit: contain; margin-bottom: 0.2rem; display: block; margin: 0 auto 0.2rem; filter: brightness(0.85); }
+        .product-btn.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+
+        .color-row { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+        .color-dot {
+            width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent;
+            cursor: pointer; transition: all 0.2s;
         }
-        .form-group { margin-bottom: 1rem; }
-        .form-group:last-child { margin-bottom: 0; }
-        .form-group label {
-            display: block;
-            font-size: 0.8rem;
-            font-weight: 500;
-            color: var(--text-muted);
-            margin-bottom: 0.35rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        .color-dot.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+
+        .view-btns { display: flex; gap: 0.4rem; }
+        .view-btn {
+            flex: 1; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--border);
+            background: transparent; color: var(--text-muted); cursor: pointer; text-align: center; font-size: 0.8rem;
         }
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 0.65rem 0.85rem;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            background: var(--surface2);
-            color: var(--text);
-            font-size: 0.9rem;
-            font-family: 'Outfit', sans-serif;
+        .view-btn.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+
+        .form-group { margin-bottom: 0.85rem; }
+        .form-group label { display: block; font-size: 0.72rem; font-weight: 500; color: var(--text-muted); margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 0.55rem 0.75rem; border-radius: 7px; border: 1px solid var(--border);
+            background: var(--surface2); color: var(--text); font-size: 0.85rem; font-family: 'Outfit', sans-serif;
         }
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-        .form-group textarea { resize: vertical; min-height: 80px; }
-        .form-group select { cursor: pointer; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--accent); }
         .form-group select option { background: var(--surface); }
+        .form-group textarea { resize: vertical; min-height: 60px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
 
-        .product-check-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.5rem;
+        .canvas-area { display: flex; flex-direction: column; align-items: center; }
+        .garment-preview {
+            position: relative; width: 100%; max-width: 480px; aspect-ratio: 3/4;
+            border-radius: 14px; overflow: hidden; background: #ffffff;
         }
-        .product-check {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 0.75rem;
-            border-radius: 8px;
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 0.85rem;
+        .garment-preview .mockup-img {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: contain; padding: 5%; z-index: 1; pointer-events: none; user-select: none; transition: filter 0.3s;
         }
-        .product-check:hover { border-color: var(--accent); }
-        .product-check.checked {
-            border-color: var(--accent);
-            background: var(--accent-dim);
-        }
-        .product-check input[type="checkbox"] { display: none; }
-        .product-check .check-icon {
-            width: 18px; height: 18px; border-radius: 4px;
-            border: 2px solid var(--border);
-            display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s; flex-shrink: 0;
-        }
-        .product-check.checked .check-icon {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: #000;
+        .canvas-wrap {
+            position: absolute; z-index: 5; border: 1px dashed rgba(0,0,0,0.15); border-radius: 4px;
         }
 
-        .design-upload-area {
-            display: flex;
-            gap: 1.5rem;
+        .tools-tab-row { display: flex; gap: 0.3rem; margin-bottom: 0.75rem; }
+        .tool-tab {
+            flex: 1; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border);
+            background: transparent; color: var(--text-muted); cursor: pointer; text-align: center; font-size: 0.78rem;
         }
-        .design-side {
-            flex: 1;
-            text-align: center;
-        }
-        .design-side h4 {
-            font-size: 0.85rem;
-            margin-bottom: 0.75rem;
-            color: var(--text-muted);
-        }
-        .design-dropzone {
-            border: 2px dashed var(--border);
-            border-radius: 12px;
-            padding: 2rem 1rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            background: var(--surface2);
-            position: relative;
-            min-height: 180px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .design-dropzone:hover { border-color: var(--accent); }
-        .design-dropzone.has-image { padding: 0.5rem; }
-        .design-dropzone i { font-size: 2rem; color: var(--text-muted); margin-bottom: 0.5rem; }
-        .design-dropzone span { font-size: 0.8rem; color: var(--text-muted); }
-        .design-dropzone img {
-            max-width: 100%;
-            max-height: 200px;
-            border-radius: 8px;
-        }
-        .design-dropzone input { display: none; }
+        .tool-tab.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+        .tool-panel { display: none; }
+        .tool-panel.active { display: block; }
 
-        .preview-upload-zone {
-            border: 2px dashed var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s;
-            background: var(--surface2);
+        .text-color-row { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+        .text-color-btn {
+            width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; cursor: pointer;
         }
-        .preview-upload-zone:hover { border-color: var(--accent); }
-        .preview-upload-zone i { font-size: 1.5rem; color: var(--text-muted); margin-bottom: 0.5rem; display: block; }
-        .preview-upload-zone span { font-size: 0.8rem; color: var(--text-muted); display: block; }
-        .preview-upload-zone img { max-width: 200px; max-height: 150px; border-radius: 8px; margin-top: 0.5rem; }
-        .preview-upload-zone input { display: none; }
+        .text-color-btn.active { border-color: #fff; box-shadow: 0 0 0 1px var(--accent); }
 
-        .tags-input-wrap {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.4rem;
-            padding: 0.5rem;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            background: var(--surface2);
-            min-height: 42px;
-            align-items: center;
-            cursor: text;
+        .upload-zone {
+            border: 2px dashed var(--border); border-radius: 10px; padding: 1.5rem; text-align: center;
+            cursor: pointer; transition: all 0.2s; background: var(--surface2);
         }
-        .tags-input-wrap:focus-within { border-color: var(--accent); }
+        .upload-zone:hover { border-color: var(--accent); }
+        .upload-zone i { font-size: 1.3rem; color: var(--text-muted); margin-bottom: 0.3rem; display: block; }
+        .upload-zone span { font-size: 0.78rem; color: var(--text-muted); }
+        .upload-zone input { display: none; }
+
+        .element-list { max-height: 200px; overflow-y: auto; }
+        .element-item {
+            display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.6rem;
+            border-radius: 6px; background: var(--surface2); margin-bottom: 0.3rem;
+            font-size: 0.78rem; cursor: pointer; transition: background 0.15s;
+        }
+        .element-item:hover { background: rgba(255,255,255,0.08); }
+        .element-item.selected { background: var(--accent-dim); }
+        .element-item .el-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .element-item .el-type { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; }
+
+        .lock-controls { margin-top: 0.75rem; padding: 0.75rem; background: var(--surface2); border-radius: 8px; }
+        .lock-controls h4 { font-size: 0.75rem; color: var(--orange); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .lock-toggle {
+            display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0;
+            font-size: 0.8rem; cursor: pointer; user-select: none;
+        }
+        .lock-toggle input[type="checkbox"] { display: none; }
+        .lock-icon {
+            width: 20px; height: 20px; border-radius: 4px; border: 2px solid var(--border);
+            display: flex; align-items: center; justify-content: center; font-size: 10px;
+            transition: all 0.2s; color: transparent;
+        }
+        .lock-toggle input:checked + .lock-icon {
+            background: var(--orange); border-color: var(--orange); color: #000;
+        }
+
+        .action-btns { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
+        .action-btns button { flex: 1; }
+
+        .tags-wrap {
+            display: flex; flex-wrap: wrap; gap: 0.3rem; padding: 0.4rem;
+            border-radius: 7px; border: 1px solid var(--border); background: var(--surface2);
+            min-height: 36px; align-items: center; cursor: text;
+        }
+        .tags-wrap:focus-within { border-color: var(--accent); }
         .tag-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            padding: 0.25rem 0.6rem;
-            border-radius: 20px;
-            background: var(--accent-dim);
-            color: var(--accent);
-            font-size: 0.78rem;
-            font-weight: 500;
+            display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.2rem 0.5rem;
+            border-radius: 14px; background: var(--accent-dim); color: var(--accent); font-size: 0.72rem; font-weight: 500;
         }
-        .tag-pill .tag-remove {
-            cursor: pointer;
-            opacity: 0.6;
-            font-size: 0.7rem;
-        }
-        .tag-pill .tag-remove:hover { opacity: 1; }
-        .tags-input-wrap input {
-            border: none;
-            background: transparent;
-            color: var(--text);
-            font-size: 0.85rem;
-            outline: none;
-            min-width: 100px;
-            flex: 1;
-            padding: 0.2rem;
-        }
+        .tag-pill .tag-rm { cursor: pointer; opacity: 0.6; font-size: 0.65rem; }
+        .tag-pill .tag-rm:hover { opacity: 1; }
+        .tags-wrap input { border: none; background: transparent; color: var(--text); font-size: 0.8rem; outline: none; min-width: 80px; flex: 1; padding: 0.15rem; }
 
-        .submit-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding-top: 1rem;
-        }
-        .submit-bar .info { color: var(--text-muted); font-size: 0.8rem; }
+        .submit-section { margin-top: 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+        .submit-section .info { color: var(--text-muted); font-size: 0.78rem; }
 
-        .submit-success {
-            display: none;
-            text-align: center;
-            padding: 3rem 1rem;
-        }
+        .submit-success { display: none; text-align: center; padding: 3rem 1rem; }
         .submit-success i { font-size: 3rem; color: var(--accent); margin-bottom: 1rem; }
-        .submit-success h2 {
-            font-family: 'Syne', sans-serif;
-            margin-bottom: 0.5rem;
-        }
+        .submit-success h2 { font-family: 'Syne', sans-serif; margin-bottom: 0.5rem; }
         .submit-success p { color: var(--text-muted); margin-bottom: 0.5rem; }
-        .submit-success .template-id-display {
-            font-family: monospace;
-            font-size: 1.1rem;
-            color: var(--accent);
-            margin: 1rem 0;
-        }
+        .submit-success .tid { font-family: monospace; font-size: 1.1rem; color: var(--accent); margin: 1rem 0; }
 
         .toast-msg {
-            position: fixed;
-            bottom: 2rem;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--surface2);
-            color: var(--text);
-            padding: 0.75rem 1.5rem;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            font-size: 0.85rem;
-            z-index: 9999;
+            position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
+            background: var(--surface2); color: var(--text); padding: 0.75rem 1.5rem;
+            border-radius: 10px; border: 1px solid var(--border); font-size: 0.85rem; z-index: 9999;
             animation: toastIn 0.3s ease;
         }
         @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } }
 
+        @media (max-width: 900px) {
+            .studio-layout { grid-template-columns: 1fr; }
+        }
         @media (max-width: 640px) {
             .form-row { grid-template-columns: 1fr; }
-            .product-check-grid { grid-template-columns: repeat(2, 1fr); }
-            .design-upload-area { flex-direction: column; }
             .token-input-wrap { flex-direction: column; }
         }
     </style>
@@ -375,146 +228,132 @@
             <p class="token-success" id="tokenSuccess"></p>
         </div>
 
-        <div class="upload-form" id="uploadForm">
-            <h2>Submit a Design Template</h2>
-            <p class="subtitle">Your template will be reviewed before being made available to users</p>
+        <div class="studio-wrap" id="studioWrap">
+            <h2>Design Your Template</h2>
+            <p class="subtitle">Place your design on the product, then lock elements you don't want users to change</p>
 
-            <div class="form-section">
-                <h3>Designer Info</h3>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Your Name *</label>
-                        <input type="text" id="designerName" placeholder="Designer name" maxlength="100">
+            <div class="studio-layout">
+                <div class="studio-sidebar">
+                    <div class="sidebar-section">
+                        <div class="section-title">Product</div>
+                        <div class="product-grid" id="productGrid"></div>
                     </div>
-                    <div class="form-group">
-                        <label>Email (optional)</label>
-                        <input type="email" id="designerEmail" placeholder="you@example.com" maxlength="200">
+                    <div class="sidebar-section">
+                        <div class="section-title">Color</div>
+                        <div class="color-row" id="colorRow"></div>
+                    </div>
+                    <div class="sidebar-section">
+                        <div class="section-title">View</div>
+                        <div class="view-btns">
+                            <button class="view-btn active" data-view="front">Front</button>
+                            <button class="view-btn" data-view="back">Back</button>
+                        </div>
+                    </div>
+                    <div class="sidebar-section">
+                        <div class="section-title">Template Info</div>
+                        <div class="form-group"><label>Title *</label><input type="text" id="tplTitle" maxlength="120" placeholder="Template name"></div>
+                        <div class="form-group"><label>Description</label><textarea id="tplDesc" maxlength="500" placeholder="Describe your design..."></textarea></div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Your Name *</label><input type="text" id="tplDesigner" maxlength="100" placeholder="Designer name"></div>
+                            <div class="form-group"><label>Email</label><input type="email" id="tplEmail" maxlength="200" placeholder="Optional"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Genre *</label>
+                                <select id="tplGenre">
+                                    <option value="">Select genre</option>
+                                    <option>Hip-Hop</option><option>R&B</option><option>Pop</option><option>Rock</option>
+                                    <option>Jazz</option><option>Electronic</option><option>Country</option><option>Latin</option>
+                                    <option>Afrobeats</option><option>Indie</option><option>Metal</option><option>Classical</option>
+                                    <option>Reggae</option><option>Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>Artist</label><input type="text" id="tplArtist" maxlength="100" placeholder="Optional"></div>
+                        </div>
+                        <div class="form-group"><label>Label</label><input type="text" id="tplLabel" maxlength="100" placeholder="Optional"></div>
+                        <div class="form-group">
+                            <label>Tags</label>
+                            <div class="tags-wrap" id="tagsWrap">
+                                <input type="text" id="tagsInput" placeholder="Type + Enter">
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="form-section">
-                <h3>Template Details</h3>
-                <div class="form-group">
-                    <label>Title *</label>
-                    <input type="text" id="templateTitle" placeholder="Give your design a name" maxlength="120">
-                </div>
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea id="templateDesc" placeholder="Describe your design..." maxlength="500"></textarea>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Genre *</label>
-                        <select id="templateGenre">
-                            <option value="">Select genre</option>
-                            <option>Hip-Hop</option>
-                            <option>R&B</option>
-                            <option>Pop</option>
-                            <option>Rock</option>
-                            <option>Jazz</option>
-                            <option>Electronic</option>
-                            <option>Country</option>
-                            <option>Latin</option>
-                            <option>Afrobeats</option>
-                            <option>Indie</option>
-                            <option>Metal</option>
-                            <option>Classical</option>
-                            <option>Reggae</option>
-                            <option>Other</option>
-                        </select>
+                <div class="canvas-area">
+                    <div class="garment-preview" id="garmentPreview">
+                        <img src="images/merch/tshirt-front.png" class="mockup-img" id="mockupImg">
+                        <div class="canvas-wrap" id="canvasWrap">
+                            <canvas id="designCanvas"></canvas>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Artist Name (optional)</label>
-                        <input type="text" id="templateArtist" placeholder="Associated artist" maxlength="100">
+                    <div style="margin-top: 1rem;">
+                        <div class="section-title">Elements & Locks</div>
+                        <div class="element-list" id="elementList"></div>
+                        <div class="lock-controls" id="lockControls" style="display:none;">
+                            <h4><i class="fas fa-lock"></i> Lock Settings</h4>
+                            <label class="lock-toggle"><input type="checkbox" id="lockPosition"><span class="lock-icon"><i class="fas fa-check"></i></span> Lock Position & Size</label>
+                            <label class="lock-toggle"><input type="checkbox" id="lockContent"><span class="lock-icon"><i class="fas fa-check"></i></span> Lock Text Content</label>
+                            <label class="lock-toggle"><input type="checkbox" id="lockFont"><span class="lock-icon"><i class="fas fa-check"></i></span> Lock Font & Style</label>
+                            <label class="lock-toggle"><input type="checkbox" id="lockColor"><span class="lock-icon"><i class="fas fa-check"></i></span> Lock Color</label>
+                        </div>
                     </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Label Name (optional)</label>
-                        <input type="text" id="templateLabel" placeholder="Associated label" maxlength="100">
+
+                <div class="studio-tools">
+                    <div class="sidebar-section">
+                        <div class="tools-tab-row">
+                            <button class="tool-tab active" data-tool="text"><i class="fas fa-font"></i> Text</button>
+                            <button class="tool-tab" data-tool="image"><i class="fas fa-image"></i> Image</button>
+                        </div>
+                        <div class="tool-panel active" id="panel-text">
+                            <div class="form-group"><label>Text</label><input type="text" id="txtInput" placeholder="Enter text..."></div>
+                            <div class="form-group">
+                                <label>Font</label>
+                                <select id="txtFont">
+                                    <option>Inter</option><option>Arial</option><option>Georgia</option>
+                                    <option>Courier New</option><option>Impact</option><option>Comic Sans MS</option>
+                                    <option>Trebuchet MS</option><option>Verdana</option><option>Palatino</option><option>Garamond</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Size</label>
+                                <input type="range" id="txtSize" min="10" max="72" value="24" style="width:100%;">
+                            </div>
+                            <div class="form-group">
+                                <label>Color</label>
+                                <div class="text-color-row" id="txtColorRow"></div>
+                            </div>
+                            <button class="btn btn-accent btn-sm" id="addTextBtn" style="width:100%;"><i class="fas fa-plus"></i> Add Text</button>
+                        </div>
+                        <div class="tool-panel" id="panel-image">
+                            <div class="upload-zone" id="imgUploadZone">
+                                <input type="file" accept="image/*" id="imgFileInput">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <span>Upload artwork</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Tags</label>
-                        <div class="tags-input-wrap" id="tagsWrap">
-                            <input type="text" id="tagsInput" placeholder="Type and press Enter">
+                    <div class="sidebar-section">
+                        <div class="action-btns">
+                            <button class="btn btn-sm btn-secondary" id="deleteElBtn"><i class="fas fa-trash"></i> Delete</button>
+                            <button class="btn btn-sm btn-secondary" id="clearAllBtn"><i class="fas fa-eraser"></i> Clear</button>
+                        </div>
+                    </div>
+                    <div class="sidebar-section">
+                        <div class="section-title">Preview Image (optional)</div>
+                        <div class="upload-zone" id="previewUploadZone" style="padding:1rem;">
+                            <input type="file" accept="image/*" id="previewFileInput">
+                            <i class="fas fa-image"></i>
+                            <span>Styled mockup preview</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="form-section">
-                <h3>Products</h3>
-                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">Select which product types this design works on</p>
-                <div class="product-check-grid" id="productCheckGrid">
-                    <label class="product-check checked" data-product="tshirt">
-                        <input type="checkbox" value="tshirt" checked>
-                        <span class="check-icon"><i class="fas fa-check" style="font-size:10px;"></i></span>
-                        T-Shirt
-                    </label>
-                    <label class="product-check" data-product="hoodie">
-                        <input type="checkbox" value="hoodie">
-                        <span class="check-icon"><i class="fas fa-check" style="font-size:10px;"></i></span>
-                        Hoodie
-                    </label>
-                    <label class="product-check" data-product="tank">
-                        <input type="checkbox" value="tank">
-                        <span class="check-icon"><i class="fas fa-check" style="font-size:10px;"></i></span>
-                        Tank Top
-                    </label>
-                    <label class="product-check" data-product="longsleeve">
-                        <input type="checkbox" value="longsleeve">
-                        <span class="check-icon"><i class="fas fa-check" style="font-size:10px;"></i></span>
-                        Long Sleeve
-                    </label>
-                    <label class="product-check" data-product="sweatshirt">
-                        <input type="checkbox" value="sweatshirt">
-                        <span class="check-icon"><i class="fas fa-check" style="font-size:10px;"></i></span>
-                        Sweatshirt
-                    </label>
-                    <label class="product-check" data-product="hat">
-                        <input type="checkbox" value="hat">
-                        <span class="check-icon"><i class="fas fa-check" style="font-size:10px;"></i></span>
-                        Cap
-                    </label>
-                </div>
-            </div>
-
-            <div class="form-section">
-                <h3>Design Files</h3>
-                <div class="design-upload-area">
-                    <div class="design-side">
-                        <h4>Front Design *</h4>
-                        <div class="design-dropzone" id="frontDropzone">
-                            <input type="file" accept="image/*" id="frontFileInput">
-                            <i class="fas fa-cloud-upload-alt"></i>
-                            <span>Click or drop image</span>
-                        </div>
-                    </div>
-                    <div class="design-side">
-                        <h4>Back Design (optional)</h4>
-                        <div class="design-dropzone" id="backDropzone">
-                            <input type="file" accept="image/*" id="backFileInput">
-                            <i class="fas fa-cloud-upload-alt"></i>
-                            <span>Click or drop image</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-section">
-                <h3>Preview Image (optional)</h3>
-                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">Upload a styled mockup preview of how the design looks on a product</p>
-                <div class="preview-upload-zone" id="previewDropzone">
-                    <input type="file" accept="image/*" id="previewFileInput">
-                    <i class="fas fa-image"></i>
-                    <span>Click or drop preview image</span>
-                </div>
-            </div>
-
-            <div class="submit-bar">
+            <div class="submit-section">
                 <span class="info"><i class="fas fa-info-circle"></i> Templates are reviewed before going live</span>
-                <button class="btn btn-accent" id="submitTemplateBtn" style="min-width: 180px;">
+                <button class="btn btn-accent" id="submitBtn" style="min-width:180px;">
                     <i class="fas fa-paper-plane"></i> Submit Template
                 </button>
             </div>
@@ -523,178 +362,368 @@
         <div class="submit-success" id="submitSuccess">
             <i class="fas fa-check-circle"></i>
             <h2>Template Submitted!</h2>
-            <p>Your design has been submitted for review. You'll be notified once it's approved.</p>
-            <div class="template-id-display" id="resultTemplateId"></div>
-            <button class="btn btn-accent" id="submitAnotherBtn" style="margin-top: 1rem;">
-                <i class="fas fa-plus"></i> Submit Another
-            </button>
+            <p>Your design has been submitted for review.</p>
+            <div class="tid" id="resultId"></div>
+            <button class="btn btn-accent" id="anotherBtn" style="margin-top:1rem;"><i class="fas fa-plus"></i> Submit Another</button>
         </div>
     </div>
 
     <script>
     (function() {
+        var PRODUCTS = [
+            { id: 'tshirt', name: 'T-Shirt', pct: { top: 25, left: 22, width: 56, height: 38 } },
+            { id: 'hoodie', name: 'Hoodie', pct: { top: 32, left: 24, width: 52, height: 30 } },
+            { id: 'tank', name: 'Tank Top', pct: { top: 22, left: 22, width: 56, height: 40 } },
+            { id: 'longsleeve', name: 'Long Sleeve', pct: { top: 25, left: 22, width: 56, height: 38 } },
+            { id: 'sweatshirt', name: 'Sweatshirt', pct: { top: 28, left: 24, width: 52, height: 34 } },
+            { id: 'hat', name: 'Cap', pct: { top: 18, left: 25, width: 50, height: 35 } }
+        ];
+        var COLORS = [
+            { id: 'black', hex: '#1a1a1a', filter: 'brightness(0.22)' },
+            { id: 'white', hex: '#f5f5f5', filter: 'none' },
+            { id: 'navy', hex: '#1b2838', filter: 'brightness(0.22) sepia(1) hue-rotate(180deg) saturate(3)' },
+            { id: 'gray', hex: '#6b7280', filter: 'brightness(0.55) saturate(0.1)' },
+            { id: 'forest', hex: '#1a472a', filter: 'brightness(0.25) sepia(1) hue-rotate(80deg) saturate(4)' },
+            { id: 'burgundy', hex: '#6b1c2a', filter: 'brightness(0.28) sepia(1) hue-rotate(320deg) saturate(4)' },
+            { id: 'sand', hex: '#c2b280', filter: 'brightness(0.82) sepia(0.4) saturate(0.8)' },
+            { id: 'slate', hex: '#3d4f5f', filter: 'brightness(0.38) sepia(1) hue-rotate(170deg) saturate(1.5)' }
+        ];
+        var TEXT_COLORS = ['#ffffff','#000000','#00ffa3','#ff4444','#ffd700','#3b82f6','#a855f7','#ec4899','#f97316','#14b8a6'];
+
         var uploadToken = '';
-        var frontDataURL = null;
-        var backDataURL = null;
+        var product = PRODUCTS[0];
+        var color = COLORS[0];
+        var view = 'front';
+        var canvas = null;
+        var frontJSON = null;
+        var backJSON = null;
         var previewFile = null;
         var tags = [];
-
-        var base = (typeof apiUrl === 'function') ? apiUrl('') : (window.location.origin);
-        base = base.replace(/\/$/, '');
+        var base = window.location.origin;
 
         var params = new URLSearchParams(window.location.search);
         var preToken = params.get('token');
-        if (preToken) {
-            document.getElementById('uploadTokenInput').value = preToken;
-        }
+        if (preToken) document.getElementById('uploadTokenInput').value = preToken;
 
         document.getElementById('validateTokenBtn').addEventListener('click', validateToken);
-        document.getElementById('uploadTokenInput').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') validateToken();
-        });
+        document.getElementById('uploadTokenInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') validateToken(); });
 
         function validateToken() {
-            var token = document.getElementById('uploadTokenInput').value.trim();
+            var tk = document.getElementById('uploadTokenInput').value.trim();
             var errEl = document.getElementById('tokenError');
             var sucEl = document.getElementById('tokenSuccess');
-            errEl.style.display = 'none';
-            sucEl.style.display = 'none';
-
-            if (!token) { errEl.textContent = 'Please enter a token'; errEl.style.display = 'block'; return; }
-
-            fetch(base + '/api/templates/validate-token', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: token })
-            })
+            errEl.style.display = 'none'; sucEl.style.display = 'none';
+            if (!tk) { errEl.textContent = 'Please enter a token'; errEl.style.display = 'block'; return; }
+            fetch(base + '/api/templates/validate-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: tk }) })
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (data.success) {
-                    uploadToken = token;
+                    uploadToken = tk;
                     sucEl.textContent = 'Token verified (' + data.data.remaining + ' uploads remaining)';
                     sucEl.style.display = 'block';
                     setTimeout(function() {
                         document.getElementById('tokenGate').style.display = 'none';
-                        document.getElementById('uploadForm').style.display = 'block';
-                    }, 600);
-                } else {
-                    errEl.textContent = data.message || 'Invalid token';
-                    errEl.style.display = 'block';
-                }
-            })
-            .catch(function() {
-                errEl.textContent = 'Connection error';
-                errEl.style.display = 'block';
-            });
+                        document.getElementById('studioWrap').style.display = 'block';
+                        initStudio();
+                    }, 500);
+                } else { errEl.textContent = data.message || 'Invalid token'; errEl.style.display = 'block'; }
+            }).catch(function() { errEl.textContent = 'Connection error'; errEl.style.display = 'block'; });
         }
 
-        document.querySelectorAll('.product-check').forEach(function(el) {
-            el.addEventListener('click', function(e) {
-                e.preventDefault();
-                var cb = el.querySelector('input[type="checkbox"]');
-                cb.checked = !cb.checked;
-                el.classList.toggle('checked', cb.checked);
-            });
-        });
-
-        function setupDropzone(dropzoneId, inputId, side) {
-            var zone = document.getElementById(dropzoneId);
-            var input = document.getElementById(inputId);
-            zone.addEventListener('click', function() { input.click(); });
-            zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.style.borderColor = 'var(--accent)'; });
-            zone.addEventListener('dragleave', function() { zone.style.borderColor = ''; });
-            zone.addEventListener('drop', function(e) {
-                e.preventDefault();
-                zone.style.borderColor = '';
-                if (e.dataTransfer.files[0]) handleDesignFile(e.dataTransfer.files[0], zone, side);
-            });
-            input.addEventListener('change', function() {
-                if (input.files[0]) handleDesignFile(input.files[0], zone, side);
-                input.value = '';
-            });
+        function initStudio() {
+            renderProducts();
+            renderColors();
+            renderTextColors();
+            initCanvas();
+            updateMockup();
+            bindTools();
+            bindLocks();
+            window.addEventListener('resize', positionCanvas);
         }
 
-        function handleDesignFile(file, zone, side) {
-            if (!file.type.startsWith('image/')) { showToast('Please upload an image file'); return; }
-            if (file.size > 5 * 1024 * 1024) { showToast('File must be under 5MB'); return; }
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                if (side === 'front') frontDataURL = e.target.result;
-                else backDataURL = e.target.result;
-                zone.innerHTML = '<img src="' + e.target.result + '" alt="Design">';
-                zone.classList.add('has-image');
-            };
-            reader.readAsDataURL(file);
-        }
-
-        setupDropzone('frontDropzone', 'frontFileInput', 'front');
-        setupDropzone('backDropzone', 'backFileInput', 'back');
-
-        var previewZone = document.getElementById('previewDropzone');
-        var previewInput = document.getElementById('previewFileInput');
-        previewZone.addEventListener('click', function() { previewInput.click(); });
-        previewInput.addEventListener('change', function() {
-            if (previewInput.files[0]) {
-                previewFile = previewInput.files[0];
-                var reader = new FileReader();
-                reader.onload = function(e) {
-                    previewZone.innerHTML = '<img src="' + e.target.result + '" alt="Preview">';
-                };
-                reader.readAsDataURL(previewFile);
-            }
-        });
-
-        var tagsInput = document.getElementById('tagsInput');
-        tagsInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' || e.key === ',') {
-                e.preventDefault();
-                var val = tagsInput.value.trim().replace(/,/g, '');
-                if (val && tags.length < 10 && !tags.includes(val.toLowerCase())) {
-                    tags.push(val.toLowerCase());
-                    renderTags();
-                }
-                tagsInput.value = '';
-            }
-        });
-        document.getElementById('tagsWrap').addEventListener('click', function() { tagsInput.focus(); });
-
-        function renderTags() {
-            var wrap = document.getElementById('tagsWrap');
-            var pills = wrap.querySelectorAll('.tag-pill');
-            pills.forEach(function(p) { p.remove(); });
-            tags.forEach(function(t, i) {
-                var pill = document.createElement('span');
-                pill.className = 'tag-pill';
-                pill.innerHTML = t + ' <span class="tag-remove" data-idx="' + i + '"><i class="fas fa-times"></i></span>';
-                wrap.insertBefore(pill, tagsInput);
-            });
-            wrap.querySelectorAll('.tag-remove').forEach(function(btn) {
-                btn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    tags.splice(parseInt(btn.dataset.idx), 1);
-                    renderTags();
+        function renderProducts() {
+            var g = document.getElementById('productGrid');
+            g.innerHTML = PRODUCTS.map(function(p) {
+                return '<div class="product-btn' + (p.id === product.id ? ' active' : '') + '" data-id="' + p.id + '">'
+                    + '<img src="images/merch/' + p.id + '-front.png" alt="' + p.name + '">'
+                    + '<span>' + p.name + '</span></div>';
+            }).join('');
+            g.querySelectorAll('.product-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    product = PRODUCTS.find(function(p) { return p.id === btn.dataset.id; }) || PRODUCTS[0];
+                    g.querySelectorAll('.product-btn').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    updateMockup();
                 });
             });
         }
 
-        document.getElementById('submitTemplateBtn').addEventListener('click', submitTemplate);
+        function renderColors() {
+            var r = document.getElementById('colorRow');
+            r.innerHTML = COLORS.map(function(c) {
+                return '<div class="color-dot' + (c.id === color.id ? ' active' : '') + '" data-id="' + c.id + '" style="background:' + c.hex + ';" title="' + c.id + '"></div>';
+            }).join('');
+            r.querySelectorAll('.color-dot').forEach(function(d) {
+                d.addEventListener('click', function() {
+                    color = COLORS.find(function(c) { return c.id === d.dataset.id; }) || COLORS[0];
+                    r.querySelectorAll('.color-dot').forEach(function(dd) { dd.classList.remove('active'); });
+                    d.classList.add('active');
+                    document.getElementById('mockupImg').style.filter = color.filter;
+                });
+            });
+        }
+
+        function renderTextColors() {
+            var row = document.getElementById('txtColorRow');
+            row.innerHTML = TEXT_COLORS.map(function(c, i) {
+                return '<div class="text-color-btn' + (i === 0 ? ' active' : '') + '" data-c="' + c + '" style="background:' + c + ';"></div>';
+            }).join('');
+            row.querySelectorAll('.text-color-btn').forEach(function(b) {
+                b.addEventListener('click', function() {
+                    row.querySelectorAll('.text-color-btn').forEach(function(bb) { bb.classList.remove('active'); });
+                    b.classList.add('active');
+                });
+            });
+        }
+
+        function initCanvas() {
+            canvas = new fabric.Canvas('designCanvas', { backgroundColor: 'transparent', selection: true, preserveObjectStacking: true });
+            canvas.on('selection:created', updateElementList);
+            canvas.on('selection:updated', updateElementList);
+            canvas.on('selection:cleared', function() { updateElementList(); document.getElementById('lockControls').style.display = 'none'; });
+            canvas.on('object:added', updateElementList);
+            canvas.on('object:removed', updateElementList);
+            positionCanvas();
+        }
+
+        function updateMockup() {
+            document.getElementById('mockupImg').src = 'images/merch/' + product.id + '-' + view + '.png';
+            document.getElementById('mockupImg').style.filter = color.filter;
+            positionCanvas();
+        }
+
+        function positionCanvas() {
+            if (!canvas) return;
+            var preview = document.getElementById('garmentPreview');
+            var wrap = document.getElementById('canvasWrap');
+            var pa = product.pct;
+            var pw = preview.offsetWidth; var ph = preview.offsetHeight;
+            var cw = Math.round(pw * pa.width / 100);
+            var ch = Math.round(ph * pa.height / 100);
+            canvas.setWidth(cw); canvas.setHeight(ch);
+            wrap.style.width = cw + 'px'; wrap.style.height = ch + 'px';
+            wrap.style.top = Math.round(ph * pa.top / 100) + 'px';
+            wrap.style.left = Math.round(pw * pa.left / 100) + 'px';
+            canvas.renderAll();
+        }
+
+        document.querySelectorAll('.view-btn').forEach(function(b) {
+            b.addEventListener('click', function() {
+                var newView = b.dataset.view;
+                if (newView === view) return;
+                if (view === 'front') frontJSON = canvas.toJSON(['wdthLockPosition','wdthLockContent','wdthLockFont','wdthLockColor','wdthElementName']);
+                else backJSON = canvas.toJSON(['wdthLockPosition','wdthLockContent','wdthLockFont','wdthLockColor','wdthElementName']);
+                view = newView;
+                document.querySelectorAll('.view-btn').forEach(function(bb) { bb.classList.toggle('active', bb.dataset.view === view); });
+                document.getElementById('mockupImg').src = 'images/merch/' + product.id + '-' + view + '.png';
+                var saved = view === 'front' ? frontJSON : backJSON;
+                if (saved && saved.objects && saved.objects.length > 0) {
+                    canvas.loadFromJSON(saved, function() { canvas.renderAll(); updateElementList(); });
+                } else { canvas.clear(); canvas.renderAll(); updateElementList(); }
+            });
+        });
+
+        function bindTools() {
+            document.querySelectorAll('.tool-tab').forEach(function(t) {
+                t.addEventListener('click', function() {
+                    document.querySelectorAll('.tool-tab').forEach(function(tt) { tt.classList.remove('active'); });
+                    document.querySelectorAll('.tool-panel').forEach(function(p) { p.classList.remove('active'); });
+                    t.classList.add('active');
+                    document.getElementById('panel-' + t.dataset.tool).classList.add('active');
+                });
+            });
+
+            document.getElementById('addTextBtn').addEventListener('click', function() {
+                var text = document.getElementById('txtInput').value.trim();
+                if (!text) return;
+                var activeC = document.querySelector('#txtColorRow .text-color-btn.active');
+                var col = activeC ? activeC.dataset.c : '#ffffff';
+                var font = document.getElementById('txtFont').value;
+                var size = parseInt(document.getElementById('txtSize').value) || 24;
+                var cw = canvas.getWidth();
+                var obj = new fabric.Textbox(text, {
+                    left: 10, top: 10, width: cw - 20, fontFamily: font, fontSize: size,
+                    fill: col, textAlign: 'center', editable: true
+                });
+                obj.wdthElementName = text.substring(0, 30);
+                obj.wdthLockPosition = false;
+                obj.wdthLockContent = false;
+                obj.wdthLockFont = false;
+                obj.wdthLockColor = false;
+                canvas.add(obj);
+                canvas.setActiveObject(obj);
+                canvas.renderAll();
+                document.getElementById('txtInput').value = '';
+            });
+
+            var imgZone = document.getElementById('imgUploadZone');
+            var imgInput = document.getElementById('imgFileInput');
+            imgZone.addEventListener('click', function() { imgInput.click(); });
+            imgInput.addEventListener('change', function() {
+                if (!imgInput.files[0]) return;
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    fabric.Image.fromURL(e.target.result, function(img) {
+                        var cw = canvas.getWidth(); var ch = canvas.getHeight();
+                        var scale = Math.min((cw * 0.8) / img.width, (ch * 0.6) / img.height, 1);
+                        img.set({ scaleX: scale, scaleY: scale, left: cw * 0.1, top: ch * 0.1 });
+                        img.wdthElementName = 'Image';
+                        img.wdthLockPosition = false;
+                        img.wdthLockContent = false;
+                        img.wdthLockFont = false;
+                        img.wdthLockColor = false;
+                        canvas.add(img);
+                        canvas.setActiveObject(img);
+                        canvas.renderAll();
+                    });
+                };
+                reader.readAsDataURL(imgInput.files[0]);
+                imgInput.value = '';
+            });
+
+            document.getElementById('deleteElBtn').addEventListener('click', function() {
+                var active = canvas.getActiveObject();
+                if (active) { canvas.remove(active); canvas.renderAll(); }
+            });
+            document.getElementById('clearAllBtn').addEventListener('click', function() {
+                if (canvas.getObjects().length === 0) return;
+                if (confirm('Clear all elements?')) { canvas.clear(); canvas.renderAll(); }
+            });
+
+            var pvZone = document.getElementById('previewUploadZone');
+            var pvInput = document.getElementById('previewFileInput');
+            pvZone.addEventListener('click', function() { pvInput.click(); });
+            pvInput.addEventListener('change', function() {
+                if (pvInput.files[0]) {
+                    previewFile = pvInput.files[0];
+                    var r2 = new FileReader();
+                    r2.onload = function(ev) { pvZone.innerHTML = '<img src="' + ev.target.result + '" alt="" style="max-width:100%;max-height:120px;border-radius:8px;">'; };
+                    r2.readAsDataURL(previewFile);
+                }
+            });
+
+            var tagsInput = document.getElementById('tagsInput');
+            tagsInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    var v = tagsInput.value.trim().replace(/,/g, '');
+                    if (v && tags.length < 10 && !tags.includes(v.toLowerCase())) { tags.push(v.toLowerCase()); renderTags(); }
+                    tagsInput.value = '';
+                }
+            });
+            document.getElementById('tagsWrap').addEventListener('click', function() { tagsInput.focus(); });
+
+            document.getElementById('submitBtn').addEventListener('click', submitTemplate);
+            document.getElementById('anotherBtn').addEventListener('click', resetStudio);
+        }
+
+        function renderTags() {
+            var w = document.getElementById('tagsWrap');
+            w.querySelectorAll('.tag-pill').forEach(function(p) { p.remove(); });
+            var inp = document.getElementById('tagsInput');
+            tags.forEach(function(t, i) {
+                var pill = document.createElement('span');
+                pill.className = 'tag-pill';
+                pill.innerHTML = t + ' <span class="tag-rm" data-i="' + i + '"><i class="fas fa-times"></i></span>';
+                w.insertBefore(pill, inp);
+            });
+            w.querySelectorAll('.tag-rm').forEach(function(btn) {
+                btn.addEventListener('click', function(e) { e.stopPropagation(); tags.splice(parseInt(btn.dataset.i), 1); renderTags(); });
+            });
+        }
+
+        function updateElementList() {
+            var list = document.getElementById('elementList');
+            var objs = canvas.getObjects();
+            var active = canvas.getActiveObject();
+            if (objs.length === 0) { list.innerHTML = '<div style="padding:0.5rem;color:var(--text-muted);font-size:0.78rem;text-align:center;">No elements yet</div>'; return; }
+            list.innerHTML = objs.map(function(obj, i) {
+                var name = obj.wdthElementName || (obj.type === 'textbox' ? obj.text.substring(0, 20) : 'Image');
+                var type = obj.type === 'textbox' ? 'TEXT' : 'IMG';
+                var isActive = active === obj;
+                var locks = [];
+                if (obj.wdthLockPosition) locks.push('<i class="fas fa-arrows-alt" style="color:var(--orange);font-size:9px;" title="Position locked"></i>');
+                if (obj.wdthLockContent) locks.push('<i class="fas fa-pen" style="color:var(--orange);font-size:9px;" title="Content locked"></i>');
+                if (obj.wdthLockFont) locks.push('<i class="fas fa-font" style="color:var(--orange);font-size:9px;" title="Font locked"></i>');
+                if (obj.wdthLockColor) locks.push('<i class="fas fa-palette" style="color:var(--orange);font-size:9px;" title="Color locked"></i>');
+                return '<div class="element-item' + (isActive ? ' selected' : '') + '" data-idx="' + i + '">'
+                    + '<span class="el-type">' + type + '</span>'
+                    + '<span class="el-name">' + escHtml(name) + '</span>'
+                    + locks.join(' ')
+                    + '</div>';
+            }).join('');
+            list.querySelectorAll('.element-item').forEach(function(el) {
+                el.addEventListener('click', function() {
+                    var idx = parseInt(el.dataset.idx);
+                    var obj = canvas.getObjects()[idx];
+                    if (obj) { canvas.setActiveObject(obj); canvas.renderAll(); showLockControls(obj); }
+                });
+            });
+            if (active) showLockControls(active);
+        }
+
+        function showLockControls(obj) {
+            var lc = document.getElementById('lockControls');
+            lc.style.display = 'block';
+            document.getElementById('lockPosition').checked = !!obj.wdthLockPosition;
+            document.getElementById('lockContent').checked = !!obj.wdthLockContent;
+            document.getElementById('lockFont').checked = !!obj.wdthLockFont;
+            document.getElementById('lockColor').checked = !!obj.wdthLockColor;
+            var contentRow = document.getElementById('lockContent').closest('.lock-toggle');
+            var fontRow = document.getElementById('lockFont').closest('.lock-toggle');
+            if (obj.type === 'textbox') {
+                contentRow.style.display = 'flex';
+                fontRow.style.display = 'flex';
+            } else {
+                contentRow.style.display = 'none';
+                fontRow.style.display = 'none';
+            }
+        }
+
+        function bindLocks() {
+            ['lockPosition', 'lockContent', 'lockFont', 'lockColor'].forEach(function(lockId) {
+                document.getElementById(lockId).addEventListener('change', function() {
+                    var obj = canvas.getActiveObject();
+                    if (!obj) return;
+                    var prop = 'wdth' + lockId.charAt(0).toUpperCase() + lockId.slice(1);
+                    obj[prop] = this.checked;
+                    updateElementList();
+                });
+            });
+        }
+
+        function getCanvasJSON() {
+            return canvas.toJSON(['wdthLockPosition', 'wdthLockContent', 'wdthLockFont', 'wdthLockColor', 'wdthElementName']);
+        }
 
         function submitTemplate() {
-            var btn = document.getElementById('submitTemplateBtn');
-            var title = document.getElementById('templateTitle').value.trim();
-            var designerName = document.getElementById('designerName').value.trim();
-            var genre = document.getElementById('templateGenre').value;
-
-            if (!designerName) { showToast('Please enter your name'); return; }
+            var btn = document.getElementById('submitBtn');
+            var title = document.getElementById('tplTitle').value.trim();
+            var designer = document.getElementById('tplDesigner').value.trim();
+            var genre = document.getElementById('tplGenre').value;
+            if (!designer) { showToast('Please enter your name'); return; }
             if (!title) { showToast('Please enter a template title'); return; }
             if (!genre) { showToast('Please select a genre'); return; }
-            if (!frontDataURL) { showToast('Please upload a front design'); return; }
 
-            var products = [];
-            document.querySelectorAll('.product-check input:checked').forEach(function(cb) {
-                products.push(cb.value);
-            });
-            if (products.length === 0) { showToast('Select at least one product type'); return; }
+            if (view === 'front') frontJSON = getCanvasJSON();
+            else backJSON = getCanvasJSON();
+
+            var currentFront = view === 'front' ? getCanvasJSON() : frontJSON;
+            if (!currentFront || !currentFront.objects || currentFront.objects.length === 0) {
+                showToast('Add at least one design element to the front'); return;
+            }
+
+            var selectedProducts = [product.id];
 
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
@@ -702,84 +731,58 @@
             var formData = new FormData();
             formData.append('uploadToken', uploadToken);
             formData.append('title', title);
-            formData.append('description', document.getElementById('templateDesc').value.trim());
-            formData.append('designerName', designerName);
-            formData.append('designerEmail', document.getElementById('designerEmail').value.trim());
+            formData.append('description', document.getElementById('tplDesc').value.trim());
+            formData.append('designerName', designer);
+            formData.append('designerEmail', document.getElementById('tplEmail').value.trim());
             formData.append('genre', genre);
-            formData.append('artistName', document.getElementById('templateArtist').value.trim());
-            formData.append('labelName', document.getElementById('templateLabel').value.trim());
-            formData.append('products', JSON.stringify(products));
-            formData.append('frontDesign', frontDataURL);
-            formData.append('backDesign', backDataURL || '');
-            formData.append('tags', JSON.stringify(tags));
-
-            if (previewFile) {
-                formData.append('previewImage', previewFile);
+            formData.append('artistName', document.getElementById('tplArtist').value.trim());
+            formData.append('labelName', document.getElementById('tplLabel').value.trim());
+            formData.append('products', JSON.stringify(selectedProducts));
+            formData.append('defaultProduct', product.id);
+            formData.append('defaultColor', color.id);
+            formData.append('frontDesign', JSON.stringify(currentFront));
+            var currentBack = view === 'back' ? getCanvasJSON() : backJSON;
+            if (currentBack && currentBack.objects && currentBack.objects.length > 0) {
+                formData.append('backDesign', JSON.stringify(currentBack));
             }
+            formData.append('tags', JSON.stringify(tags));
+            if (previewFile) formData.append('previewImage', previewFile);
 
-            fetch(base + '/api/templates/submit', {
-                method: 'POST',
-                body: formData
-            })
+            fetch(base + '/api/templates/submit', { method: 'POST', body: formData })
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Template';
                 if (data.success) {
-                    document.getElementById('uploadForm').style.display = 'none';
+                    document.getElementById('studioWrap').style.display = 'none';
                     document.getElementById('submitSuccess').style.display = 'block';
-                    document.getElementById('resultTemplateId').textContent = 'Template ID: ' + data.data.templateId;
-                } else {
-                    showToast(data.message || 'Submission failed');
-                }
-            })
-            .catch(function() {
+                    document.getElementById('resultId').textContent = 'Template ID: ' + data.data.templateId;
+                } else { showToast(data.message || 'Submission failed'); }
+            }).catch(function() {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Template';
-                showToast('Connection error. Please try again.');
+                showToast('Connection error');
             });
         }
 
-        document.getElementById('submitAnotherBtn').addEventListener('click', function() {
+        function resetStudio() {
             document.getElementById('submitSuccess').style.display = 'none';
-            document.getElementById('uploadForm').style.display = 'block';
-            document.getElementById('templateTitle').value = '';
-            document.getElementById('templateDesc').value = '';
-            document.getElementById('templateArtist').value = '';
-            document.getElementById('templateLabel').value = '';
-            frontDataURL = null;
-            backDataURL = null;
-            previewFile = null;
-            tags = [];
-            renderTags();
-            document.getElementById('frontDropzone').innerHTML = '<input type="file" accept="image/*" id="frontFileInput"><i class="fas fa-cloud-upload-alt"></i><span>Click or drop image</span>';
-            document.getElementById('backDropzone').innerHTML = '<input type="file" accept="image/*" id="backFileInput"><i class="fas fa-cloud-upload-alt"></i><span>Click or drop image</span>';
-            document.getElementById('previewDropzone').innerHTML = '<input type="file" accept="image/*" id="previewFileInput"><i class="fas fa-image"></i><span>Click or drop preview image</span>';
-            document.getElementById('frontDropzone').classList.remove('has-image');
-            document.getElementById('backDropzone').classList.remove('has-image');
-            setupDropzone('frontDropzone', 'frontFileInput', 'front');
-            setupDropzone('backDropzone', 'backFileInput', 'back');
-            var pz = document.getElementById('previewDropzone');
-            var pi = document.getElementById('previewFileInput');
-            pz.addEventListener('click', function() { pi.click(); });
-            pi.addEventListener('change', function() {
-                if (pi.files[0]) {
-                    previewFile = pi.files[0];
-                    var r2 = new FileReader();
-                    r2.onload = function(ev) { pz.innerHTML = '<img src="' + ev.target.result + '" alt="Preview">'; };
-                    r2.readAsDataURL(previewFile);
-                }
-            });
-        });
+            document.getElementById('studioWrap').style.display = 'block';
+            document.getElementById('tplTitle').value = '';
+            document.getElementById('tplDesc').value = '';
+            document.getElementById('tplArtist').value = '';
+            document.getElementById('tplLabel').value = '';
+            canvas.clear(); canvas.renderAll();
+            frontJSON = null; backJSON = null;
+            previewFile = null; tags = [];
+            renderTags(); updateElementList();
+        }
 
+        function escHtml(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
         function showToast(msg) {
-            var old = document.querySelector('.toast-msg');
-            if (old) old.remove();
-            var el = document.createElement('div');
-            el.className = 'toast-msg';
-            el.textContent = msg;
-            document.body.appendChild(el);
-            setTimeout(function() { el.remove(); }, 3000);
+            var old = document.querySelector('.toast-msg'); if (old) old.remove();
+            var el = document.createElement('div'); el.className = 'toast-msg'; el.textContent = msg;
+            document.body.appendChild(el); setTimeout(function() { el.remove(); }, 3000);
         }
     })();
     </script>

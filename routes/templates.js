@@ -81,7 +81,7 @@ router.post('/validate-token', async (req, res) => {
 
 router.post('/submit', upload.single('previewImage'), async (req, res) => {
     try {
-        const { uploadToken, title, description, designerName, designerEmail, genre, artistName, artistId, labelName, labelId, products, frontDesign, backDesign, tags } = req.body;
+        const { uploadToken, title, description, designerName, designerEmail, genre, artistName, artistId, labelName, labelId, products, frontDesign, backDesign, tags, defaultProduct, defaultColor } = req.body;
 
         if (!uploadToken || !uploadToken.startsWith('wdth_dsgn_') || uploadToken.length < 40) {
             return res.status(400).json({ success: false, message: 'Invalid upload token' });
@@ -117,8 +117,35 @@ router.post('/submit', upload.single('previewImage'), async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid email format' });
         }
 
-        if (!frontDesign || typeof frontDesign !== 'string' || !frontDesign.startsWith('data:image/')) {
-            return res.status(400).json({ success: false, message: 'Front design must be a valid image data URL' });
+        if (!frontDesign || typeof frontDesign !== 'string') {
+            return res.status(400).json({ success: false, message: 'Front design data is required' });
+        }
+        if (frontDesign.length > MAX_DESIGN_BYTES) {
+            return res.status(400).json({ success: false, message: 'Front design data exceeds maximum size' });
+        }
+        try {
+            var parsedFront = JSON.parse(frontDesign);
+            if (!parsedFront.objects || !Array.isArray(parsedFront.objects)) {
+                return res.status(400).json({ success: false, message: 'Front design must be valid Fabric.js JSON with objects array' });
+            }
+        } catch (e) {
+            return res.status(400).json({ success: false, message: 'Front design must be valid Fabric.js JSON' });
+        }
+        if (backDesign) {
+            if (typeof backDesign !== 'string') {
+                return res.status(400).json({ success: false, message: 'Back design must be a string' });
+            }
+            if (backDesign.length > MAX_DESIGN_BYTES) {
+                return res.status(400).json({ success: false, message: 'Back design data exceeds maximum size' });
+            }
+            try {
+                var parsedBack = JSON.parse(backDesign);
+                if (!parsedBack.objects || !Array.isArray(parsedBack.objects)) {
+                    return res.status(400).json({ success: false, message: 'Back design must be valid Fabric.js JSON with objects array' });
+                }
+            } catch (e) {
+                return res.status(400).json({ success: false, message: 'Back design must be valid Fabric.js JSON' });
+            }
         }
 
         let productList = [];
@@ -173,8 +200,10 @@ router.post('/submit', upload.single('previewImage'), async (req, res) => {
             labelName: labelName ? String(labelName).trim().substring(0, 100) : '',
             labelId: labelId ? String(labelId).substring(0, 100) : '',
             products: productList,
-            frontDesign: frontDesign.substring(0, MAX_DESIGN_BYTES),
-            backDesign: backDesign ? String(backDesign).substring(0, MAX_DESIGN_BYTES) : null,
+            defaultProduct: VALID_PRODUCTS.includes(defaultProduct) ? defaultProduct : productList[0],
+            defaultColor: defaultColor || 'black',
+            frontDesign: frontDesign,
+            backDesign: backDesign || null,
             previewImageUrl,
             previewObjectPath,
             tags: tagList,

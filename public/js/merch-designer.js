@@ -265,9 +265,18 @@ var MerchDesigner = (function() {
         document.getElementById('deleteSelectedBtn').addEventListener('click', function() {
             var active = state.canvas.getActiveObject();
             if (active) {
+                if (active.wdthIsTemplateElement) {
+                    showToast('Template elements cannot be deleted');
+                    return;
+                }
                 if (active.type === 'activeSelection') {
-                    active.forEachObject(function(obj) { state.canvas.remove(obj); });
+                    var removable = [];
+                    active.forEachObject(function(obj) {
+                        if (!obj.wdthIsTemplateElement) removable.push(obj);
+                    });
+                    if (removable.length === 0) { showToast('Template elements cannot be deleted'); return; }
                     state.canvas.discardActiveObject();
+                    removable.forEach(function(obj) { state.canvas.remove(obj); });
                 } else {
                     state.canvas.remove(active);
                 }
@@ -276,9 +285,12 @@ var MerchDesigner = (function() {
         });
 
         document.getElementById('clearCanvasBtn').addEventListener('click', function() {
-            if (state.canvas.getObjects().length === 0) return;
-            if (confirm('Clear all design elements?')) {
-                state.canvas.clear();
+            var objs = state.canvas.getObjects();
+            if (objs.length === 0) return;
+            var userObjs = objs.filter(function(o) { return !o.wdthIsTemplateElement; });
+            if (userObjs.length === 0) { showToast('No user elements to clear'); return; }
+            if (confirm('Clear your design elements? Template elements will be kept.')) {
+                userObjs.forEach(function(o) { state.canvas.remove(o); });
                 state.canvas.renderAll();
             }
         });
@@ -358,15 +370,16 @@ var MerchDesigner = (function() {
         if (view === state.view) return;
         var thumbEl = document.getElementById('otherSideThumb');
 
+        var extraProps = ['wdthLockPosition','wdthLockContent','wdthLockFont','wdthLockColor','wdthElementName','wdthIsTemplateElement','wdthOriginalFont','wdthOriginalFill'];
         if (state.view === 'front') {
-            state.frontObjects = state.canvas.toJSON();
+            state.frontObjects = state.canvas.toJSON(extraProps);
             if (state.canvas.getObjects().length > 0) {
                 state.frontThumbDataURL = state.canvas.toDataURL({ format: 'png', multiplier: 0.4 });
             } else {
                 state.frontThumbDataURL = null;
             }
         } else {
-            state.backObjects = state.canvas.toJSON();
+            state.backObjects = state.canvas.toJSON(extraProps);
             if (state.canvas.getObjects().length > 0) {
                 state.backThumbDataURL = state.canvas.toDataURL({ format: 'png', multiplier: 0.4 });
             } else {
@@ -384,7 +397,7 @@ var MerchDesigner = (function() {
 
         var saved = view === 'front' ? state.frontObjects : state.backObjects;
         if (saved && saved.objects && saved.objects.length > 0) {
-            state.canvas.loadFromJSON(saved, function() { state.canvas.renderAll(); });
+            state.canvas.loadFromJSON(saved, function() { applyLockEnforcement(); state.canvas.renderAll(); });
         } else {
             state.canvas.clear();
             state.canvas.renderAll();
@@ -518,5 +531,72 @@ var MerchDesigner = (function() {
         setTimeout(function() { el.remove(); }, 3000);
     }
 
-    return { init: init };
+    function loadTemplate(templateData) {
+        if (!templateData) return;
+
+        if (templateData.defaultProduct) {
+            var prod = PRODUCTS.find(function(p) { return p.id === templateData.defaultProduct; });
+            if (prod) selectProduct(prod);
+        }
+        if (templateData.defaultColor) {
+            var col = COLORS.find(function(c) { return c.id === templateData.defaultColor; });
+            if (col) selectColor(col);
+        }
+
+        var frontData = templateData.frontDesign;
+        var backData = templateData.backDesign;
+
+        if (frontData) {
+            var frontObj = typeof frontData === 'string' ? JSON.parse(frontData) : frontData;
+            state.view = 'front';
+            document.querySelectorAll('.view-toggle-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.view === 'front'); });
+            var img = document.getElementById('garmentMockupImg');
+            if (img) img.src = getImagePath(state.product.id, 'front');
+            state.canvas.loadFromJSON(frontObj, function() {
+                state.canvas.getObjects().forEach(function(obj) { obj.wdthIsTemplateElement = true; });
+                applyLockEnforcement();
+                state.canvas.renderAll();
+                var ep = ['wdthLockPosition','wdthLockContent','wdthLockFont','wdthLockColor','wdthElementName','wdthIsTemplateElement','wdthOriginalFont','wdthOriginalFill'];
+                state.frontObjects = state.canvas.toJSON(ep);
+            });
+        }
+
+        if (backData) {
+            var backObj = typeof backData === 'string' ? JSON.parse(backData) : backData;
+            state.backObjects = backObj;
+        }
+
+        showToast('Template loaded! Locked elements are protected.');
+    }
+
+    function applyLockEnforcement() {
+        if (!state.canvas) return;
+        state.canvas.getObjects().forEach(function(obj) {
+            if (!obj.wdthIsTemplateElement) return;
+            if (obj.wdthLockPosition) {
+                obj.set({
+                    lockMovementX: true,
+                    lockMovementY: true,
+                    lockScalingX: true,
+                    lockScalingY: true,
+                    lockRotation: true,
+                    hasControls: false,
+                    hasBorders: true,
+                    borderColor: '#f59e0b',
+                    borderDashArray: [4, 3]
+                });
+            }
+            if (obj.wdthLockContent && obj.type === 'textbox') {
+                obj.set({ editable: false });
+            }
+            if (obj.wdthLockFont && obj.type === 'textbox') {
+                obj.set({ wdthOriginalFont: obj.fontFamily });
+            }
+            if (obj.wdthLockColor) {
+                obj.set({ wdthOriginalFill: obj.fill });
+            }
+        });
+    }
+
+    return { init: init, loadTemplate: loadTemplate };
 })();

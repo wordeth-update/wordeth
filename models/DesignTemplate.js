@@ -61,6 +61,15 @@ const designTemplateSchema = new mongoose.Schema({
         type: String,
         enum: ['tshirt', 'hoodie', 'tank', 'longsleeve', 'sweatshirt', 'hat']
     }],
+    defaultProduct: {
+        type: String,
+        enum: ['tshirt', 'hoodie', 'tank', 'longsleeve', 'sweatshirt', 'hat'],
+        default: 'tshirt'
+    },
+    defaultColor: {
+        type: String,
+        default: 'black'
+    },
     frontDesign: {
         type: String,
         required: true
