@@ -133,8 +133,12 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Purpose**: Pre-launch landing page shown to all public visitors at the root domain until the platform officially launches.
 - **Page**: `public/coming-soon.html` — animated dark/purple/mint themed standalone page (Syne + Outfit fonts) with three pillars (Search lyrics, Customize apparel, Connect through Verses), email signup form, and animated background orbs.
 - **Middleware**: Inserted in `server.js` before the HTML cache and static-file middleware. Intercepts `GET`/`HEAD` requests and serves `coming-soon.html` for any HTML/page request unless the visitor has the `wdth_preview=1` cookie.
-- **Bypass — daily-rotating master token**: Visiting any URL with `?preview=<TOKEN>` sets an HMAC-signed `wdth_preview` cookie (HttpOnly, SameSite=Lax, Secure in prod, **24h TTL**) and redirects with the param stripped. The accepted token is **derived daily** as `HMAC(COMING_SOON_SIGNING_KEY||JWT_SECRET, "wdth-daily:" + COMING_SOON_PREVIEW_TOKEN + ":" + UTC_DATE).slice(0,16)`. The token rotates at 00:00 UTC; the previous day's token is also accepted for a 24h grace window so links shared late at night don't die at midnight.
-- **Fetching today's link**: `GET /api/coming-soon/today-token` (admin auth required) returns `{ today, tomorrow, yesterday, nextRotationUtc }` with full preview URLs for copy-paste.
+- **Bypass — two-tier tokens**: Visiting any URL with `?preview=<TOKEN>` sets an HMAC-signed `wdth_preview` cookie (HttpOnly, SameSite=Lax, Secure in prod) and redirects with the param stripped.
+  - **Alpha token** (admin/personal use, **1-year cookie**): exact value of `COMING_SOON_PREVIEW_TOKEN` env var (default `wordeth-launch-2026`). Never share this — it's the long-lived insider link.
+  - **Bravo tokens** (shareable, **24h cookie**): derived daily as `HMAC(COMING_SOON_SIGNING_KEY||JWT_SECRET, "wdth-daily:" + COMING_SOON_PREVIEW_TOKEN + ":" + UTC_DATE).slice(0,16)`. Rotates at 00:00 UTC; yesterday's token still accepted for 24h grace.
+- **Fetching links (admin only)**:
+  - `GET /api/coming-soon/share-link` → plain-text response, just today's bravo URL. One-line copy/paste.
+  - `GET /api/coming-soon/today-token` → JSON with `alpha.url` plus `bravo.today/tomorrow/yesterday` and `nextRotationUtc`.
 - **Toggle**: Set `COMING_SOON_MODE=off` to disable the gate entirely (e.g., at launch). Default is `on`.
 - **Bypass paths**: `/api/*`, static asset directories (`/css`, `/js`, `/images`, `/fonts`, etc.), `/socket.io/*`, `coming-soon.html` itself, favicon, robots.txt, sitemap.xml, manifest.json, and service workers always pass through.
 - **Signup capture**: `POST /api/coming-soon/signup` accepts `{ email }`, validates format, and persists to the `waitlist_signups` MongoDB collection (model: `WaitlistSignup`) with `email` (unique), `source`, `ip`, `userAgent`, `referrer`, `createdAt`. Duplicate emails are silently no-ops via upsert.

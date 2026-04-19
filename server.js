@@ -228,7 +228,9 @@ const PREVIEW_SIGNING_KEY = process.env.COMING_SOON_SIGNING_KEY
     || _csCrypto.randomBytes(32).toString('hex');
 const PREVIEW_COOKIE = 'wdth_preview';
 const PREVIEW_COOKIE_SECURE = process.env.NODE_ENV === 'production';
-const PREVIEW_COOKIE_MAX_AGE = 60 * 60 * 24; // 24h — matches daily token rotation
+const ALPHA_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year — alpha (admin) token
+const BRAVO_COOKIE_MAX_AGE = 60 * 60 * 24;       // 24h — bravo (daily share) token
+const PREVIEW_COOKIE_MAX_AGE = ALPHA_COOKIE_MAX_AGE; // legacy alias (used by cap)
 const COMING_SOON_BYPASS_PREFIXES = [
     '/api/', '/css/', '/js/', '/images/', '/img/', '/fonts/', '/assets/',
     '/socket.io/', '/.well-known/', '/uploads/', '/static/', '/og-image/'
@@ -288,10 +290,17 @@ function _dailyTokenForDay(dayKey) {
         .digest('hex')
         .slice(0, 16);
 }
-function _previewTokenMatches(provided) {
+function _matchesAlphaToken(provided) {
+    if (!PREVIEW_TOKEN || !provided) return false;
+    const a = Buffer.from(String(provided));
+    const b = Buffer.from(PREVIEW_TOKEN);
+    if (a.length !== b.length) return false;
+    try { return _csCrypto.timingSafeEqual(a, b); } catch { return false; }
+}
+function _matchesBravoToken(provided) {
     if (!provided) return false;
     const p = String(provided);
-    for (const offset of [0, -1]) { // today + yesterday
+    for (const offset of [0, -1]) { // today + yesterday (24h grace)
         const expected = _dailyTokenForDay(_utcDayKey(offset));
         if (!expected) continue;
         try {
@@ -334,9 +343,15 @@ app.use(async (req, res, next) => {
         if (p.startsWith(prefix)) return next();
     }
 
-    if (req.query.preview && _previewTokenMatches(req.query.preview)) {
-        _issuePreviewCookie(res, PREVIEW_COOKIE_MAX_AGE);
-        return _redirectStrippingPreview(req, res);
+    if (req.query.preview) {
+        if (_matchesAlphaToken(req.query.preview)) {
+            _issuePreviewCookie(res, ALPHA_COOKIE_MAX_AGE);
+            return _redirectStrippingPreview(req, res);
+        }
+        if (_matchesBravoToken(req.query.preview)) {
+            _issuePreviewCookie(res, BRAVO_COOKIE_MAX_AGE);
+            return _redirectStrippingPreview(req, res);
+        }
     }
 
     if (_hasValidPreviewCookie(req)) return next();
@@ -422,24 +437,45 @@ app.get('/api/coming-soon/signups.csv', _csAuth, _csRequireRole('ADMIN'), async 
     }
 });
 
-// Admin-only: fetch today's (and tomorrow's) preview link
-app.get('/api/coming-soon/today-token', _csAuth, _csRequireRole('ADMIN'), (req, res) => {
+function _siteOrigin(req) {
     const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').toString().split(',')[0];
     const host = req.headers['x-forwarded-host'] || req.headers.host || 'www.wordeth.com';
-    const origin = `${proto}://${host}`;
+    return `${proto}://${host}`;
+}
+
+// Admin-only: super-simple plain-text endpoint — returns ONLY today's bravo share URL.
+// Hit it, copy the response, paste into a text. Done.
+app.get('/api/coming-soon/share-link', _csAuth, _csRequireRole('ADMIN'), (req, res) => {
+    const today = _dailyTokenForDay(_utcDayKey(0));
+    if (!today) return res.status(503).type('text/plain').send('COMING_SOON_PREVIEW_TOKEN not set');
+    res.setHeader('Cache-Control', 'no-store');
+    return res.type('text/plain').send(`${_siteOrigin(req)}/?preview=${today}`);
+});
+
+// Admin-only: full JSON with today/tomorrow/yesterday + alpha link.
+app.get('/api/coming-soon/today-token', _csAuth, _csRequireRole('ADMIN'), (req, res) => {
+    const origin = _siteOrigin(req);
     const today = _dailyTokenForDay(_utcDayKey(0));
     const tomorrow = _dailyTokenForDay(_utcDayKey(1));
     const yesterday = _dailyTokenForDay(_utcDayKey(-1));
     if (!today) return res.status(503).json({ success: false, message: 'COMING_SOON_PREVIEW_TOKEN not set' });
+    const now = new Date();
     const nextRotationUtc = new Date(Date.UTC(
-        new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + 1
+        now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1
     )).toISOString();
     return res.json({
         success: true,
-        today: { token: today, url: `${origin}/?preview=${today}` },
-        tomorrow: { token: tomorrow, url: `${origin}/?preview=${tomorrow}` },
-        yesterday: { token: yesterday, url: `${origin}/?preview=${yesterday}`, note: 'still accepted (24h grace)' },
-        nextRotationUtc
+        alpha: {
+            note: 'Personal admin link. 1-year cookie. Do NOT share.',
+            url: `${origin}/?preview=${PREVIEW_TOKEN}`
+        },
+        bravo: {
+            note: 'Daily share link. 24h cookie. Rotates at 00:00 UTC. Yesterday still works during grace.',
+            today: { token: today, url: `${origin}/?preview=${today}` },
+            tomorrow: { token: tomorrow, url: `${origin}/?preview=${tomorrow}` },
+            yesterday: { token: yesterday, url: `${origin}/?preview=${yesterday}` },
+            nextRotationUtc
+        }
     });
 });
 
