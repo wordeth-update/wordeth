@@ -318,17 +318,77 @@ app.use((req, res, next) => {
     return res.sendFile(filePath);
 });
 
-app.post('/api/coming-soon/signup', express.json(), (req, res) => {
-    try {
-        const email = (req.body && req.body.email ? String(req.body.email) : '').trim().toLowerCase();
-        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
-            return res.status(400).json({ success: false, message: 'Please enter a valid email.' });
-        }
-        console.log(`[coming-soon-signup] ${email} @ ${new Date().toISOString()}`);
-        return res.json({ success: true });
-    } catch (e) {
-        return res.status(500).json({ success: false, message: 'Something went wrong. Please try again.' });
+const _comingSoonSignupSeen = new Map(); // email -> last-sent timestamp
+const _COMING_SOON_DEDUPE_MS = 1000 * 60 * 60 * 24; // 24h
+
+function _escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+}
+
+app.post('/api/coming-soon/signup', express.json(), async (req, res) => {
+    const email = (req.body && req.body.email ? String(req.body.email) : '').trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
+        return res.status(400).json({ success: false, message: 'Please enter a valid email.' });
     }
+
+    const now = Date.now();
+    const last = _comingSoonSignupSeen.get(email);
+    if (last && now - last < _COMING_SOON_DEDUPE_MS) {
+        console.log(`[coming-soon-signup] dedupe ${email}`);
+        return res.json({ success: true });
+    }
+    _comingSoonSignupSeen.set(email, now);
+
+    // Periodic GC of dedupe map (cap memory)
+    if (_comingSoonSignupSeen.size > 5000) {
+        for (const [k, t] of _comingSoonSignupSeen) {
+            if (now - t > _COMING_SOON_DEDUPE_MS) _comingSoonSignupSeen.delete(k);
+        }
+    }
+
+    const ts = new Date().toISOString();
+    const ip = (req.headers['x-forwarded-for'] || req.ip || '').toString().split(',')[0].trim();
+    const ua = (req.headers['user-agent'] || '').toString().slice(0, 200);
+    console.log(`[coming-soon-signup] ${email} @ ${ts} ip=${ip}`);
+
+    // Fire-and-forget email so the visitor never waits on SMTP.
+    (async () => {
+        try {
+            const { sendEmail } = require('./utils/replitmail');
+            const safeEmail = _escapeHtml(email);
+            const safeIp = _escapeHtml(ip || 'unknown');
+            const safeUa = _escapeHtml(ua || 'unknown');
+            await sendEmail({
+                subject: `New Wordeth waitlist signup: ${email}`,
+                text:
+`New "Notify me" signup on Wordeth coming-soon page.
+
+Email: ${email}
+Time:  ${ts}
+IP:    ${ip || 'unknown'}
+UA:    ${ua || 'unknown'}
+`,
+                html:
+`<div style="font-family:'Outfit',Arial,sans-serif;background:#0a0612;color:#fff;padding:24px;border-radius:12px;max-width:560px;">
+  <h2 style="font-family:'Syne',Arial,sans-serif;margin:0 0 12px;color:#4dffb8;">New Wordeth waitlist signup</h2>
+  <p style="margin:0 0 20px;color:rgba(255,255,255,0.75);">Someone just dropped their email on the coming-soon page.</p>
+  <table style="width:100%;border-collapse:collapse;font-size:14px;">
+    <tr><td style="padding:8px 0;color:rgba(255,255,255,0.55);width:90px;">Email</td><td style="padding:8px 0;"><strong>${safeEmail}</strong></td></tr>
+    <tr><td style="padding:8px 0;color:rgba(255,255,255,0.55);">Time</td><td style="padding:8px 0;">${ts}</td></tr>
+    <tr><td style="padding:8px 0;color:rgba(255,255,255,0.55);">IP</td><td style="padding:8px 0;">${safeIp}</td></tr>
+    <tr><td style="padding:8px 0;vertical-align:top;color:rgba(255,255,255,0.55);">User-Agent</td><td style="padding:8px 0;">${safeUa}</td></tr>
+  </table>
+</div>`
+            });
+            console.log(`[coming-soon-signup] emailed waitlist notification for ${email}`);
+        } catch (err) {
+            console.error(`[coming-soon-signup] email failed for ${email}:`, err && err.message ? err.message : err);
+        }
+    })();
+
+    return res.json({ success: true });
 });
 
 const _htmlCache = new Map();

@@ -136,7 +136,7 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Bypass**: Visiting any URL with `?preview=<TOKEN>` sets a 1-year `wdth_preview=1` cookie (HttpOnly, SameSite=Lax) and redirects to the same path with the param stripped. Default token is `wordeth-insider-2026`, overridable via `COMING_SOON_PREVIEW_TOKEN` env var.
 - **Toggle**: Set `COMING_SOON_MODE=off` to disable the gate entirely (e.g., at launch). Default is `on`.
 - **Bypass paths**: `/api/*`, static asset directories (`/css`, `/js`, `/images`, `/fonts`, etc.), `/socket.io/*`, `coming-soon.html` itself, favicon, robots.txt, sitemap.xml, manifest.json, and service workers always pass through.
-- **Signup endpoint**: `POST /api/coming-soon/signup` accepts `{ email }`, validates format, and logs to console (no DB persistence yet).
+- **Signup endpoint**: `POST /api/coming-soon/signup` accepts `{ email }`, validates format, dedupes per-email for 24h (in-memory), logs to console, and emails a notification to the Replit account owner via the Replit Mail integration (`utils/replitmail.js`). Email send is fire-and-forget so the visitor never waits on SMTP. Notifications include the signup email, timestamp, IP, and user-agent. To route notifications to `signup@wordeth.com`, set the Wordeth Replit account's verified email to that address (or set up a forward to it) — Replit Mail always delivers to the account owner.
 
 ### Key Features Architecture
 - **Verses (Audio Rooms)**: Uses Agora RTC SDK for scalable audio/video, with Socket.io for room management. Supports server-side token generation and Web Audio API for filters.
