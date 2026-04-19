@@ -228,8 +228,7 @@ const PREVIEW_SIGNING_KEY = process.env.COMING_SOON_SIGNING_KEY
     || _csCrypto.randomBytes(32).toString('hex');
 const PREVIEW_COOKIE = 'wdth_preview';
 const PREVIEW_COOKIE_SECURE = process.env.NODE_ENV === 'production';
-const PREVIEW_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // master token cookie TTL (1 year)
-const PreviewToken = require('./models/PreviewToken');
+const PREVIEW_COOKIE_MAX_AGE = 60 * 60 * 24; // 24h — matches daily token rotation
 const COMING_SOON_BYPASS_PREFIXES = [
     '/api/', '/css/', '/js/', '/images/', '/img/', '/fonts/', '/assets/',
     '/socket.io/', '/.well-known/', '/uploads/', '/static/', '/og-image/'
@@ -272,12 +271,36 @@ function _hasValidPreviewCookie(req) {
     } catch { return false; }
 }
 
+// Daily-rotating master token: deterministically derived from the env token + UTC date.
+// Same token for the whole UTC day; changes at 00:00 UTC. Yesterday's token is also
+// accepted for a 24h grace window so links don't die mid-conversation.
+function _utcDayKey(offsetDays = 0) {
+    const d = new Date(Date.now() + offsetDays * 86400000);
+    return d.getUTCFullYear() + '-' +
+        String(d.getUTCMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getUTCDate()).padStart(2, '0');
+}
+function _dailyTokenForDay(dayKey) {
+    if (!PREVIEW_TOKEN) return null;
+    return _csCrypto
+        .createHmac('sha256', PREVIEW_SIGNING_KEY)
+        .update('wdth-daily:' + PREVIEW_TOKEN + ':' + dayKey)
+        .digest('hex')
+        .slice(0, 16);
+}
 function _previewTokenMatches(provided) {
-    if (!PREVIEW_TOKEN || !provided) return false;
-    const a = Buffer.from(String(provided));
-    const b = Buffer.from(PREVIEW_TOKEN);
-    if (a.length !== b.length) return false;
-    try { return _csCrypto.timingSafeEqual(a, b); } catch { return false; }
+    if (!provided) return false;
+    const p = String(provided);
+    for (const offset of [0, -1]) { // today + yesterday
+        const expected = _dailyTokenForDay(_utcDayKey(offset));
+        if (!expected) continue;
+        try {
+            const a = Buffer.from(p);
+            const b = Buffer.from(expected);
+            if (a.length === b.length && _csCrypto.timingSafeEqual(a, b)) return true;
+        } catch { /* ignore */ }
+    }
+    return false;
 }
 
 function _issuePreviewCookie(res, ttlSeconds) {
@@ -301,19 +324,6 @@ function _redirectStrippingPreview(req, res) {
     return res.redirect(302, req.path + (otherParams ? '?' + otherParams : ''));
 }
 
-async function _resolveBravoToken(provided) {
-    if (!provided || typeof provided !== 'string') return null;
-    if (provided.length > 200) return null;
-    try {
-        const doc = await PreviewToken.findOne({ token: provided });
-        if (!doc || !doc.isUsable()) return null;
-        return doc;
-    } catch (err) {
-        console.error('[coming-soon] bravo token lookup failed:', err && err.message ? err.message : err);
-        return null;
-    }
-}
-
 app.use(async (req, res, next) => {
     if (COMING_SOON_MODE !== 'on') return next();
     if (req.method !== 'GET' && req.method !== 'HEAD') return next();
@@ -324,25 +334,9 @@ app.use(async (req, res, next) => {
         if (p.startsWith(prefix)) return next();
     }
 
-    if (req.query.preview) {
-        // 1. Master token (env-driven, 1-year cookie)
-        if (_previewTokenMatches(req.query.preview)) {
-            _issuePreviewCookie(res, PREVIEW_COOKIE_MAX_AGE);
-            return _redirectStrippingPreview(req, res);
-        }
-        // 2. Bravo token (DB-backed, custom TTL, usage-tracked)
-        const bravo = await _resolveBravoToken(String(req.query.preview));
-        if (bravo) {
-            _issuePreviewCookie(res, bravo.ttlSeconds);
-            try {
-                bravo.useCount += 1;
-                bravo.lastUsedAt = new Date();
-                await bravo.save();
-            } catch (err) {
-                console.error('[coming-soon] bravo token usage update failed:', err && err.message ? err.message : err);
-            }
-            return _redirectStrippingPreview(req, res);
-        }
+    if (req.query.preview && _previewTokenMatches(req.query.preview)) {
+        _issuePreviewCookie(res, PREVIEW_COOKIE_MAX_AGE);
+        return _redirectStrippingPreview(req, res);
     }
 
     if (_hasValidPreviewCookie(req)) return next();
@@ -428,72 +422,25 @@ app.get('/api/coming-soon/signups.csv', _csAuth, _csRequireRole('ADMIN'), async 
     }
 });
 
-// ----- Admin: Bravo preview tokens (time-limited bypass tokens) -----
-function _generateBravoToken() {
-    return 'bravo_' + _csCrypto.randomBytes(18).toString('base64')
-        .replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
-}
-
-app.get('/api/coming-soon/preview-tokens', _csAuth, _csRequireRole('ADMIN'), async (req, res) => {
-    try {
-        const items = await PreviewToken.find({}).sort({ createdAt: -1 }).limit(500).lean();
-        return res.json({ success: true, items });
-    } catch (err) {
-        console.error('[preview-tokens] list failed:', err && err.message ? err.message : err);
-        return res.status(500).json({ success: false, message: 'Failed to list tokens' });
-    }
-});
-
-app.post('/api/coming-soon/preview-tokens', _csAuth, _csRequireRole('ADMIN'), express.json(), async (req, res) => {
-    try {
-        const label = String(req.body && req.body.label || '').trim().slice(0, 120);
-        const ttlHours = Number(req.body && req.body.ttlHours);
-        const expiresInDays = req.body && req.body.expiresInDays != null ? Number(req.body.expiresInDays) : null;
-        const maxUses = req.body && req.body.maxUses != null ? Math.max(0, parseInt(req.body.maxUses, 10) || 0) : 0;
-
-        if (!Number.isFinite(ttlHours) || ttlHours <= 0 || ttlHours > 24 * 365) {
-            return res.status(400).json({ success: false, message: 'ttlHours must be between 0 and 8760' });
-        }
-        const ttlSeconds = Math.round(ttlHours * 3600);
-        const tokenExpiresAt = (expiresInDays != null && Number.isFinite(expiresInDays) && expiresInDays > 0)
-            ? new Date(Date.now() + expiresInDays * 24 * 3600 * 1000)
-            : null;
-
-        const token = _generateBravoToken();
-        const doc = await PreviewToken.create({
-            token, label, ttlSeconds, tokenExpiresAt, maxUses,
-            createdBy: req.user && req.user._id ? req.user._id : null
-        });
-        return res.json({ success: true, item: doc.toObject() });
-    } catch (err) {
-        console.error('[preview-tokens] create failed:', err && err.message ? err.message : err);
-        return res.status(500).json({ success: false, message: 'Failed to create token' });
-    }
-});
-
-app.patch('/api/coming-soon/preview-tokens/:id', _csAuth, _csRequireRole('ADMIN'), express.json(), async (req, res) => {
-    try {
-        const update = {};
-        if (typeof req.body.revoked === 'boolean') update.revoked = req.body.revoked;
-        if (req.body.label != null) update.label = String(req.body.label).trim().slice(0, 120);
-        const doc = await PreviewToken.findByIdAndUpdate(req.params.id, update, { new: true });
-        if (!doc) return res.status(404).json({ success: false, message: 'Not found' });
-        return res.json({ success: true, item: doc.toObject() });
-    } catch (err) {
-        console.error('[preview-tokens] update failed:', err && err.message ? err.message : err);
-        return res.status(500).json({ success: false, message: 'Failed to update token' });
-    }
-});
-
-app.delete('/api/coming-soon/preview-tokens/:id', _csAuth, _csRequireRole('ADMIN'), async (req, res) => {
-    try {
-        const r = await PreviewToken.findByIdAndDelete(req.params.id);
-        if (!r) return res.status(404).json({ success: false, message: 'Not found' });
-        return res.json({ success: true });
-    } catch (err) {
-        console.error('[preview-tokens] delete failed:', err && err.message ? err.message : err);
-        return res.status(500).json({ success: false, message: 'Failed to delete token' });
-    }
+// Admin-only: fetch today's (and tomorrow's) preview link
+app.get('/api/coming-soon/today-token', _csAuth, _csRequireRole('ADMIN'), (req, res) => {
+    const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').toString().split(',')[0];
+    const host = req.headers['x-forwarded-host'] || req.headers.host || 'www.wordeth.com';
+    const origin = `${proto}://${host}`;
+    const today = _dailyTokenForDay(_utcDayKey(0));
+    const tomorrow = _dailyTokenForDay(_utcDayKey(1));
+    const yesterday = _dailyTokenForDay(_utcDayKey(-1));
+    if (!today) return res.status(503).json({ success: false, message: 'COMING_SOON_PREVIEW_TOKEN not set' });
+    const nextRotationUtc = new Date(Date.UTC(
+        new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + 1
+    )).toISOString();
+    return res.json({
+        success: true,
+        today: { token: today, url: `${origin}/?preview=${today}` },
+        tomorrow: { token: tomorrow, url: `${origin}/?preview=${tomorrow}` },
+        yesterday: { token: yesterday, url: `${origin}/?preview=${yesterday}`, note: 'still accepted (24h grace)' },
+        nextRotationUtc
+    });
 });
 
 // Admin-only JSON list with pagination
