@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wordeth — Coming Soon</title>
+<meta name="description" content="Wordeth is coming soon. A social music experience where lyrics, custom apparel, and live audio rooms meet a real creator economy.">
+<meta property="og:title" content="Wordeth — Coming Soon">
+<meta property="og:description" content="Search lyrics. Customize apparel. Connect through Verses. Grow in a creator economy.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0a0612">
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --bg-0: #050308;
+    --bg-1: #0d0719;
+    --purple-deep: #2a0f5f;
+    --purple-mid: #6c2bd9;
+    --purple-light: #a78bfa;
+    --mint: #4dffb8;
+    --mint-glow: rgba(77, 255, 184, 0.25);
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.72);
+    --text-tertiary: rgba(255, 255, 255, 0.5);
+    --border: rgba(255, 255, 255, 0.08);
+    --glass: rgba(255, 255, 255, 0.04);
+    --glass-hover: rgba(255, 255, 255, 0.07);
+}
+
+html, body {
+    background: var(--bg-0);
+    color: var(--text-primary);
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+body {
+    position: relative;
+    background:
+        radial-gradient(ellipse 80% 60% at 50% 0%, rgba(108, 43, 217, 0.35), transparent 60%),
+        radial-gradient(ellipse 60% 50% at 100% 100%, rgba(77, 255, 184, 0.15), transparent 60%),
+        radial-gradient(ellipse 50% 50% at 0% 80%, rgba(167, 139, 250, 0.18), transparent 60%),
+        var(--bg-0);
+}
+
+.bg-orbs {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+.orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.55;
+    animation: float 20s ease-in-out infinite;
+}
+.orb-1 { width: 500px; height: 500px; background: radial-gradient(circle, var(--purple-mid), transparent 70%); top: -150px; left: -100px; animation-delay: 0s; }
+.orb-2 { width: 600px; height: 600px; background: radial-gradient(circle, var(--mint), transparent 70%); bottom: -200px; right: -150px; opacity: 0.25; animation-delay: -7s; }
+.orb-3 { width: 400px; height: 400px; background: radial-gradient(circle, var(--purple-light), transparent 70%); top: 40%; left: 50%; opacity: 0.3; animation-delay: -14s; }
+
+@keyframes float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(60px, -40px) scale(1.1); }
+    66% { transform: translate(-50px, 30px) scale(0.95); }
+}
+
+.noise {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+main {
+    position: relative;
+    z-index: 2;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.nav-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 5rem;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: var(--text-primary);
+}
+.brand-mark {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--purple-mid), var(--mint));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.4rem;
+    color: var(--bg-0);
+    box-shadow: 0 8px 24px rgba(108, 43, 217, 0.4);
+}
+.brand-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.4rem;
+    letter-spacing: -0.02em;
+}
+
+.nav-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    background: rgba(77, 255, 184, 0.08);
+    border: 1px solid rgba(77, 255, 184, 0.25);
+    color: var(--mint);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--mint);
+    box-shadow: 0 0 12px var(--mint-glow);
+    animation: pulse 1.8s ease-in-out infinite;
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.hero {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-top: 2rem;
+}
+
+.eyebrow {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--purple-light);
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: rise 0.9s ease-out 0.1s forwards;
+}
+
+h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.8rem, 7vw, 5.5rem);
+    font-weight: 800;
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+    max-width: 900px;
+    opacity: 0;
+    animation: rise 0.9s ease-out 0.2s forwards;
+}
+h1 .grad {
+    background: linear-gradient(120deg, var(--mint) 0%, var(--purple-light) 50%, var(--mint) 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 6s linear infinite;
+}
+@keyframes shimmer {
+    to { background-position: 200% center; }
+}
+
+.lede {
+    font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+    color: var(--text-secondary);
+    max-width: 640px;
+    margin-bottom: 3.5rem;
+    line-height: 1.6;
+    opacity: 0;
+    animation: rise 0.9s ease-out 0.35s forwards;
+}
+
+@keyframes rise {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.pillars {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    width: 100%;
+    max-width: 1080px;
+    margin-bottom: 4rem;
+}
+
+.pillar {
+    position: relative;
+    padding: 2rem 1.75rem 2.25rem;
+    border-radius: 20px;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    text-align: left;
+    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.3s, border-color 0.3s;
+    opacity: 0;
+    animation: rise 0.9s ease-out forwards;
+    overflow: hidden;
+}
+.pillar:nth-child(1) { animation-delay: 0.5s; }
+.pillar:nth-child(2) { animation-delay: 0.65s; }
+.pillar:nth-child(3) { animation-delay: 0.8s; }
+
+.pillar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    padding: 1px;
+    background: linear-gradient(135deg, transparent 30%, rgba(77, 255, 184, 0.3), transparent 70%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+.pillar:hover {
+    transform: translateY(-6px);
+    background: var(--glass-hover);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+.pillar:hover::before { opacity: 1; }
+
+.pillar-icon {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
+    margin-bottom: 1.25rem;
+    background: linear-gradient(135deg, rgba(108, 43, 217, 0.3), rgba(77, 255, 184, 0.15));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--mint);
+}
+.pillar:nth-child(2) .pillar-icon { color: var(--purple-light); background: linear-gradient(135deg, rgba(77, 255, 184, 0.15), rgba(167, 139, 250, 0.3)); }
+.pillar:nth-child(3) .pillar-icon { color: #ffd770; background: linear-gradient(135deg, rgba(255, 215, 112, 0.18), rgba(108, 43, 217, 0.25)); }
+
+.pillar h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin-bottom: 0.6rem;
+    letter-spacing: -0.01em;
+}
+.pillar p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.55;
+}
+.pillar-tag {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.25rem 0.7rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    border-radius: 999px;
+    border: 1px solid var(--border);
+}
+
+.cta-card {
+    width: 100%;
+    max-width: 540px;
+    padding: 1.75rem;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(108, 43, 217, 0.12), rgba(77, 255, 184, 0.06));
+    border: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    text-align: center;
+    opacity: 0;
+    animation: rise 0.9s ease-out 1s forwards;
+}
+.cta-card h4 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.15rem;
+    margin-bottom: 0.4rem;
+}
+.cta-card p {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    margin-bottom: 1.25rem;
+}
+.signup-form {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.signup-form input[type="email"] {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.85rem 1rem;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+}
+.signup-form input[type="email"]:focus {
+    border-color: var(--mint);
+    background: rgba(0, 0, 0, 0.6);
+}
+.signup-form input[type="email"]::placeholder { color: var(--text-tertiary); }
+.signup-form button {
+    padding: 0.85rem 1.5rem;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, var(--mint), #2dd99c);
+    color: var(--bg-0);
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.2s;
+}
+.signup-form button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(77, 255, 184, 0.25);
+}
+.signup-form button:disabled {
+    opacity: 0.6; cursor: not-allowed; transform: none;
+}
+.signup-msg {
+    margin-top: 0.85rem;
+    font-size: 0.85rem;
+    min-height: 1.2em;
+    color: var(--mint);
+}
+.signup-msg.error { color: #ff7a8a; }
+
+footer {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-tertiary);
+    font-size: 0.82rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.socials { display: flex; gap: 0.4rem; }
+.socials a {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    text-decoration: none;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.socials a:hover { color: var(--mint); border-color: rgba(77, 255, 184, 0.3); background: var(--glass); }
+
+@media (max-width: 768px) {
+    .nav-top { margin-bottom: 3rem; }
+    .pillars { grid-template-columns: 1fr; gap: 1rem; margin-bottom: 3rem; }
+    .pillar { padding: 1.5rem; }
+    .lede { margin-bottom: 2.5rem; }
+    footer { flex-direction: column; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+</div>
+<div class="noise"></div>
+
+<main>
+    <nav class="nav-top">
+        <a href="/" class="brand">
+            <div class="brand-mark">W</div>
+            <span class="brand-name">Wordeth</span>
+        </a>
+        <div class="nav-status">
+            <span class="dot"></span>
+            Launching soon
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="eyebrow">Built for music. Built for you.</div>
+        <h1>The social music experience <span class="grad">is almost here.</span></h1>
+        <p class="lede">Wordeth is the home where your favorite songs become a community, your style becomes wearable, and your voice gets paid.</p>
+
+        <div class="pillars">
+            <div class="pillar">
+                <div class="pillar-icon"><i class="fas fa-microphone-lines"></i></div>
+                <h3>Search &amp; find lyrics</h3>
+                <p>Look up the lines you love, sing along in karaoke mode, and dive deep into the words behind every track.</p>
+                <span class="pillar-tag">Lyrics &amp; Karaoke</span>
+            </div>
+            <div class="pillar">
+                <div class="pillar-icon"><i class="fas fa-shirt"></i></div>
+                <h3>Customize apparel</h3>
+                <p>Design tees, hoodies, hats and more in our studio — or remix templates from your favorite artists, designers and labels.</p>
+                <span class="pillar-tag">Custom Merch Studio</span>
+            </div>
+            <div class="pillar">
+                <div class="pillar-icon"><i class="fas fa-headphones-simple"></i></div>
+                <h3>Connect through Verses</h3>
+                <p>Live audio rooms where fans, artists and creators talk, host, debate and grow together inside a real creator economy.</p>
+                <span class="pillar-tag">Verses &amp; Creator Payouts</span>
+            </div>
+        </div>
+
+        <div class="cta-card">
+            <h4>Be first in line</h4>
+            <p>Drop your email and we'll send you an invite the moment we open the doors.</p>
+            <form class="signup-form" id="signupForm" novalidate>
+                <input type="email" id="emailInput" placeholder="you@email.com" required autocomplete="email">
+                <button type="submit" id="signupBtn">Notify me</button>
+            </form>
+            <div class="signup-msg" id="signupMsg"></div>
+        </div>
+    </section>
+
+    <footer>
+        <div>&copy; <span id="year"></span> Wordeth. All rights reserved.</div>
+        <div class="socials">
+            <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+            <a href="#" aria-label="TikTok"><i class="fab fa-tiktok"></i></a>
+            <a href="#" aria-label="X"><i class="fab fa-x-twitter"></i></a>
+        </div>
+    </footer>
+</main>
+
+<script>
+document.getElementById('year').textContent = new Date().getFullYear();
+
+document.getElementById('signupForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var input = document.getElementById('emailInput');
+    var btn = document.getElementById('signupBtn');
+    var msg = document.getElementById('signupMsg');
+    var email = input.value.trim();
+    msg.classList.remove('error');
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        msg.classList.add('error');
+        msg.textContent = 'Please enter a valid email address.';
+        return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    fetch('/api/coming-soon/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email })
+    }).then(function(r) {
+        return r.json().catch(function(){ return {}; }).then(function(data) {
+            return { ok: r.ok, data: data || {} };
+        });
+    })
+    .then(function(result) {
+        btn.disabled = false;
+        btn.textContent = 'Notify me';
+        if (result.ok && result.data.success) {
+            msg.textContent = "You're on the list. See you at launch.";
+            input.value = '';
+        } else {
+            msg.classList.add('error');
+            msg.textContent = (result.data && result.data.message) || 'Something went wrong. Please try again.';
+        }
+    })
+    .catch(function() {
+        btn.disabled = false;
+        btn.textContent = 'Notify me';
+        msg.classList.add('error');
+        msg.textContent = "Couldn't reach the server. Please try again.";
+    });
+});
+</script>
+
+</body>
+</html>

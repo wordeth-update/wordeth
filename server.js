@@ -213,6 +213,124 @@ app.use('/api', (req, res, next) => {
     next();
 });
 
+// ============================================
+// Coming Soon gate — shows pre-launch landing page for visitors
+// without a preview cookie. Bypass with ?preview=TOKEN to set cookie.
+// Toggle with COMING_SOON_MODE env var ('on' | 'off'). Default: 'on'.
+// ============================================
+const _csCrypto = require('crypto');
+const COMING_SOON_MODE = (process.env.COMING_SOON_MODE || 'on').toLowerCase();
+// Require explicit preview token — never fall back to a predictable value.
+const PREVIEW_TOKEN = process.env.COMING_SOON_PREVIEW_TOKEN || '';
+// HMAC signing key for the bypass cookie — falls back to JWT_SECRET, then random (per-process).
+const PREVIEW_SIGNING_KEY = process.env.COMING_SOON_SIGNING_KEY
+    || process.env.JWT_SECRET
+    || _csCrypto.randomBytes(32).toString('hex');
+const PREVIEW_COOKIE = 'wdth_preview';
+const PREVIEW_COOKIE_SECURE = process.env.NODE_ENV === 'production';
+const PREVIEW_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+const COMING_SOON_BYPASS_PREFIXES = [
+    '/api/', '/css/', '/js/', '/images/', '/img/', '/fonts/', '/assets/',
+    '/socket.io/', '/.well-known/', '/uploads/', '/static/', '/og-image/'
+];
+const COMING_SOON_BYPASS_EXACT = new Set([
+    '/coming-soon.html', '/favicon.ico', '/robots.txt', '/sitemap.xml',
+    '/manifest.json', '/sw.js', '/service-worker.js'
+]);
+
+if (COMING_SOON_MODE === 'on' && !PREVIEW_TOKEN) {
+    console.warn('[coming-soon] COMING_SOON_MODE=on but COMING_SOON_PREVIEW_TOKEN is unset — preview bypass is DISABLED.');
+}
+
+function _signPreviewValue(expiry) {
+    const sig = _csCrypto
+        .createHmac('sha256', PREVIEW_SIGNING_KEY)
+        .update(`wdth-preview:${expiry}`)
+        .digest('base64')
+        .replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+    return `${expiry}.${sig}`;
+}
+
+function _hasValidPreviewCookie(req) {
+    const cookieHeader = req.headers.cookie || '';
+    let cookieVal = null;
+    for (const part of cookieHeader.split(';')) {
+        const [name, ...rest] = part.trim().split('=');
+        if (name === PREVIEW_COOKIE) { cookieVal = rest.join('='); break; }
+    }
+    if (!cookieVal) return false;
+    const dot = cookieVal.indexOf('.');
+    if (dot <= 0) return false;
+    const expiry = parseInt(cookieVal.slice(0, dot), 10);
+    if (!Number.isFinite(expiry) || expiry < Date.now()) return false;
+    const expected = _signPreviewValue(expiry);
+    try {
+        const a = Buffer.from(cookieVal);
+        const b = Buffer.from(expected);
+        return a.length === b.length && _csCrypto.timingSafeEqual(a, b);
+    } catch { return false; }
+}
+
+function _previewTokenMatches(provided) {
+    if (!PREVIEW_TOKEN || !provided) return false;
+    const a = Buffer.from(String(provided));
+    const b = Buffer.from(PREVIEW_TOKEN);
+    if (a.length !== b.length) return false;
+    try { return _csCrypto.timingSafeEqual(a, b); } catch { return false; }
+}
+
+app.use((req, res, next) => {
+    if (COMING_SOON_MODE !== 'on') return next();
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+
+    const p = req.path;
+    if (COMING_SOON_BYPASS_EXACT.has(p)) return next();
+    for (const prefix of COMING_SOON_BYPASS_PREFIXES) {
+        if (p.startsWith(prefix)) return next();
+    }
+
+    if (req.query.preview && _previewTokenMatches(req.query.preview)) {
+        const expiry = Date.now() + PREVIEW_COOKIE_MAX_AGE * 1000;
+        const cookieParts = [
+            `${PREVIEW_COOKIE}=${_signPreviewValue(expiry)}`,
+            'Path=/',
+            `Max-Age=${PREVIEW_COOKIE_MAX_AGE}`,
+            'SameSite=Lax',
+            'HttpOnly'
+        ];
+        if (PREVIEW_COOKIE_SECURE) cookieParts.push('Secure');
+        res.setHeader('Set-Cookie', cookieParts.join('; '));
+        const otherParams = Object.entries(req.query)
+            .filter(([k]) => k !== 'preview')
+            .map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+        return res.redirect(302, req.path + (otherParams ? '?' + otherParams : ''));
+    }
+
+    if (_hasValidPreviewCookie(req)) return next();
+
+    const ext = path.extname(p);
+    if (ext && ext !== '.html') return next();
+
+    const filePath = path.join(__dirname, 'public', 'coming-soon.html');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.sendFile(filePath);
+});
+
+app.post('/api/coming-soon/signup', express.json(), (req, res) => {
+    try {
+        const email = (req.body && req.body.email ? String(req.body.email) : '').trim().toLowerCase();
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
+            return res.status(400).json({ success: false, message: 'Please enter a valid email.' });
+        }
+        console.log(`[coming-soon-signup] ${email} @ ${new Date().toISOString()}`);
+        return res.json({ success: true });
+    } catch (e) {
+        return res.status(500).json({ success: false, message: 'Something went wrong. Please try again.' });
+    }
+});
+
 const _htmlCache = new Map();
 app.use((req, res, next) => {
     const ext = path.extname(req.path);

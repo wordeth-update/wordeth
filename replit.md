@@ -129,6 +129,15 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Public Browse API**: Endpoints for browsing approved templates by genre, artist, label; trending (weekly sales), and featured templates.
 - **Routes**: `routes/templates.js` mounted at `/api/templates`. Validates Fabric.js JSON structure (requires `objects` array), rejects oversize payloads, validates front/back/left/right designs.
 
+### Coming Soon Gate
+- **Purpose**: Pre-launch landing page shown to all public visitors at the root domain until the platform officially launches.
+- **Page**: `public/coming-soon.html` — animated dark/purple/mint themed standalone page (Syne + Outfit fonts) with three pillars (Search lyrics, Customize apparel, Connect through Verses), email signup form, and animated background orbs.
+- **Middleware**: Inserted in `server.js` before the HTML cache and static-file middleware. Intercepts `GET`/`HEAD` requests and serves `coming-soon.html` for any HTML/page request unless the visitor has the `wdth_preview=1` cookie.
+- **Bypass**: Visiting any URL with `?preview=<TOKEN>` sets a 1-year `wdth_preview=1` cookie (HttpOnly, SameSite=Lax) and redirects to the same path with the param stripped. Default token is `wordeth-insider-2026`, overridable via `COMING_SOON_PREVIEW_TOKEN` env var.
+- **Toggle**: Set `COMING_SOON_MODE=off` to disable the gate entirely (e.g., at launch). Default is `on`.
+- **Bypass paths**: `/api/*`, static asset directories (`/css`, `/js`, `/images`, `/fonts`, etc.), `/socket.io/*`, `coming-soon.html` itself, favicon, robots.txt, sitemap.xml, manifest.json, and service workers always pass through.
+- **Signup endpoint**: `POST /api/coming-soon/signup` accepts `{ email }`, validates format, and logs to console (no DB persistence yet).
+
 ### Key Features Architecture
 - **Verses (Audio Rooms)**: Uses Agora RTC SDK for scalable audio/video, with Socket.io for room management. Supports server-side token generation and Web Audio API for filters.
 - **Lyrics**: Server-side search integrating with licensed third-party APIs.
