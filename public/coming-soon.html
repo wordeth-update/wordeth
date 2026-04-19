@@ -107,22 +107,11 @@ main {
     text-decoration: none;
     color: var(--text-primary);
 }
-.brand-mark {
-    width: 44px; height: 44px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, var(--purple-mid), var(--mint));
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 1.4rem;
-    color: var(--bg-0);
-    box-shadow: 0 8px 24px rgba(108, 43, 217, 0.4);
-}
-.brand-name {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 1.4rem;
-    letter-spacing: -0.02em;
+.brand-logo {
+    height: 56px;
+    width: auto;
+    display: block;
+    filter: drop-shadow(0 6px 20px rgba(108, 43, 217, 0.35));
 }
 
 .nav-status {
@@ -411,9 +400,8 @@ footer {
 
 <main>
     <nav class="nav-top">
-        <a href="/" class="brand">
-            <div class="brand-mark">W</div>
-            <span class="brand-name">Wordeth</span>
+        <a href="/" class="brand" aria-label="Wordeth">
+            <img src="/images/wordeth-logo.png" alt="Wordeth" class="brand-logo">
         </a>
         <div class="nav-status">
             <span class="dot"></span>
@@ -423,7 +411,7 @@ footer {
 
     <section class="hero">
         <div class="eyebrow">Built for music. Built for you.</div>
-        <h1>The social music experience <span class="grad">is almost here.</span></h1>
+        <h1>The world&rsquo;s <span class="grad">dopest</span> social music experience <span class="grad">is almost here.</span></h1>
         <p class="lede">Wordeth is the home where your favorite songs become a community, your style becomes wearable, and your voice gets paid.</p>
 
         <div class="pillars">
