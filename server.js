@@ -228,7 +228,8 @@ const PREVIEW_SIGNING_KEY = process.env.COMING_SOON_SIGNING_KEY
     || _csCrypto.randomBytes(32).toString('hex');
 const PREVIEW_COOKIE = 'wdth_preview';
 const PREVIEW_COOKIE_SECURE = process.env.NODE_ENV === 'production';
-const PREVIEW_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+const PREVIEW_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // master token cookie TTL (1 year)
+const PreviewToken = require('./models/PreviewToken');
 const COMING_SOON_BYPASS_PREFIXES = [
     '/api/', '/css/', '/js/', '/images/', '/img/', '/fonts/', '/assets/',
     '/socket.io/', '/.well-known/', '/uploads/', '/static/', '/og-image/'
@@ -279,7 +280,41 @@ function _previewTokenMatches(provided) {
     try { return _csCrypto.timingSafeEqual(a, b); } catch { return false; }
 }
 
-app.use((req, res, next) => {
+function _issuePreviewCookie(res, ttlSeconds) {
+    const safeTtl = Math.max(60, Math.min(ttlSeconds | 0, PREVIEW_COOKIE_MAX_AGE));
+    const expiry = Date.now() + safeTtl * 1000;
+    const cookieParts = [
+        `${PREVIEW_COOKIE}=${_signPreviewValue(expiry)}`,
+        'Path=/',
+        `Max-Age=${safeTtl}`,
+        'SameSite=Lax',
+        'HttpOnly'
+    ];
+    if (PREVIEW_COOKIE_SECURE) cookieParts.push('Secure');
+    res.setHeader('Set-Cookie', cookieParts.join('; '));
+}
+
+function _redirectStrippingPreview(req, res) {
+    const otherParams = Object.entries(req.query)
+        .filter(([k]) => k !== 'preview')
+        .map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+    return res.redirect(302, req.path + (otherParams ? '?' + otherParams : ''));
+}
+
+async function _resolveBravoToken(provided) {
+    if (!provided || typeof provided !== 'string') return null;
+    if (provided.length > 200) return null;
+    try {
+        const doc = await PreviewToken.findOne({ token: provided });
+        if (!doc || !doc.isUsable()) return null;
+        return doc;
+    } catch (err) {
+        console.error('[coming-soon] bravo token lookup failed:', err && err.message ? err.message : err);
+        return null;
+    }
+}
+
+app.use(async (req, res, next) => {
     if (COMING_SOON_MODE !== 'on') return next();
     if (req.method !== 'GET' && req.method !== 'HEAD') return next();
 
@@ -289,21 +324,25 @@ app.use((req, res, next) => {
         if (p.startsWith(prefix)) return next();
     }
 
-    if (req.query.preview && _previewTokenMatches(req.query.preview)) {
-        const expiry = Date.now() + PREVIEW_COOKIE_MAX_AGE * 1000;
-        const cookieParts = [
-            `${PREVIEW_COOKIE}=${_signPreviewValue(expiry)}`,
-            'Path=/',
-            `Max-Age=${PREVIEW_COOKIE_MAX_AGE}`,
-            'SameSite=Lax',
-            'HttpOnly'
-        ];
-        if (PREVIEW_COOKIE_SECURE) cookieParts.push('Secure');
-        res.setHeader('Set-Cookie', cookieParts.join('; '));
-        const otherParams = Object.entries(req.query)
-            .filter(([k]) => k !== 'preview')
-            .map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-        return res.redirect(302, req.path + (otherParams ? '?' + otherParams : ''));
+    if (req.query.preview) {
+        // 1. Master token (env-driven, 1-year cookie)
+        if (_previewTokenMatches(req.query.preview)) {
+            _issuePreviewCookie(res, PREVIEW_COOKIE_MAX_AGE);
+            return _redirectStrippingPreview(req, res);
+        }
+        // 2. Bravo token (DB-backed, custom TTL, usage-tracked)
+        const bravo = await _resolveBravoToken(String(req.query.preview));
+        if (bravo) {
+            _issuePreviewCookie(res, bravo.ttlSeconds);
+            try {
+                bravo.useCount += 1;
+                bravo.lastUsedAt = new Date();
+                await bravo.save();
+            } catch (err) {
+                console.error('[coming-soon] bravo token usage update failed:', err && err.message ? err.message : err);
+            }
+            return _redirectStrippingPreview(req, res);
+        }
     }
 
     if (_hasValidPreviewCookie(req)) return next();
@@ -386,6 +425,74 @@ app.get('/api/coming-soon/signups.csv', _csAuth, _csRequireRole('ADMIN'), async 
     } catch (err) {
         console.error('[coming-soon-signups.csv] failed:', err && err.message ? err.message : err);
         return res.status(500).json({ success: false, message: 'Failed to export waitlist' });
+    }
+});
+
+// ----- Admin: Bravo preview tokens (time-limited bypass tokens) -----
+function _generateBravoToken() {
+    return 'bravo_' + _csCrypto.randomBytes(18).toString('base64')
+        .replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+
+app.get('/api/coming-soon/preview-tokens', _csAuth, _csRequireRole('ADMIN'), async (req, res) => {
+    try {
+        const items = await PreviewToken.find({}).sort({ createdAt: -1 }).limit(500).lean();
+        return res.json({ success: true, items });
+    } catch (err) {
+        console.error('[preview-tokens] list failed:', err && err.message ? err.message : err);
+        return res.status(500).json({ success: false, message: 'Failed to list tokens' });
+    }
+});
+
+app.post('/api/coming-soon/preview-tokens', _csAuth, _csRequireRole('ADMIN'), express.json(), async (req, res) => {
+    try {
+        const label = String(req.body && req.body.label || '').trim().slice(0, 120);
+        const ttlHours = Number(req.body && req.body.ttlHours);
+        const expiresInDays = req.body && req.body.expiresInDays != null ? Number(req.body.expiresInDays) : null;
+        const maxUses = req.body && req.body.maxUses != null ? Math.max(0, parseInt(req.body.maxUses, 10) || 0) : 0;
+
+        if (!Number.isFinite(ttlHours) || ttlHours <= 0 || ttlHours > 24 * 365) {
+            return res.status(400).json({ success: false, message: 'ttlHours must be between 0 and 8760' });
+        }
+        const ttlSeconds = Math.round(ttlHours * 3600);
+        const tokenExpiresAt = (expiresInDays != null && Number.isFinite(expiresInDays) && expiresInDays > 0)
+            ? new Date(Date.now() + expiresInDays * 24 * 3600 * 1000)
+            : null;
+
+        const token = _generateBravoToken();
+        const doc = await PreviewToken.create({
+            token, label, ttlSeconds, tokenExpiresAt, maxUses,
+            createdBy: req.user && req.user._id ? req.user._id : null
+        });
+        return res.json({ success: true, item: doc.toObject() });
+    } catch (err) {
+        console.error('[preview-tokens] create failed:', err && err.message ? err.message : err);
+        return res.status(500).json({ success: false, message: 'Failed to create token' });
+    }
+});
+
+app.patch('/api/coming-soon/preview-tokens/:id', _csAuth, _csRequireRole('ADMIN'), express.json(), async (req, res) => {
+    try {
+        const update = {};
+        if (typeof req.body.revoked === 'boolean') update.revoked = req.body.revoked;
+        if (req.body.label != null) update.label = String(req.body.label).trim().slice(0, 120);
+        const doc = await PreviewToken.findByIdAndUpdate(req.params.id, update, { new: true });
+        if (!doc) return res.status(404).json({ success: false, message: 'Not found' });
+        return res.json({ success: true, item: doc.toObject() });
+    } catch (err) {
+        console.error('[preview-tokens] update failed:', err && err.message ? err.message : err);
+        return res.status(500).json({ success: false, message: 'Failed to update token' });
+    }
+});
+
+app.delete('/api/coming-soon/preview-tokens/:id', _csAuth, _csRequireRole('ADMIN'), async (req, res) => {
+    try {
+        const r = await PreviewToken.findByIdAndDelete(req.params.id);
+        if (!r) return res.status(404).json({ success: false, message: 'Not found' });
+        return res.json({ success: true });
+    } catch (err) {
+        console.error('[preview-tokens] delete failed:', err && err.message ? err.message : err);
+        return res.status(500).json({ success: false, message: 'Failed to delete token' });
     }
 });
 
