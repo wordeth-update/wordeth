@@ -219,7 +219,8 @@ app.use('/api', (req, res, next) => {
 // Toggle with COMING_SOON_MODE env var ('on' | 'off'). Default: 'on'.
 // ============================================
 const _csCrypto = require('crypto');
-const COMING_SOON_MODE = (process.env.COMING_SOON_MODE || 'on').toLowerCase();
+// Default is 'off' so the site is open. Set COMING_SOON_MODE=on in env to re-enable the gate.
+const COMING_SOON_MODE = (process.env.COMING_SOON_MODE || 'off').toLowerCase();
 // Require explicit preview token — never fall back to a predictable value.
 const PREVIEW_TOKEN = process.env.COMING_SOON_PREVIEW_TOKEN || '';
 // HMAC signing key for the bypass cookie — falls back to JWT_SECRET, then random (per-process).

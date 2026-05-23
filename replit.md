@@ -139,7 +139,7 @@ Partner dashboard pages are web-only — do NOT sync to iOS/Android builds.
 - **Fetching links (admin only)**:
   - `GET /api/coming-soon/share-link` → plain-text response, just today's bravo URL. One-line copy/paste.
   - `GET /api/coming-soon/today-token` → JSON with `alpha.url` plus `bravo.today/tomorrow/yesterday` and `nextRotationUtc`.
-- **Toggle**: Set `COMING_SOON_MODE=off` to disable the gate entirely (e.g., at launch). Default is `on`.
+- **Toggle**: Default is `off` (site is open). Set `COMING_SOON_MODE=on` in env to enable the gate.
 - **Bypass paths**: `/api/*`, static asset directories (`/css`, `/js`, `/images`, `/fonts`, etc.), `/socket.io/*`, `coming-soon.html` itself, favicon, robots.txt, sitemap.xml, manifest.json, and service workers always pass through.
 - **Signup capture**: `POST /api/coming-soon/signup` accepts `{ email }`, validates format, and persists to the `waitlist_signups` MongoDB collection (model: `WaitlistSignup`) with `email` (unique), `source`, `ip`, `userAgent`, `referrer`, `createdAt`. Duplicate emails are silently no-ops via upsert.
 - **Waitlist export (admin)**: `GET /api/coming-soon/signups.csv` (admin auth required) returns the full waitlist as a downloadable CSV named `wordeth-waitlist-YYYY-MM-DD.csv`. `GET /api/coming-soon/signups?limit=&skip=` returns paginated JSON for in-app dashboards.
