@@ -187,9 +187,19 @@
 }
 
 .loading-spinner-wrap {
-    width: 140px;
-    height: 140px;
+    width: 76px;
+    height: 76px;
     margin: 0 auto;
+}
+
+@media (max-width: 600px) {
+    .loading-spinner-wrap {
+        width: 60px;
+        height: 60px;
+    }
+    .loading {
+        padding: 1.5rem;
+    }
 }
 
 .loading-ring {

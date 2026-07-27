@@ -524,6 +524,7 @@
                     <div class="tools-tabs">
                         <button class="tools-tab active" data-tool="text"><i class="fas fa-font"></i> Text</button>
                         <button class="tools-tab" data-tool="art"><i class="fas fa-image"></i> Art</button>
+                        <button class="tools-tab" data-tool="templates"><i class="fas fa-layer-group"></i> Templates</button>
                     </div>
                     <div class="tools-content">
                         <div class="tool-panel active" id="toolPanel-text">
@@ -559,6 +560,24 @@
                                 </div>
                             </div>
                             <p style="font-size:0.72rem; color:var(--text-secondary); text-align:center; margin-top:0.5rem;">PNG, JPG, SVG up to 10MB</p>
+                        </div>
+                        <div class="tool-panel" id="toolPanel-templates">
+                            <div class="tool-group">
+                                <label class="tool-label">Search by lyric, artist or title</label>
+                                <div class="template-search-row">
+                                    <input type="text" class="tool-input" id="templateSearchInput" placeholder="e.g. a lyric line or artist...">
+                                    <button class="template-search-btn" id="templateSearchBtn" aria-label="Search templates"><i class="fas fa-search"></i></button>
+                                </div>
+                            </div>
+                            <div class="tool-group">
+                                <label class="tool-label">Genre</label>
+                                <select class="tool-select" id="templateGenreSelect">
+                                    <option value="">All genres</option>
+                                </select>
+                            </div>
+                            <div class="template-results" id="templateResults">
+                                <p class="template-results-hint">Browse ready-made designs from artists, designers &amp; labels. Search a lyric to find matching drops.</p>
+                            </div>
                         </div>
                     </div>
                     <div class="sidebar-section order-section">
@@ -770,11 +789,11 @@
                 var textEl = document.getElementById('lyricsPrefillText');
                 var metaEl = document.getElementById('lyricsPrefillMeta');
 
-                textEl.textContent = decodeURIComponent(lyrics);
+                textEl.textContent = lyrics;
 
                 if (song || artist) {
-                    var songName = song ? decodeURIComponent(song) : '';
-                    var artistName = artist ? decodeURIComponent(artist) : '';
+                    var songName = song || '';
+                    var artistName = artist || '';
                     var metaLine = '';
                     if (songName && artistName) metaLine = '"' + songName + '" by ' + artistName;
                     else if (songName) metaLine = '"' + songName + '"';
@@ -784,7 +803,7 @@
                 }
 
                 banner.classList.add('active');
-                window.selectedLyrics = decodeURIComponent(lyrics);
+                window.selectedLyrics = lyrics;
             }
         }
 

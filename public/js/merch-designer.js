@@ -364,6 +364,8 @@ var MerchDesigner = (function() {
             });
         }
 
+        initTemplatesPanel();
+
         if (document.getElementById('useLyricsDesignBtn')) {
             document.getElementById('useLyricsDesignBtn').addEventListener('click', function() {
                 if (window.selectedLyrics) {
@@ -498,12 +500,163 @@ var MerchDesigner = (function() {
     function checkForLyrics() {
         var params = new URLSearchParams(window.location.search);
         var lyrics = params.get('lyrics');
-        if (lyrics) {
-            window.selectedLyrics = decodeURIComponent(lyrics);
+        if (lyrics) window.selectedLyrics = lyrics;
+        if (window.selectedLyrics) {
             var banner = document.getElementById('lyricsDesignBanner');
-            if (banner) banner.style.display = 'block';
+            if (banner) banner.style.display = 'none';
+            autoPlaceLyrics(window.selectedLyrics);
         }
     }
+
+    function autoPlaceLyrics(lyrics) {
+        if (!state.canvas) return;
+        var text = String(lyrics).substring(0, 200);
+        var alreadyPlaced = state.canvas.getObjects().some(function(o) {
+            return o.wdthLyricsAutoPlaced;
+        });
+        if (alreadyPlaced) return;
+
+        var cw = state.canvas.getWidth();
+        var ch = state.canvas.getHeight();
+        var textObj = new fabric.Textbox(text, {
+            left: cw * 0.05,
+            top: ch * 0.25,
+            width: cw * 0.9,
+            fontFamily: 'Impact',
+            fontSize: Math.max(14, Math.round(cw / 12)),
+            fill: '#ffffff',
+            textAlign: 'center',
+            editable: true
+        });
+        textObj.wdthLyricsAutoPlaced = true;
+        state.canvas.add(textObj);
+        state.canvas.setActiveObject(textObj);
+        state.canvas.renderAll();
+        showToast('Lyrics placed on your garment — drag, resize or restyle them');
+    }
+
+    var TEMPLATE_GENRES = [
+        'Hip-Hop', 'R&B', 'Pop', 'Rock', 'Jazz', 'Electronic',
+        'Country', 'Latin', 'Afrobeats', 'Indie', 'Metal', 'Classical', 'Reggae', 'Other'
+    ];
+    var templateSearchTimer = null;
+
+    function apiBase() {
+        var base = typeof apiUrl === 'function' ? apiUrl('') : '';
+        return base.replace(/\/$/, '');
+    }
+
+    function initTemplatesPanel() {
+        var genreSelect = document.getElementById('templateGenreSelect');
+        var searchInput = document.getElementById('templateSearchInput');
+        var searchBtn = document.getElementById('templateSearchBtn');
+        if (!genreSelect || !searchInput) return;
+
+        genreSelect.innerHTML = '<option value="">All genres</option>' + TEMPLATE_GENRES.map(function(g) {
+            return '<option value="' + g + '">' + g + '</option>';
+        }).join('');
+
+        genreSelect.addEventListener('change', fetchTemplates);
+        if (searchBtn) searchBtn.addEventListener('click', fetchTemplates);
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); fetchTemplates(); }
+        });
+        searchInput.addEventListener('input', function() {
+            clearTimeout(templateSearchTimer);
+            templateSearchTimer = setTimeout(fetchTemplates, 400);
+        });
+
+        var templatesTab = document.querySelector('.tools-tab[data-tool="templates"]');
+        if (templatesTab) {
+            templatesTab.addEventListener('click', function() {
+                var results = document.getElementById('templateResults');
+                if (results && !results.dataset.loaded) fetchTemplates();
+            });
+        }
+    }
+
+    function fetchTemplates() {
+        var results = document.getElementById('templateResults');
+        if (!results) return;
+        results.dataset.loaded = '1';
+        results.innerHTML = '<div class="template-loading"><i class="fas fa-spinner fa-spin"></i> Loading designs...</div>';
+
+        var params = new URLSearchParams();
+        var q = (document.getElementById('templateSearchInput') || {}).value || '';
+        var genre = (document.getElementById('templateGenreSelect') || {}).value || '';
+        if (q.trim()) params.set('q', q.trim());
+        if (genre) params.set('genre', genre);
+        params.set('limit', '24');
+
+        fetch(apiBase() + '/api/templates/browse?' + params.toString())
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var templates = (data && data.success && data.data && data.data.templates) || [];
+                renderTemplateResults(templates);
+            })
+            .catch(function() {
+                results.innerHTML = '<p class="template-results-hint">Couldn\'t load templates. Check your connection and try again.</p>';
+            });
+    }
+
+    function renderTemplateResults(templates) {
+        var results = document.getElementById('templateResults');
+        if (!results) return;
+        if (!templates.length) {
+            results.innerHTML = '<p class="template-results-hint">No matching designs yet. Try a different lyric, artist or genre.</p>';
+            return;
+        }
+        results.innerHTML = templates.map(function(t) {
+            var by = t.artistName || t.labelName || t.designerName || '';
+            var preview = t.previewImageUrl
+                ? '<img src="' + escAttr(t.previewImageUrl) + '" alt="" loading="lazy">'
+                : '<div class="template-card-noimg"><i class="fas fa-shirt"></i></div>';
+            return '<button class="template-card" data-template-id="' + escAttr(t.templateId) + '">'
+                + '<div class="template-card-preview">' + preview + '</div>'
+                + '<div class="template-card-title">' + escHtml(t.title) + '</div>'
+                + (by ? '<div class="template-card-by">' + escHtml(by) + '</div>' : '')
+                + '<div class="template-card-genre">' + escHtml(t.genre || '') + '</div>'
+                + '</button>';
+        }).join('');
+        results.querySelectorAll('.template-card').forEach(function(card) {
+            card.addEventListener('click', function() {
+                applyTemplateById(card.dataset.templateId, card);
+            });
+        });
+    }
+
+    function applyTemplateById(templateId, card) {
+        var hasUserWork = state.canvas && state.canvas.getObjects().some(function(o) { return !o.wdthIsTemplateElement; });
+        var hasSavedWork = ['front','back','left','right'].some(function(v) {
+            var d = getViewObjects(v);
+            return d && d.objects && d.objects.some(function(o) { return !o.wdthIsTemplateElement; });
+        });
+        if ((hasUserWork || hasSavedWork) && !confirm('Loading this template will replace your current design. Continue?')) {
+            return;
+        }
+        if (card) card.classList.add('loading');
+        fetch(apiBase() + '/api/templates/' + encodeURIComponent(templateId))
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (card) card.classList.remove('loading');
+                if (data && data.success && data.data) {
+                    loadTemplate(data.data);
+                } else {
+                    showToast('Could not load that template');
+                }
+            })
+            .catch(function() {
+                if (card) card.classList.remove('loading');
+                showToast('Could not load that template');
+            });
+    }
+
+    function escHtml(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+    function escAttr(s) { return escHtml(s); }
 
     function getDesignDataURL() {
         if (!state.canvas || state.canvas.getObjects().length === 0) return null;
@@ -601,6 +754,19 @@ var MerchDesigner = (function() {
 
     function loadTemplate(templateData) {
         if (!templateData) return;
+
+        state.frontObjects = [];
+        state.backObjects = [];
+        state.leftObjects = [];
+        state.rightObjects = [];
+        setThumbDataURL('front', null);
+        setThumbDataURL('back', null);
+        setThumbDataURL('left', null);
+        setThumbDataURL('right', null);
+        if (state.canvas) {
+            state.canvas.clear();
+            state.canvas.renderAll();
+        }
 
         if (templateData.defaultProduct) {
             var prod = PRODUCTS.find(function(p) { return p.id === templateData.defaultProduct; });

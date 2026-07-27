@@ -250,12 +250,24 @@ router.post('/submit', upload.single('previewImage'), async (req, res) => {
 
 router.get('/browse', async (req, res) => {
     try {
-        const { genre, artist, label, featured, sort, page, limit: lim } = req.query;
+        const { genre, artist, label, featured, sort, page, limit: lim, q } = req.query;
         const query = { status: 'approved' };
+        const escRx = (s) => String(s).trim().slice(0, 120).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         if (genre) query.genre = genre;
-        if (artist) query.artistName = { $regex: artist, $options: 'i' };
-        if (label) query.labelName = { $regex: label, $options: 'i' };
+        if (artist) query.artistName = { $regex: escRx(artist), $options: 'i' };
+        if (label) query.labelName = { $regex: escRx(label), $options: 'i' };
         if (featured === 'true') query.featured = true;
+        if (q && typeof q === 'string' && q.trim()) {
+            const rx = { $regex: escRx(q), $options: 'i' };
+            query.$or = [
+                { title: rx },
+                { description: rx },
+                { tags: rx },
+                { artistName: rx },
+                { labelName: rx },
+                { designerName: rx }
+            ];
+        }
 
         const pageNum = Math.max(parseInt(page) || 1, 1);
         const perPage = Math.min(Math.max(parseInt(lim) || 20, 1), 50);
