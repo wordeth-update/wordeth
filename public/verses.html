@@ -139,8 +139,8 @@
                     </div>
                     <div class="hero-actions">
                         <button class="create-room-btn" id="create-room">
-                            <i class="fas fa-plus"></i>
-                            Create New Room
+                            <span class="key-icon-wrap"><i class="fas fa-key"></i></span>
+                            Open a Room
                         </button>
                         <a href="verses-guide.html" class="guide-link-btn">
                             <i class="fas fa-question-circle"></i>
@@ -651,8 +651,22 @@
         </div>
     </div>
 
+    <!-- Key Unlock Overlay -->
+    <div class="key-unlock-overlay" id="key-unlock-overlay" aria-hidden="true">
+        <div class="key-unlock-inner">
+            <div class="keyhole-ring">
+                <div class="keyhole">
+                    <span class="keyhole-circle"></span>
+                    <span class="keyhole-slot"></span>
+                </div>
+                <i class="fas fa-key unlock-key"></i>
+            </div>
+            <div class="key-unlock-label">Opening the room&hellip;</div>
+        </div>
+    </div>
+
     <!-- Boost Modal -->
-    <div class="modal" id="boost-modal">
+    <div class="modal side-panel" id="boost-modal">
         <div class="modal-content" style="max-width:440px;">
             <div class="modal-header">
                 <h3><i class="fas fa-rocket"></i> Boost Replay</h3>

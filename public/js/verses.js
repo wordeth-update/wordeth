@@ -2975,6 +2975,7 @@ class AudioRoomsManager {
     }
 
     _enterRoomUI(roomId, isHost, roomName, participants) {
+        this._hideKeyUnlock();
         if (this.toggleAudioBtn) {
             this._setBtnWithSpan(this.toggleAudioBtn, 'fas fa-microphone', 'Mic');
             this.toggleAudioBtn.classList.remove('muted');
@@ -2997,9 +2998,23 @@ class AudioRoomsManager {
         this._playSfx('enterRoom');
     }
 
+    _playKeyUnlock() {
+        const overlay = document.getElementById('key-unlock-overlay');
+        if (!overlay) return;
+        overlay.classList.add('active');
+        if (this._keyUnlockTimer) clearTimeout(this._keyUnlockTimer);
+        this._keyUnlockTimer = setTimeout(() => this._hideKeyUnlock(), 2500);
+    }
+
+    _hideKeyUnlock() {
+        if (this._keyUnlockTimer) { clearTimeout(this._keyUnlockTimer); this._keyUnlockTimer = null; }
+        document.getElementById('key-unlock-overlay')?.classList.remove('active');
+    }
+
     async createRoom() {
         this._primeSfx();
         if (!this.createRoomForm) return;
+        this._playKeyUnlock();
 
         const submitBtn = this.createRoomForm.querySelector('button[type="submit"]');
         const origText = submitBtn?.textContent;
@@ -3093,6 +3108,7 @@ class AudioRoomsManager {
     }
 
     _restoreLobbyUI() {
+        this._hideKeyUnlock();
         const inviteSpinner = document.getElementById('invite-joining-msg');
         if (inviteSpinner) inviteSpinner.remove();
         const endedScreen = document.getElementById('room-ended-screen');
@@ -3145,6 +3161,7 @@ class AudioRoomsManager {
     async joinRoom(roomId, isHost = false, isInvite = false) {
         this._primeSfx();
         if (!roomId) return;
+        this._playKeyUnlock();
 
         const ctx = this._getUserContext();
         this._pendingJoinRoom = roomId;
