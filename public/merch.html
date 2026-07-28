@@ -578,6 +578,11 @@
                             <div class="template-results" id="templateResults">
                                 <p class="template-results-hint">Browse ready-made designs from artists, designers &amp; labels. Search a lyric to find matching drops.</p>
                             </div>
+                            <div class="tool-group publish-template-group">
+                                <label class="tool-label">Are you a designer?</label>
+                                <button class="tool-btn publish-template-btn" id="publishTemplateBtn"><i class="fas fa-upload"></i> Publish Design as Template</button>
+                                <p class="publish-template-hint">Share your creation in the gallery so fans can shop it. Approved designs appear here.</p>
+                            </div>
                         </div>
                     </div>
                     <div class="sidebar-section order-section">
@@ -830,5 +835,55 @@
     <script data-cfasync="false" src="js/verse-mini-player.js"></script>
     <script data-cfasync="false" src="js/spa-router.js"></script>
     <script src="js/main.js"></script>
+    <!-- Publish Template Modal -->
+    <div class="publish-modal-overlay" id="publishModalOverlay" aria-hidden="true">
+        <div class="publish-modal" role="dialog" aria-labelledby="publishModalTitle">
+            <div class="publish-modal-header">
+                <h3 id="publishModalTitle"><i class="fas fa-upload"></i> Publish as Template</h3>
+                <button class="publish-modal-close" id="publishModalClose" aria-label="Close">&times;</button>
+            </div>
+            <div class="publish-modal-body">
+                <div class="publish-field">
+                    <label for="pubTitle">Title <span class="req">*</span></label>
+                    <input type="text" class="tool-input" id="pubTitle" maxlength="120" placeholder="e.g. Midnight Verses Tee">
+                </div>
+                <div class="publish-field">
+                    <label for="pubGenre">Genre <span class="req">*</span></label>
+                    <select class="tool-select" id="pubGenre"></select>
+                </div>
+                <div class="publish-field-row">
+                    <div class="publish-field">
+                        <label for="pubArtist">Artist</label>
+                        <input type="text" class="tool-input" id="pubArtist" maxlength="100" placeholder="Artist name">
+                    </div>
+                    <div class="publish-field">
+                        <label for="pubAlbum">Album</label>
+                        <input type="text" class="tool-input" id="pubAlbum" maxlength="150" placeholder="Album name">
+                    </div>
+                </div>
+                <div class="publish-field">
+                    <label for="pubSong">Song</label>
+                    <input type="text" class="tool-input" id="pubSong" maxlength="150" placeholder="Song title">
+                </div>
+                <div class="publish-field">
+                    <label for="pubLyrics">Lyric line (helps fans find it)</label>
+                    <input type="text" class="tool-input" id="pubLyrics" maxlength="300" placeholder="A lyric featured in the design">
+                </div>
+                <div class="publish-field">
+                    <label for="pubTags">Tags (comma-separated)</label>
+                    <input type="text" class="tool-input" id="pubTags" placeholder="e.g. streetwear, tour, vintage">
+                </div>
+                <div class="publish-field">
+                    <label for="pubDescription">Description</label>
+                    <textarea class="tool-input" id="pubDescription" rows="2" maxlength="500" placeholder="Tell shoppers about this design"></textarea>
+                </div>
+                <p class="publish-modal-note">Your current design (all sides) and product/color will be submitted for review. Once approved, it appears in the template gallery.</p>
+            </div>
+            <div class="publish-modal-footer">
+                <button class="tool-btn publish-cancel-btn" id="publishCancelBtn">Cancel</button>
+                <button class="tool-btn publish-submit-btn" id="publishSubmitBtn"><i class="fas fa-paper-plane"></i> Submit for Review</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

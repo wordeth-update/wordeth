@@ -32,7 +32,12 @@ const designTemplateSchema = new mongoose.Schema({
     },
     uploadToken: {
         type: String,
-        required: true
+        default: ''
+    },
+    designerUserId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
     },
     genre: {
         type: String,
@@ -55,6 +60,24 @@ const designTemplateSchema = new mongoose.Schema({
     },
     labelId: {
         type: String,
+        default: ''
+    },
+    albumName: {
+        type: String,
+        trim: true,
+        maxlength: 150,
+        default: ''
+    },
+    songTitle: {
+        type: String,
+        trim: true,
+        maxlength: 150,
+        default: ''
+    },
+    lyricsSnippet: {
+        type: String,
+        trim: true,
+        maxlength: 300,
         default: ''
     },
     products: [{

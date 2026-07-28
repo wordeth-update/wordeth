@@ -558,6 +558,7 @@ var MerchDesigner = (function() {
 
         genreSelect.addEventListener('change', fetchTemplates);
         if (searchBtn) searchBtn.addEventListener('click', fetchTemplates);
+        initPublishModal();
         searchInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') { e.preventDefault(); fetchTemplates(); }
         });
@@ -657,6 +658,102 @@ var MerchDesigner = (function() {
         });
     }
     function escAttr(s) { return escHtml(s); }
+
+    function initPublishModal() {
+        var openBtn = document.getElementById('publishTemplateBtn');
+        var overlay = document.getElementById('publishModalOverlay');
+        if (!openBtn || !overlay) return;
+        var closeBtn = document.getElementById('publishModalClose');
+        var cancelBtn = document.getElementById('publishCancelBtn');
+        var submitBtn = document.getElementById('publishSubmitBtn');
+        var genreSel = document.getElementById('pubGenre');
+
+        genreSel.innerHTML = '<option value="">Select a genre\u2026</option>' + TEMPLATE_GENRES.map(function(g) {
+            return '<option value="' + g + '">' + g + '</option>';
+        }).join('');
+
+        function close() { overlay.classList.remove('active'); }
+
+        openBtn.addEventListener('click', function() {
+            if (!localStorage.getItem('authToken')) {
+                showToast('Please sign in to publish a design');
+                return;
+            }
+            var extraProps = ['wdthLockPosition','wdthLockContent','wdthLockFont','wdthLockColor','wdthElementName','wdthIsTemplateElement','wdthOriginalFont','wdthOriginalFill'];
+            if (state.canvas) setViewObjects(state.view, state.canvas.toJSON(extraProps));
+            var hasFront = state.frontObjects && state.frontObjects.objects && state.frontObjects.objects.length > 0;
+            if (!hasFront) {
+                showToast('Add a design to the front view before publishing');
+                return;
+            }
+            overlay.classList.add('active');
+        });
+        closeBtn.addEventListener('click', close);
+        cancelBtn.addEventListener('click', close);
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) close(); });
+
+        submitBtn.addEventListener('click', function() {
+            var title = document.getElementById('pubTitle').value.trim();
+            var genre = genreSel.value;
+            if (title.length < 2) { showToast('Please enter a title (at least 2 characters)'); return; }
+            if (!genre) { showToast('Please choose a genre'); return; }
+
+            var tags = document.getElementById('pubTags').value
+                .split(',').map(function(t) { return t.trim(); }).filter(Boolean).slice(0, 10);
+
+            var body = {
+                title: title,
+                description: document.getElementById('pubDescription').value.trim(),
+                genre: genre,
+                artistName: document.getElementById('pubArtist').value.trim(),
+                albumName: document.getElementById('pubAlbum').value.trim(),
+                songTitle: document.getElementById('pubSong').value.trim(),
+                lyricsSnippet: document.getElementById('pubLyrics').value.trim(),
+                tags: tags,
+                products: [state.product.id],
+                defaultProduct: state.product.id,
+                defaultColor: state.color.id,
+                frontDesign: JSON.stringify(state.frontObjects),
+                previewDataUrl: getDesignDataURL()
+            };
+            ['back', 'left', 'right'].forEach(function(v) {
+                var d = getViewObjects(v);
+                if (d && d.objects && d.objects.length > 0) {
+                    body[v + 'Design'] = JSON.stringify(d);
+                }
+            });
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting\u2026';
+            fetch(apiBase() + '/api/templates/publish', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('authToken'),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit for Review';
+                if (data && data.success) {
+                    close();
+                    showToast(data.message || 'Design submitted for review!');
+                    document.getElementById('pubTitle').value = '';
+                    document.getElementById('pubDescription').value = '';
+                    document.getElementById('pubTags').value = '';
+                } else {
+                    showToast((data && data.message) || 'Could not submit design');
+                }
+            })
+            .catch(function() {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit for Review';
+                showToast('Could not submit design. Please try again.');
+            });
+        });
+    }
 
     function getDesignDataURL() {
         if (!state.canvas || state.canvas.getObjects().length === 0) return null;

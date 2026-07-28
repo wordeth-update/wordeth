@@ -248,6 +248,125 @@ router.post('/submit', upload.single('previewImage'), async (req, res) => {
     }
 });
 
+function validateDesignJson(value, label) {
+    if (typeof value !== 'string') return label + ' must be a string';
+    if (value.length > MAX_DESIGN_BYTES) return label + ' data exceeds maximum size';
+    try {
+        const parsed = JSON.parse(value);
+        if (!parsed.objects || !Array.isArray(parsed.objects)) return label + ' must be valid Fabric.js JSON with objects array';
+    } catch (e) {
+        return label + ' must be valid Fabric.js JSON';
+    }
+    return null;
+}
+
+router.post('/publish', auth, async (req, res) => {
+    try {
+        const { title, description, genre, artistName, albumName, songTitle, lyricsSnippet, products, defaultProduct, defaultColor, frontDesign, backDesign, leftDesign, rightDesign, tags, previewDataUrl } = req.body;
+
+        if (!title || String(title).trim().length < 2 || String(title).trim().length > 120) {
+            return res.status(400).json({ success: false, message: 'Title must be between 2 and 120 characters' });
+        }
+        if (!genre || !VALID_GENRES.includes(genre)) {
+            return res.status(400).json({ success: false, message: 'Valid genre is required' });
+        }
+        if (!frontDesign) {
+            return res.status(400).json({ success: false, message: 'Front design data is required' });
+        }
+        const designs = { frontDesign, backDesign, leftDesign, rightDesign };
+        for (const key of Object.keys(designs)) {
+            if (!designs[key]) continue;
+            const err = validateDesignJson(designs[key], key);
+            if (err) return res.status(400).json({ success: false, message: err });
+        }
+
+        let productList = [];
+        try {
+            productList = Array.isArray(products) ? products : JSON.parse(products);
+            productList = productList.filter(p => VALID_PRODUCTS.includes(p));
+            if (productList.length === 0) throw new Error();
+        } catch {
+            return res.status(400).json({ success: false, message: 'At least one valid product type is required' });
+        }
+
+        const SIDE_VIEW_PRODUCTS = ['tshirt', 'hoodie', 'longsleeve', 'sweatshirt', 'hat'];
+        const resolvedProduct = VALID_PRODUCTS.includes(defaultProduct) ? defaultProduct : productList[0];
+        if ((leftDesign || rightDesign) && !SIDE_VIEW_PRODUCTS.includes(resolvedProduct)) {
+            return res.status(400).json({ success: false, message: 'Side views are not supported for this product type' });
+        }
+
+        let tagList = [];
+        if (Array.isArray(tags)) {
+            tagList = tags.slice(0, 10).map(t => String(t).trim().toLowerCase().substring(0, 40)).filter(Boolean);
+        }
+
+        let previewImageUrl = '';
+        let previewObjectPath = '';
+        if (previewDataUrl && typeof previewDataUrl === 'string') {
+            const m = previewDataUrl.match(/^data:image\/(png|jpeg);base64,([A-Za-z0-9+/=]+)$/);
+            if (!m) {
+                return res.status(400).json({ success: false, message: 'Preview image must be a PNG or JPEG data URL' });
+            }
+            const buffer = Buffer.from(m[2], 'base64');
+            if (buffer.length > 5 * 1024 * 1024) {
+                return res.status(400).json({ success: false, message: 'Preview image exceeds 5MB' });
+            }
+            try {
+                const { Client } = require('@replit/object-storage');
+                const client = new Client();
+                const ext = m[1] === 'png' ? 'png' : 'jpg';
+                const objPath = `merch-templates/previews/${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${ext}`;
+                await client.uploadFromBytes(objPath, buffer);
+                previewObjectPath = objPath;
+                if (process.env.PUBLIC_OBJECT_SEARCH_PATHS) {
+                    previewImageUrl = `/object-storage/${objPath}`;
+                }
+            } catch (err) {
+                console.error('Template preview upload error:', err);
+            }
+        }
+
+        const clean = (v, max) => v ? String(v).trim().substring(0, max) : '';
+        const template = await DesignTemplate.create({
+            templateId: generateTemplateId(),
+            title: String(title).trim(),
+            description: clean(description, 500),
+            designerName: req.user.name || req.user.username || 'Designer',
+            designerEmail: req.user.email || '',
+            designerUserId: req.user._id,
+            genre,
+            artistName: clean(artistName, 100),
+            albumName: clean(albumName, 150),
+            songTitle: clean(songTitle, 150),
+            lyricsSnippet: clean(lyricsSnippet, 300),
+            products: productList,
+            defaultProduct: VALID_PRODUCTS.includes(defaultProduct) ? defaultProduct : productList[0],
+            defaultColor: defaultColor || 'black',
+            frontDesign,
+            backDesign: backDesign || null,
+            leftDesign: leftDesign || null,
+            rightDesign: rightDesign || null,
+            previewImageUrl,
+            previewObjectPath,
+            tags: tagList,
+            status: 'pending'
+        });
+
+        res.json({
+            success: true,
+            data: { templateId: template.templateId, title: template.title, status: template.status },
+            message: 'Design submitted! It will appear in the gallery once approved.'
+        });
+    } catch (error) {
+        console.error('Error publishing template:', error);
+        res.status(500).json({ success: false, message: 'Failed to publish template' });
+    }
+});
+
+router.get('/genres', (req, res) => {
+    res.json({ success: true, data: VALID_GENRES });
+});
+
 router.get('/browse', async (req, res) => {
     try {
         const { genre, artist, label, featured, sort, page, limit: lim, q } = req.query;
@@ -265,7 +384,10 @@ router.get('/browse', async (req, res) => {
                 { tags: rx },
                 { artistName: rx },
                 { labelName: rx },
-                { designerName: rx }
+                { designerName: rx },
+                { albumName: rx },
+                { songTitle: rx },
+                { lyricsSnippet: rx }
             ];
         }
 
@@ -280,7 +402,7 @@ router.get('/browse', async (req, res) => {
 
         const [templates, total] = await Promise.all([
             DesignTemplate.find(query)
-                .select('templateId title designerName genre artistName labelName products previewImageUrl tags featured salesCount weekSalesCount createdAt')
+                .select('templateId title designerName genre artistName labelName albumName songTitle lyricsSnippet products previewImageUrl tags featured salesCount weekSalesCount createdAt')
                 .sort(sortObj).skip(skip).limit(perPage),
             DesignTemplate.countDocuments(query)
         ]);
