@@ -1,0 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap');
+
+.station-dial-root {
+  --bg: #060409;
+  --mint: #00E5A8;
+  --violet: #8B2FFF;
+  --surface: #120e18;
+  --surface-hover: #1a1523;
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --border: #231f2e;
+}
+
+.font-syne {
+  font-family: 'Syne', sans-serif;
+}
+
+.font-outfit {
+  font-family: 'Outfit', sans-serif;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
