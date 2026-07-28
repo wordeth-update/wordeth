@@ -1126,6 +1126,10 @@ class AudioRoomsManager {
                 this._el('h3', {textContent: 'No live rooms right now'}),
                 this._el('p', {textContent: 'Be the first to start a conversation \u2014 create a room and invite friends!'}));
             roomsGrid.replaceChildren(emptyState);
+            const emptyFeatured = document.getElementById('featured-section');
+            if (emptyFeatured) emptyFeatured.style.display = 'none';
+            const emptyFeedTitle = document.getElementById('live-feed-title');
+            if (emptyFeedTitle) emptyFeedTitle.style.display = 'none';
             const friendsList = document.getElementById('friends-list');
             if (friendsList && !friendsList.textContent.trim()) {
                 const friendsEmpty = this._el('div', {className: 'empty-rooms-state', cssText: 'padding: 1.5rem;'},
@@ -1136,7 +1140,27 @@ class AudioRoomsManager {
         }
 
         roomsGrid.replaceChildren();
-        rooms.forEach(room => {
+
+        // Split the busiest rooms into the featured carousel (Live Feed layout)
+        const featuredSection = document.getElementById('featured-section');
+        const featuredWrap = document.getElementById('featured-rooms');
+        const feedTitle = document.getElementById('live-feed-title');
+        let featured = [];
+        let feed = rooms;
+        if (featuredWrap && rooms.length >= 3) {
+            const sorted = [...rooms].sort((a, b) => (b.participantCount || 0) - (a.participantCount || 0));
+            featured = sorted.slice(0, 2);
+            const featuredIds = new Set(featured.map(r => r.id));
+            feed = rooms.filter(r => !featuredIds.has(r.id));
+        }
+        if (featuredWrap) {
+            featuredWrap.replaceChildren();
+            featured.forEach(room => featuredWrap.appendChild(this._createFeaturedCard(room)));
+        }
+        if (featuredSection) featuredSection.style.display = featured.length ? '' : 'none';
+        if (feedTitle) feedTitle.style.display = '';
+
+        feed.forEach(room => {
             roomsGrid.appendChild(this.createRoomCard(room));
         });
 
@@ -1207,6 +1231,41 @@ class AudioRoomsManager {
         const card = this._el('div', {className: cardClass},
             this._el('div', {className: 'room-preview'}, participantsPreview, roomInfo),
             this._el('div', {className: 'room-actions'}, joinBtn));
+        card.dataset.roomId = room.id;
+        card.dataset.genre = genre;
+        card.dataset.roomName = (room.name || '').toLowerCase();
+        if (tokenPrice > 0) card.dataset.tokenPrice = tokenPrice;
+        return card;
+    }
+
+    _createFeaturedCard(room) {
+        const participants = room.participants || [];
+        const count = room.participantCount || participants.length || 0;
+        const genre = room.genre || 'general';
+        const roomName = room.name || ('Room ' + room.id.slice(-5));
+        const host = participants.find(p => p.isHost);
+        const hostName = host ? (host.userName || host.name || 'Unknown') : 'Unknown';
+        const tokenPrice = room.tokenPrice || 0;
+
+        const badges = this._el('div', {className: 'featured-badges'},
+            this._el('span', {className: 'featured-live-badge'}, this._el('span', {className: 'live-dot'}), this._text('LIVE')),
+            this._el('span', {className: 'featured-stat-badge'}, this._icon('fas fa-users'), this._text(' ' + count.toLocaleString())));
+        if (tokenPrice > 0) {
+            badges.appendChild(this._el('span', {className: 'featured-token-badge'}, this._icon('fas fa-coins'), this._text(' ' + tokenPrice)));
+        }
+
+        const joinBtn = this._el('button', {className: 'join-room-btn featured-join-btn'},
+            this._text(room.isLocked ? 'Locked' : 'Join Verse'), this._icon('fas fa-chevron-right'));
+        if (room.isLocked) joinBtn.disabled = true;
+
+        const card = this._el('div', {className: 'room-card featured-room-card' + (tokenPrice > 0 ? ' room-card-gated' : '')},
+            this._el('div', {className: 'featured-card-glow'}),
+            badges,
+            this._el('h3', {className: 'featured-room-title', textContent: roomName}),
+            this._el('p', {className: 'room-topic featured-room-host'},
+                this._text('Host '), this._el('span', {className: 'featured-host-chip', textContent: hostName})),
+            this._el('div', {className: 'featured-genre-row'}, this._icon(this.getGenreIconClass(genre)), this._el('span', {textContent: this.capitalizeFirst(genre)})),
+            joinBtn);
         card.dataset.roomId = room.id;
         card.dataset.genre = genre;
         card.dataset.roomName = (room.name || '').toLowerCase();
@@ -1370,7 +1429,7 @@ class AudioRoomsManager {
         roomCards.forEach(card => {
             const matchGenre = genreFilter === 'all' || card.dataset.genre === genreFilter;
             const matchSearch = !searchVal || (card.dataset.roomName || '').includes(searchVal);
-            card.style.display = (matchGenre && matchSearch) ? 'block' : 'none';
+            card.style.display = (matchGenre && matchSearch) ? '' : 'none';
         });
     }
 

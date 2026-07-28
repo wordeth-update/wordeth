@@ -7,7 +7,7 @@
     <title>Verses - Wordeth</title>
     <link rel="icon" type="image/png" href="images/logo.png">
     <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/verses.css?v=1771700100">
+    <link rel="stylesheet" href="css/verses.css?v=1785245437">
     <link rel="stylesheet" href="css/enhanced.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/cookie-consent.css">
@@ -103,7 +103,7 @@
 
     <main class="audio-rooms-container">
         <!-- Room Selection View -->
-        <div class="room-selection" id="room-selection">
+        <div class="room-selection lobby-v2" id="room-selection">
             <div class="hero-section">
                 <div class="hero-content">
                     <h1 class="hero-title">
@@ -212,11 +212,18 @@
                         <div class="filter-tabs">
                             <button class="filter-tab active" data-filter="all">All</button>
                             <button class="filter-tab" data-filter="hip-hop">Hip-Hop</button>
-                            <button class="filter-tab" data-filter="rock">Rock</button>
+                            <button class="filter-tab" data-filter="r&b">R&amp;B</button>
                             <button class="filter-tab" data-filter="pop">Pop</button>
+                            <button class="filter-tab" data-filter="rock">Rock</button>
+                            <button class="filter-tab" data-filter="electronic">Electronic</button>
                             <button class="filter-tab" data-filter="jazz">Jazz</button>
                         </div>
                     </div>
+                    <div class="featured-section" id="featured-section" style="display:none;">
+                        <h2 class="featured-title"><i class="fas fa-fire"></i> Featured</h2>
+                        <div class="featured-carousel" id="featured-rooms"></div>
+                    </div>
+                    <h2 class="feed-title" id="live-feed-title" style="display:none;">Live Now</h2>
                     <div class="rooms-grid" id="rooms-grid">
                     </div>
                 </div>
@@ -1007,7 +1014,7 @@
     <script src="js/native-screen-capture.js"></script>
     <script src="js/ar-filters.js?v=1770700000"></script>
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.22.0.js"></script>
-    <script data-cfasync="false" src="js/verses.js?v=1772009400"></script>
+    <script data-cfasync="false" src="js/verses.js?v=1785245437"></script>
     <script data-cfasync="false" src="js/nav-auth.js"></script>
     <script src="js/notifications.js?v=1770526814"></script>
     <script src="js/cookie-consent.js"></script>
