@@ -411,6 +411,9 @@ class AudioRoomsManager {
         } else {
             console.warn('Invite: giving up -', isPermanent ? 'room gone' : `max retries (${inv.retries})`);
             inv.status = 'failed';
+            // Keep the room id around so the ended screen can offer "Try Again"
+            // (only when the failure was transient, not when the room is truly gone)
+            inv.lastRoomId = isPermanent ? null : inv.roomId;
             inv.roomId = null;
             inv.retries = 0;
             this._showRoomEndedScreen(message);
@@ -456,7 +459,13 @@ class AudioRoomsManager {
         if (hostLabel) {
             screen.appendChild(this._el('div', {cssText: 'font-size:14px;color:rgba(255,255,255,0.5);', textContent: 'Was hosted by ' + hostLabel}));
         }
-        const browseLink = this._el('a', {href: '/verses.html', cssText: 'margin-top:16px;display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;transition:transform 0.15s;'},
+        const retryRoomId = this._invite?.lastRoomId || null;
+        if (retryRoomId) {
+            const retryBtn = this._el('a', {href: '/verses.html?room=' + encodeURIComponent(retryRoomId), cssText: 'margin-top:16px;display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;transition:transform 0.15s;'},
+                this._icon('fas fa-redo'), ' Try Again');
+            screen.appendChild(retryBtn);
+        }
+        const browseLink = this._el('a', {href: '/verses.html', cssText: 'margin-top:' + (retryRoomId ? '4px' : '16px') + ';display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:' + (retryRoomId ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#7c3aed,#a855f7)') + ';color:#fff;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;transition:transform 0.15s;' + (retryRoomId ? 'border:1px solid rgba(255,255,255,0.15);' : '')},
             this._icon('fas fa-headphones'), ' Browse Active Rooms');
         screen.appendChild(browseLink);
         if (this._lastJoinDebug) {
@@ -3305,7 +3314,15 @@ class AudioRoomsManager {
             console.error('[Join] Failed:', error.message);
             this._resetJoinState();
             if (isInvite) {
-                this._failInvite(error.message || 'Could not join the room.', true);
+                // Network hiccups (timeouts, dropped connections) are transient —
+                // retry instead of declaring the room dead on the first failure.
+                const transient = error.name === 'AbortError' ||
+                    error.name === 'TypeError' ||
+                    /abort|network|failed to fetch|load failed|timed? ?out/i.test(error.message || '');
+                const friendly = transient
+                    ? 'We had trouble connecting. Check your signal and try again.'
+                    : (error.message || 'Could not join the room.');
+                this._failInvite(friendly, !transient);
             } else {
                 this._restoreLobbyUI();
                 this.showToast?.(error.message || 'Failed to join room. Please try again.', 'fa-exclamation-circle');
