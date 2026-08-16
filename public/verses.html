@@ -7,7 +7,7 @@
     <title>Verses - Wordeth</title>
     <link rel="icon" type="image/png" href="images/logo.png">
     <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/verses.css?v=1785245437">
+    <link rel="stylesheet" href="css/verses.css?v=1786908218">
     <link rel="stylesheet" href="css/enhanced.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/cookie-consent.css">
@@ -218,6 +218,10 @@
                             <button class="filter-tab" data-filter="electronic">Electronic</button>
                             <button class="filter-tab" data-filter="jazz">Jazz</button>
                         </div>
+                    </div>
+                    <div class="coming-up-section" id="coming-up-section" style="display:none;">
+                        <h2 class="featured-title"><i class="fas fa-calendar-alt"></i> Coming Up</h2>
+                        <div class="coming-up-list" id="coming-up-list"></div>
                     </div>
                     <div class="featured-section" id="featured-section" style="display:none;">
                         <h2 class="featured-title"><i class="fas fa-fire"></i> Featured</h2>
@@ -433,6 +437,10 @@
                     <button class="control-btn" id="share-music" title="Play a song">
                         <i class="fas fa-music"></i>
                         <span class="ctrl-label">Music</span>
+                    </button>
+                    <button class="control-btn" id="tip-room-btn" title="Tip tokens to the creators">
+                        <i class="fas fa-coins"></i>
+                        <span class="ctrl-label">Tip</span>
                     </button>
                     <button class="control-btn danger" id="leave-room-btn">
                         <i class="fas fa-sign-out-alt"></i>
@@ -748,6 +756,36 @@
                         Make room private (friends only)
                     </label>
                 </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="schedule-room-toggle" name="schedule-room-toggle">
+                        Schedule for later
+                    </label>
+                </div>
+                <div id="schedule-options" style="display:none;">
+                    <div class="form-group">
+                        <label for="schedule-start-time">Date &amp; Time</label>
+                        <input type="datetime-local" id="schedule-start-time" name="schedule-start-time">
+                    </div>
+                    <div class="form-group">
+                        <label for="schedule-description">Description (Optional)</label>
+                        <textarea id="schedule-description" name="schedule-description" rows="2" maxlength="1000" placeholder="What's this session about?"></textarea>
+                    </div>
+                    <div class="form-group collab-block">
+                        <label>Collaborators (up to 5) <span class="collab-my-id" id="my-collab-id"></span></label>
+                        <input type="text" id="collab-search-input" placeholder="Search by name or WRD-XXXXXX" autocomplete="off">
+                        <div class="collab-search-results" id="collab-search-results"></div>
+                        <div class="collab-selected" id="collab-selected"></div>
+                        <div class="collab-split-summary" id="collab-split-summary" style="display:none;"></div>
+                    </div>
+                    <div class="form-group" id="approval-mode-group" style="display:none;">
+                        <label for="approval-mode">Collaborator Approval</label>
+                        <select id="approval-mode" name="approval-mode">
+                            <option value="real-time">Real-time — schedule now, can't go live until everyone approves</option>
+                            <option value="pre-schedule">Pre-schedule — everyone must approve before it's scheduled</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="modal-actions">
                     <button type="button" class="cancel-btn">Cancel</button>
                     <button type="submit" class="create-btn">Create Room</button>
@@ -1014,9 +1052,9 @@
     <script src="js/native-screen-capture.js"></script>
     <script src="js/ar-filters.js?v=1770700000"></script>
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.22.0.js"></script>
-    <script data-cfasync="false" src="js/verses.js?v=1785253919"></script>
+    <script data-cfasync="false" src="js/verses.js?v=1786908218"></script>
     <script data-cfasync="false" src="js/nav-auth.js"></script>
-    <script src="js/notifications.js?v=1770526814"></script>
+    <script src="js/notifications.js?v=1786908218"></script>
     <script src="js/cookie-consent.js"></script>
     <script>
     function viewUserProfile(userId) {

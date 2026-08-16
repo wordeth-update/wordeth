@@ -1111,3 +1111,58 @@ function _vpvTimeAgo(dateStr) {
     if (days < 30) return days + 'd ago';
     return new Date(dateStr).toLocaleDateString();
 }
+
+// ==================== Upcoming scheduled rooms card ====================
+(function () {
+    function esc(t) {
+        var d = document.createElement('div');
+        d.textContent = t == null ? '' : String(t);
+        return d.innerHTML;
+    }
+    function fmtTime(iso) {
+        var d = new Date(iso), now = new Date();
+        var time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        if (d.toDateString() === now.toDateString()) return 'Today ' + time;
+        if (d.toDateString() === new Date(now.getTime() + 86400000).toDateString()) return 'Tomorrow ' + time;
+        return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + ' ' + time;
+    }
+    function loadUpcoming() {
+        var card = document.getElementById('upcoming-rooms-card');
+        var list = document.getElementById('upcoming-rooms-list');
+        if (!card || !list) return;
+        var user = {};
+        try { user = JSON.parse(localStorage.getItem('user') || '{}'); } catch (e) {}
+        if (!user._id) return;
+        var token = localStorage.getItem('authToken');
+        fetch(apiUrl('/api/scheduled-rooms/by-creator/' + user._id), {
+            headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+        })
+        .then(function (res) { return res.ok ? res.json() : []; })
+        .then(function (rooms) {
+            if (!rooms.length) { card.style.display = 'none'; return; }
+            list.innerHTML = rooms.map(function (r) {
+                var isHost = String(r.hostUserId) === String(user._id);
+                var canGoLive = isHost && r.status === 'scheduled' &&
+                    (new Date(r.startTime).getTime() - Date.now()) <= 15 * 60 * 1000;
+                return '<div class="upcoming-room-row">' +
+                    '<div class="upcoming-room-info">' +
+                        '<span class="upcoming-room-title">' + esc(r.title) + '</span>' +
+                        '<span class="upcoming-room-time"><i class="fas fa-clock"></i> ' + esc(fmtTime(r.startTime)) + '</span>' +
+                        (r.status === 'pending_approval' ? '<span class="upcoming-room-pending">Waiting on approvals</span>' : '') +
+                        '<span class="upcoming-room-interest"><i class="fas fa-bell"></i> ' + (parseInt(r.interestCount, 10) || 0) + ' interested</span>' +
+                    '</div>' +
+                    (canGoLive
+                        ? '<a class="upcoming-go-live-btn" href="/verses.html?openScheduled=' + encodeURIComponent(r.id) + '">Go Live</a>'
+                        : '') +
+                '</div>';
+            }).join('');
+            card.style.display = '';
+        })
+        .catch(function () {});
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadUpcoming);
+    } else {
+        loadUpcoming();
+    }
+})();

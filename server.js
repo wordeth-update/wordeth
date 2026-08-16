@@ -69,6 +69,10 @@ const stripeRoutes = require('./routes/stripe'); // Stripe payments
 const messagesRoutes = require('./routes/messages'); // Direct messaging
 const wagersRoutes = require('./routes/wagers'); // Token wagering
 const audiobankRoutes = require('./routes/audiobank'); // Audio Bank API & admin
+const scheduledRoomsRoutes = require('./routes/scheduledRooms'); // Scheduled rooms & collabs
+const roomTipsRoutes = require('./routes/roomTips'); // Room tip pool
+const settlementService = require('./services/settlement'); // Crash-safe payouts
+const nudgeScheduler = require('./services/nudgeScheduler'); // Scheduled-room nudges
 const { createWebhookHandler } = require('./routes/stripe');
 const trackingMiddleware = require('./middleware/tracking'); // Event tracking
 
@@ -87,6 +91,11 @@ const io = new Server(server, {
 
 setupSignaling(io);
 app.set('io', io);
+nudgeScheduler.init({ io, connectedUsers: global._connectedUsers });
+if (process.env.NODE_ENV !== 'test') {
+    nudgeScheduler.start();
+    settlementService.startRecoverySweep();
+}
 
 app.set('trust proxy', 1);
 
@@ -569,6 +578,8 @@ app.use('/api/stripe', stripeRoutes); // Stripe payments & checkout
 app.use('/api/messages', messagesRoutes); // Direct messaging
 app.use('/api/wagers', wagersRoutes); // Token wagering
 app.use('/api/audiobank', audiobankRoutes); // Audio Bank API & admin
+app.use('/api/scheduled-rooms', scheduledRoomsRoutes); // Scheduled rooms & collabs
+app.use('/api/rooms', roomTipsRoutes); // Room tips (mounted before custom room APIs)
 function generateRoomId() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const bytes = crypto.randomBytes(18);

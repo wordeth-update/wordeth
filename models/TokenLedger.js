@@ -10,7 +10,7 @@ const tokenLedgerSchema = new mongoose.Schema({
     type: {
         type: String,
         required: true,
-        enum: ['monthly_grant', 'pack_purchase', 'room_entry', 'room_earning', 'creator_payout', 'admin_adjustment', 'replay_play', 'boost_purchase'],
+        enum: ['monthly_grant', 'pack_purchase', 'room_entry', 'room_earning', 'creator_payout', 'admin_adjustment', 'replay_play', 'boost_purchase', 'tip', 'tip_refund', 'room_split_payout', 'snippet_rental', 'wager_create', 'wager_accept', 'wager_win', 'wager_refund'],
         index: true
     },
     amount: {

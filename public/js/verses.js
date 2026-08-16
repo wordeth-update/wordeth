@@ -116,6 +116,12 @@ class AudioRoomsManager {
         this.recordingStartTime = 0;
         this.currentVideoFilter = 'none';
         
+        // Deep link: host "go live" straight from their profile card
+        const openScheduledId = new URLSearchParams(window.location.search).get('openScheduled');
+        if (openScheduledId && localStorage.getItem('authToken')) {
+            setTimeout(() => this.openScheduledRoom(openScheduledId), 800);
+        }
+
         const urlRoom = this._parseRoomFromUrl();
         if (urlRoom) {
             this.queueInvite(urlRoom);
@@ -758,6 +764,11 @@ class AudioRoomsManager {
             this.createRoom();
         });
 
+        this._setupSchedulingUI();
+
+        // Tip button (in-room)
+        document.getElementById('tip-room-btn')?.addEventListener('click', () => this.sendTip());
+
         // Topic editing
         this.editTopicBtn?.addEventListener('click', () => {
             this.showTopicEditModal();
@@ -1092,6 +1103,13 @@ class AudioRoomsManager {
                 this.showRoomInviteNotification(data);
             });
 
+            this.lobbySocket.on('room-tip', (data) => {
+                if (data && data.roomId === this.currentRoom) {
+                    this.addChatMessage('System', `${data.fromUserName || 'Someone'} tipped ${data.amount} token${data.amount === 1 ? '' : 's'}! Pool: ${data.poolBalance}`, true);
+                    this._playSfx?.('enterRoom');
+                }
+            });
+
             this.lobbySocket.on('disconnect', () => {
                 console.log('Lobby socket disconnected');
             });
@@ -1110,6 +1128,404 @@ class AudioRoomsManager {
             console.error('Error loading rooms:', error);
         } finally {
             this._loadingRooms = false;
+        }
+        this.loadComingUp().catch(() => {});
+    }
+
+    // ==================== Scheduled Rooms: Coming Up ====================
+
+    _authHeaders() {
+        const token = localStorage.getItem('authToken');
+        return token ? { 'Authorization': `Bearer ${token}` } : {};
+    }
+
+    async loadComingUp() {
+        const section = document.getElementById('coming-up-section');
+        const list = document.getElementById('coming-up-list');
+        if (!section || !list) return;
+        try {
+            const signedIn = !!localStorage.getItem('authToken');
+            const [rooms, mine] = await Promise.all([
+                fetch(apiUrl('/api/scheduled-rooms/coming-up'), { headers: this._authHeaders() })
+                    .then(r => r.ok ? r.json() : []),
+                signedIn
+                    ? fetch(apiUrl('/api/scheduled-rooms/mine'), { headers: this._authHeaders() })
+                        .then(r => r.ok ? r.json() : { invites: [] }).catch(() => ({ invites: [] }))
+                    : Promise.resolve({ invites: [] })
+            ]);
+            const invites = (mine.invites || []);
+            if (!rooms.length && !invites.length) { section.style.display = 'none'; return; }
+            const myId = (JSON.parse(localStorage.getItem('user') || '{}'))._id || null;
+            list.innerHTML = '';
+            invites.forEach(inv => list.appendChild(this._createInviteCard(inv)));
+            rooms.slice(0, 10).forEach(r => list.appendChild(this._createComingUpCard(r, myId)));
+            section.style.display = '';
+        } catch (e) {
+            console.warn('[ComingUp] load failed:', e.message);
+        }
+    }
+
+    // Pending collab invite: approve/decline with your split shown
+    _createInviteCard(inv) {
+        const card = document.createElement('div');
+        card.className = 'coming-up-card collab-invite-card';
+        const esc = (t) => window.escapeHtml(String(t == null ? '' : t));
+        card.innerHTML = `
+            <div class="coming-up-info">
+                <div class="coming-up-title"><i class="fas fa-handshake"></i> Collab invite: ${esc(inv.title)}</div>
+                <div class="coming-up-meta">
+                    <span class="coming-up-time"><i class="fas fa-clock"></i> ${esc(this._formatStartTime(inv.startTime))}</span>
+                    <span class="coming-up-split">Your split: ${esc(inv.mySplit)}%</span>
+                </div>
+                <div class="coming-up-host">Hosted by ${esc(inv.hostName)}</div>
+            </div>
+            <div class="coming-up-actions">
+                <button class="coming-up-btn go-live-btn" data-action="approve">Approve</button>
+                <button class="coming-up-btn decline-btn" data-action="decline">Decline</button>
+            </div>`;
+        const respond = async (action) => {
+            try {
+                const res = await fetch(apiUrl(`/api/scheduled-rooms/${encodeURIComponent(inv.id)}/respond`), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...this._authHeaders() },
+                    body: JSON.stringify({ action })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    this.showToast?.(data.message || 'Could not respond', 'fa-exclamation-circle');
+                    return;
+                }
+                this.showToast?.(action === 'approve' ? 'Approved! You\'re on the bill.' : 'Invite declined', 'fa-check');
+                this.loadComingUp().catch(() => {});
+            } catch (e) {
+                this.showToast?.('Could not respond. Try again.', 'fa-exclamation-circle');
+            }
+        };
+        card.querySelector('[data-action="approve"]').addEventListener('click', () => respond('approve'));
+        card.querySelector('[data-action="decline"]').addEventListener('click', () => respond('decline'));
+        return card;
+    }
+
+    _formatStartTime(iso) {
+        const d = new Date(iso);
+        const now = new Date();
+        const sameDay = d.toDateString() === now.toDateString();
+        const tomorrow = new Date(now.getTime() + 86400000).toDateString() === d.toDateString();
+        const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        if (sameDay) return `Today ${time}`;
+        if (tomorrow) return `Tomorrow ${time}`;
+        return `${d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })} ${time}`;
+    }
+
+    _createComingUpCard(r, myId) {
+        const card = document.createElement('div');
+        card.className = 'coming-up-card';
+        card.dataset.scheduledId = r.id;
+        const esc = (t) => window.escapeHtml(String(t == null ? '' : t));
+        const collabs = (r.collaborators || []).map(c => esc(c.userName)).filter(Boolean);
+        const hostLine = esc(r.hostName) + (collabs.length ? ` + ${collabs.join(', ')}` : '');
+        const isMine = myId && String(r.hostUserId) === String(myId);
+        card.innerHTML = `
+            <div class="coming-up-info">
+                <div class="coming-up-title">${esc(r.title)}</div>
+                <div class="coming-up-meta">
+                    <span class="coming-up-time"><i class="fas fa-clock"></i> ${esc(this._formatStartTime(r.startTime))}</span>
+                    ${r.genre ? `<span class="coming-up-genre">${esc(r.genre)}</span>` : ''}
+                    ${r.tokenPrice > 0 ? `<span class="coming-up-price"><i class="fas fa-key"></i> ${r.tokenPrice}</span>` : ''}
+                </div>
+                <div class="coming-up-host">${hostLine}</div>
+            </div>
+            <div class="coming-up-actions">
+                <span class="coming-up-interest"><i class="fas fa-bell"></i> <span class="interest-count">${parseInt(r.interestCount, 10) || 0}</span></span>
+                ${isMine
+                    ? `<button class="coming-up-btn go-live-btn" data-action="go-live">Go Live</button>`
+                    : `<button class="coming-up-btn remind-btn ${r.isInterested ? 'active' : ''}" data-action="remind">${r.isInterested ? 'Reminding' : 'Remind me'}</button>`}
+            </div>`;
+        card.querySelector('[data-action="remind"]')?.addEventListener('click', () => this._toggleInterest(r.id, card));
+        card.querySelector('[data-action="go-live"]')?.addEventListener('click', () => this.openScheduledRoom(r.id));
+        return card;
+    }
+
+    async _toggleInterest(scheduledId, card) {
+        if (!localStorage.getItem('authToken')) {
+            this.showToast?.('Sign in to get reminded', 'fa-bell');
+            window.location.href = `/signin.html?redirect=${encodeURIComponent('/verses.html')}`;
+            return;
+        }
+        try {
+            const res = await fetch(apiUrl(`/api/scheduled-rooms/${encodeURIComponent(scheduledId)}/interest`), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...this._authHeaders() }
+            });
+            if (!res.ok) throw new Error('interest failed');
+            const data = await res.json();
+            const btn = card.querySelector('.remind-btn');
+            const count = card.querySelector('.interest-count');
+            if (btn) {
+                btn.classList.toggle('active', data.isInterested);
+                btn.textContent = data.isInterested ? 'Reminding' : 'Remind me';
+            }
+            if (count) count.textContent = data.interestCount;
+        } catch (e) {
+            this.showToast?.('Could not update reminder', 'fa-exclamation-circle');
+        }
+    }
+
+    // Host go-live: open the scheduled room server-side, then join as host
+    async openScheduledRoom(scheduledId) {
+        try {
+            const res = await fetch(apiUrl(`/api/scheduled-rooms/${encodeURIComponent(scheduledId)}/open`), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...this._authHeaders() }
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                this.showToast?.(data.message || 'Could not go live', 'fa-exclamation-circle');
+                return;
+            }
+            if (data.roomId) {
+                await this.joinRoom(data.roomId, true);
+            }
+        } catch (e) {
+            this.showToast?.('Could not go live. Please try again.', 'fa-exclamation-circle');
+        }
+    }
+
+    // ==================== Scheduling UI (create-room modal) ====================
+
+    _setupSchedulingUI() {
+        this._selectedCollabs = [];
+        const toggle = document.getElementById('schedule-room-toggle');
+        const options = document.getElementById('schedule-options');
+        const searchInput = document.getElementById('collab-search-input');
+        const results = document.getElementById('collab-search-results');
+        if (!toggle || !options) return;
+
+        toggle.addEventListener('change', () => {
+            options.style.display = toggle.checked ? '' : 'none';
+            const submitBtn = this.createRoomForm?.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.textContent = toggle.checked ? 'Schedule Room' : 'Create Room';
+            if (toggle.checked) {
+                if (!localStorage.getItem('authToken')) {
+                    this.showToast?.('Sign in to schedule rooms', 'fa-calendar-alt');
+                    toggle.checked = false;
+                    options.style.display = 'none';
+                    return;
+                }
+                // Default: one hour from now, minute precision, local time
+                const startEl = document.getElementById('schedule-start-time');
+                if (startEl && !startEl.value) {
+                    const d = new Date(Date.now() + 60 * 60 * 1000);
+                    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+                    startEl.value = d.toISOString().slice(0, 16);
+                }
+                this._loadMyCollabId();
+            }
+        });
+
+        let searchTimer = null;
+        searchInput?.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            const q = searchInput.value.trim();
+            if (q.length < 2) { if (results) results.innerHTML = ''; return; }
+            searchTimer = setTimeout(() => this._searchCollaborators(q), 300);
+        });
+    }
+
+    async _loadMyCollabId() {
+        const el = document.getElementById('my-collab-id');
+        if (!el || el.textContent) return;
+        try {
+            const res = await fetch(apiUrl('/api/scheduled-rooms/my-collab-id'), { headers: this._authHeaders() });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.collabId) el.textContent = `Your ID: ${data.collabId}`;
+            }
+        } catch (e) { /* non-fatal */ }
+    }
+
+    async _searchCollaborators(q) {
+        const results = document.getElementById('collab-search-results');
+        if (!results) return;
+        try {
+            const res = await fetch(apiUrl(`/api/scheduled-rooms/collaborator-search?q=${encodeURIComponent(q)}`), { headers: this._authHeaders() });
+            if (!res.ok) return;
+            const users = await res.json();
+            const esc = (t) => window.escapeHtml(String(t == null ? '' : t));
+            results.innerHTML = '';
+            users.forEach(u => {
+                if (this._selectedCollabs.some(c => c.userId === u._id)) return;
+                const row = document.createElement('div');
+                row.className = 'collab-result' + (u.busy ? ' busy' : '');
+                row.innerHTML = `
+                    <img src="${esc(u.avatar)}" alt="" onerror="this.src='assets/default-avatar.png'">
+                    <span class="collab-result-name">${esc(u.name)}</span>
+                    ${u.collabId ? `<span class="collab-result-id">${esc(u.collabId)}</span>` : ''}
+                    ${u.busy ? '<span class="collab-busy-tag">busy</span>' : ''}`;
+                if (!u.busy) {
+                    row.addEventListener('click', () => this._addCollaborator(u));
+                }
+                results.appendChild(row);
+            });
+            if (!users.length) results.innerHTML = '<div class="collab-result none">No matches</div>';
+        } catch (e) { /* non-fatal */ }
+    }
+
+    _addCollaborator(u) {
+        if (this._selectedCollabs.length >= 5) {
+            this.showToast?.('Maximum 5 collaborators', 'fa-exclamation-circle');
+            return;
+        }
+        this._selectedCollabs.push({ userId: u._id, name: u.name, avatar: u.avatar, splitPercent: 0 });
+        this._autoBalanceSplits();
+        const searchInput = document.getElementById('collab-search-input');
+        const results = document.getElementById('collab-search-results');
+        if (searchInput) searchInput.value = '';
+        if (results) results.innerHTML = '';
+        this._renderSelectedCollabs();
+    }
+
+    _autoBalanceSplits() {
+        // Even split across host + collaborators, host absorbs the remainder
+        const n = this._selectedCollabs.length + 1;
+        const each = Math.floor(100 / n);
+        this._selectedCollabs.forEach(c => { c.splitPercent = each; });
+    }
+
+    _hostSplit() {
+        const collabTotal = this._selectedCollabs.reduce((s, c) => s + (Number(c.splitPercent) || 0), 0);
+        return Math.round((100 - collabTotal) * 100) / 100;
+    }
+
+    _renderSelectedCollabs() {
+        const wrap = document.getElementById('collab-selected');
+        const summary = document.getElementById('collab-split-summary');
+        const approvalGroup = document.getElementById('approval-mode-group');
+        if (!wrap) return;
+        const esc = (t) => window.escapeHtml(String(t == null ? '' : t));
+        wrap.innerHTML = '';
+        this._selectedCollabs.forEach((c, i) => {
+            const chip = document.createElement('div');
+            chip.className = 'collab-chip';
+            chip.innerHTML = `
+                <img src="${esc(c.avatar)}" alt="" onerror="this.src='assets/default-avatar.png'">
+                <span class="collab-chip-name">${esc(c.name)}</span>
+                <input type="number" class="collab-split-input" min="1" max="99" step="1" value="${Number(c.splitPercent) || 0}" aria-label="Split % for ${esc(c.name)}">%
+                <button type="button" class="collab-remove" aria-label="Remove ${esc(c.name)}">&times;</button>`;
+            chip.querySelector('.collab-split-input').addEventListener('input', (e) => {
+                this._selectedCollabs[i].splitPercent = Number(e.target.value) || 0;
+                this._updateSplitSummary();
+            });
+            chip.querySelector('.collab-remove').addEventListener('click', () => {
+                this._selectedCollabs.splice(i, 1);
+                this._autoBalanceSplits();
+                this._renderSelectedCollabs();
+            });
+            wrap.appendChild(chip);
+        });
+        if (approvalGroup) approvalGroup.style.display = this._selectedCollabs.length ? '' : 'none';
+        if (summary) summary.style.display = this._selectedCollabs.length ? '' : 'none';
+        this._updateSplitSummary();
+    }
+
+    _updateSplitSummary() {
+        const summary = document.getElementById('collab-split-summary');
+        if (!summary || !this._selectedCollabs.length) return;
+        const host = this._hostSplit();
+        const ok = host >= 0 && this._selectedCollabs.every(c => Number(c.splitPercent) > 0);
+        summary.classList.toggle('invalid', !ok);
+        summary.textContent = ok
+            ? `You keep ${host}% — splits total 100%`
+            : 'Splits must total exactly 100% (each collaborator above 0%)';
+    }
+
+    async _createScheduledRoom(formData, submitBtn, origText) {
+        const title = (formData.get('room-name-input') || '').toString().trim() || 'Untitled Room';
+        const genre = (formData.get('room-genre') || '').toString();
+        const topic = (formData.get('initial-song') || '').toString();
+        const description = (document.getElementById('schedule-description')?.value || '').trim();
+        const tokenPrice = parseInt(formData.get('room-token-price'), 10) || 0;
+        const startRaw = document.getElementById('schedule-start-time')?.value;
+        const approvalMode = document.getElementById('approval-mode')?.value || 'real-time';
+
+        if (!startRaw) {
+            this.showToast?.('Pick a date and time', 'fa-clock');
+            return;
+        }
+        const start = new Date(startRaw);
+        if (isNaN(start.getTime()) || start.getTime() < Date.now() + 60 * 1000) {
+            this.showToast?.('Start time must be in the future', 'fa-clock');
+            return;
+        }
+        if (this._selectedCollabs.length && (this._hostSplit() < 0 || this._selectedCollabs.some(c => !(Number(c.splitPercent) > 0)))) {
+            this.showToast?.('Splits must total exactly 100%', 'fa-percent');
+            return;
+        }
+
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Scheduling...'; }
+        try {
+            const res = await fetch(apiUrl('/api/scheduled-rooms'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...this._authHeaders() },
+                body: JSON.stringify({
+                    title, genre, topic, description, tokenPrice,
+                    startTime: start.toISOString(),
+                    approvalMode,
+                    hostSplitPercent: this._selectedCollabs.length ? this._hostSplit() : 100,
+                    collaborators: this._selectedCollabs.map(c => ({ userId: c.userId, splitPercent: Number(c.splitPercent) }))
+                })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                this.showToast?.(data.message || 'Could not schedule the room', 'fa-exclamation-circle');
+                return;
+            }
+            this.hideAllModals();
+            this.createRoomForm?.reset();
+            this._selectedCollabs = [];
+            this._renderSelectedCollabs();
+            const optEl = document.getElementById('schedule-options');
+            if (optEl) optEl.style.display = 'none';
+            this.showToast?.(data.status === 'pending_approval'
+                ? 'Room saved — waiting on collaborator approvals'
+                : 'Room scheduled! It\'s now in Coming Up.', 'fa-calendar-check');
+            this.loadComingUp().catch(() => {});
+        } catch (e) {
+            this.showToast?.('Could not schedule the room', 'fa-exclamation-circle');
+        } finally {
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText || 'Create Room'; }
+        }
+    }
+
+    // ==================== Tips ====================
+
+    async sendTip() {
+        if (!this.currentRoom) return;
+        if (!localStorage.getItem('authToken')) {
+            this.showToast?.('Sign in to tip the creators', 'fa-coins');
+            return;
+        }
+        const raw = prompt('How many tokens would you like to tip?', '5');
+        if (raw == null) return;
+        const amount = Math.floor(Number(raw));
+        if (!Number.isFinite(amount) || amount <= 0) {
+            this.showToast?.('Enter a valid number of tokens', 'fa-exclamation-circle');
+            return;
+        }
+        try {
+            const res = await fetch(apiUrl(`/api/rooms/${encodeURIComponent(this.currentRoom)}/tip`), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...this._authHeaders() },
+                body: JSON.stringify({ amount })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                this.showToast?.(data.message || 'Tip failed', 'fa-exclamation-circle');
+                return;
+            }
+            this.showToast?.(`Tipped ${amount} token${amount === 1 ? '' : 's'}!`, 'fa-coins');
+        } catch (e) {
+            this.showToast?.('Tip failed. Please try again.', 'fa-exclamation-circle');
         }
     }
 
@@ -3090,6 +3506,14 @@ class AudioRoomsManager {
         if (submitBtn) submitBtn.disabled = true;
 
         const formData = new FormData(this.createRoomForm);
+
+        // Scheduled path: save for later instead of opening now
+        if (document.getElementById('schedule-room-toggle')?.checked) {
+            if (submitBtn) submitBtn.disabled = false;
+            await this._createScheduledRoom(formData, submitBtn, origText);
+            return;
+        }
+
         const roomName = formData.get('room-name-input') || 'Untitled Room';
         const initialSong = formData.get('initial-song') || '';
         const tokenPrice = parseInt(formData.get('room-token-price'), 10) || 0;

@@ -159,6 +159,20 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: null,
         index: true
+    },
+    // Shareable collab ID (format WRD-XXXXXX), auto-assigned
+    collabId: {
+        type: String,
+        default: null,
+        unique: true,
+        sparse: true,
+        index: true
+    },
+    // Idempotency markers for room settlement payouts. A payout is applied to
+    // the balance and pushed here in ONE atomic update, so retries are no-ops.
+    settledPayoutIds: {
+        type: [String],
+        default: []
     }
 }, {
     timestamps: true
@@ -169,8 +183,41 @@ userSchema.pre('save', async function(next) {
     if (this.isModified('password')) {
         this.password = await bcrypt.hash(this.password, 10);
     }
+    if (!this.collabId) {
+        this.collabId = generateCollabId();
+    }
     next();
 });
+
+function generateCollabId() {
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no confusable 0/O/1/I/L
+    let suffix = '';
+    for (let i = 0; i < 6; i++) {
+        suffix += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return `WRD-${suffix}`;
+}
+
+// Lazily assign collabId for pre-existing users (retries on rare collision)
+userSchema.statics.ensureCollabId = async function(userId) {
+    const user = await this.findById(userId).select('collabId');
+    if (!user) return null;
+    if (user.collabId) return user.collabId;
+    for (let attempt = 0; attempt < 5; attempt++) {
+        const candidate = generateCollabId();
+        try {
+            const updated = await this.findOneAndUpdate(
+                { _id: userId, collabId: null },
+                { $set: { collabId: candidate } },
+                { new: true }
+            ).select('collabId');
+            return updated ? updated.collabId : (await this.findById(userId).select('collabId')).collabId;
+        } catch (err) {
+            if (err.code !== 11000) throw err; // duplicate collabId — retry
+        }
+    }
+    throw new Error('Could not assign collab ID');
+};
 
 // Compare password method
 userSchema.methods.comparePassword = async function(candidatePassword) {

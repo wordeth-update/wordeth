@@ -71,6 +71,29 @@ function scheduleRoomDeletion(roomId, reason) {
                 deleteRoom(roomId);
             }
             console.log(`Room ${roomId} deleted after grace period (${reason})`);
+
+            // Settle the tip pool (idempotent + crash-safe; recovery sweep
+            // finishes it if this process dies mid-settlement)
+            try {
+                const { closeAndSettleRoom } = require('../services/settlement');
+                const result = await closeAndSettleRoom(roomId);
+                if (result.settled) {
+                    console.log(`[Settlement] Room ${roomId} pool settled (${result.balance} tokens)`);
+                }
+            } catch (settleErr) {
+                console.error(`[Settlement] Error settling room ${roomId}:`, settleErr.message);
+            }
+
+            // If this room came from a schedule, mark it completed
+            try {
+                const ScheduledRoom = require('../models/ScheduledRoom');
+                await ScheduledRoom.updateOne(
+                    { liveRoomId: roomId, status: 'live' },
+                    { $set: { status: 'completed' } }
+                );
+            } catch (srErr) {
+                console.error(`[Settlement] Error completing scheduled room for ${roomId}:`, srErr.message);
+            }
         } else if (r) {
             console.log(`Room ${roomId} deletion skipped — ${r.participants.size} participant(s) present`);
         }
@@ -442,7 +465,10 @@ function setupSignaling(io) {
             }
 
             const isOriginalCreator = room.creatorUserId && socket.userId && room.creatorUserId === socket.userId;
-            const shouldBeHost = isHost || isOriginalCreator;
+            // Host authority is derived server-side: when the room has a known
+            // creator, only that creator may claim host. Client-requested
+            // isHost is honored only for legacy rooms without a creator.
+            const shouldBeHost = room.creatorUserId ? isOriginalCreator : (isHost || isOriginalCreator);
 
             if (shouldBeHost) {
                 const currentHostId = room.hostId;
@@ -1169,6 +1195,11 @@ async function joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar
     const room = rooms.get(roomId);
     cancelRoomDeletion(roomId);
     room.lastActivity = Date.now();
+    // Host authority derived server-side: rooms with a known creator only
+    // grant host to that creator, regardless of the client's isHost flag.
+    if (room.creatorUserId && String(room.creatorUserId) !== String(userId || '')) {
+        isHost = false;
+    }
     if (room.isLocked && !isHost) {
         return { success: false, message: 'This room is currently locked.' };
     }

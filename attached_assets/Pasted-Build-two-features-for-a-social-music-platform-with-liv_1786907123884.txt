@@ -1,0 +1,22 @@
+Build two features for a social music platform with live audio/video "rooms" (adapt to the project's existing stack and room system):
+
+Feature 1 — Room collaboration with token splits
+
+Collaborator invites in room creation: In the create-room flow, let the host add up to 5 collaborators by searching name or a unique shareable collab ID (format WRD-XXXXXX, auto-assigned to every user). Each collaborator gets a numeric split percentage; host + collaborator splits must total exactly 100% (validated server-side). Creators who are currently live or already committed to a scheduled room appear greyed out as "busy" in search results.
+Approval modes (host picks one):
+pre-schedule: all collaborators must approve their split before the room can be scheduled at all.
+real-time: the room can be scheduled immediately, but cannot open (go live) until every collaborator approves. Enforce both gates in the backend, not just UI.
+Notifications & nudges: Collaborators get invites they can approve/decline. All involved parties get a nudge 5 minutes before the scheduled start and at start time — delivered in real time (e.g., WebSocket) if online, stored as in-app notifications if offline. Nudges must be claimed atomically so they never fire twice.
+Token economy: Users have a token balance. Listeners can tip tokens into a room's pool while it's open (atomic debit, with refund compensation if the pool credit fails). When the host closes the room, the pool is distributed per the approved splits into a transaction ledger.
+Crash-safe payouts (critical): Settlement must be idempotent and provably recoverable without relying on multi-document transactions: create unique unsettled ledger entries per (room, recipient), apply each credit and a payout-ID marker to the recipient's balance document in a single atomic update (so retries are no-ops), then mark the ledger entry settled. Run a background recovery sweep that completes any interrupted settlements. Concurrent double-close must yield exactly one payout. Cover this with automated tests simulating crashes between each step.
+Feature 2 — Scheduled rooms program
+
+Scheduling: The create-room flow supports picking a future date/time and an optional description; the room saves as scheduled instead of opening. Store full metadata (title, genre, topic, collaborators/splits, start time, description).
+Discovery surfaces:
+A public "Coming Up" section on the rooms page alongside live rooms, ordered by popularity (interest count), then soonest start.
+A card on a creator's profile showing their next planned room(s) with times.
+"Remind me" interest: Signed-in users can toggle interest on an upcoming room; interested users are included in the 5-minute and start-time nudges. Privacy requirement: public listing endpoints must return only an interest count plus the caller's own isInterested flag (via optional auth) — never the roster of interested user IDs or participant lists. Add route tests asserting this.
+Go-live transition: At/near start time, the host can open the scheduled room (server-side host check), moving it into the live list and triggering collaborator nudges. Support a deep link that takes the host straight from their profile card to going live.
+Out of scope: calendar integrations, recurring schedules, recommendation algorithms beyond simple interest-count ordering.
+General: escape all user-generated content rendered into HTML (room names, topics, descriptions, user names); enforce private-room access and room capacity atomically server-side; reject tips after close.
+

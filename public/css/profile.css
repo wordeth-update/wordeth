@@ -1637,3 +1637,14 @@
         display: none;
     }
 }
+
+/* Upcoming scheduled rooms card */
+.upcoming-rooms-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(168,85,247,0.25); border-radius: 14px; padding: 16px 18px; margin: 16px 0; }
+.upcoming-rooms-card h3 { margin: 0 0 10px; color: #c4b5fd; font-size: 1rem; }
+.upcoming-room-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.upcoming-room-row:last-child { border-bottom: none; }
+.upcoming-room-info { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; min-width: 0; }
+.upcoming-room-title { font-weight: 600; color: #fff; }
+.upcoming-room-time, .upcoming-room-interest { font-size: 0.8rem; color: #c4b5fd; }
+.upcoming-room-pending { font-size: 0.75rem; color: #fbbf24; }
+.upcoming-go-live-btn { background: linear-gradient(135deg, #a855f7, #7c3aed); color: #fff; border-radius: 999px; padding: 6px 16px; font-size: 0.85rem; font-weight: 600; text-decoration: none; flex-shrink: 0; }

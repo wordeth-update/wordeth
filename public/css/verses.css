@@ -3935,3 +3935,51 @@ body.in-room * {
     top: 50%;
     transform: translateY(-50%);
 }
+
+/* ==================== Scheduled Rooms: Coming Up ==================== */
+.coming-up-section { margin: 12px 0 16px; }
+.coming-up-list { display: flex; flex-direction: column; gap: 8px; }
+.coming-up-card {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(168,85,247,0.25);
+    border-radius: 12px; padding: 10px 14px;
+}
+.coming-up-info { min-width: 0; flex: 1; }
+.coming-up-title { font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.coming-up-meta { display: flex; gap: 10px; align-items: center; font-size: 0.78rem; color: #c4b5fd; margin-top: 2px; flex-wrap: wrap; }
+.coming-up-genre { text-transform: capitalize; background: rgba(168,85,247,0.15); border-radius: 8px; padding: 1px 8px; }
+.coming-up-host { font-size: 0.78rem; color: rgba(255,255,255,0.55); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.coming-up-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.coming-up-interest { font-size: 0.8rem; color: #c4b5fd; }
+.coming-up-btn {
+    border: 1px solid rgba(168,85,247,0.5); background: transparent; color: #c4b5fd;
+    border-radius: 999px; padding: 6px 14px; font-size: 0.8rem; cursor: pointer; font-weight: 600;
+}
+.coming-up-btn.active, .coming-up-btn:hover { background: rgba(168,85,247,0.2); color: #fff; }
+.coming-up-btn.go-live-btn { background: linear-gradient(135deg, #a855f7, #7c3aed); color: #fff; border: none; }
+
+/* Schedule options in create-room modal */
+#schedule-options textarea { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 10px; resize: vertical; }
+.collab-my-id { float: right; font-size: 0.72rem; color: #c4b5fd; font-weight: 400; }
+.collab-search-results { max-height: 160px; overflow-y: auto; margin-top: 4px; }
+.collab-result { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; color: #eee; }
+.collab-result:hover { background: rgba(168,85,247,0.15); }
+.collab-result img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+.collab-result.busy { opacity: 0.45; cursor: not-allowed; }
+.collab-result-id { font-size: 0.7rem; color: #c4b5fd; margin-left: auto; }
+.collab-busy-tag { font-size: 0.7rem; color: #f87171; margin-left: auto; text-transform: uppercase; }
+.collab-result.none { color: rgba(255,255,255,0.4); cursor: default; }
+.collab-selected { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.collab-chip { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; padding: 6px 10px; color: #fff; }
+.collab-chip img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+.collab-chip-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.collab-split-input { width: 58px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; padding: 4px 6px; text-align: right; }
+.collab-remove { background: none; border: none; color: #f87171; font-size: 1.1rem; cursor: pointer; padding: 0 4px; }
+.collab-split-summary { margin-top: 8px; font-size: 0.8rem; color: #34d399; }
+.collab-split-summary.invalid { color: #f87171; }
+
+/* Collab invite cards */
+.collab-invite-card { border-color: rgba(52,211,153,0.4); }
+.coming-up-split { color: #34d399; font-weight: 600; }
+.coming-up-btn.decline-btn { border-color: rgba(248,113,113,0.5); color: #f87171; }
+.coming-up-btn.decline-btn:hover { background: rgba(248,113,113,0.15); }

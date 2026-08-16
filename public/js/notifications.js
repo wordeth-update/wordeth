@@ -87,6 +87,11 @@
             case 'new_follower': return name + ' started following you';
             case 'follower_created_room': return name + ' started a room: ' + escHtml(n.roomName || 'a Verse');
             case 'follower_joined_room': return name + ' joined a room: ' + escHtml(n.roomName || 'a Verse');
+            case 'collab_invite': return name + ' invited you to collaborate on "' + escHtml(n.roomName || 'a room') + '"';
+            case 'collab_response': return name + ' responded to your collab invite for "' + escHtml(n.roomName || 'a room') + '"';
+            case 'room_nudge_5min': return '"' + escHtml(n.roomName || 'Your room') + '" starts in 5 minutes';
+            case 'room_nudge_start': return '"' + escHtml(n.roomName || 'Your room') + '" is starting now';
+            case 'room_live': return name + ' is live now: "' + escHtml(n.roomName || 'a room') + '"';
             default: return name + ' sent you a notification';
         }
     }
@@ -102,7 +107,7 @@
             var n = notifications[i];
             var initial = (n.fromUserName || 'U').charAt(0).toUpperCase();
             var cls = n.read ? 'notif-item' : 'notif-item unread';
-            html += '<div class="' + cls + '" data-nid="' + n._id + '"' + (n.roomId ? ' data-room="' + escHtml(n.roomId) + '"' : '') + '>'
+            html += '<div class="' + cls + '" data-nid="' + n._id + '" data-type="' + escHtml(n.type || '') + '"' + (n.roomId ? ' data-room="' + escHtml(n.roomId) + '"' : '') + '>'
                 + '<div class="notif-item-avatar">' + initial + '</div>'
                 + '<div class="notif-item-body">'
                 + '<div class="notif-item-text">' + notifText(n) + '</div>'
@@ -119,7 +124,15 @@
                 item.addEventListener('click', function() {
                     var nid = item.getAttribute('data-nid');
                     var roomId = item.getAttribute('data-room');
+                    var type = item.getAttribute('data-type') || '';
                     markRead(nid);
+                    // Scheduled-room notifications point at a schedule, not a
+                    // live room — send those to the Verses lobby instead.
+                    var scheduledTypes = ['collab_invite', 'collab_response', 'room_nudge_5min', 'room_nudge_start'];
+                    if (scheduledTypes.indexOf(type) !== -1) {
+                        window.location.href = '/verses.html';
+                        return;
+                    }
                     if (roomId) {
                         localStorage.setItem('wordeth_pending_room', roomId);
                         localStorage.setItem('wordeth_pending_room_ts', String(Date.now()));

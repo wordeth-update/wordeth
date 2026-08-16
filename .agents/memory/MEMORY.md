@@ -1,0 +1,3 @@
+- [Wordeth server quirks](wordeth-server-quirks.md) — HTML is cached/rewritten at startup, so any public/*.html edit needs a Wordeth Server restart; other quirks inside.
+- [Idempotent settlement pattern](settlement-pattern.md) — crash-safe token payouts without multi-doc transactions: unique ledger rows + payoutId marker in one atomic update + recovery sweep.
+- [Pre-existing test failures](wordeth-server-quirks.md) — health/auth/articles/ads Jest suites fail on HEAD (supertest misuse of server.js export); not caused by new work.
