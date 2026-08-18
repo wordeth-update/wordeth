@@ -275,7 +275,13 @@
             + '<div class="invite-from">'
             + '<div class="invite-from-avatar">' + inviterInitial + '</div>'
             + '<div class="invite-from-text"><strong>' + escHtml(data.inviterName) + '</strong> invited you</div>'
-            + '</div></div>'
+            + '</div>'
+            + ((parseInt(data.tokenPrice, 10) || 0) > 0
+                ? (data.freePass
+                    ? '<div class="invite-price-tag free-pass"><i class="fas fa-ticket-alt"></i> Free pass from the host</div>'
+                    : '<div class="invite-price-tag paid"><i class="fas fa-key"></i> ' + (parseInt(data.tokenPrice, 10) || 0) + ' tokens to enter</div>')
+                : '')
+            + '</div>'
             + '<div class="invite-card-actions">'
             + '<button class="invite-action-btn dismiss" id="notif-invite-dismiss">Not now</button>'
             + '<button class="invite-action-btn join" id="notif-invite-join"><i class="fas fa-headphones"></i> Join</button>'

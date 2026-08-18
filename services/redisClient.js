@@ -66,6 +66,7 @@ function serializeRoom(room) {
     participantHistory: room.participantHistory ? Array.from(room.participantHistory) : [],
     peakParticipants: room.peakParticipants || 0,
     genre: room.genre || '',
+    freeEntryUserIds: Array.isArray(room.freeEntryUserIds) ? room.freeEntryUserIds : [],
   });
 }
 
@@ -94,6 +95,7 @@ function deserializeRoom(json) {
     participantHistory: new Set(data.participantHistory || []),
     peakParticipants: data.peakParticipants || 0,
     genre: data.genre || '',
+    freeEntryUserIds: Array.isArray(data.freeEntryUserIds) ? data.freeEntryUserIds : [],
   };
 }
 

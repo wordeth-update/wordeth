@@ -386,12 +386,44 @@ class AudioRoomsManager {
 
         try {
             if (this.currentRoom) { inv.status = 'idle'; return; }
+
+            // Paid room? Show the price and get confirmation BEFORE joining
+            // (the server charges at join time). Skipped once confirmed.
+            if (!inv.priceCleared) {
+                const gate = await this._checkEntryPrice(inv.roomId);
+                if (gate === 'gated') {
+                    inv.status = 'idle';
+                    return; // token gate modal takes over; confirm re-enters
+                }
+                inv.priceCleared = true;
+            }
+
             this._updateJoiningStatus('Joining room\u2026');
             await this.joinRoom(inv.roomId, false, true);
         } catch (e) {
             console.error('Invite: join failed:', e);
             this._failInvite('Could not connect to the room. Please try joining from the list.');
         }
+    }
+
+    // Returns 'free' (join right away) or 'gated' (token gate modal shown).
+    // Fails CLOSED: if we cannot learn the price, we throw so the invite
+    // retry logic kicks in — a user is never charged without seeing a price.
+    async _checkEntryPrice(roomId) {
+        const token = localStorage.getItem('authToken');
+        const res = await fetch(apiUrl(`/api/rooms/${encodeURIComponent(roomId)}/info`), {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (res.status === 404) return 'free'; // room gone — join will surface the real error
+        if (!res.ok) throw new Error(`room info lookup failed (${res.status})`);
+        const info = await res.json();
+        if (!info.tokenPrice || info.freeEntry) return 'free';
+        // Hide the joining overlay so the gate modal is usable
+        document.getElementById('invite-joining-msg')?.remove();
+        if (this.roomSelection) this.roomSelection.style.display = '';
+        if (this._inviteHardTimeout) { clearTimeout(this._inviteHardTimeout); this._inviteHardTimeout = null; }
+        this._showTokenGate(roomId, info.tokenPrice);
+        return 'gated';
     }
 
     _failInvite(message, permanent = false) {
@@ -1219,7 +1251,7 @@ class AudioRoomsManager {
 
     _createComingUpCard(r, myId) {
         const card = document.createElement('div');
-        card.className = 'coming-up-card';
+        card.className = 'coming-up-card' + (r.tokenPrice > 0 ? ' coming-up-paid' : '');
         card.dataset.scheduledId = r.id;
         const esc = (t) => window.escapeHtml(String(t == null ? '' : t));
         const collabs = (r.collaborators || []).map(c => esc(c.userName)).filter(Boolean);
@@ -1791,6 +1823,8 @@ class AudioRoomsManager {
         const notification = document.createElement('div');
         notification.id = 'wordeth-invite-notification';
         notification.className = 'invite-notification';
+        const tokenPrice = parseInt(data.tokenPrice, 10) || 0;
+        const freePass = !!data.freePass;
         const liveBadge = this._el('div', {className: 'invite-live-badge'},
             this._el('span', {className: 'invite-live-dot'}), 'LIVE NOW');
         const logo = this._el('img', {className: 'invite-logo', src: '/images/logo.png', alt: 'Wordeth'});
@@ -1802,6 +1836,13 @@ class AudioRoomsManager {
             this._el('div', {className: 'invite-room-name', textContent: roomName}),
             this._el('div', {className: 'invite-from'},
                 this._el('div', {className: 'invite-from-avatar', textContent: inviterInitial}), fromText));
+        if (tokenPrice > 0) {
+            cardBody.appendChild(freePass
+                ? this._el('div', {className: 'invite-price-tag free-pass'},
+                    this._icon('fas fa-ticket-alt'), this._text(' Free pass from the host'))
+                : this._el('div', {className: 'invite-price-tag paid'},
+                    this._icon('fas fa-key'), this._text(` ${tokenPrice} token${tokenPrice === 1 ? '' : 's'} to enter`)));
+        }
 
         const dismissBtn = this._el('button', {className: 'invite-action-btn dismiss', textContent: 'Not now'});
         const joinBtn = this._el('button', {className: 'invite-action-btn join'},
@@ -1821,7 +1862,11 @@ class AudioRoomsManager {
             if (this.currentRoom) {
                 this.leaveRoom();
             }
-            this.joinRoom(data.roomId);
+            if (tokenPrice > 0 && !freePass) {
+                this._showTokenGate(data.roomId, tokenPrice);
+            } else {
+                this.joinRoom(data.roomId);
+            }
         });
 
         dismissBtn.addEventListener('click', () => {
@@ -2131,7 +2176,7 @@ class AudioRoomsManager {
         return item;
     }
 
-    inviteUser(userId) {
+    async inviteUser(userId) {
         const userElement = document.querySelector(`[data-user-id="${userId}"]`)?.closest('.search-result-item');
         const userName = userElement?.querySelector('.search-result-name')?.textContent || 'User';
 
@@ -2139,6 +2184,18 @@ class AudioRoomsManager {
         try {
             currentUserName = JSON.parse(localStorage.getItem('user'))?.name || 'Someone';
         } catch(e) {}
+
+        // If I'm hosting a paid room, comp this person's entry first
+        // (authenticated server-side; only the host can do this).
+        if (this.isRoomHost && this.currentRoom && localStorage.getItem('authToken')) {
+            try {
+                await fetch(apiUrl(`/api/rooms/${encodeURIComponent(this.currentRoom)}/grant-pass`), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...this._authHeaders() },
+                    body: JSON.stringify({ targetUserId: userId })
+                });
+            } catch (e) { /* invite still goes out; they'd just pay normally */ }
+        }
 
         const roomNameEl = document.getElementById('room-name');
         const displayRoomName = roomNameEl?.textContent || this.currentRoom;

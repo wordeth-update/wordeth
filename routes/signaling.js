@@ -229,6 +229,17 @@ function setupSignaling(io) {
             }
             socket.inviteTimestamps.push(now);
 
+            // Attach the entry price so invitees see the cost up front.
+            // Free passes are GRANTED only via the authenticated HTTP endpoint
+            // (POST /api/rooms/:roomId/grant-pass) — the socket layer merely
+            // reports whether the target already holds one, since socket
+            // identity is client-asserted and must not authorize payments.
+            const inviteRoom = rooms.get(roomId);
+            const tokenPrice = inviteRoom ? (inviteRoom.tokenPrice || 0) : 0;
+            const freePass = !!(inviteRoom && targetUserId &&
+                Array.isArray(inviteRoom.freeEntryUserIds) &&
+                inviteRoom.freeEntryUserIds.includes(String(targetUserId)));
+
             const targetSockets = connectedUsers.get(targetUserId);
             if (targetSockets && targetSockets.size > 0) {
                 const socketIds = Array.from(targetSockets);
@@ -238,6 +249,8 @@ function setupSignaling(io) {
                     roomName: roomName || roomId,
                     inviterName: inviterName || socket.registeredUserName || 'Someone',
                     inviterId: socket.registeredUserId,
+                    tokenPrice,
+                    freePass,
                     timestamp: now
                 });
                 socket.emit('invite-sent', { targetUserId, success: true });
@@ -367,7 +380,14 @@ function setupSignaling(io) {
             }
 
             const isCreatorOfRoom = room.creatorUserId && socket.userId && room.creatorUserId === socket.userId;
-            if (room.tokenPrice > 0 && !isCreatorOfRoom && !requestedHost) {
+            // Entry-fee exemptions are derived server-side: the creator, anyone
+            // on the room's free-entry list (collaborators / host guest passes).
+            // The client's isHost flag is only honored for legacy rooms that
+            // have no recorded creator.
+            const hasFreePass = Array.isArray(room.freeEntryUserIds) && socket.userId &&
+                room.freeEntryUserIds.includes(String(socket.userId));
+            const legacyHostClaim = !room.creatorUserId && requestedHost;
+            if (room.tokenPrice > 0 && !isCreatorOfRoom && !hasFreePass && !legacyHostClaim) {
                 try {
                     const deductResult = await User.findOneAndUpdate(
                         { _id: socket.userId, tokenBalance: { $gte: room.tokenPrice } },

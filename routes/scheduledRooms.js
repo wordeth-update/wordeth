@@ -424,6 +424,8 @@ router.post('/:id/open', auth, async (req, res) => {
             stageAccess: 'invite-only',
             tokenPrice: sr.tokenPrice || 0,
             genre: sr.genre || '',
+            // Host and approved collaborators enter their own room free
+            freeEntryUserIds: [String(req.user._id)].concat(activeCollabs.map(c => String(c.userId))),
             createdAt: now,
             lastActivity: now,
             participantHistory: new Set(),
