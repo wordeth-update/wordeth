@@ -12,3 +12,6 @@ description: Environment/runtime quirks of the Wordeth app that repeatedly bite 
 
 ## Railway build: npm only — never let a root pnpm-lock.yaml exist
 Railway/nixpacks auto-detects pnpm if `pnpm-lock.yaml` is present at repo root and runs `pnpm install --frozen-lockfile`, which fails once package.json drifts. This repo is npm-managed (package-lock.json). A stale root pnpm-lock (accidentally introduced during mockup-sandbox artifact init) broke production deploys in Aug 2026. **How to apply:** keep pnpm lockfiles out of the repo root; artifact subdirs are fine.
+
+## Railway deploys via root Dockerfile (added Aug 2026)
+Railway's Railpack auto-detect ignored nixpacks.toml, re-downloaded puppeteer Chrome, installed dev deps, and OOM-crashed builds (npm "Exit handler never called", exit 137). Root Dockerfile now controls prod builds: node:20-slim, system chromium + PUPPETEER_EXECUTABLE_PATH for OG images, `npm ci --omit=dev`. **How to apply:** production build changes go in Dockerfile/.dockerignore, not nixpacks.toml (dead config).
