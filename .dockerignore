@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log
+.git
+.replit
+replit.nix
+.local
+.agents
+.config
+.cache
+artifacts
+attached_assets
+tests
+coverage
+screenshots
+Dockerfile
+.dockerignore
+*.md
