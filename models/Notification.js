@@ -9,7 +9,7 @@ const notificationSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['new_follower', 'follower_created_room', 'follower_joined_room', 'collab_invite', 'collab_response', 'room_nudge_5min', 'room_nudge_start', 'room_live'],
+        enum: ['new_follower', 'follower_created_room', 'follower_joined_room', 'collab_invite', 'collab_response', 'room_nudge_5min', 'room_nudge_start', 'room_live', 'room_invite'],
         required: true
     },
     fromUserId: {

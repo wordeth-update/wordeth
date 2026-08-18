@@ -214,7 +214,7 @@ function setupSignaling(io) {
             }
         });
 
-        socket.on('room-invite', ({ targetUserId, roomId, roomName, inviterName }) => {
+        socket.on('room-invite', async ({ targetUserId, roomId, roomName, inviterName }) => {
             if (!socket.registeredUserId) {
                 socket.emit('invite-sent', { targetUserId, success: false, reason: 'not_registered' });
                 return;
@@ -240,22 +240,86 @@ function setupSignaling(io) {
                 Array.isArray(inviteRoom.freeEntryUserIds) &&
                 inviteRoom.freeEntryUserIds.includes(String(targetUserId)));
 
-            const targetSockets = connectedUsers.get(targetUserId);
-            if (targetSockets && targetSockets.size > 0) {
-                const socketIds = Array.from(targetSockets);
-                const latestSocketId = socketIds[socketIds.length - 1];
-                io.to(latestSocketId).emit('room-invite', {
-                    roomId,
-                    roomName: roomName || roomId,
-                    inviterName: inviterName || socket.registeredUserName || 'Someone',
-                    inviterId: socket.registeredUserId,
-                    tokenPrice,
-                    freePass,
-                    timestamp: now
-                });
-                socket.emit('invite-sent', { targetUserId, success: true });
-            } else {
-                socket.emit('invite-sent', { targetUserId, success: false, reason: 'offline' });
+            try {
+                // Paid rooms: cap invites per sender→recipient pair at 10/day
+                // so nobody gets pestered to pay by the same person.
+                if (tokenPrice > 0 && !freePass) {
+                    try {
+                        const redis = getClient();
+                        if (redis) {
+                            const day = new Date().toISOString().slice(0, 10);
+                            const capKey = `invitecap:${socket.registeredUserId}:${targetUserId}:${day}`;
+                            const count = await redis.incr(capKey);
+                            if (count === 1) await redis.expire(capKey, 86400);
+                            if (count > 10) {
+                                socket.emit('invite-sent', { targetUserId, success: false, reason: 'daily_cap' });
+                                return;
+                            }
+                        }
+                    } catch (e) { /* Redis down — don't block invites */ }
+                }
+
+                // Popup vs quiet: the interruptive popup is reserved for
+                // people the RECIPIENT has a relationship with — someone they
+                // follow, or the room's creator/host. Everyone else's invite
+                // lands quietly in the bell notifications instead.
+                let allowPopup = true;
+                if (tokenPrice > 0 && !freePass) {
+                    const isRoomCreator = inviteRoom && inviteRoom.creatorUserId &&
+                        String(inviteRoom.creatorUserId) === String(socket.registeredUserId);
+                    if (!isRoomCreator) {
+                        const followed = await User.exists({
+                            _id: targetUserId,
+                            following: socket.registeredUserId
+                        }).catch(() => null);
+                        allowPopup = !!followed;
+                    }
+                }
+
+                const targetSockets = connectedUsers.get(targetUserId);
+                const online = targetSockets && targetSockets.size > 0;
+
+                if (allowPopup && online) {
+                    const socketIds = Array.from(targetSockets);
+                    const latestSocketId = socketIds[socketIds.length - 1];
+                    io.to(latestSocketId).emit('room-invite', {
+                        roomId,
+                        roomName: roomName || roomId,
+                        inviterName: inviterName || socket.registeredUserName || 'Someone',
+                        inviterId: socket.registeredUserId,
+                        tokenPrice,
+                        freePass,
+                        timestamp: now
+                    });
+                    socket.emit('invite-sent', { targetUserId, success: true });
+                } else if (!allowPopup) {
+                    // Quiet path: store a bell notification (works online or
+                    // offline) — no screen takeover from strangers.
+                    try {
+                        await Notification.create({
+                            userId: targetUserId,
+                            type: 'room_invite',
+                            fromUserId: socket.registeredUserId,
+                            fromUserName: inviterName || socket.registeredUserName || 'Someone',
+                            roomId,
+                            roomName: roomName || roomId
+                        });
+                        if (online) {
+                            for (const sid of targetSockets) {
+                                io.to(sid).emit('notification', { type: 'room_invite' });
+                            }
+                        }
+                        socket.emit('invite-sent', { targetUserId, success: true, quiet: true });
+                    } catch (e) {
+                        console.warn('[Invite] quiet notification error:', e.message);
+                        socket.emit('invite-sent', { targetUserId, success: false, reason: 'error' });
+                    }
+                } else {
+                    socket.emit('invite-sent', { targetUserId, success: false, reason: 'offline' });
+                }
+            } catch (err) {
+                console.error('[Invite] error:', err);
+                socket.emit('invite-sent', { targetUserId, success: false, reason: 'error' });
             }
         });
 

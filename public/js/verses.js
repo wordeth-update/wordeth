@@ -2211,7 +2211,11 @@ class AudioRoomsManager {
 
             activeSocket.once('invite-sent', (response) => {
                 if (response.success) {
-                    this.showShareToast(`Invite sent to ${userName}!`);
+                    this.showShareToast(response.quiet
+                        ? `Invite sent to ${userName} — they'll see it in their notifications`
+                        : `Invite sent to ${userName}!`);
+                } else if (response.reason === 'daily_cap') {
+                    this.showShareToast(`You've already invited ${userName} today — give them a breather`);
                 } else {
                     this.fallbackInvite(userName);
                 }

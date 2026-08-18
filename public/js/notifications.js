@@ -92,6 +92,7 @@
             case 'room_nudge_5min': return '"' + escHtml(n.roomName || 'Your room') + '" starts in 5 minutes';
             case 'room_nudge_start': return '"' + escHtml(n.roomName || 'Your room') + '" is starting now';
             case 'room_live': return name + ' is live now: "' + escHtml(n.roomName || 'a room') + '"';
+            case 'room_invite': return name + ' invited you to "' + escHtml(n.roomName || 'a room') + '"';
             default: return name + ' sent you a notification';
         }
     }
