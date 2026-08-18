@@ -758,19 +758,33 @@ function ogCrawlerHeaders(req, res, next) {
 }
 
 // Rich link preview for room invites (Open Graph / SMS / iMessage / social cards)
-app.get('/room/:roomId', ogCrawlerHeaders, (req, res) => {
+app.get('/room/:roomId', ogCrawlerHeaders, async (req, res) => {
     const roomId = req.params.roomId;
     const activeRooms = getActiveRooms();
-    const room = activeRooms.find(r => r.id === roomId);
+    let room = activeRooms.find(r => r.id === roomId);
+
+    // Fall back to Redis for rooms that ended or aren't yet in memory
+    if (!room) {
+        try {
+            const { loadRoom } = require('./services/redisClient');
+            room = await loadRoom(roomId);
+        } catch (e) {
+            // Redis unavailable — room stays null, page still renders gracefully
+        }
+    }
 
     const queryName = req.query.name || '';
     const queryHost = req.query.host || '';
     const roomName = escapeHtml(room?.name || queryName || 'a Live Verse');
     const participantCount = room?.participantCount || 0;
     const hostName = room?.participants?.find(p => p.isHost)?.userName || queryHost || '';
+    const tokenPrice = room?.tokenPrice || 0;
+
+    const priceLabel = tokenPrice > 0 ? `${tokenPrice} token${tokenPrice === 1 ? '' : 's'}` : '';
+    const priceSuffix = tokenPrice > 0 ? ` 🎟 ${priceLabel} to join.` : '';
     const description = escapeHtml(hostName
-        ? `${hostName} is live on Wordeth${participantCount > 1 ? ` with ${participantCount - 1} other${participantCount > 2 ? 's' : ''}` : ''}. Tap to join the conversation.`
-        : `A live audio room on Wordeth${participantCount > 0 ? ` with ${participantCount} listener${participantCount > 1 ? 's' : ''}` : ''}. Tap to join.`);
+        ? `${hostName} is live on Wordeth${participantCount > 1 ? ` with ${participantCount - 1} other${participantCount > 2 ? 's' : ''}` : ''}. Tap to join the conversation.${priceSuffix}`
+        : `A live audio room on Wordeth${participantCount > 0 ? ` with ${participantCount} listener${participantCount > 1 ? 's' : ''}` : ''}. Tap to join.${priceSuffix}`);
 
     const baseUrl = req.get('x-forwarded-proto') 
         ? `${req.get('x-forwarded-proto')}://${req.get('host')}`
@@ -791,6 +805,11 @@ app.get('/room/:roomId', ogCrawlerHeaders, (req, res) => {
         if (req.query.host) qs.set('host', req.query.host);
         return res.redirect(302, `/verses.html?${qs.toString()}`);
     }
+
+    // Price badge HTML — shown only for paid rooms
+    const priceBadgeHtml = tokenPrice > 0
+        ? `<span class="invite-price-tag paid" style="margin-top:12px;font-size:0.9rem;font-weight:600;display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;color:#fbbf24;background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.35);">🎟 ${escapeHtml(priceLabel)} to join</span>`
+        : '';
 
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.setHeader('CDN-Cache-Control', 'no-store');
@@ -817,7 +836,10 @@ app.get('/room/:roomId', ogCrawlerHeaders, (req, res) => {
     <meta http-equiv="refresh" content="2;url=${joinUrl}">
 </head>
 <body style="background:#1a1033;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
-    <p>Joining room...</p>
+    <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <p style="margin:0;font-size:1.1rem;opacity:0.85;">Joining <strong>${roomName}</strong>…</p>
+        ${priceBadgeHtml}
+    </div>
 </body>
 </html>`);
 });
