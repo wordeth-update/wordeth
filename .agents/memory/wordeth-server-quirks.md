@@ -15,3 +15,6 @@ Railway/nixpacks auto-detects pnpm if `pnpm-lock.yaml` is present at repo root a
 
 ## Railway deploys via root Dockerfile (added Aug 2026)
 Railway's Railpack auto-detect ignored nixpacks.toml, re-downloaded puppeteer Chrome, installed dev deps, and OOM-crashed builds (npm "Exit handler never called", exit 137). Root Dockerfile now controls prod builds: node:20-slim, system chromium + PUPPETEER_EXECUTABLE_PATH for OG images, `npm ci --omit=dev`. **How to apply:** production build changes go in Dockerfile/.dockerignore, not nixpacks.toml (dead config).
+
+## package-lock.json must point at registry.npmjs.org, not Replit's proxy
+Running npm install inside Replit can stamp `http://package-firewall.replit.local/npm/...` into the lockfile's `resolved` URLs. Railway (and any external CI) can't resolve that host → `npm ci` fails with ENOTFOUND. **How to apply:** after any npm install that touches package-lock.json, grep it for `package-firewall` and sed-replace with `https://registry.npmjs.org` before pushing.
