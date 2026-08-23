@@ -17,6 +17,9 @@ ENV NODE_ENV=production \
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+# Safety net: strip any Replit-internal package-proxy addresses that may have
+# been stamped into the lockfile, so builds never depend on Replit's network.
+RUN sed -i 's|http://package-firewall.replit.local/npm|https://registry.npmjs.org|g' package-lock.json
 # Generous retries/timeouts: Railway builders occasionally drop DNS mid-install
 RUN npm config set fetch-retries 5 \
     && npm config set fetch-retry-mintimeout 20000 \
