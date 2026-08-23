@@ -18,3 +18,8 @@ Railway's Railpack auto-detect ignored nixpacks.toml, re-downloaded puppeteer Ch
 
 ## package-lock.json must point at registry.npmjs.org, not Replit's proxy
 Running npm install inside Replit can stamp `http://package-firewall.replit.local/npm/...` into the lockfile's `resolved` URLs. Railway (and any external CI) can't resolve that host → `npm ci` fails with ENOTFOUND. **How to apply:** after any npm install that touches package-lock.json, grep it for `package-firewall` and sed-replace with `https://registry.npmjs.org` before pushing.
+
+## File storage is MongoDB GridFS (since Aug 2026)
+All uploads (artwork, audio messages, avatars, profile photos, music snippets, audiobank, template previews) go through services/fileStorage.js into GridFS and are served at GET /api/files/<key> with Range support and nosniff + CSP sandbox headers. Private keys embed random tokens (capability URLs — same access model as the old signed URLs). Analytics archives live in the AnalyticsArchive collection, not S3.
+**Why:** production runs on Railway where Replit object storage is unreachable; user directive was "all storage routed to MongoDB".
+**How to apply:** never reintroduce @replit/object-storage or signed URLs for new features; store the stable /api/files URL (or the key) in Mongo docs. The legacy Replit-storage fallback in routes/files.js and the avatar route only works inside Replit and exists purely for pre-migration stragglers. Note: `new Client()` from @replit/object-storage needs `{ bucketId: process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID }` passed explicitly or it throws "A bucket name is needed".
