@@ -131,15 +131,12 @@ router.post('/:userId', auth, upload.single('audio'), async (req, res) => {
 
         if (req.file) {
             try {
-                const { Client } = require('@replit/object-storage');
-                const client = new Client();
-                const key = `audio-messages/${myId}-${Date.now()}.webm`;
-                await client.uploadFromBytes(key, req.file.buffer);
-                const { ok, value } = await client.getSignedDownloadUrl(key);
-                if (ok) {
-                    msgData.audioUrl = value;
-                    msgData.audioExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
-                }
+                const fileStorage = require('../services/fileStorage');
+                const rand = require('crypto').randomBytes(8).toString('hex');
+                const key = `audio-messages/${myId}-${Date.now()}-${rand}.webm`;
+                const { url } = await fileStorage.uploadBytes(key, req.file.buffer, req.file.mimetype || 'audio/webm');
+                msgData.audioUrl = url;
+                msgData.audioExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
             } catch (uploadErr) {
                 console.error('Audio upload error:', uploadErr);
             }

@@ -64,29 +64,22 @@ router.post('/tracks', apiKeyAuth, requirePerm('audiobank:submit'), upload.field
         if (!req.files || !req.files.audio) return res.status(400).json({ error: 'Audio file is required', code: 'VALIDATION' });
         if (!tokenPrice || parseInt(tokenPrice) < 1) return res.status(400).json({ error: 'Valid token price is required', code: 'VALIDATION' });
 
-        const { Client } = require('@replit/object-storage');
-        const client = new Client();
-        const ts = Date.now();
+        const fileStorage = require('../services/fileStorage');
+        const ts = `${Date.now()}-${require('crypto').randomBytes(6).toString('hex')}`;
 
         const audioKey = `audiobank/${ts}-${req.files.audio[0].originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-        await client.uploadFromBytes(audioKey, req.files.audio[0].buffer);
-        const audioResult = await client.getSignedDownloadUrl(audioKey);
-        if (!audioResult.ok) return res.status(500).json({ error: 'Audio upload failed', code: 'UPLOAD_FAIL' });
+        const audioUp = await fileStorage.uploadBytes(audioKey, req.files.audio[0].buffer, req.files.audio[0].mimetype);
 
         let previewUrl = '';
         if (req.files.preview) {
             const previewKey = `audiobank/preview-${ts}-${req.files.preview[0].originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-            await client.uploadFromBytes(previewKey, req.files.preview[0].buffer);
-            const previewResult = await client.getSignedDownloadUrl(previewKey);
-            if (previewResult.ok) previewUrl = previewResult.value;
+            previewUrl = (await fileStorage.uploadBytes(previewKey, req.files.preview[0].buffer, req.files.preview[0].mimetype)).url;
         }
 
         let coverArt = '';
         if (req.files.cover) {
             const coverKey = `audiobank/cover-${ts}-${req.files.cover[0].originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-            await client.uploadFromBytes(coverKey, req.files.cover[0].buffer);
-            const coverResult = await client.getSignedDownloadUrl(coverKey);
-            if (coverResult.ok) coverArt = coverResult.value;
+            coverArt = (await fileStorage.uploadBytes(coverKey, req.files.cover[0].buffer, req.files.cover[0].mimetype)).url;
         }
 
         const track = await AudioBank.create({
@@ -99,7 +92,7 @@ router.post('/tracks', apiKeyAuth, requirePerm('audiobank:submit'), upload.field
             tokenPrice: parseInt(tokenPrice),
             rentalDays: rentalDays ? parseInt(rentalDays) : 30,
             tags: tags ? (Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim())) : [],
-            audioUrl: audioResult.value,
+            audioUrl: audioUp.url,
             previewUrl,
             coverArt,
             active: false,
@@ -309,29 +302,22 @@ router.post('/admin/tracks', auth, requireRole('ADMIN'), upload.fields([
         if (!title) return res.status(400).json({ message: 'Title is required' });
         if (!req.files || !req.files.audio) return res.status(400).json({ message: 'Audio file is required' });
 
-        const { Client } = require('@replit/object-storage');
-        const client = new Client();
-        const ts = Date.now();
+        const fileStorage = require('../services/fileStorage');
+        const ts = `${Date.now()}-${require('crypto').randomBytes(6).toString('hex')}`;
 
         const audioKey = `audiobank/${ts}-${req.files.audio[0].originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-        await client.uploadFromBytes(audioKey, req.files.audio[0].buffer);
-        const audioResult = await client.getSignedDownloadUrl(audioKey);
-        if (!audioResult.ok) return res.status(500).json({ message: 'Audio upload failed' });
+        const audioUp = await fileStorage.uploadBytes(audioKey, req.files.audio[0].buffer, req.files.audio[0].mimetype);
 
         let previewUrl = '';
         if (req.files.preview) {
             const pk = `audiobank/preview-${ts}-${req.files.preview[0].originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-            await client.uploadFromBytes(pk, req.files.preview[0].buffer);
-            const pr = await client.getSignedDownloadUrl(pk);
-            if (pr.ok) previewUrl = pr.value;
+            previewUrl = (await fileStorage.uploadBytes(pk, req.files.preview[0].buffer, req.files.preview[0].mimetype)).url;
         }
 
         let coverArt = '';
         if (req.files.cover) {
             const ck = `audiobank/cover-${ts}-${req.files.cover[0].originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-            await client.uploadFromBytes(ck, req.files.cover[0].buffer);
-            const cr = await client.getSignedDownloadUrl(ck);
-            if (cr.ok) coverArt = cr.value;
+            coverArt = (await fileStorage.uploadBytes(ck, req.files.cover[0].buffer, req.files.cover[0].mimetype)).url;
         }
 
         const track = await AudioBank.create({
@@ -344,7 +330,7 @@ router.post('/admin/tracks', auth, requireRole('ADMIN'), upload.fields([
             tokenPrice: parseInt(tokenPrice) || 5,
             rentalDays: rentalDays ? parseInt(rentalDays) : 30,
             tags: tags ? tags.split(',').map(t => t.trim()) : [],
-            audioUrl: audioResult.value,
+            audioUrl: audioUp.url,
             previewUrl,
             coverArt,
             active: true

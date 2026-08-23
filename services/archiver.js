@@ -1,31 +1,7 @@
-const { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+// Analytics archives live in MongoDB (AnalyticsArchive collection) — no
+// external object storage. Summaries are small JSON documents.
 const UsageEvent = require('../models/UsageEvent');
-
-function getS3Client() {
-  const region = process.env.AWS_REGION || 'us-east-1';
-  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-
-  if (!accessKeyId || !secretAccessKey) {
-    throw new Error('AWS credentials not configured. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.');
-  }
-
-  return new S3Client({
-    region,
-    credentials: { accessKeyId, secretAccessKey }
-  });
-}
-
-function getBucket() {
-  const bucket = process.env.AWS_S3_BUCKET;
-  if (!bucket) throw new Error('AWS_S3_BUCKET not configured');
-  return bucket;
-}
-
-function getArchiveKey(dateStr) {
-  const [year, month, day] = dateStr.split('-');
-  return `wordeth-analytics/${year}/${month}/${day}.json`;
-}
+const AnalyticsArchive = require('../models/AnalyticsArchive');
 
 async function aggregateDaySummary(dateStr) {
   const dayStart = new Date(dateStr + 'T00:00:00.000Z');
@@ -112,17 +88,13 @@ async function archiveDay(dateStr) {
     return { skipped: true, date: dateStr, reason: 'No events for this day' };
   }
 
-  const s3 = getS3Client();
-  const key = getArchiveKey(dateStr);
+  await AnalyticsArchive.findOneAndUpdate(
+    { date: dateStr },
+    { date: dateStr, summary, archivedAt: new Date() },
+    { upsert: true }
+  );
 
-  await s3.send(new PutObjectCommand({
-    Bucket: getBucket(),
-    Key: key,
-    Body: JSON.stringify(summary, null, 2),
-    ContentType: 'application/json'
-  }));
-
-  return { success: true, date: dateStr, totalEvents: summary.totalEvents, key };
+  return { success: true, date: dateStr, totalEvents: summary.totalEvents, key: dateStr };
 }
 
 async function archiveRange(startDate, endDate) {
@@ -159,23 +131,8 @@ async function archiveOldData(daysOld = 7) {
 }
 
 async function getArchivedSummary(dateStr) {
-  try {
-    const s3 = getS3Client();
-    const key = getArchiveKey(dateStr);
-
-    const response = await s3.send(new GetObjectCommand({
-      Bucket: getBucket(),
-      Key: key
-    }));
-
-    const body = await response.Body.transformToString();
-    return JSON.parse(body);
-  } catch (err) {
-    if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
-      return null;
-    }
-    throw err;
-  }
+  const doc = await AnalyticsArchive.findOne({ date: dateStr }).lean();
+  return doc ? doc.summary : null;
 }
 
 async function getArchivedRange(startDate, endDate) {
@@ -197,23 +154,8 @@ async function getArchivedRange(startDate, endDate) {
 }
 
 async function listArchivedMonths() {
-  const s3 = getS3Client();
-  const prefix = 'wordeth-analytics/';
-
-  const response = await s3.send(new ListObjectsV2Command({
-    Bucket: getBucket(),
-    Prefix: prefix,
-    Delimiter: ''
-  }));
-
-  const months = new Set();
-  (response.Contents || []).forEach(obj => {
-    const parts = obj.Key.replace(prefix, '').split('/');
-    if (parts.length >= 2) {
-      months.add(`${parts[0]}-${parts[1]}`);
-    }
-  });
-
+  const dates = await AnalyticsArchive.distinct('date');
+  const months = new Set(dates.map(d => d.slice(0, 7)));
   return Array.from(months).sort();
 }
 
@@ -293,7 +235,9 @@ async function getMonthSummary(yearMonth) {
 }
 
 function isConfigured() {
-  return !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY && process.env.AWS_S3_BUCKET);
+  // Archives live in MongoDB, which the app requires anyway.
+  const mongoose = require('mongoose');
+  return mongoose.connection.readyState === 1;
 }
 
 module.exports = {

@@ -411,7 +411,7 @@ router.get('/admin/archive/status', authenticateAdmin, (req, res) => {
 
 router.post('/admin/archive', authenticateAdmin, async (req, res) => {
     if (!archiver.isConfigured()) {
-        return res.status(400).json({ error: 'AWS S3 not configured. Set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_S3_BUCKET.' });
+        return res.status(400).json({ error: 'Archive storage unavailable — MongoDB is not connected.' });
     }
     try {
         const { mode, date, startDate, endDate, daysOld } = req.body;
@@ -434,7 +434,7 @@ router.post('/admin/archive', authenticateAdmin, async (req, res) => {
 
 function requireArchiveConfig(req, res, next) {
     if (!archiver.isConfigured()) {
-        return res.status(400).json({ error: 'AWS S3 not configured. Set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_S3_BUCKET.' });
+        return res.status(400).json({ error: 'Archive storage unavailable — MongoDB is not connected.' });
     }
     next();
 }

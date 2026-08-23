@@ -580,6 +580,7 @@ app.use('/api/wagers', wagersRoutes); // Token wagering
 app.use('/api/audiobank', audiobankRoutes); // Audio Bank API & admin
 app.use('/api/scheduled-rooms', scheduledRoomsRoutes); // Scheduled rooms & collabs
 app.use('/api/rooms', roomTipsRoutes); // Room tips (mounted before custom room APIs)
+app.use('/api/files', require('./routes/files')); // Files stored in MongoDB (GridFS)
 function generateRoomId() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const bytes = crypto.randomBytes(18);

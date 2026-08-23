@@ -682,14 +682,7 @@ router.post('/bulk/roster', partnerAuth, csvUpload.single('csvFile'), async (req
     }
 });
 
-const { Client } = require('@replit/object-storage');
-let _storageClient = null;
-function getStorageClient() {
-    if (!_storageClient) {
-        _storageClient = new Client();
-    }
-    return _storageClient;
-}
+const fileStorage = require('../services/fileStorage');
 
 const artworkUpload = multer({
     storage: multer.memoryStorage(),
@@ -738,13 +731,11 @@ router.post('/artwork/upload', partnerAuth, artworkUpload.single('artworkFile'),
 
         const ext = req.file.originalname.split('.').pop().toLowerCase();
         const timestamp = Date.now();
+        const rand = require('crypto').randomBytes(6).toString('hex');
         const safeFilename = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const objectPath = `artwork/${label.slug}/${artistSlug}/${timestamp}-${safeFilename}`;
+        const objectPath = `artwork/${label.slug}/${artistSlug}/${timestamp}-${rand}-${safeFilename}`;
 
-        const storage = getStorageClient();
-        await storage.uploadFromBytes(objectPath, req.file.buffer);
-
-        const artworkUrl = await storage.getSignedDownloadUrl(objectPath);
+        const { url: artworkUrl } = await fileStorage.uploadBytes(objectPath, req.file.buffer, req.file.mimetype);
 
         const artworkEntry = {
             url: artworkUrl,
@@ -783,18 +774,12 @@ router.get('/artwork/:artistSlug', partnerAuth, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Artist not found' });
         }
 
-        const artworkWithUrls = await Promise.all(
-            artist.templateArtwork.map(async (art) => {
-                let url = art.url;
-                try {
-                    url = await getStorageClient().getSignedDownloadUrl(art.objectPath);
-                } catch (e) {}
-                return {
-                    ...art.toObject(),
-                    url
-                };
-            })
-        );
+        // Stable URLs served from MongoDB (also covers legacy objects via
+        // the files route's fallback), so no signed-URL refresh needed.
+        const artworkWithUrls = artist.templateArtwork.map((art) => ({
+            ...art.toObject(),
+            url: art.objectPath ? fileStorage.publicUrl(art.objectPath) : art.url
+        }));
 
         res.json({
             success: true,
@@ -828,7 +813,7 @@ router.delete('/artwork/:artistSlug/:artworkId', partnerAuth, async (req, res) =
         }
 
         try {
-            await getStorageClient().delete(artwork.objectPath);
+            await fileStorage.deleteByKey(artwork.objectPath);
         } catch (e) {}
 
         artwork.deleteOne();

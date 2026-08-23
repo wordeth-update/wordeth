@@ -178,15 +178,10 @@ router.post('/avatar', auth, (req, res) => {
             if (!req.file) {
                 return res.status(400).json({ message: 'No file uploaded' });
             }
-            const { Client } = require('@replit/object-storage');
-            const objClient = new Client();
+            const fileStorage = require('../services/fileStorage');
             const ext = req.file.mimetype.split('/')[1] || 'png';
             const objectName = `avatars/${req.user._id}.${ext}`;
-            const result = await objClient.uploadFromBytes(objectName, req.file.buffer);
-            if (!result.ok) {
-                console.error('Object storage upload failed:', result.error);
-                return res.status(500).json({ message: 'Error uploading avatar' });
-            }
+            await fileStorage.uploadBytes(objectName, req.file.buffer, req.file.mimetype);
             const avatarUrl = `/api/user/avatar/${req.user._id}`;
             req.user.avatar = objectName;
             await req.user.save();
@@ -215,17 +210,29 @@ router.get('/avatar/:userId', async (req, res) => {
             return res.redirect('/assets/default-avatar.png');
         }
         if (user.avatar.startsWith('avatars/')) {
-            const { Client } = require('@replit/object-storage');
-            const objClient = new Client();
-            const result = await objClient.downloadAsBytes(user.avatar);
-            if (!result.ok) {
-                return res.redirect('/assets/default-avatar.png');
-            }
             const ext = user.avatar.split('.').pop();
             const mimeMap = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp' };
-            res.set('Content-Type', mimeMap[ext] || 'image/png');
-            res.set('Cache-Control', 'public, max-age=86400');
-            return res.send(Buffer.from(result.value));
+            // MongoDB first, then legacy Replit storage for pre-migration avatars
+            const fileStorage = require('../services/fileStorage');
+            const stored = await fileStorage.downloadBytes(user.avatar).catch(() => null);
+            if (stored) {
+                res.set('Content-Type', stored.file.contentType || mimeMap[ext] || 'image/png');
+                res.set('Cache-Control', 'public, max-age=86400');
+                return res.send(stored.buffer);
+            }
+            try {
+                const { Client } = require('@replit/object-storage');
+                const objClient = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID
+                    ? new Client({ bucketId: process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID })
+                    : new Client();
+                const result = await objClient.downloadAsBytes(user.avatar);
+                if (result.ok) {
+                    res.set('Content-Type', mimeMap[ext] || 'image/png');
+                    res.set('Cache-Control', 'public, max-age=86400');
+                    return res.send(Buffer.from(result.value));
+                }
+            } catch (e) { /* not on Replit */ }
+            return res.redirect('/assets/default-avatar.png');
         }
         return res.redirect(user.avatar);
     } catch (error) {
@@ -430,15 +437,13 @@ router.post('/profile-photo', auth, upload.single('photo'), async (req, res) => 
         if (req.user.profilePhotos && req.user.profilePhotos.length >= 6) {
             return res.status(400).json({ message: 'Maximum 6 profile photos allowed' });
         }
-        const { Client } = require('@replit/object-storage');
-        const client = new Client();
-        const key = `profile-photos/${req.user._id}-${Date.now()}.jpg`;
-        await client.uploadFromBytes(key, req.file.buffer);
-        const { ok, value } = await client.getSignedDownloadUrl(key);
-        if (!ok) return res.status(500).json({ message: 'Upload failed' });
+        const fileStorage = require('../services/fileStorage');
+        const rand = require('crypto').randomBytes(8).toString('hex');
+        const key = `profile-photos/${req.user._id}-${Date.now()}-${rand}.jpg`;
+        const { url } = await fileStorage.uploadBytes(key, req.file.buffer, req.file.mimetype || 'image/jpeg');
 
         req.user.profilePhotos.push({
-            url: value,
+            url,
             caption: (req.body.caption || '').substring(0, 100)
         });
         await req.user.save();
@@ -466,15 +471,13 @@ router.delete('/profile-photo/:index', auth, async (req, res) => {
 router.post('/music-snippet', auth, audioUpload.single('audio'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ message: 'No audio file provided' });
-        const { Client } = require('@replit/object-storage');
-        const client = new Client();
-        const key = `music-snippets/${req.user._id}-${Date.now()}.webm`;
-        await client.uploadFromBytes(key, req.file.buffer);
-        const { ok, value } = await client.getSignedDownloadUrl(key);
-        if (!ok) return res.status(500).json({ message: 'Upload failed' });
+        const fileStorage = require('../services/fileStorage');
+        const rand = require('crypto').randomBytes(8).toString('hex');
+        const key = `music-snippets/${req.user._id}-${Date.now()}-${rand}.webm`;
+        const { url } = await fileStorage.uploadBytes(key, req.file.buffer, req.file.mimetype || 'audio/webm');
 
         req.user.musicSnippet = {
-            url: value,
+            url,
             title: (req.body.title || '').substring(0, 100),
             artist: (req.body.artist || '').substring(0, 100),
             isRented: false,

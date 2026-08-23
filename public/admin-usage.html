@@ -214,13 +214,13 @@
 
                 <section id="historical-tab" class="tab-content">
                     <h2>Historical Trends</h2>
-                    <p class="section-desc">Long-term analytics archived to AWS S3 for year-over-year insights</p>
+                    <p class="section-desc">Long-term analytics archived to MongoDB for year-over-year insights</p>
 
                     <div id="archiveNotConfigured" style="display:none;">
                         <div class="metric-card wide">
                             <div class="empty-state">
                                 <i class="fas fa-cloud" style="font-size:2rem;margin-bottom:12px;color:#4ECDC4;"></i>
-                                <p>AWS S3 storage is not yet configured.</p>
+                                <p>Archive storage unavailable — database not connected.</p>
                                 <p style="color:#8B949E;font-size:0.85rem;margin-top:8px;">
                                     Add <code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code>, 
                                     <code>AWS_S3_BUCKET</code>, and optionally <code>AWS_REGION</code> to your secrets to enable archiving.

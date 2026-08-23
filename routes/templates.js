@@ -197,16 +197,12 @@ router.post('/submit', upload.single('previewImage'), async (req, res) => {
         let previewObjectPath = '';
         if (req.file) {
             try {
-                const { Client } = require('@replit/object-storage');
-                const client = new Client();
+                const fileStorage = require('../services/fileStorage');
                 const ext = req.file.mimetype === 'image/png' ? 'png' : 'jpg';
                 const objPath = `merch-templates/previews/${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${ext}`;
-                await client.uploadFromBytes(objPath, req.file.buffer);
+                const { url } = await fileStorage.uploadBytes(objPath, req.file.buffer, req.file.mimetype);
                 previewObjectPath = objPath;
-                const publicPaths = process.env.PUBLIC_OBJECT_SEARCH_PATHS;
-                if (publicPaths) {
-                    previewImageUrl = `/object-storage/${objPath}`;
-                }
+                previewImageUrl = url;
             } catch (err) {
                 console.error('Template preview upload error:', err);
             }
@@ -312,15 +308,12 @@ router.post('/publish', auth, async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Preview image exceeds 5MB' });
             }
             try {
-                const { Client } = require('@replit/object-storage');
-                const client = new Client();
+                const fileStorage = require('../services/fileStorage');
                 const ext = m[1] === 'png' ? 'png' : 'jpg';
                 const objPath = `merch-templates/previews/${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${ext}`;
-                await client.uploadFromBytes(objPath, buffer);
+                const { url } = await fileStorage.uploadBytes(objPath, buffer, `image/${m[1]}`);
                 previewObjectPath = objPath;
-                if (process.env.PUBLIC_OBJECT_SEARCH_PATHS) {
-                    previewImageUrl = `/object-storage/${objPath}`;
-                }
+                previewImageUrl = url;
             } catch (err) {
                 console.error('Template preview upload error:', err);
             }

@@ -13,7 +13,6 @@
     "mobile:build": "node scripts/build-mobile.js && npx cap sync"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.984.0",
     "@capacitor/android": "^8.0.2",
     "@capacitor/app": "^8.0.0",
     "@capacitor/camera": "^8.0.0",
