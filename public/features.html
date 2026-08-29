@@ -71,7 +71,7 @@
     <div class="section-header">
         <span class="section-number">01</span>
         <h2>Verses <span class="accent">Live Audio Rooms</span></h2>
-        <p class="section-desc">Real-time audio rooms where music lovers connect, discuss, and vibe together. Powered by Agora RTC with full WebSocket signaling.</p>
+        <p class="section-desc">Real-time audio rooms where music lovers connect, discuss, perform, and vibe together from virtually anywhere.</p>
     </div>
 
     <div class="screenshot-showcase">
@@ -106,7 +106,7 @@
         <div class="feature-card">
             <div class="card-icon mint"><i class="fas fa-sliders-h"></i></div>
             <h3>Audio Filters</h3>
-            <p>Web Audio API powered filters let speakers customize their sound. Built-in noise suppression keeps conversations clean.</p>
+            <p>Speakers can personalize their sound with creative audio filters, while built-in noise reduction helps conversations stay clear.</p>
         </div>
         <div class="feature-card">
             <div class="card-icon purple"><i class="fas fa-user-plus"></i></div>
@@ -178,10 +178,10 @@
                 <i class="fas fa-save"></i>
                 <h3>Auto-Save</h3>
             </div>
-            <p>When a room ends, if it had a token price or ran for more than 5 minutes, a Replay record is automatically created with the room's metadata: title, genre, duration, peak participant count, and participant history.</p>
+            <p>Eligible rooms can become replays after they end, preserving useful details such as the title, genre, duration, and audience highlights.</p>
             <div class="detail-specs">
-                <div class="spec"><span class="spec-label">Trigger</span><span class="spec-value">Token price > 0 OR duration > 5 min</span></div>
-                <div class="spec"><span class="spec-label">Data Stored</span><span class="spec-value">Title, genre, duration, participants, history</span></div>
+                <div class="spec"><span class="spec-label">Eligibility</span><span class="spec-value">Qualifying hosted sessions</span></div>
+                <div class="spec"><span class="spec-label">Replay Details</span><span class="spec-value">Title, genre, duration, and audience highlights</span></div>
                 <div class="spec"><span class="spec-label">Status</span><span class="spec-value">Available immediately after room ends</span></div>
             </div>
         </div>
@@ -194,7 +194,7 @@
             <div class="detail-specs">
                 <div class="spec"><span class="spec-label">Pricing</span><span class="spec-value">Creator sets price per replay</span></div>
                 <div class="spec"><span class="spec-label">Revenue</span><span class="spec-value">100% credited to creator earnings</span></div>
-                <div class="spec"><span class="spec-label">Tracking</span><span class="spec-value">TokenLedger + EventsLedger entries</span></div>
+                <div class="spec"><span class="spec-label">Tracking</span><span class="spec-value">Clear activity and earnings history</span></div>
             </div>
         </div>
     </div>
@@ -284,7 +284,7 @@
         <div class="feature-card highlight">
             <div class="card-icon gold"><i class="fas fa-play-circle"></i></div>
             <h3>Paid Replays</h3>
-            <p>Replay token prices are set independently (typically lower than live). Each play generates a token transfer logged in both the TokenLedger and EventsLedger for full auditability.</p>
+            <p>Creators price replays separately from live rooms. Every paid play is reflected in clear activity and earnings records.</p>
             <div class="card-accent gold-accent"></div>
         </div>
         <div class="feature-card highlight">
@@ -350,11 +350,11 @@
                 <i class="fas fa-shield-alt"></i>
                 <h3>Verified Attendance</h3>
             </div>
-            <p>Only real attendees can rate. The server validates each rating against the room's participant history, preventing fake reviews. A compound unique index ensures one rating per user per room.</p>
+            <p>Only verified attendees can rate a room, helping prevent fake reviews and keeping feedback useful. Each attendee can submit one rating per room.</p>
             <div class="detail-specs">
                 <div class="spec"><span class="spec-label">Minimum Time</span><span class="spec-value">60 seconds in room</span></div>
-                <div class="spec"><span class="spec-label">Validation</span><span class="spec-value">Server-side participant history check</span></div>
-                <div class="spec"><span class="spec-label">Duplicates</span><span class="spec-value">Prevented by compound unique index</span></div>
+                <div class="spec"><span class="spec-label">Validation</span><span class="spec-value">Verified room attendance</span></div>
+                <div class="spec"><span class="spec-label">Duplicates</span><span class="spec-value">One rating per attendee</span></div>
             </div>
         </div>
     </div>
@@ -512,7 +512,7 @@
     <div class="section-header">
         <span class="section-number">07</span>
         <h2>Plans & <span class="accent">Pricing</span></h2>
-        <p class="section-desc">Configuration-driven subscription plans with role-based entitlements and monthly token grants.</p>
+        <p class="section-desc">Flexible subscription plans with benefits tailored to each community role and monthly token grants.</p>
     </div>
 
     <div class="screenshot-showcase">
@@ -536,16 +536,16 @@
         </div>
         <div class="feature-card">
             <div class="card-icon pink"><i class="fas fa-lock-open"></i></div>
-            <h3>RBAC Entitlements</h3>
-            <p>Role-Based Access Control middleware enforces feature access by account type and subscription tier. Clean, configuration-driven entitlement checks.</p>
+            <h3>Plan-Based Access</h3>
+            <p>Features and benefits are matched to each account type and subscription level, creating a clear experience for fans, creators, designers, and labels.</p>
         </div>
     </div>
 
     <div class="detail-callout">
         <div class="callout-icon"><i class="fas fa-credit-card"></i></div>
         <div class="callout-text">
-            <h4>Native Billing Engine</h4>
-            <p>Built-in payment processing with an integrated payment gateway. No reliance on third-party subscription management — full control over billing cycles, upgrades, and downgrades.</p>
+            <h4>Simple Subscription Management</h4>
+            <p>Members can securely manage billing, plan upgrades, and plan changes through a streamlined Wordeth experience.</p>
         </div>
     </div>
 </section>
@@ -572,7 +572,7 @@
                 <i class="fas fa-search"></i>
                 <h3>Multi-Source Search</h3>
             </div>
-            <p>Our lyrics engine searches across multiple licensed sources to deliver accurate, complete lyrics instantly. Results include synced (timed) lyrics when available, enabling real-time karaoke mode.</p>
+            <p>Find accurate lyrics by song, artist, or album. Synced lyrics are available for supported songs, making real-time karaoke sessions possible.</p>
         </div>
         <div class="feature-detail-card">
             <div class="detail-header">
@@ -699,7 +699,7 @@
         <div class="feature-card">
             <div class="card-icon pink"><i class="fas fa-chart-bar"></i></div>
             <h3>Usage Analytics</h3>
-            <p>Event tracking middleware captures platform usage. Admin dashboards visualize engagement, growth, and system health metrics.</p>
+            <p>Private dashboards help authorized teams understand engagement, audience growth, and the overall health of the Wordeth community.</p>
         </div>
     </div>
 
@@ -740,13 +740,13 @@
     <div class="feature-grid three-col">
         <div class="feature-card">
             <div class="card-icon mint"><i class="fas fa-lock"></i></div>
-            <h3>JWT Authentication</h3>
-            <p>Secure token-based authentication with 7-day expiry. Passwords hashed with bcrypt. Separate auth flows for users, advertisers, and partners.</p>
+            <h3>Secure Accounts</h3>
+            <p>Protected sign-in and dedicated account experiences help safeguard members, advertisers, and business partners.</p>
         </div>
         <div class="feature-card">
             <div class="card-icon purple"><i class="fas fa-shield-alt"></i></div>
-            <h3>Security Headers</h3>
-            <p>Helmet.js enforces Content Security Policy. Express-rate-limit prevents abuse. CORS configured for trusted origins. Trust proxy enabled for accurate client identification.</p>
+            <h3>Built-In Safeguards</h3>
+            <p>Wordeth uses layered safeguards designed to protect accounts, reduce abuse, and keep activity within trusted experiences.</p>
         </div>
         <div class="feature-card">
             <div class="card-icon pink"><i class="fas fa-file-contract"></i></div>
@@ -766,9 +766,9 @@
         <div class="feature-detail-card">
             <div class="detail-header">
                 <i class="fas fa-book"></i>
-                <h3>Events Ledger</h3>
+                <h3>Transparent Activity Records</h3>
             </div>
-            <p>An immutable events ledger tracks all financial transactions: token purchases, room earnings, replay plays, boost purchases, and payout calculations. Full audit trail for transparency.</p>
+            <p>Members and creators can review important token purchases, room earnings, replay activity, boosts, and payout information in one clear history.</p>
         </div>
     </div>
 </section>
