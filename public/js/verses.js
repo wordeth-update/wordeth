@@ -1692,21 +1692,6 @@ class AudioRoomsManager {
         card.dataset.genre = genre;
         card.dataset.roomName = (room.name || '').toLowerCase();
         if (tokenPrice > 0) card.dataset.tokenPrice = tokenPrice;
-
-        // Level meter: bar heights encode how busy the room is, so the
-        // meter reads as data rather than decoration. Log-scaled so a
-        // 200-listener room does not flatten every quieter one.
-        const level = Math.max(0.08, Math.min(1, Math.log10(count + 1) / 2.4));
-        const meter = this._el('div', {className: 'wc-vu room-level'});
-        meter.setAttribute('aria-hidden', 'true');
-        meter.title = count + ' listening';
-        for (let i = 0; i < 9; i++) {
-            const bar = this._el('span');
-            const jitter = 0.72 + ((i * 37) % 11) / 22;
-            bar.style.height = Math.min(100, level * 100 * jitter).toFixed(1) + '%';
-            meter.appendChild(bar);
-        }
-        card.appendChild(meter);
         return card;
     }
 
@@ -1742,21 +1727,6 @@ class AudioRoomsManager {
         card.dataset.genre = genre;
         card.dataset.roomName = (room.name || '').toLowerCase();
         if (tokenPrice > 0) card.dataset.tokenPrice = tokenPrice;
-
-        // Level meter: bar heights encode how busy the room is, so the
-        // meter reads as data rather than decoration. Log-scaled so a
-        // 200-listener room does not flatten every quieter one.
-        const level = Math.max(0.08, Math.min(1, Math.log10(count + 1) / 2.4));
-        const meter = this._el('div', {className: 'wc-vu room-level'});
-        meter.setAttribute('aria-hidden', 'true');
-        meter.title = count + ' listening';
-        for (let i = 0; i < 9; i++) {
-            const bar = this._el('span');
-            const jitter = 0.72 + ((i * 37) % 11) / 22;
-            bar.style.height = Math.min(100, level * 100 * jitter).toFixed(1) + '%';
-            meter.appendChild(bar);
-        }
-        card.appendChild(meter);
         return card;
     }
 
