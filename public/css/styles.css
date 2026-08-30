@@ -401,6 +401,135 @@ main > section:not(.hero-minimal):not(.features-strip):not(.explore-cards) {
     animation: pulse 2s infinite;
 }
 
+/* ── Revolving LIVE NOW badge ──────────────────────────────────
+   The site's sole "live" indicator now (the old text pill was
+   removed and this took its place in flow, centered above the
+   headline — not a corner accent anymore). role="status" +
+   aria-label carries the accessible announcement, since the disc
+   content itself is aria-hidden decoration.
+
+   Modeled on physical rotating LED "flange display" signs — a
+   circular disc spinning on a VERTICAL axis, so it compresses
+   edge-on and opens back up, not a flat clock-hand sweep. That's a
+   3D `rotateY()` transform, not a 2D `rotate()`.
+
+   Depth: two attempts at a true cylindrical rim (thin rotateY/
+   translateZ segments) rendered broken in practice — only a couple
+   of the 12 segments showed, floating outside the disc rather than
+   wrapping it. Removed rather than keep debugging 3D CSS geometry
+   with no browser to verify against. Instead, a thick (6px) border
+   + layered glow does the job more simply: at the edge-on moment of
+   the spin, that thick border silhouette itself reads as a glowing
+   edge, without any extra 3D elements to get wrong.
+
+   Neon buzz: a separate blurred glow layer sits behind the disc:
+   its BORDER/gradient is static (no perf cost), and only its
+   OPACITY flickers on an irregular schedule — keeps to transform/
+   opacity-only per /animate even for a "buzzing" effect. Reduced
+   motion freezes the disc AND the flicker at a steady glow. */
+.hero-live-badge {
+    position: relative;
+    width: 360px;
+    height: 360px;
+    margin: 0 auto 5rem;
+    perspective: 1755px;
+}
+.flange-glow {
+    position: absolute;
+    inset: -76px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 229, 168, 0.55) 0%, rgba(139, 47, 255, 0.35) 45%, transparent 72%);
+    filter: blur(45px);
+    animation: neon-buzz 5s linear infinite;
+    z-index: 0;
+}
+.flange-disc {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    z-index: 1;
+    transform-style: preserve-3d;
+    animation: flange-spin 6s linear infinite;
+}
+.flange-face {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    backface-visibility: hidden;
+    background: radial-gradient(circle at 35% 30%, rgba(139, 47, 255, 0.45), rgba(6, 4, 9, 0.94) 75%);
+    border: 20px solid var(--mint);
+    box-shadow:
+        0 0 14px rgba(0, 229, 168, 0.95),
+        0 0 40px rgba(0, 229, 168, 0.65),
+        0 0 78px rgba(139, 47, 255, 0.45),
+        inset 0 0 10px rgba(0, 0, 0, 0.5),
+        inset 0 0 36px rgba(0, 229, 168, 0.25);
+}
+.flange-face-back {
+    transform: rotateY(180deg);
+}
+.flange-text {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 2.8rem;
+    letter-spacing: 0.05em;
+    line-height: 1.35;
+    color: var(--mint);
+    text-transform: uppercase;
+    text-shadow: 0 0 8px rgba(0, 229, 168, 0.9), 0 0 20px rgba(0, 229, 168, 0.5);
+}
+.flange-text-sub {
+    color: #fff;
+    opacity: 0.9;
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+}
+.hero-live-dot {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    background: var(--hot-pink, #FF2D78);
+    box-shadow: 0 0 20px rgba(255, 45, 120, 0.9), 0 0 40px rgba(255, 45, 120, 0.5);
+    margin-top: 1rem;
+    animation: pulse 2s infinite;
+}
+@keyframes flange-spin {
+    from { transform: rotateY(0deg); }
+    to   { transform: rotateY(360deg); }
+}
+/* Irregular, non-uniform stops — a smooth sine pulse reads as "breathing,"
+   not "buzzing." Small, frequent dips mimic real neon tube instability. */
+@keyframes neon-buzz {
+    0%, 100% { opacity: 0.85; }
+    3%   { opacity: 0.55; }
+    6%   { opacity: 0.9; }
+    9%   { opacity: 0.6; }
+    11%  { opacity: 0.88; }
+    30%  { opacity: 0.85; }
+    52%  { opacity: 0.5; }
+    54%  { opacity: 0.87; }
+    55%  { opacity: 0.62; }
+    57%  { opacity: 0.9; }
+    78%  { opacity: 0.85; }
+    80%  { opacity: 0.58; }
+    82%  { opacity: 0.9; }
+}
+@media (max-width: 640px) {
+    .hero-live-badge { width: 266px; height: 266px; margin-bottom: 3.9rem; perspective: 1398px; }
+    .flange-glow { inset: -59px; filter: blur(36px); }
+    .flange-face { border-width: 16px; }
+    .flange-text { font-size: 2.07rem; }
+    .hero-live-dot { width: 20px; height: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .flange-disc { animation: none; }
+    .flange-glow { animation: none; opacity: 0.75; }
+    .hero-live-dot { animation: none; opacity: 0.85; }
+}
+
 .hero-minimal-content h1 {
     font-family: var(--font-display);
     font-size: 4.5rem;

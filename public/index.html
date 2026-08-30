@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>document.documentElement.classList.add('js');</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wordeth - Social Music Experience</title>
             <link rel="icon" type="image/png" href="images/logo.png">
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/styles.css?v=1788110800">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/enhanced.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -13,6 +14,7 @@
     <link rel="stylesheet" href="css/notifications.css?v=1770526814">
     <link rel="stylesheet" href="css/mini-player.css">
     <link rel="stylesheet" href="css/tournaments.css">
+    <link rel="stylesheet" href="css/homepage-story.css?v=1788110800">
 </head>
 <body>
     <nav class="main-nav">
@@ -88,57 +90,197 @@
         <section class="hero-minimal">
             <div class="hero-minimal-bg"></div>
             <div class="hero-minimal-content">
-                <span class="hero-eyebrow"><i class="fas fa-headphones"></i> Live Now</span>
+                <div class="hero-live-badge" role="status" aria-label="Live now">
+                    <div class="flange-glow"></div>
+                    <div class="flange-disc">
+                        <div class="flange-face flange-face-front">
+                            <span class="flange-text">LIVE</span>
+                            <span class="flange-text flange-text-sub">NOW</span>
+                            <span class="hero-live-dot" aria-hidden="true"></span>
+                        </div>
+                        <div class="flange-face flange-face-back">
+                            <span class="flange-text">LIVE</span>
+                            <span class="flange-text flange-text-sub">NOW</span>
+                            <span class="hero-live-dot" aria-hidden="true"></span>
+                        </div>
+                    </div>
+                </div>
                 <h1>Where Music Comes Alive</h1>
                 <p>Live rooms. Lyrics. Community. All in one place.</p>
                 <a href="verses.html" class="hero-cta">Join a Room</a>
             </div>
         </section>
 
-        <section class="features-strip">
-            <div class="features-strip-inner">
-                <div class="strip-item">
-                    <i class="fas fa-microphone-alt"></i>
-                    <span>Live Audio Rooms</span>
+        <!-- ============================================================
+             BEAT 2 — FRICTION
+             ============================================================ -->
+        <section class="story-beat story-friction" id="beat-friction">
+            <div class="story-inner">
+                <p class="story-eyebrow">The problem</p>
+                <h2 class="story-headline">Everywhere else, listening and connecting live in different apps.</h2>
+                <p class="story-body">Wordeth puts live audio rooms, lyrics, monetization, and merch in one place — built around actual conversation, not just playback.</p>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             BEAT 3 — MECHANISM: VERSES (draggable capability strip)
+             ============================================================ -->
+        <section class="story-beat story-verses" id="beat-verses">
+            <div class="story-inner story-inner--wide">
+                <p class="story-eyebrow">01 · Verses — Live Audio Rooms</p>
+                <h2 class="story-headline">Real rooms. Real people. Real time.</h2>
+                <p class="story-body">Real-time audio rooms where music lovers connect, discuss, perform, and vibe together from virtually anywhere.</p>
+            </div>
+            <div class="capability-track-wrap">
+                <div class="capability-track" id="capabilityTrack">
+                    <div class="capability-card">
+                        <i class="fas fa-user-shield"></i>
+                        <h3>Host Controls</h3>
+                        <p>Promote listeners to speakers, mute participants, and lock rooms for private sessions.</p>
+                    </div>
+                    <div class="capability-card">
+                        <i class="fas fa-microphone-alt"></i>
+                        <h3>Karaoke Mode</h3>
+                        <p>Built-in karaoke with synced lyrics display — the whole room sings along together.</p>
+                    </div>
+                    <div class="capability-card">
+                        <i class="fas fa-video"></i>
+                        <h3>Video &amp; Camera</h3>
+                        <p>Toggle video mode for face-to-face conversation in more intimate rooms.</p>
+                    </div>
+                    <div class="capability-card">
+                        <i class="fas fa-calendar-alt"></i>
+                        <h3>Scheduled Rooms</h3>
+                        <p>Plan a session ahead with a title, date, time, and genre so your audience knows when to show up.</p>
+                    </div>
+                    <div class="capability-card">
+                        <i class="fas fa-user-friends"></i>
+                        <h3>Room Invites</h3>
+                        <p>Real-time notifications and clear pricing before friends enter a paid room.</p>
+                    </div>
+                    <div class="capability-card">
+                        <i class="fas fa-ticket-alt"></i>
+                        <h3>Guest Passes</h3>
+                        <p>Grant selected guests free entry while keeping the room monetized for everyone else.</p>
+                    </div>
                 </div>
-                <div class="strip-divider"></div>
-                <div class="strip-item">
-                    <i class="fas fa-music"></i>
-                    <span>Instant Lyrics</span>
+                <div class="story-drag-hint" id="capabilityDragHint"><i class="fas fa-hand-pointer"></i> drag to browse</div>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             BEAT 4 — MECHANISM: TOKEN ECONOMY (stat cards)
+             ============================================================ -->
+        <section class="story-beat story-tokens" id="beat-tokens">
+            <div class="story-inner">
+                <p class="story-eyebrow">02–05 · Tokens, Replays &amp; Boost</p>
+                <h2 class="story-headline">A currency that never expires.</h2>
+                <p class="story-body">One system powers creator monetization, content gating, and platform engagement.</p>
+            </div>
+            <div class="token-stat-grid">
+                <div class="token-stat-card">
+                    <i class="fas fa-infinity"></i>
+                    <h3>Tokens Never Expire</h3>
+                    <p>Unlike many platforms, your balance carries forward month after month — save up or spend freely.</p>
                 </div>
-                <div class="strip-divider"></div>
-                <div class="strip-item">
-                    <i class="fas fa-video"></i>
-                    <span>Video &amp; AR</span>
+                <div class="token-stat-card">
+                    <i class="fas fa-play-circle"></i>
+                    <h3>Paid Replays</h3>
+                    <p>Rooms auto-save as replayable content. 100% of replay revenue is credited to the creator's earnings.</p>
                 </div>
-                <div class="strip-divider"></div>
-                <div class="strip-item">
-                    <i class="fas fa-tshirt"></i>
-                    <span>Custom Merch</span>
+                <div class="token-stat-card">
+                    <i class="fas fa-fire"></i>
+                    <h3>Token Boost</h3>
+                    <p>Boost tokens are burned, not transferred — a deflationary mechanism that funds the whole ecosystem.</p>
                 </div>
-                <div class="strip-divider"></div>
-                <div class="strip-item">
-                    <i class="fas fa-users"></i>
-                    <span>Music Community</span>
+                <div class="token-stat-card">
+                    <i class="fas fa-hand-holding-usd"></i>
+                    <h3>Creator Payouts</h3>
+                    <p>Creators convert token earnings to real money through monthly payouts as the community grows.</p>
                 </div>
             </div>
         </section>
 
-        <section class="explore-cards">
-            <div class="explore-cards-inner">
-                <a href="lyrics.html" class="explore-card explore-card--lyrics">
-                    <div class="explore-card-icon"><i class="fas fa-music"></i></div>
-                    <h3>Explore Lyrics</h3>
-                    <p>Search any song instantly</p>
-                    <span class="explore-arrow"><i class="fas fa-arrow-right"></i></span>
+        <!-- ============================================================
+             BEAT 5 — PROOF: ROOM RATINGS
+             ============================================================ -->
+        <section class="story-beat story-ratings" id="beat-ratings">
+            <div class="story-inner">
+                <p class="story-eyebrow">04 · Room Ratings</p>
+                <h2 class="story-headline">Only real attendees get a vote.</h2>
+                <p class="story-body">After spending at least 60 seconds in a room, verified attendees can rate it — one rating each. Every rating updates two scores at once: the replay's rating and the creator's overall profile rating.</p>
+                <div class="rating-tag-row">
+                    <span>Great Host</span><span>Good Music</span><span>Lively Chat</span><span>Informative</span><span>Entertaining</span><span>Professional</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             BEAT 6 — PAYOFF: LYRICS / MERCH / TOURNAMENTS
+             ============================================================ -->
+        <section class="story-beat story-payoff" id="beat-payoff">
+            <div class="story-inner">
+                <p class="story-eyebrow">08–10 · Lyrics, Merch &amp; Tournaments</p>
+                <h2 class="story-headline">Say it, wear it, defend it.</h2>
+            </div>
+            <div class="payoff-grid">
+                <a href="lyrics.html" class="payoff-card">
+                    <div class="payoff-icon"><i class="fas fa-music"></i></div>
+                    <h3>Lyrics Search</h3>
+                    <p>Synced lyrics for supported songs make real-time, room-wide karaoke possible.</p>
+                    <span class="payoff-arrow"><i class="fas fa-arrow-right"></i></span>
                 </a>
-                <a href="merch.html" class="explore-card explore-card--merch">
-                    <div class="explore-card-icon"><i class="fas fa-palette"></i></div>
-                    <h3>Design Merch</h3>
-                    <p>Your lyrics, your style</p>
-                    <span class="explore-arrow"><i class="fas fa-arrow-right"></i></span>
+                <a href="merch.html" class="payoff-card">
+                    <div class="payoff-icon"><i class="fas fa-tshirt"></i></div>
+                    <h3>Artist Merch Store</h3>
+                    <p>A multi-view design studio with live previews — customize front, back, and print areas before ordering.</p>
+                    <span class="payoff-arrow"><i class="fas fa-arrow-right"></i></span>
+                </a>
+                <a href="verses-tournaments.html" class="payoff-card">
+                    <div class="payoff-icon"><i class="fas fa-trophy"></i></div>
+                    <h3>Verses Tournaments</h3>
+                    <p>Seasonal brackets, fan voting, and leaderboards — sponsors add prizes for the season's winners.</p>
+                    <span class="payoff-arrow"><i class="fas fa-arrow-right"></i></span>
                 </a>
             </div>
+        </section>
+
+        <!-- ============================================================
+             BEAT 7 — ACTION: ACCOUNT TYPES + CTA
+             ============================================================ -->
+        <section class="story-beat story-action" id="beat-action">
+            <div class="story-inner">
+                <p class="story-eyebrow">06 · Account Types</p>
+                <h2 class="story-headline">Pick your role. Start free.</h2>
+            </div>
+            <div class="account-type-grid">
+                <div class="account-type-card">
+                    <span class="account-type-badge">Default</span>
+                    <h3>Fan</h3>
+                    <p>Join any open room, search lyrics, shop the merch store, and rate rooms.</p>
+                </div>
+                <div class="account-type-card">
+                    <span class="account-type-badge">Creator</span>
+                    <h3>Music Artist</h3>
+                    <p>Build a storefront, monetize lyric packs, sell merch, and set token prices on rooms.</p>
+                </div>
+                <div class="account-type-card">
+                    <span class="account-type-badge">Creator</span>
+                    <h3>Designer</h3>
+                    <p>Upload design templates, build a portfolio, and earn revenue per use.</p>
+                </div>
+                <div class="account-type-card">
+                    <span class="account-type-badge">Business</span>
+                    <h3>Label</h3>
+                    <p>Manage artist rosters, access partner dashboards, and track revenue analytics.</p>
+                </div>
+                <div class="account-type-card">
+                    <span class="account-type-badge">New</span>
+                    <h3>Creator</h3>
+                    <p>Host and monetize rooms, earn from paid replays, and boost your content.</p>
+                </div>
+            </div>
+            <a href="signup.html" class="story-final-cta">Create your account <i class="fas fa-arrow-right"></i></a>
         </section>
     </main>
 
@@ -193,6 +335,8 @@
     <script src="js/utils.js"></script>
     <script src="js/config.js"></script>
     <script src="js/main.js"></script>
+    <script src="js/hero-animation.js?v=1788110800"></script>
+    <script src="js/homepage-story.js?v=1788110800"></script>
     <script src="js/nav-auth.js"></script>
     <script src="js/cookie-consent.js"></script>
     <script data-cfasync="false" src="/socket.io/socket.io.js"></script>

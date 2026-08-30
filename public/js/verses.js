@@ -1606,13 +1606,17 @@ class AudioRoomsManager {
         let feed = rooms;
         if (featuredWrap && rooms.length >= 3) {
             const sorted = [...rooms].sort((a, b) => (b.participantCount || 0) - (a.participantCount || 0));
-            featured = sorted.slice(0, 2);
+            // Was a fixed top-2 — widened so the carousel has enough cards to be worth
+            // dragging through. Always leaves at least 1 room in the main feed below.
+            const featuredCount = Math.min(6, rooms.length - 1);
+            featured = sorted.slice(0, featuredCount);
             const featuredIds = new Set(featured.map(r => r.id));
             feed = rooms.filter(r => !featuredIds.has(r.id));
         }
         if (featuredWrap) {
             featuredWrap.replaceChildren();
             featured.forEach(room => featuredWrap.appendChild(this._createFeaturedCard(room)));
+            this._initFeaturedCarouselInteraction(featuredWrap);
         }
         if (featuredSection) featuredSection.style.display = featured.length ? '' : 'none';
         if (feedTitle) feedTitle.style.display = '';
@@ -1728,6 +1732,109 @@ class AudioRoomsManager {
         card.dataset.roomName = (room.name || '').toLowerCase();
         if (tokenPrice > 0) card.dataset.tokenPrice = tokenPrice;
         return card;
+    }
+
+    // Grab-to-drag with detent ticks on the featured room carousel. Called every
+    // time renderRooms() rebuilds the carousel (real-time via the rooms-updated
+    // socket event), so listeners are torn down and reattached on every call —
+    // stored on the element itself since cards (and this closure) get replaced
+    // on every rebuild. The carousel's native `overflow-x:auto` + `scroll-snap-
+    // type: x mandatory` (see css/verses.css) remains the fallback — reduced
+    // motion or fewer than 2 cards both bail out to it untouched.
+    //
+    // Note: this previously used GSAP Draggable's `type: 'scroll'` mode. In
+    // testing that broke the carousel's flex layout in a way that couldn't be
+    // pinned down without a live browser to inspect (isolated CSS/markup tests
+    // all passed; only initializing Draggable itself triggered it). Plain
+    // pointer events avoid the mystery entirely and are easier to reason about
+    // — GSAP is still used, additively, for the tick pulse and the snap-back
+    // easing, but never for drag detection itself.
+    _initFeaturedCarouselInteraction(featuredWrap) {
+        if (!featuredWrap) return;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+        if (featuredWrap._dragCleanup) featuredWrap._dragCleanup();
+
+        const getCards = () => Array.from(featuredWrap.querySelectorAll('.featured-room-card'));
+        if (getCards().length < 2) return;
+
+        const nearestCardIndex = (scrollLeft) => {
+            const cards = getCards();
+            let best = 0, bestDist = Infinity;
+            cards.forEach((c, i) => {
+                const d = Math.abs(c.offsetLeft - scrollLeft);
+                if (d < bestDist) { bestDist = d; best = i; }
+            });
+            return best;
+        };
+
+        const tick = (index, strong) => {
+            const card = getCards()[index];
+            if (!card) return;
+            const scale = strong ? 0.97 : 0.985;
+            card.animate(
+                [
+                    { transform: 'scale(1)' },
+                    { transform: `scale(${scale})` },
+                    { transform: 'scale(1)' }
+                ],
+                { duration: 160, easing: 'ease-out' }
+            );
+            if ('vibrate' in navigator) navigator.vibrate(strong ? 12 : 6); // Android only — iOS Safari doesn't expose this
+        };
+
+        let lastIndex = nearestCardIndex(featuredWrap.scrollLeft);
+        let isDown = false, activePointerId = null, startX = 0, startScroll = 0;
+
+        const onPointerDown = (e) => {
+            // Touch keeps the browser's reliable native horizontal scrolling.
+            if (e.pointerType === 'touch') return;
+            isDown = true;
+            activePointerId = e.pointerId;
+            startX = e.clientX;
+            startScroll = featuredWrap.scrollLeft;
+            featuredWrap.style.cursor = 'grabbing';
+            lastIndex = nearestCardIndex(featuredWrap.scrollLeft);
+            const hint = document.getElementById('featuredDragHint');
+            if (hint) hint.classList.add('faded');
+        };
+        const onPointerMove = (e) => {
+            if (!isDown || e.pointerId !== activePointerId) return;
+            featuredWrap.scrollLeft = startScroll - (e.clientX - startX);
+            const idx = nearestCardIndex(featuredWrap.scrollLeft);
+            if (idx !== lastIndex) { tick(idx, false); lastIndex = idx; }
+        };
+        const onPointerUp = (e) => {
+            if (!isDown || e.pointerId !== activePointerId) return;
+            isDown = false;
+            activePointerId = null;
+            featuredWrap.style.cursor = 'grab';
+            const idx = nearestCardIndex(featuredWrap.scrollLeft);
+            const target = getCards()[idx];
+            if (!target) return;
+            featuredWrap.scrollTo({ left: target.offsetLeft, behavior: 'smooth' });
+            window.setTimeout(() => tick(idx, true), 300);
+        };
+
+        const onPointerCancel = (e) => {
+            if (!isDown || e.pointerId !== activePointerId) return;
+            isDown = false;
+            activePointerId = null;
+            featuredWrap.style.cursor = 'grab';
+        };
+
+        featuredWrap.style.cursor = 'grab';
+        featuredWrap.addEventListener('pointerdown', onPointerDown);
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('pointercancel', onPointerCancel);
+
+        featuredWrap._dragCleanup = () => {
+            featuredWrap.removeEventListener('pointerdown', onPointerDown);
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', onPointerUp);
+            window.removeEventListener('pointercancel', onPointerCancel);
+        };
     }
 
     getGenreIconClass(genre) {

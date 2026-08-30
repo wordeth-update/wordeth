@@ -1,0 +1,286 @@
+/* ============================================================
+   HOMEPAGE SCROLL STORY — css/homepage-story.css
+   Loaded only on index.html. Uses the real design tokens already
+   declared in styles.css (--mint, --purple-accent, --hot-pink,
+   --font-display, --glass-border, etc.) — no new palette, no new
+   font. Material language: glass panels over the dark field,
+   matching the brand system already in use site-wide.
+   ============================================================ */
+
+.story-beat {
+    position: relative;
+    padding: 6rem 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+.story-inner { max-width: 640px; }
+.story-inner--wide { max-width: 720px; }
+
+.story-eyebrow {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--mint);
+    margin-bottom: 1rem;
+}
+.story-headline {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(1.7rem, 3.4vw, 2.6rem);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin-bottom: 1rem;
+}
+.story-body {
+    font-size: 1.02rem;
+    color: rgba(255, 255, 255, 0.62);
+    line-height: 1.6;
+}
+
+/* ---- Beat: Friction ---- */
+.story-friction { text-align: center; }
+.story-friction .story-inner { max-width: 620px; margin: 0 auto; }
+
+/* ---- Beat: Verses capability strip (draggable, matches Verses hallway) ---- */
+.capability-track-wrap { margin-top: 2.5rem; position: relative; }
+.capability-track {
+    display: flex;
+    gap: 1.25rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: 0.5rem;
+    cursor: grab;
+}
+.capability-track:active { cursor: grabbing; }
+.capability-track::-webkit-scrollbar { display: none; }
+.capability-card {
+    scroll-snap-align: center;
+    flex-shrink: 0;
+    width: min(260px, 78vw);
+    border-radius: 20px;
+    padding: 1.6rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+}
+.capability-card i {
+    font-size: 1.3rem;
+    color: var(--mint);
+    margin-bottom: 1rem;
+    display: block;
+}
+.capability-card h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin-bottom: 0.5rem;
+}
+.capability-card p {
+    font-size: 0.88rem;
+    color: rgba(255, 255, 255, 0.55);
+    line-height: 1.5;
+}
+.story-drag-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-top: 1rem;
+    font-size: 0.74rem;
+    color: rgba(255, 255, 255, 0.4);
+    transition: opacity 0.4s ease;
+}
+.story-drag-hint i { color: var(--mint); }
+.story-drag-hint.faded { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .story-drag-hint { display: none; } }
+
+/* ---- Beat: Token stat grid ---- */
+.token-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.1rem;
+    margin-top: 2.5rem;
+}
+.token-stat-card {
+    border-radius: 18px;
+    padding: 1.6rem;
+    background: linear-gradient(160deg, rgba(139, 47, 255, 0.1), rgba(0, 229, 168, 0.04));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.token-stat-card i {
+    font-size: 1.3rem;
+    color: var(--purple-vivid, var(--purple-accent));
+    margin-bottom: 1rem;
+    display: block;
+}
+.token-stat-card h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+.token-stat-card p {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.55);
+    line-height: 1.5;
+}
+@media (max-width: 900px) { .token-stat-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .token-stat-grid { grid-template-columns: 1fr; } }
+
+/* ---- Beat: Ratings proof ---- */
+.story-ratings { text-align: center; }
+.story-ratings .story-inner { max-width: 640px; margin: 0 auto; }
+.rating-tag-row {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 1.6rem;
+}
+.rating-tag-row span {
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    font-size: 0.82rem;
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.75);
+}
+
+/* ---- Beat: Payoff grid ---- */
+.payoff-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.2rem;
+    margin-top: 2.5rem;
+}
+.payoff-card {
+    display: block;
+    border-radius: 20px;
+    padding: 1.8rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    text-decoration: none;
+    color: inherit;
+    position: relative;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.payoff-card:hover { border-color: rgba(255, 255, 255, 0.2); transform: translateY(-3px); }
+.payoff-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0, 229, 168, 0.14);
+    color: var(--mint);
+    margin-bottom: 1.1rem;
+    font-size: 1.1rem;
+}
+.payoff-card h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+.payoff-card p {
+    font-size: 0.88rem;
+    color: rgba(255, 255, 255, 0.55);
+    line-height: 1.5;
+    margin-bottom: 1rem;
+}
+.payoff-arrow { color: var(--mint); font-size: 0.85rem; }
+@media (max-width: 800px) { .payoff-grid { grid-template-columns: 1fr; } }
+
+/* ---- Beat: Account types + final CTA ---- */
+.story-action { text-align: center; }
+.account-type-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+    margin-top: 2.5rem;
+    text-align: left;
+}
+.account-type-card {
+    border-radius: 16px;
+    padding: 1.3rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.account-type-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(139, 47, 255, 0.18);
+    color: var(--purple-vivid, var(--purple-accent));
+    margin-bottom: 0.6rem;
+}
+.account-type-card h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+.account-type-card p {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+    line-height: 1.5;
+}
+@media (max-width: 900px) { .account-type-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 560px) { .account-type-grid { grid-template-columns: 1fr; } }
+
+.story-final-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 2.5rem;
+    padding: 1rem 2.4rem;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--mint) 0%, var(--purple-accent) 100%);
+    color: var(--black, #060409);
+    font-weight: 700;
+    text-decoration: none;
+    font-size: 1rem;
+}
+
+/* ---- Motion: reveal states, driven by JS adding .in-view ----
+   Gated behind html.js (set by a tiny inline script in <head>, before body
+   paints) so the hidden-then-reveal initial state ONLY applies when we've
+   confirmed JS actually runs. Without JS, none of this opacity:0 applies —
+   every beat is visible immediately, which is correct: this is motion
+   layered on top of a complete page, not a page that depends on it. */
+html.js .story-beat .story-eyebrow,
+html.js .story-beat .story-headline,
+html.js .story-beat .story-body,
+html.js .story-beat .capability-track-wrap,
+html.js .story-beat .token-stat-grid,
+html.js .story-beat .rating-tag-row,
+html.js .story-beat .payoff-grid,
+html.js .story-beat .account-type-grid,
+html.js .story-beat .story-final-cta {
+    opacity: 0;
+    transform: translateY(22px);
+    transition: opacity 0.6s cubic-bezier(0.23, 1, 0.32, 1), transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+}
+html.js .story-beat.in-view .story-eyebrow { opacity: 1; transform: none; transition-delay: 0s; }
+html.js .story-beat.in-view .story-headline { opacity: 1; transform: none; transition-delay: 0.08s; }
+html.js .story-beat.in-view .story-body { opacity: 1; transform: none; transition-delay: 0.16s; }
+html.js .story-beat.in-view .capability-track-wrap,
+html.js .story-beat.in-view .token-stat-grid,
+html.js .story-beat.in-view .rating-tag-row,
+html.js .story-beat.in-view .payoff-grid,
+html.js .story-beat.in-view .account-type-grid,
+html.js .story-beat.in-view .story-final-cta { opacity: 1; transform: none; transition-delay: 0.24s; }
+
+/* Reduced motion: final state immediately, ordinary document flow, no interpolation */
+@media (prefers-reduced-motion: reduce) {
+    html.js .story-beat .story-eyebrow, html.js .story-beat .story-headline, html.js .story-beat .story-body,
+    html.js .story-beat .capability-track-wrap, html.js .story-beat .token-stat-grid, html.js .story-beat .rating-tag-row,
+    html.js .story-beat .payoff-grid, html.js .story-beat .account-type-grid, html.js .story-beat .story-final-cta {
+        opacity: 1; transform: none; transition: none;
+    }
+}
