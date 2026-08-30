@@ -3955,24 +3955,32 @@ body.in-room * {
     gap: 1.25rem;
 }
 
-/* Floating "Open a Room" CTA on mobile */
+/* Keep the core "Open a Room" action prominent and in-flow on mobile.
+   A previous fixed-bottom treatment could be covered by browser chrome or
+   the cookie consent panel, making the hallway's primary action disappear. */
 @media (max-width: 768px) {
+    .lobby-v2 .hero-actions {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
     .lobby-v2 .hero-actions .create-room-btn {
-        position: fixed;
-        bottom: 1.4rem;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 900;
-        width: calc(100% - 2.5rem);
-        max-width: 320px;
+        position: static;
+        transform: none;
+        width: 100%;
+        max-width: 360px;
+        min-height: 58px;
+        margin: 0 auto;
         justify-content: center;
         padding: 1rem 2rem;
         border-radius: 50px;
-        background: linear-gradient(90deg, var(--purple-accent, #8B2FFF), #5a1bb5);
-        box-shadow: 0 8px 30px rgba(139,47,255,0.45);
-        border: 1px solid rgba(255,255,255,0.1);
+        background: linear-gradient(135deg, var(--mint, #00E5A8), var(--purple-accent, #8B2FFF));
+        box-shadow: 0 10px 32px rgba(0,229,168,0.28), 0 8px 26px rgba(139,47,255,0.35);
+        border: 1px solid rgba(255,255,255,0.18);
         font-family: var(--font-display, 'Unbounded', sans-serif);
         font-weight: 700;
+        font-size: 1rem;
     }
     .lobby-v2 .hero-actions .create-room-btn .key-icon-wrap {
         background: rgba(255,255,255,0.1);
@@ -3984,8 +3992,9 @@ body.in-room * {
     }
     .lobby-v2 .hero-actions .create-room-btn .key-icon-wrap i { color: var(--mint, #00E5A8); }
     body.in-room .lobby-v2 .hero-actions .create-room-btn { display: none; }
-    /* Breathing room so the feed isn't hidden under the CTA */
-    .lobby-v2 .rooms-section { padding-bottom: 6rem; }
+    .lobby-v2 .hero-actions .guide-link-btn {
+        justify-content: center;
+    }
     .lobby-v2 .featured-room-card { min-height: 280px; }
 }
 
