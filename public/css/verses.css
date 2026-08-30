@@ -53,6 +53,52 @@
     max-width: 1200px;
     margin: 0 auto;
     gap: 4rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-soundwave {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+.wave-track {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 200%;
+    height: 100%;
+    display: flex;
+    will-change: transform;
+}
+.wave-track svg {
+    width: 50%;
+    height: 100%;
+    flex-shrink: 0;
+    display: block;
+}
+.wave-track-1 { opacity: 0.16; animation: wave-drift 22s linear infinite; }
+.wave-track-1 svg path { fill: var(--mint, #00E5A8); }
+.wave-track-2 { opacity: 0.12; animation: wave-drift-reverse 30s linear infinite; }
+.wave-track-2 svg path { fill: var(--purple-accent, #8B2FFF); }
+.wave-track-3 { opacity: 0.09; animation: wave-drift 40s linear infinite; }
+.wave-track-3 svg path { fill: var(--hot-pink, #FF2D78); }
+
+@keyframes wave-drift {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+@keyframes wave-drift-reverse {
+    from { transform: translateX(-50%); }
+    to { transform: translateX(0); }
+}
+
+.hero-content, .hero-visual { position: relative; z-index: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+    .wave-track { animation: none !important; transform: translateX(-25%); }
 }
 
 .hero-content {
@@ -3634,6 +3680,22 @@ body.in-room * {
     scrollbar-width: none;
     -ms-overflow-style: none;
     padding-bottom: 0.5rem;
+    cursor: grab;
+}
+.lobby-v2 .featured-carousel:active { cursor: grabbing; }
+.featured-drag-hint {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.4);
+    margin-left: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: opacity 0.4s ease;
+}
+.featured-drag-hint.faded { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+    .featured-drag-hint { display: none; }
 }
 .lobby-v2 .featured-carousel::-webkit-scrollbar { display: none; }
 .lobby-v2 .featured-room-card {

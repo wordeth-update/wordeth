@@ -1606,13 +1606,15 @@ class AudioRoomsManager {
         let feed = rooms;
         if (featuredWrap && rooms.length >= 3) {
             const sorted = [...rooms].sort((a, b) => (b.participantCount || 0) - (a.participantCount || 0));
-            featured = sorted.slice(0, 2);
+            const featuredCount = Math.min(6, rooms.length - 1);
+            featured = sorted.slice(0, featuredCount);
             const featuredIds = new Set(featured.map(r => r.id));
             feed = rooms.filter(r => !featuredIds.has(r.id));
         }
         if (featuredWrap) {
             featuredWrap.replaceChildren();
             featured.forEach(room => featuredWrap.appendChild(this._createFeaturedCard(room)));
+            this._initFeaturedCarouselInteraction(featuredWrap);
         }
         if (featuredSection) featuredSection.style.display = featured.length ? '' : 'none';
         if (feedTitle) feedTitle.style.display = '';
@@ -1728,6 +1730,95 @@ class AudioRoomsManager {
         card.dataset.roomName = (room.name || '').toLowerCase();
         if (tokenPrice > 0) card.dataset.tokenPrice = tokenPrice;
         return card;
+    }
+
+    _initFeaturedCarouselInteraction(featuredWrap) {
+        if (!featuredWrap || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        if (featuredWrap._dragCleanup) featuredWrap._dragCleanup();
+
+        const getCards = () => Array.from(featuredWrap.querySelectorAll('.featured-room-card'));
+        if (getCards().length < 2) return;
+
+        const nearestCardIndex = (scrollLeft) => {
+            let best = 0;
+            let bestDist = Infinity;
+            getCards().forEach((card, index) => {
+                const distance = Math.abs(card.offsetLeft - scrollLeft);
+                if (distance < bestDist) {
+                    bestDist = distance;
+                    best = index;
+                }
+            });
+            return best;
+        };
+
+        const tick = (index, strong) => {
+            const card = getCards()[index];
+            if (!card) return;
+            if (typeof gsap !== 'undefined') {
+                gsap.fromTo(card, { scale: 1 }, {
+                    scale: strong ? 0.97 : 0.985,
+                    duration: 0.08,
+                    ease: 'power2.out',
+                    yoyo: true,
+                    repeat: 1
+                });
+            }
+            if ('vibrate' in navigator) navigator.vibrate(strong ? 12 : 6);
+        };
+
+        let lastIndex = nearestCardIndex(featuredWrap.scrollLeft);
+        let isDown = false;
+        let startX = 0;
+        let startScroll = 0;
+
+        const onPointerDown = (event) => {
+            isDown = true;
+            startX = event.clientX;
+            startScroll = featuredWrap.scrollLeft;
+            featuredWrap.style.cursor = 'grabbing';
+            lastIndex = nearestCardIndex(featuredWrap.scrollLeft);
+            document.getElementById('featuredDragHint')?.classList.add('faded');
+        };
+        const onPointerMove = (event) => {
+            if (!isDown) return;
+            featuredWrap.scrollLeft = startScroll - (event.clientX - startX);
+            const index = nearestCardIndex(featuredWrap.scrollLeft);
+            if (index !== lastIndex) {
+                tick(index, false);
+                lastIndex = index;
+            }
+        };
+        const onPointerUp = () => {
+            if (!isDown) return;
+            isDown = false;
+            featuredWrap.style.cursor = 'grab';
+            const index = nearestCardIndex(featuredWrap.scrollLeft);
+            const target = getCards()[index];
+            if (!target) return;
+            if (typeof gsap !== 'undefined') {
+                gsap.to(featuredWrap, {
+                    scrollLeft: target.offsetLeft,
+                    duration: 0.5,
+                    ease: 'elastic.out(1, 0.65)',
+                    onComplete: () => tick(index, true)
+                });
+            } else {
+                featuredWrap.scrollLeft = target.offsetLeft;
+                tick(index, true);
+            }
+        };
+
+        featuredWrap.style.cursor = 'grab';
+        featuredWrap.addEventListener('pointerdown', onPointerDown);
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+
+        featuredWrap._dragCleanup = () => {
+            featuredWrap.removeEventListener('pointerdown', onPointerDown);
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', onPointerUp);
+        };
     }
 
     getGenreIconClass(genre) {
