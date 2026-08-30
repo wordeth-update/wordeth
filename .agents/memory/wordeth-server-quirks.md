@@ -28,3 +28,8 @@ All uploads (artwork, audio messages, avatars, profile photos, music snippets, a
 Some long-lived partner labels contain artists created before artist IDs became mandatory. Saving the whole label can fail validation even when an unrelated artwork change is valid.
 **Why:** the partner demo account exposed this during an end-to-end artwork upload check.
 **How to apply:** use targeted nested updates for partner artwork changes rather than validating and saving the entire legacy label document.
+
+## SPA page scripts need document-lifetime singleton guards
+The client-side router can execute page-specific scripts again whenever a user returns to that page. Removing the old script element does not disconnect observers or listeners created by its earlier execution.
+**Why:** homepage animation controllers accumulated route observers and drag listeners across repeated SPA navigation until they were converted to guarded singletons.
+**How to apply:** any page script that installs long-lived observers or global listeners must reuse one document-lifetime controller and explicitly tear down per-route resources.
