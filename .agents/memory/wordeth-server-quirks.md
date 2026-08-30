@@ -23,3 +23,8 @@ Running npm install inside Replit can stamp `http://package-firewall.replit.loca
 All uploads (artwork, audio messages, avatars, profile photos, music snippets, audiobank, template previews) go through services/fileStorage.js into GridFS and are served at GET /api/files/<key> with Range support and nosniff + CSP sandbox headers. Private keys embed random tokens (capability URLs — same access model as the old signed URLs). Analytics archives live in the AnalyticsArchive collection, not S3.
 **Why:** production runs on Railway where Replit object storage is unreachable; user directive was "all storage routed to MongoDB".
 **How to apply:** never reintroduce @replit/object-storage or signed URLs for new features; store the stable /api/files URL (or the key) in Mongo docs. The legacy Replit-storage fallback in routes/files.js and the avatar route only works inside Replit and exists purely for pre-migration stragglers. Note: `new Client()` from @replit/object-storage needs `{ bucketId: process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID }` passed explicitly or it throws "A bucket name is needed".
+
+## Legacy partner labels require targeted updates
+Some long-lived partner labels contain artists created before artist IDs became mandatory. Saving the whole label can fail validation even when an unrelated artwork change is valid.
+**Why:** the partner demo account exposed this during an end-to-end artwork upload check.
+**How to apply:** use targeted nested updates for partner artwork changes rather than validating and saving the entire legacy label document.
