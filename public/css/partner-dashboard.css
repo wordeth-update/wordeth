@@ -293,7 +293,7 @@
 }
 
 .map-popup {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
 }
 
 .map-popup h4 {

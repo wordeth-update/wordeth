@@ -17,7 +17,7 @@
 }
 
 .pricing-hero h1 {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 2.6rem;
     font-weight: 800;
     letter-spacing: -0.04em;
@@ -259,7 +259,7 @@
 .card-header { margin-bottom: 1.25rem; }
 
 .card-plan-name {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 1.2rem;
     font-weight: 700;
     color: #fff;
@@ -277,7 +277,7 @@
 .card-price { margin-bottom: 1.5rem; }
 
 .price-amount {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 2.2rem;
     font-weight: 800;
     color: var(--mint, #00E5A8);
@@ -393,7 +393,7 @@
 
 .pricing-faq h2 {
     text-align: center;
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 1.6rem;
     font-weight: 700;
     color: #fff;
@@ -421,7 +421,7 @@
 }
 
 .faq-item h3 {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     color: #fff;
     font-size: 0.95rem;
     font-weight: 700;

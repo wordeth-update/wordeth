@@ -114,7 +114,7 @@ const merchSaleSchema = new mongoose.Schema({
     },
     source: {
         type: String,
-        enum: ['csv', 'webhook', 'manual', 'api', 'inksoft'],
+        enum: ['csv', 'webhook', 'manual', 'api', 'inksoft', 'in-house'],
         default: 'manual'
     },
     geo: {

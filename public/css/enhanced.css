@@ -1,7 +1,7 @@
 /* Enhanced UI Styles - Smoother, Modern Design */
 
 /* Import Google Fonts for better typography */
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800;900&family=Outfit:wght@300;400;500;600;700&display=swap');
 
 /* Updated Root Variables */
 :root {
@@ -39,7 +39,7 @@
     --radius-lg: 24px;
     --radius-xl: 32px;
     --radius-full: 9999px;
-    --font-display: 'Syne', sans-serif;
+    --font-display: 'Unbounded', sans-serif;
     --font-body: 'Outfit', sans-serif;
 }
 
@@ -70,7 +70,7 @@ html {
 }
 
 .nav-links a {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
     font-weight: 500;
     letter-spacing: 0.02em;
     transition: var(--transition-smooth);
@@ -85,7 +85,7 @@ html {
 
 /* Enhanced Sign In Button */
 .nav-signin-btn {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
     font-weight: 600;
     letter-spacing: 0.05em;
     padding: 0.75rem 1.5rem;
@@ -120,14 +120,14 @@ html {
 }
 
 .search-input {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95rem;
     padding: 0.75rem 1rem;
 }
 
 /* Enhanced Headings */
 h1, h2, h3, h4, h5, h6 {
-    font-family: 'Poppins', 'Inter', sans-serif;
+    font-family: var(--font-display);
     font-weight: 600;
     letter-spacing: -0.02em;
 }
@@ -143,7 +143,7 @@ h2 {
 
 /* Enhanced Buttons */
 button, .btn, .cta-button, .video-cta-button {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
     font-weight: 600;
     letter-spacing: 0.02em;
     border-radius: var(--radius-lg);
@@ -212,7 +212,7 @@ button, .btn, .cta-button, .video-cta-button {
 }
 
 .stat-number {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Unbounded', sans-serif;
     font-weight: 700;
     font-size: 1.5rem;
     color: var(--purple-accent);
@@ -264,7 +264,7 @@ button, .btn, .cta-button, .video-cta-button {
 /* Enhanced Popular Tags */
 .popular-tag {
     border-radius: var(--radius-full);
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
     font-weight: 500;
     transition: var(--transition-bounce);
     border: 1px solid rgba(255, 255, 255, 0.15);
@@ -315,7 +315,7 @@ button, .btn, .cta-button, .video-cta-button {
 
 .product-type {
     border-radius: var(--radius-md);
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
     font-weight: 500;
     transition: var(--transition-bounce);
 }
@@ -335,7 +335,7 @@ button, .btn, .cta-button, .video-cta-button {
 }
 
 .option-group h3 {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Unbounded', sans-serif;
     font-weight: 600;
     letter-spacing: 0.02em;
 }
@@ -371,7 +371,7 @@ button, .btn, .cta-button, .video-cta-button {
 }
 
 .auth-box h1 {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Unbounded', sans-serif;
     font-weight: 700;
     background: linear-gradient(135deg, var(--mint) 0%, var(--mint-light) 100%);
     -webkit-background-clip: text;
@@ -383,7 +383,7 @@ input[type="email"],
 input[type="password"],
 input[type="text"] {
     border-radius: var(--radius-md);
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
     transition: var(--transition-smooth);
 }
 
@@ -394,7 +394,7 @@ input:focus {
 
 .submit-btn {
     border-radius: var(--radius-lg);
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
     font-weight: 600;
     letter-spacing: 0.03em;
     transition: var(--transition-bounce);
@@ -414,14 +414,14 @@ input:focus {
 }
 
 .articles-header h1 {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Unbounded', sans-serif;
     font-weight: 800;
     letter-spacing: 0.05em;
 }
 
 select {
     border-radius: var(--radius-md);
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
     transition: var(--transition-smooth);
 }
 
@@ -436,13 +436,13 @@ select {
 
 .genre-tag {
     border-radius: var(--radius-full);
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
     font-weight: 500;
 }
 
 .create-room-btn {
     border-radius: var(--radius-lg);
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
     font-weight: 600;
 }
 

@@ -1,10 +1,10 @@
 /* ============================================================
    WORDETH — Design System v2
-   Fonts: Syne (headings) + Outfit (body)
+   Fonts: Unbounded (headings) + Outfit (body)
    Palette: Electric Mint · Deep Violet · Hot Pink · Black
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800;900&family=Outfit:wght@300;400;500;600;700&display=swap');
 
 /* ── Design Tokens ─────────────────────────────────────────── */
 :root {
@@ -53,7 +53,7 @@
     --gradient-mint-fade:  linear-gradient(135deg, rgba(0,229,168,0.2) 0%, transparent 60%);
 
     /* Typography */
-    --font-display: 'Syne', sans-serif;
+    --font-display: 'Unbounded', sans-serif;
     --font-body:    'Outfit', sans-serif;
 
     /* Motion */

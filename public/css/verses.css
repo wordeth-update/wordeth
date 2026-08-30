@@ -32,7 +32,7 @@
 
 .empty-rooms-state h3 {
     color: rgba(255, 255, 255, 0.65);
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 1.3rem;
     margin-bottom: 0.5rem;
 }
@@ -64,7 +64,7 @@
 }
 
 .hero-title {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 3.8rem;
     font-weight: 800;
     margin-bottom: 1.5rem;
@@ -100,7 +100,7 @@
 }
 
 .stat-number {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 1.7rem;
     font-weight: 800;
     color: var(--mint, #00E5A8);
@@ -251,7 +251,7 @@
 }
 
 .section-header h2 {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 1.4rem;
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -275,7 +275,7 @@
     font-size: 0.9rem;
 }
 .trending-header h3 {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 0.9rem;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.7);
@@ -550,7 +550,7 @@
 }
 
 .room-info h3 {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     color: var(--white);
     font-size: 1.25rem;
     margin-bottom: 0.6rem;
@@ -967,7 +967,7 @@ body.in-room * {
     text-transform: uppercase;
     letter-spacing: 0.1em;
     margin-bottom: 1rem;
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
 }
 
 .listeners-grid {
@@ -1008,7 +1008,7 @@ body.in-room * {
 
 .room-title-area h2,
 .room-title h2 {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 1.1rem;
     font-weight: 700;
     white-space: nowrap;
@@ -1256,7 +1256,7 @@ body.in-room * {
 .chat-header h3 {
     font-size: 0.88rem;
     font-weight: 700;
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
 }
 #participant-count {
     font-size: 0.75rem;
@@ -1399,7 +1399,7 @@ body.in-room * {
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 .modal-header h3 {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 1.15rem;
     font-weight: 700;
     display: flex;
@@ -2112,7 +2112,7 @@ body.in-room * {
     margin-bottom: 1.5rem;
 }
 .welcome-guide-header h2 {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 1.3rem;
     color: #fff;
     margin-bottom: 0.4rem;
@@ -2220,7 +2220,7 @@ body.in-room * {
 }
 
 .kick-menu-header {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-weight: 700;
     font-size: 0.95rem;
     color: #fff;
@@ -2323,7 +2323,7 @@ body.in-room * {
     flex-shrink: 0;
 }
 .walk-tip-title {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-weight: 700;
     font-size: 1rem;
     color: #fff;
@@ -2437,7 +2437,7 @@ body.in-room * {
 }
 
 .token-balance-amount {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 1.2rem;
     font-weight: 800;
     color: #ffd700;
@@ -2489,7 +2489,7 @@ body.in-room * {
 }
 
 .token-earnings-amount {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 1.1rem;
     font-weight: 800;
     color: var(--mint, #00E5A8);
@@ -2563,7 +2563,7 @@ body.in-room * {
 }
 
 .token-pack-amount {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 1.8rem;
     font-weight: 800;
     color: #ffd700;
@@ -2607,7 +2607,7 @@ body.in-room * {
 }
 
 .token-earnings-card h4 {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 0.9rem;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.8);
@@ -2632,7 +2632,7 @@ body.in-room * {
 }
 
 .token-earnings-stat .te-value {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 1.4rem;
     font-weight: 800;
     color: var(--mint, #00E5A8);
@@ -3391,7 +3391,7 @@ body.in-room * {
     100% { transform: rotate(-45deg) scale(1); opacity: 0.85; }
 }
 .key-unlock-label {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 0.95rem;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -3616,7 +3616,7 @@ body.in-room * {
 /* Featured carousel */
 .lobby-v2 .featured-title,
 .lobby-v2 .feed-title {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 1.2rem;
     font-weight: 800;
     color: #fff;
@@ -3711,7 +3711,7 @@ body.in-room * {
 }
 .lobby-v2 .featured-token-badge .fa-coins { color: var(--purple-accent, #8B2FFF); }
 .lobby-v2 .featured-room-title {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 1.35rem;
     line-height: 1.2;
     font-weight: 700;
@@ -3902,7 +3902,7 @@ body.in-room * {
         background: linear-gradient(90deg, var(--purple-accent, #8B2FFF), #5a1bb5);
         box-shadow: 0 8px 30px rgba(139,47,255,0.45);
         border: 1px solid rgba(255,255,255,0.1);
-        font-family: var(--font-display, 'Syne', sans-serif);
+        font-family: var(--font-display, 'Unbounded', sans-serif);
         font-weight: 700;
     }
     .lobby-v2 .hero-actions .create-room-btn .key-icon-wrap {

@@ -2,7 +2,7 @@
     max-width: 900px;
     margin: 0 auto;
     padding: 5rem 1.5rem 3rem;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
 }
 
 .loading-state {
@@ -13,7 +13,7 @@
     min-height: 60vh;
     gap: 1rem;
     color: rgba(255, 255, 255, 0.4);
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
 }
 
 .loading-state i {
@@ -189,7 +189,7 @@
     font-weight: 600;
     font-size: 0.85rem;
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
     text-decoration: none;
     display: inline-flex;
     align-items: center;
@@ -406,7 +406,7 @@
     font-weight: 600;
     font-size: 0.82rem;
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
     transition: all 0.2s;
 }
 
@@ -484,7 +484,7 @@
     font-weight: 600;
     font-size: 0.85rem;
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
     transition: all 0.2s;
 }
 

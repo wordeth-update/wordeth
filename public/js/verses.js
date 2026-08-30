@@ -1986,7 +1986,7 @@ class AudioRoomsManager {
         const modalHeader = this._el('div', {className: 'modal-header', cssText: 'justify-content:flex-end;'}, closeBtn);
         const headphonesIcon = this._icon('fas fa-headphones');
         headphonesIcon.style.cssText = 'font-size:2.5rem;color:var(--mint,#00E5A8);margin-bottom:1rem;';
-        const title = this._el('h3', {cssText: 'font-family:var(--font-display,"Syne",sans-serif);font-size:1.3rem;margin-bottom:0.5rem;', textContent: 'Join the Conversation'});
+        const title = this._el('h3', {cssText: 'font-family:var(--font-display,"Unbounded",sans-serif);font-size:1.3rem;margin-bottom:0.5rem;', textContent: 'Join the Conversation'});
         const desc = this._el('p', {cssText: 'color:rgba(255,255,255,0.5);font-size:0.9rem;margin-bottom:1.5rem;', textContent: 'Sign in or create an account to start your own audio room and connect with other music lovers.'});
         const signInLink = this._el('a', {className: 'create-btn', href: '/signin.html?return=' + encodeURIComponent('/verses.html'), cssText: 'display:inline-block;text-decoration:none;text-align:center;padding:0.75rem 1.5rem;border-radius:12px;font-weight:600;', textContent: 'Sign In'});
         const signUpLink = this._el('a', {href: '/signup.html?return=' + encodeURIComponent('/verses.html'), cssText: 'color:var(--mint,#00E5A8);text-decoration:none;font-size:0.85rem;'},

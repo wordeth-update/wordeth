@@ -748,8 +748,19 @@ router.post('/artwork/upload', partnerAuth, artworkUpload.single('artworkFile'),
             uploadedAt: new Date()
         };
 
-        artist.templateArtwork.push(artworkEntry);
-        await label.save();
+        // Use an atomic nested update instead of saving the entire label.
+        // Some long-lived partner records predate the required artistId field;
+        // validating the full legacy document would make otherwise-valid
+        // artwork uploads fail.
+        const newArtwork = artist.templateArtwork.create(artworkEntry);
+        const updateResult = await Label.updateOne(
+            { _id: label._id, 'artists.slug': artistSlug },
+            { $push: { 'artists.$.templateArtwork': newArtwork } }
+        );
+        if (updateResult.modifiedCount !== 1) {
+            await fileStorage.deleteByKey(objectPath).catch(() => {});
+            return res.status(409).json({ success: false, message: 'Artist changed during upload. Please try again.' });
+        }
 
         res.json({
             success: true,
@@ -757,7 +768,7 @@ router.post('/artwork/upload', partnerAuth, artworkUpload.single('artworkFile'),
             data: {
                 artistId: artist.artistId,
                 artistName: artist.name,
-                artwork: artworkEntry
+                artwork: newArtwork
             }
         });
     } catch (error) {
@@ -812,56 +823,19 @@ router.delete('/artwork/:artistSlug/:artworkId', partnerAuth, async (req, res) =
             return res.status(404).json({ success: false, message: 'Artwork not found' });
         }
 
-        try {
-            await fileStorage.deleteByKey(artwork.objectPath);
-        } catch (e) {}
-
-        artwork.deleteOne();
-        await label.save();
+        const updateResult = await Label.updateOne(
+            { _id: label._id, 'artists.slug': req.params.artistSlug },
+            { $pull: { 'artists.$.templateArtwork': { _id: artwork._id } } }
+        );
+        if (updateResult.modifiedCount !== 1) {
+            return res.status(409).json({ success: false, message: 'Artwork changed during deletion. Please try again.' });
+        }
+        await fileStorage.deleteByKey(artwork.objectPath).catch(() => {});
 
         res.json({ success: true, message: 'Artwork deleted' });
     } catch (error) {
         console.error('Delete artwork error:', error);
         res.status(500).json({ success: false, message: 'Failed to delete artwork' });
-    }
-});
-
-const inkSoftService = require('../services/inkSoftService');
-
-router.get('/inksoft/status', partnerAuth, async (req, res) => {
-    try {
-        const status = await inkSoftService.getSyncStatus();
-        res.json({ success: true, data: status });
-    } catch (error) {
-        console.error('InkSoft status error:', error);
-        res.status(500).json({ success: false, message: 'Failed to get sync status' });
-    }
-});
-
-router.post('/inksoft/poll', partnerAuth, async (req, res) => {
-    try {
-        if (req.partner.role === 'viewer') {
-            return res.status(403).json({ success: false, message: 'Insufficient permissions' });
-        }
-
-        const result = await inkSoftService.pollOrders();
-
-        if (!result) {
-            return res.status(404).json({ success: false, message: 'InkSoft sync is not active' });
-        }
-
-        if (result.error) {
-            return res.status(500).json({ success: false, message: result.error });
-        }
-
-        res.json({
-            success: true,
-            message: `Sync complete: ${result.recorded} new sales recorded, ${result.unmatched} unmatched`,
-            data: result
-        });
-    } catch (error) {
-        console.error('InkSoft manual poll error:', error);
-        res.status(500).json({ success: false, message: 'Failed to sync with InkSoft' });
     }
 });
 

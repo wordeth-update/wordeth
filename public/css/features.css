@@ -11,7 +11,7 @@
     --gradient-aurora:linear-gradient(135deg,#0D0118 0%,#2D1B69 40%,#8B2FFF 70%,#00E5A8 100%);
     --gradient-hot:linear-gradient(135deg,#FF2D78 0%,#8B2FFF 50%,#00C8FF 100%);
     --gradient-card:linear-gradient(135deg,rgba(139,47,255,0.12) 0%,rgba(0,229,168,0.06) 100%);
-    --font-display:'Syne',sans-serif;--font-body:'Outfit',sans-serif;
+    --font-display:'Unbounded',sans-serif;--font-body:'Outfit',sans-serif;
 }
 html{scroll-behavior:smooth}
 body{font-family:var(--font-body);background:var(--black);color:var(--white);line-height:1.6;overflow-x:hidden}

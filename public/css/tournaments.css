@@ -88,7 +88,7 @@
 }
 
 .tournament-hero h1 {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 2.8rem;
     font-weight: 800;
     margin-bottom: 0.6rem;
@@ -213,7 +213,7 @@
 }
 
 .season-number {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 2.5rem;
     font-weight: 800;
     background: linear-gradient(135deg, var(--mint, #00E5A8), var(--purple-accent, #8B2FFF));
@@ -225,7 +225,7 @@
 }
 
 .season-title {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     color: var(--white);
     font-size: 1.1rem;
     font-weight: 700;
@@ -291,7 +291,7 @@
 }
 
 .season-stat-value {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 1.1rem;
     font-weight: 700;
     color: var(--white);
@@ -336,7 +336,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 1.1rem;
     font-weight: 800;
     color: var(--mint, #00E5A8);
@@ -347,7 +347,7 @@
 .round-info { flex: 1; }
 
 .round-title {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     color: var(--white);
     font-size: 1rem;
     font-weight: 700;
@@ -382,7 +382,7 @@
     text-align: left;
     padding: 0.75rem 1rem;
     color: var(--mint, #00E5A8);
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -402,7 +402,7 @@
 }
 
 .rank-cell {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-weight: 800;
     color: rgba(255, 255, 255, 0.35);
     font-size: 0.95rem;
@@ -437,7 +437,7 @@
 .leaderboard-votes {
     color: var(--mint, #00E5A8);
     font-weight: 700;
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 0.95rem;
     text-shadow: 0 0 8px rgba(0, 229, 168, 0.3);
 }
@@ -479,7 +479,7 @@
 }
 
 .vs-text {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     font-size: 0.75rem;
     font-weight: 800;
     color: var(--mint, #00E5A8);
@@ -589,7 +589,7 @@
 }
 
 .prize-title {
-    font-family: var(--font-display, 'Syne', sans-serif);
+    font-family: var(--font-display, 'Unbounded', sans-serif);
     color: var(--white);
     font-size: 1rem;
     font-weight: 700;
