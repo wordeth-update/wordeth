@@ -1442,6 +1442,56 @@ body.in-room * {
     overflow-y: auto;
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), 0 0 60px rgba(139, 47, 255, 0.08);
 }
+.room-modal-content { max-height: 88vh; }
+
+.room-modal-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.room-modal-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.45);
+    font-family: var(--font-body, 'Outfit', sans-serif);
+    font-weight: 600;
+    font-size: 0.86rem;
+    padding: 0.7rem 0.5rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    position: relative;
+}
+.room-modal-tab:hover { color: rgba(255, 255, 255, 0.7); }
+.room-modal-tab.active { color: var(--mint, #00E5A8); border-bottom-color: var(--mint, #00E5A8); }
+.room-modal-tab-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--hot-pink, #FF2D78);
+    margin-left: 0.3rem;
+    vertical-align: middle;
+}
+.room-modal-pane { display: none; }
+.room-modal-pane.active { display: block; }
+
+.collab-schedule-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    background: rgba(139, 47, 255, 0.08);
+    border: 1px solid rgba(139, 47, 255, 0.25);
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+.collab-schedule-hint i { color: var(--purple-light, #D4A8FF); margin-top: 0.15rem; }
+.collab-schedule-hint strong { color: #fff; }
 
 .modal-header {
     display: flex;

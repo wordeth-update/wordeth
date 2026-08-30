@@ -1335,6 +1335,10 @@ class AudioRoomsManager {
 
         toggle.addEventListener('change', () => {
             options.style.display = toggle.checked ? '' : 'none';
+            const collabOptions = document.getElementById('schedule-collab-options');
+            if (collabOptions) collabOptions.style.display = toggle.checked ? '' : 'none';
+            const hint = document.getElementById('collabScheduleHint');
+            if (hint) hint.style.display = toggle.checked ? 'none' : '';
             const submitBtn = this.createRoomForm?.querySelector('button[type="submit"]');
             if (submitBtn) submitBtn.textContent = toggle.checked ? 'Schedule Room' : 'Create Room';
             if (toggle.checked) {
@@ -1457,6 +1461,8 @@ class AudioRoomsManager {
         });
         if (approvalGroup) approvalGroup.style.display = this._selectedCollabs.length ? '' : 'none';
         if (summary) summary.style.display = this._selectedCollabs.length ? '' : 'none';
+        const tabDot = document.getElementById('collabTabDot');
+        if (tabDot) tabDot.style.display = this._selectedCollabs.length ? '' : 'none';
         this._updateSplitSummary();
     }
 
@@ -2075,6 +2081,10 @@ class AudioRoomsManager {
                 }
             }
             this.createRoomModal.classList.add('active');
+            const tabs = document.querySelectorAll('#roomModalTabs .room-modal-tab');
+            const panes = document.querySelectorAll('#create-room-form .room-modal-pane');
+            tabs.forEach(t => t.classList.toggle('active', t.dataset.pane === 'details'));
+            panes.forEach(p => p.classList.toggle('active', p.dataset.pane === 'details'));
             console.log('[CreateRoom] modal active class added');
         } else {
             console.error('[CreateRoom] create-room-modal element not found in DOM');

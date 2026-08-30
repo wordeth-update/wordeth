@@ -734,72 +734,92 @@
 
     <!-- Room Creation Modal -->
     <div class="modal" id="create-room-modal">
-        <div class="modal-content">
+        <div class="modal-content room-modal-content">
             <div class="modal-header">
                 <h3>Create New Room</h3>
                 <button class="close-modal">&times;</button>
             </div>
+            <div class="room-modal-tabs" id="roomModalTabs">
+                <button type="button" class="room-modal-tab active" data-pane="details">Details</button>
+                <button type="button" class="room-modal-tab" data-pane="access">Access</button>
+                <button type="button" class="room-modal-tab" data-pane="collaborate">Collaborate <span class="room-modal-tab-dot" id="collabTabDot" style="display:none;"></span></button>
+            </div>
             <form id="create-room-form" onsubmit="return false;" action="javascript:void(0)">
-                <div class="form-group">
-                    <label for="room-name-input">Room Name</label>
-                    <input type="text" id="room-name-input" name="room-name-input" placeholder="Enter room name" required>
-                </div>
-                <div class="form-group">
-                    <label for="room-genre">Genre</label>
-                    <select id="room-genre" name="room-genre" required>
-                        <option value="">Select genre</option>
-                        <option value="hip-hop">Hip-Hop</option>
-                        <option value="rock">Rock</option>
-                        <option value="pop">Pop</option>
-                        <option value="jazz">Jazz</option>
-                        <option value="electronic">Electronic</option>
-                        <option value="r&b">R&B</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="initial-song">Topic (Optional)</label>
-                    <input type="text" id="initial-song" name="initial-song" placeholder="What's the discussion about?">
-                </div>
-                <div class="form-group" id="token-price-group" style="display:none;">
-                    <label for="room-token-price">Token Price (0 = Free)</label>
-                    <input type="number" id="room-token-price" name="room-token-price" placeholder="0" min="0" value="0">
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="private-room" name="private-room">
-                        Make room private (friends only)
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="schedule-room-toggle" name="schedule-room-toggle">
-                        Schedule for later
-                    </label>
-                </div>
-                <div id="schedule-options" style="display:none;">
+                <div class="room-modal-pane active" data-pane="details">
                     <div class="form-group">
-                        <label for="schedule-start-time">Date &amp; Time</label>
-                        <input type="datetime-local" id="schedule-start-time" name="schedule-start-time">
+                        <label for="room-name-input">Room Name</label>
+                        <input type="text" id="room-name-input" name="room-name-input" placeholder="Enter room name" required>
                     </div>
                     <div class="form-group">
-                        <label for="schedule-description">Description (Optional)</label>
-                        <textarea id="schedule-description" name="schedule-description" rows="2" maxlength="1000" placeholder="What's this session about?"></textarea>
-                    </div>
-                    <div class="form-group collab-block">
-                        <label>Collaborators (up to 5) <span class="collab-my-id" id="my-collab-id"></span></label>
-                        <input type="text" id="collab-search-input" placeholder="Search by name or WRD-XXXXXX" autocomplete="off">
-                        <div class="collab-search-results" id="collab-search-results"></div>
-                        <div class="collab-selected" id="collab-selected"></div>
-                        <div class="collab-split-summary" id="collab-split-summary" style="display:none;"></div>
-                    </div>
-                    <div class="form-group" id="approval-mode-group" style="display:none;">
-                        <label for="approval-mode">Collaborator Approval</label>
-                        <select id="approval-mode" name="approval-mode">
-                            <option value="real-time">Real-time — schedule now, can't go live until everyone approves</option>
-                            <option value="pre-schedule">Pre-schedule — everyone must approve before it's scheduled</option>
+                        <label for="room-genre">Genre</label>
+                        <select id="room-genre" name="room-genre" required>
+                            <option value="">Select genre</option>
+                            <option value="hip-hop">Hip-Hop</option>
+                            <option value="rock">Rock</option>
+                            <option value="pop">Pop</option>
+                            <option value="jazz">Jazz</option>
+                            <option value="electronic">Electronic</option>
+                            <option value="r&b">R&B</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label for="initial-song">Topic (Optional)</label>
+                        <input type="text" id="initial-song" name="initial-song" placeholder="What's the discussion about?">
+                    </div>
                 </div>
+
+                <div class="room-modal-pane" data-pane="access">
+                    <div class="form-group" id="token-price-group" style="display:none;">
+                        <label for="room-token-price">Token Price (0 = Free)</label>
+                        <input type="number" id="room-token-price" name="room-token-price" placeholder="0" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="private-room" name="private-room">
+                            Make room private (friends only)
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="schedule-room-toggle" name="schedule-room-toggle">
+                            Schedule for later
+                        </label>
+                    </div>
+                    <div id="schedule-options" style="display:none;">
+                        <div class="form-group">
+                            <label for="schedule-start-time">Date &amp; Time</label>
+                            <input type="datetime-local" id="schedule-start-time" name="schedule-start-time">
+                        </div>
+                        <div class="form-group">
+                            <label for="schedule-description">Description (Optional)</label>
+                            <textarea id="schedule-description" name="schedule-description" rows="2" maxlength="1000" placeholder="What's this session about?"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="room-modal-pane" data-pane="collaborate">
+                    <div class="collab-schedule-hint" id="collabScheduleHint">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Collaborators are available once you turn on <strong>Schedule for later</strong> in the Access tab — co-hosted rooms have to be scheduled ahead.</span>
+                    </div>
+                    <div id="schedule-collab-options" style="display:none;">
+                        <div class="form-group collab-block">
+                            <label>Collaborators (up to 5) <span class="collab-my-id" id="my-collab-id"></span></label>
+                            <input type="text" id="collab-search-input" placeholder="Search by name or WRD-XXXXXX" autocomplete="off">
+                            <div class="collab-search-results" id="collab-search-results"></div>
+                            <div class="collab-selected" id="collab-selected"></div>
+                            <div class="collab-split-summary" id="collab-split-summary" style="display:none;"></div>
+                        </div>
+                        <div class="form-group" id="approval-mode-group" style="display:none;">
+                            <label for="approval-mode">Collaborator Approval</label>
+                            <select id="approval-mode" name="approval-mode">
+                                <option value="real-time">Real-time — schedule now, can't go live until everyone approves</option>
+                                <option value="pre-schedule">Pre-schedule — everyone must approve before it's scheduled</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="modal-actions">
                     <button type="button" class="cancel-btn">Cancel</button>
                     <button type="submit" class="create-btn">Create Room</button>
@@ -1066,7 +1086,19 @@
     <script src="js/native-screen-capture.js"></script>
     <script src="js/ar-filters.js?v=1770700000"></script>
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.22.0.js"></script>
-    <script data-cfasync="false" src="js/verses.js?v=1788110800"></script>
+    <script data-cfasync="false" src="js/verses.js?v=1788113000"></script>
+    <script>
+        (function () {
+            const tabs = document.querySelectorAll('#roomModalTabs .room-modal-tab');
+            const panes = document.querySelectorAll('#create-room-form .room-modal-pane');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.toggle('active', t === tab));
+                    panes.forEach(p => p.classList.toggle('active', p.dataset.pane === tab.dataset.pane));
+                });
+            });
+        })();
+    </script>
     <script data-cfasync="false" src="js/nav-auth.js"></script>
     <script src="js/notifications.js?v=1787017601"></script>
     <script src="js/cookie-consent.js"></script>
