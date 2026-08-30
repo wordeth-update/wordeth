@@ -407,6 +407,7 @@ main > section:not(.hero-minimal):not(.features-strip):not(.explore-cards) {
         0 0 34px rgba(0, 229, 168, 0.55),
         0 0 70px rgba(139, 47, 255, 0.38),
         inset 0 0 28px rgba(139, 47, 255, 0.24);
+    animation: hero-disc-float 3.2s ease-in-out infinite, hero-disc-glow 2.2s ease-in-out infinite;
 }
 
 .hero-eyebrow::before {
@@ -415,7 +416,7 @@ main > section:not(.hero-minimal):not(.features-strip):not(.explore-cards) {
     inset: -17px;
     border: 1px solid rgba(0, 229, 168, 0.28);
     border-radius: 50%;
-    animation: pulse 2.4s ease-in-out infinite;
+    animation: hero-disc-ring 2.2s ease-out infinite;
 }
 
 .hero-eyebrow-live {
@@ -434,7 +435,39 @@ main > section:not(.hero-minimal):not(.features-strip):not(.explore-cards) {
     border-radius: 50%;
     background: var(--hot-pink);
     box-shadow: 0 0 8px var(--hot-pink), 0 0 18px rgba(255, 45, 120, 0.7);
-    animation: glow-pulse 1.8s ease-in-out infinite;
+    animation: hero-live-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes hero-disc-float {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-10px) scale(1.025); }
+}
+
+@keyframes hero-disc-glow {
+    0%, 100% {
+        box-shadow: 0 0 12px rgba(0, 229, 168, 0.85), 0 0 34px rgba(0, 229, 168, 0.48), 0 0 70px rgba(139, 47, 255, 0.3), inset 0 0 28px rgba(139, 47, 255, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(0, 229, 168, 1), 0 0 58px rgba(0, 229, 168, 0.75), 0 0 100px rgba(139, 47, 255, 0.55), inset 0 0 38px rgba(139, 47, 255, 0.34);
+    }
+}
+
+@keyframes hero-disc-ring {
+    0% { transform: scale(0.96); opacity: 0.75; }
+    75%, 100% { transform: scale(1.18); opacity: 0; }
+}
+
+@keyframes hero-live-dot {
+    0%, 100% { transform: scale(0.8); opacity: 0.65; box-shadow: 0 0 5px var(--hot-pink); }
+    50% { transform: scale(1.25); opacity: 1; box-shadow: 0 0 12px var(--hot-pink), 0 0 26px rgba(255, 45, 120, 0.9); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-eyebrow,
+    .hero-eyebrow::before,
+    .hero-eyebrow-dot {
+        animation: none;
+    }
 }
 
 .hero-minimal-content h1 {
