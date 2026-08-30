@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wordeth - Social Music Experience</title>
             <link rel="icon" type="image/png" href="images/logo.png">
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/styles.css?v=1788108576">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/enhanced.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -89,7 +89,11 @@
         <section class="hero-minimal">
             <div class="hero-minimal-bg"></div>
             <div class="hero-minimal-content">
-                <span class="hero-eyebrow"><i class="fas fa-headphones"></i> Live Now</span>
+                <span class="hero-eyebrow" aria-label="Live now">
+                    <span class="hero-eyebrow-live">Live</span>
+                    <span class="hero-eyebrow-now">Now</span>
+                    <span class="hero-eyebrow-dot" aria-hidden="true"></span>
+                </span>
                 <h1>Where Music Comes Alive</h1>
                 <p>Live rooms. Lyrics. Community. All in one place.</p>
                 <a href="verses.html" class="hero-cta">Join a Room</a>

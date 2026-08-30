@@ -382,23 +382,59 @@ main > section:not(.hero-minimal):not(.features-strip):not(.explore-cards) {
 
 .hero-eyebrow {
     display: inline-flex;
+    position: relative;
+    justify-content: center;
     align-items: center;
-    gap: 0.5rem;
-    background: rgba(0, 229, 168, 0.1);
-    border: 1px solid rgba(0, 229, 168, 0.3);
-    color: var(--mint);
-    padding: 0.4rem 1.1rem;
-    border-radius: 50px;
-    font-size: 0.82rem;
-    font-weight: 600;
-    margin-bottom: 2rem;
-    letter-spacing: 0.06em;
+    flex-direction: column;
+    width: 168px;
+    height: 208px;
+    gap: 0.12rem;
+    margin-bottom: 2.25rem;
+    border: 9px solid var(--mint);
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 50% 45%, rgba(139, 47, 255, 0.28), transparent 58%),
+        rgba(5, 4, 14, 0.82);
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: 1.7rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-    box-shadow: 0 0 16px rgba(0, 229, 168, 0.15);
+    box-shadow:
+        0 0 12px rgba(0, 229, 168, 0.95),
+        0 0 34px rgba(0, 229, 168, 0.55),
+        0 0 70px rgba(139, 47, 255, 0.38),
+        inset 0 0 28px rgba(139, 47, 255, 0.24);
 }
 
-.hero-eyebrow i {
-    animation: pulse 2s infinite;
+.hero-eyebrow::before {
+    content: '';
+    position: absolute;
+    inset: -17px;
+    border: 1px solid rgba(0, 229, 168, 0.28);
+    border-radius: 50%;
+    animation: pulse 2.4s ease-in-out infinite;
+}
+
+.hero-eyebrow-live {
+    color: var(--mint);
+    text-shadow: 0 0 15px rgba(0, 229, 168, 0.8);
+}
+
+.hero-eyebrow-now {
+    text-shadow: 0 0 16px rgba(255, 255, 255, 0.45);
+}
+
+.hero-eyebrow-dot {
+    width: 13px;
+    height: 13px;
+    margin-top: 0.8rem;
+    border-radius: 50%;
+    background: var(--hot-pink);
+    box-shadow: 0 0 8px var(--hot-pink), 0 0 18px rgba(255, 45, 120, 0.7);
+    animation: glow-pulse 1.8s ease-in-out infinite;
 }
 
 .hero-minimal-content h1 {
@@ -1160,6 +1196,13 @@ main > section:not(.hero-minimal):not(.features-strip):not(.explore-cards) {
     .hero-minimal-content h1 { font-size: 2.8rem; }
     .hero-minimal-content p  { font-size: 1rem; }
     .hero-cta { padding: 0.8rem 2rem; font-size: 0.95rem; }
+    .hero-eyebrow {
+        width: 145px;
+        height: 178px;
+        border-width: 8px;
+        font-size: 1.45rem;
+        margin-bottom: 1.75rem;
+    }
 
     .features-strip { padding: 1.2rem 1rem; }
     .features-strip-inner { gap: 0.5rem 1rem; justify-content: center; }
@@ -1191,7 +1234,13 @@ main > section:not(.hero-minimal):not(.features-strip):not(.explore-cards) {
     .hero-minimal       { min-height: 50vh; }
     .hero-minimal-content h1 { font-size: 2.1rem; }
     .hero-minimal-content p  { font-size: 0.93rem; }
-    .hero-eyebrow { font-size: 0.72rem; padding: 0.35rem 0.85rem; }
+    .hero-eyebrow {
+        width: 128px;
+        height: 158px;
+        border-width: 7px;
+        font-size: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
     .hero-cta     { padding: 0.75rem 1.75rem; font-size: 0.93rem; }
 
     .features-strip { padding: 1rem 0.75rem; }
