@@ -171,21 +171,16 @@ function isEventProcessed(eventId) {
 
 function createWebhookHandler(webhookSecret) {
     return async (req, res) => {
+        if (!webhookSecret) {
+            console.error('[Stripe] STRIPE_WEBHOOK_SECRET is missing — webhook rejected');
+            return res.status(503).json({ error: 'Webhook verification is not configured' });
+        }
         const stripe = getStripeClient();
         const sig = req.headers['stripe-signature'];
 
         let event;
         try {
-            if (webhookSecret) {
-                event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-            } else {
-                if (!sig) {
-                    console.error('[Stripe] No webhook secret and no signature — rejecting');
-                    return res.status(400).json({ error: 'Missing signature' });
-                }
-                event = JSON.parse(req.body.toString());
-                console.warn('[Stripe] No STRIPE_WEBHOOK_SECRET configured — signature not verified. Set this secret for production safety.');
-            }
+            event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
         } catch (err) {
             console.error('[Stripe] Webhook signature verification failed:', err.message);
             return res.status(400).json({ error: 'Invalid signature' });
@@ -333,9 +328,7 @@ async function handleCheckoutComplete(session) {
                     metadata: { planSlug, billingCycle: cycle, previousPlan: oldPlan?.slug, stripeSessionId: session.id }
                 });
 
-                user.accountType = plan.category;
-                const roleMap = { fan: 'USER_FAN', designer: 'DESIGNER', artist: 'ARTIST', creator: 'CREATOR', label: 'LABEL_ADMIN' };
-                user.role = roleMap[plan.category] || 'USER_FAN';
+                user.customerAudience = 'USER_PLUS';
                 await user.save();
 
                 await grantTokensForPlan(user, planSlug);
@@ -359,9 +352,7 @@ async function handleCheckoutComplete(session) {
         await subscription.save();
 
         user.subscriptionId = subscription._id;
-        user.accountType = plan.category;
-        const roleMap = { fan: 'USER_FAN', designer: 'DESIGNER', artist: 'ARTIST', creator: 'CREATOR', label: 'LABEL_ADMIN' };
-        user.role = roleMap[plan.category] || 'USER_FAN';
+        user.customerAudience = 'USER_PLUS';
         await user.save();
 
         await EventsLedger.create({

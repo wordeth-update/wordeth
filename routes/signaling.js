@@ -4,6 +4,11 @@ const TokenLedger = require('../models/TokenLedger');
 const EventsLedger = require('../models/EventsLedger');
 const Replay = require('../models/Replay');
 const Notification = require('../models/Notification');
+const jwt = require('jsonwebtoken');
+const {
+    authorizePaidRoomEntry,
+    finishWildcardPeek
+} = require('../services/userAccess');
 
 let rooms = new Map();
 const connectedUsers = new Map();
@@ -11,6 +16,17 @@ let isShuttingDown = false;
 let _io = null;
 const roomDeletionTimers = new Map();
 const ROOM_EMPTY_GRACE_PERIOD = 10 * 60 * 1000;
+
+async function authenticatedSocketUser(token) {
+    if (!token) return null;
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (!decoded.userId) return null;
+        return User.findById(decoded.userId);
+    } catch (error) {
+        return null;
+    }
+}
 
 function scheduleRoomDeletion(roomId, reason) {
     if (roomDeletionTimers.has(roomId)) return;
@@ -186,10 +202,13 @@ function setupSignaling(io) {
     io.on('connection', (socket) => {
         console.log(`Socket connected: ${socket.id}`);
 
-        socket.on('register-user', ({ userId, userName }) => {
-            if (userId) {
+        socket.on('register-user', async ({ authToken } = {}) => {
+            const verifiedUser = await authenticatedSocketUser(authToken);
+            if (verifiedUser) {
+                const userId = String(verifiedUser._id);
+                const userName = verifiedUser.name || 'User';
                 socket.registeredUserId = userId;
-                socket.registeredUserName = userName || 'User';
+                socket.registeredUserName = userName;
                 if (!connectedUsers.has(userId)) {
                     connectedUsers.set(userId, new Set());
                 }
@@ -211,6 +230,8 @@ function setupSignaling(io) {
                     }
                 }
                 console.log(`User registered: ${userName} (${userId}) on socket ${socket.id} (${userSockets.size} connections)`);
+            } else {
+                socket.emit('registration-error', { message: 'Sign in again to register this connection.' });
             }
         });
 
@@ -327,12 +348,39 @@ function setupSignaling(io) {
             if (typeof cb === 'function') cb({ ok: true, socketId: socket.id, ts: Date.now() });
         });
 
-        socket.on('join-room', async ({ roomId, userId, userName, isHost: requestedHost, roomName, avatar }, ackCallback) => {
+        socket.on('join-room', async (joinRequest, ackCallback) => {
           try {
+            let {
+                roomId,
+                userId,
+                userName,
+                isHost: requestedHost,
+                roomName,
+                avatar,
+                authToken,
+                useWildcard
+            } = joinRequest || {};
             console.log(`[join-room] Received from ${socket.id}: roomId=${roomId}, userName=${userName}, isHost=${requestedHost}`);
             if (!roomsReady) {
                 console.log('[join-room] Waiting for rooms to restore from Redis...');
                 await roomsReadyPromise;
+            }
+            const verifiedUser = await authenticatedSocketUser(authToken);
+            if (verifiedUser) {
+                userId = String(verifiedUser._id);
+                userName = verifiedUser.name;
+                avatar = verifiedUser.avatar || null;
+                socket.registeredUserId = userId;
+                socket.registeredUserName = userName;
+            } else {
+                userId = null;
+                userName = 'Guest';
+                avatar = null;
+                if (requestedHost) {
+                    socket.emit('room-error', { message: 'Please sign in to create a room.', code: 'AUTH_REQUIRED' });
+                    if (typeof ackCallback === 'function') ackCallback({ success: false, message: 'Please sign in to create a room.', code: 'AUTH_REQUIRED' });
+                    return;
+                }
             }
             let isHost = requestedHost;
             if (socket.roomId && socket.roomId !== roomId && rooms.has(socket.roomId)) {
@@ -450,8 +498,29 @@ function setupSignaling(io) {
             // have no recorded creator.
             const hasFreePass = Array.isArray(room.freeEntryUserIds) && socket.userId &&
                 room.freeEntryUserIds.includes(String(socket.userId));
-            const legacyHostClaim = !room.creatorUserId && requestedHost;
-            if (room.tokenPrice > 0 && !isCreatorOfRoom && !hasFreePass && !legacyHostClaim) {
+            let paidEntryAccess = null;
+            if (room.tokenPrice > 0 && !isCreatorOfRoom && !hasFreePass) {
+                if (!verifiedUser) {
+                    const message = 'Paid rooms are available to signed-in User+ members.';
+                    socket.emit('room-error', { message, code: 'USER_PLUS_REQUIRED' });
+                    if (typeof ackCallback === 'function') ackCallback({ success: false, message, code: 'USER_PLUS_REQUIRED' });
+                    socket.leave(roomId);
+                    socket.roomId = null;
+                    return;
+                }
+                paidEntryAccess = await authorizePaidRoomEntry({
+                    userId: socket.userId,
+                    roomId,
+                    useWildcard: Boolean(useWildcard)
+                });
+                if (!paidEntryAccess.allowed) {
+                    socket.emit('room-error', paidEntryAccess);
+                    if (typeof ackCallback === 'function') ackCallback({ success: false, ...paidEntryAccess });
+                    socket.leave(roomId);
+                    socket.roomId = null;
+                    return;
+                }
+                if (paidEntryAccess.chargeTokens) {
                 try {
                     const deductResult = await User.findOneAndUpdate(
                         { _id: socket.userId, tokenBalance: { $gte: room.tokenPrice } },
@@ -525,6 +594,7 @@ function setupSignaling(io) {
                     socket.roomId = null;
                     return;
                 }
+                }
             }
 
             if (socket.userId && socket.userId !== socket.id) {
@@ -571,8 +641,36 @@ function setupSignaling(io) {
                 isHost: shouldBeHost,
                 isSpeaker: shouldBeHost,
                 isMuted: !shouldBeHost,
-                joinedAt: Date.now()
+                joinedAt: Date.now(),
+                peekExpiresAt: paidEntryAccess?.wildcard ? paidEntryAccess.expiresAt : null
             });
+
+            if (paidEntryAccess?.wildcard && paidEntryAccess.expiresAt) {
+                if (socket.wildcardTimer) clearTimeout(socket.wildcardTimer);
+                const remainingMs = Math.max(0, new Date(paidEntryAccess.expiresAt).getTime() - Date.now());
+                socket.wildcardTimer = setTimeout(async () => {
+                    const activeRoom = rooms.get(roomId);
+                    if (!activeRoom || socket.roomId !== roomId || !activeRoom.participants.has(socket.id)) return;
+                    const participant = activeRoom.participants.get(socket.id);
+                    activeRoom.participants.delete(socket.id);
+                    socket.leave(roomId);
+                    socket.roomId = null;
+                    await finishWildcardPeek(socket.userId, roomId).catch(() => {});
+                    socket.emit('peek-expired', {
+                        message: 'Your one-time 3-minute Wildcard peek has ended.',
+                        roomId
+                    });
+                    socket.to(roomId).emit('participant-left', {
+                        socketId: socket.id,
+                        userId: participant.userId,
+                        userName: participant.userName,
+                        participants: Array.from(activeRoom.participants.values())
+                    });
+                    saveRoom(roomId, activeRoom);
+                    io.emit('rooms-updated', getActiveRooms());
+                }, remainingMs);
+                socket.wildcardTimer.unref?.();
+            }
 
             if (socket.userId && socket.userId !== socket.id) {
                 if (!room.participantHistory) room.participantHistory = new Set();
@@ -619,7 +717,8 @@ function setupSignaling(io) {
                 activeVideos: Array.from(room.activeVideos || []),
                 isLocked: room.isLocked,
                 stageAccess: room.stageAccess || 'invite-only',
-                tokenPrice: room.tokenPrice || 0
+                tokenPrice: room.tokenPrice || 0,
+                wildcardExpiresAt: paidEntryAccess?.wildcard ? paidEntryAccess.expiresAt : null
             };
             socket.emit('room-joined', joinData);
             if (typeof ackCallback === 'function') ackCallback({ success: true, ...joinData });
@@ -690,7 +789,11 @@ function setupSignaling(io) {
             const room = rooms.get(roomId);
             if (room && room.participants.has(socket.id)) {
                 const participant = room.participants.get(socket.id);
-                participant.agoraUid = agoraUid;
+                if (participant.agoraUid && Number(participant.agoraUid) !== Number(agoraUid)) {
+                    console.warn(`[Agora] Rejected mismatched UID map from ${socket.id}`);
+                    return;
+                }
+                participant.agoraUid = Number(agoraUid);
                 socket.to(roomId).emit('agora-uid-mapped', {
                     socketId: socket.id,
                     agoraUid: agoraUid
@@ -700,6 +803,10 @@ function setupSignaling(io) {
 
 
         socket.on('leave-room', ({ roomId }) => {
+            if (socket.wildcardTimer) {
+                clearTimeout(socket.wildcardTimer);
+                socket.wildcardTimer = null;
+            }
             if (!roomId || !rooms.has(roomId)) return;
             const room = rooms.get(roomId);
             if (!room.participants.has(socket.id)) return;
@@ -1125,6 +1232,7 @@ function setupSignaling(io) {
         });
 
         socket.on('disconnect', () => {
+            if (socket.wildcardTimer) clearTimeout(socket.wildcardTimer);
             if (socket.registeredUserId && connectedUsers.has(socket.registeredUserId)) {
                 const userSockets = connectedUsers.get(socket.registeredUserId);
                 userSockets.delete(socket.id);

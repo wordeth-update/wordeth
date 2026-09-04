@@ -9,6 +9,7 @@ const ScheduledRoom = require('../models/ScheduledRoom');
 const RoomInterest = require('../models/RoomInterest');
 const RoomPool = require('../models/RoomPool');
 const nudges = require('../services/nudgeScheduler');
+const { resolveCustomerAudience, USER_PLUS } = require('../services/userAccess');
 
 function isValidObjectId(id) {
     return mongoose.Types.ObjectId.isValid(id);
@@ -66,6 +67,13 @@ router.post('/', auth, async (req, res) => {
             return res.status(400).json({ message: 'Start time must be in the future' });
         }
         const mode = approvalMode === 'pre-schedule' ? 'pre-schedule' : 'real-time';
+        const normalizedTokenPrice = Math.max(0, parseInt(tokenPrice, 10) || 0);
+        if (normalizedTokenPrice > 0 && await resolveCustomerAudience(req.user) !== USER_PLUS) {
+            return res.status(403).json({
+                message: 'Creating paid rooms requires User+.',
+                code: 'USER_PLUS_REQUIRED'
+            });
+        }
 
         // --- Collaborators & splits ---
         const collabInput = Array.isArray(collaborators) ? collaborators : [];
@@ -135,7 +143,7 @@ router.post('/', auth, async (req, res) => {
             hostSplitPercent: collabDocs.length ? hostSplit : 100,
             collaborators: collabDocs,
             approvalMode: mode,
-            tokenPrice: Math.max(0, parseInt(tokenPrice, 10) || 0),
+            tokenPrice: normalizedTokenPrice,
             startTime: start,
             status: initialStatus
         });

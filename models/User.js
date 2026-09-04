@@ -36,6 +36,32 @@ const userSchema = new mongoose.Schema({
         ref: 'Subscription',
         default: null
     },
+    customerAudience: {
+        type: String,
+        enum: ['USER', 'USER_PLUS'],
+        default: 'USER',
+        index: true
+    },
+    customerAccess: {
+        activeUserSeconds: { type: Number, default: 0, min: 0 },
+        lastHeartbeatAt: { type: Date, default: null },
+        wildcardStatus: {
+            type: String,
+            enum: ['locked', 'available', 'active', 'used'],
+            default: 'locked'
+        },
+        wildcardGrantedAt: { type: Date, default: null },
+        wildcardRoomId: { type: String, default: '' },
+        wildcardStartedAt: { type: Date, default: null },
+        wildcardExpiresAt: { type: Date, default: null },
+        wildcardUsedAt: { type: Date, default: null },
+        wildcardEmailStatus: {
+            type: String,
+            enum: ['none', 'pending', 'sent', 'failed'],
+            default: 'none'
+        },
+        wildcardEmailEventId: { type: String, default: '' }
+    },
     creatorProfile: {
         displayName: { type: String, default: '' },
         handle: { type: String, default: '', lowercase: true, trim: true },
@@ -232,6 +258,7 @@ userSchema.methods.getPublicProfile = function() {
         bio: this.bio || '',
         avatar: this.avatar || '',
         accountType: this.accountType || 'fan',
+        customerAudience: this.customerAudience || 'USER',
         role: this.role,
         createdAt: this.createdAt,
         showRoomHistory: this.showRoomHistory || false,

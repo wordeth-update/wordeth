@@ -2,3 +2,4 @@
 - [Idempotent settlement pattern](settlement-pattern.md) — crash-safe token payouts without multi-doc transactions: unique ledger rows + payoutId marker in one atomic update + recovery sweep.
 - [Pre-existing test failures](wordeth-server-quirks.md) — health/auth/articles/ads Jest suites fail on HEAD (supertest misuse of server.js export); not caused by new work.
 - [Apliiq callback contracts](apliiq-callback-contracts.md) — auth differs by callback; preserve raw fulfillment bytes, stage unauthenticated product imports, and reconcile duplicates safely.
+- [Agora stage authorization](agora-stage-authorization.md) — server-issued listener/speaker tokens require Agora Co-host Authentication to enforce publish privileges.

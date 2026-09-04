@@ -15,7 +15,7 @@
     let currentUserPlan = null;
 
     const categoryDescriptions = {
-        fan: 'Enjoy music, discover lyrics, and connect with your favorite artists.',
+        fan: 'Choose User to browse every room, or User+ to enter and create paid rooms. Listed room token prices still apply.',
         designer: 'Design and sell custom music merch. Start free and grow your brand.',
         artist: 'Tools for independent artists to build, promote, and earn.',
         label: 'Enterprise tools for labels managing rosters, analytics, and revenue.'
@@ -89,7 +89,10 @@
     }
 
     function renderPlans() {
-        const filtered = allPlans.filter(p => p.category === currentCategory);
+        const filtered = allPlans.filter(p =>
+            p.category === currentCategory &&
+            !(currentCategory === 'fan' && p.slug === 'fan-creator')
+        );
 
         if (filtered.length === 0) {
             plansContainer.innerHTML = '<p style="color:rgba(255,255,255,0.4);text-align:center;padding:2rem;">No plans available for this category.</p>';
@@ -109,6 +112,7 @@
     }
 
     function createPlanCard(plan) {
+        const copy = customerPlanCopy(plan);
         const isFeatured = featuredSlugs.includes(plan.slug);
         const isCurrent = currentUserPlan === plan.slug;
         const yearlyPrice = plan.priceYearly || Math.round(plan.priceMonthly * 9.6);
@@ -132,7 +136,7 @@
             }
         }
 
-        const features = (plan.features || []).map(f =>
+        const features = copy.features.map(f =>
             `<li><i class="fas fa-check"></i> ${escapeHtml(f)}</li>`
         ).join('');
 
@@ -149,8 +153,8 @@
 
         card.innerHTML = `
             <div class="card-header">
-                <div class="card-plan-name">${escapeHtml(plan.name)}</div>
-                <div class="card-plan-desc">${escapeHtml(plan.description || '')}</div>
+                <div class="card-plan-name">${escapeHtml(displayPlanName(plan))}</div>
+                <div class="card-plan-desc">${escapeHtml(copy.description)}</div>
             </div>
             <div class="card-price">${priceHTML}</div>
             <ul class="card-features">${features}</ul>
@@ -163,6 +167,41 @@
         }
 
         return card;
+    }
+
+    function displayPlanName(plan) {
+        if (plan.slug === 'fan-free') return 'User';
+        if (plan.slug === 'fan-plus') return 'User+';
+        return plan.name;
+    }
+
+    function customerPlanCopy(plan) {
+        if (plan.slug === 'fan-free') {
+            return {
+                description: 'Browse every room and join or create free rooms.',
+                features: [
+                    'Browse every room',
+                    'Join and create free rooms',
+                    'One 3-minute Wildcard after 8 active hours',
+                    'Search lyrics and shop merch'
+                ]
+            };
+        }
+        if (plan.slug === 'fan-plus') {
+            return {
+                description: 'Enter and create paid rooms with User+.',
+                features: [
+                    'Enter paid rooms (listed token price applies)',
+                    'Create paid rooms',
+                    'Reduced ads',
+                    'Save designs and view design history'
+                ]
+            };
+        }
+        return {
+            description: plan.description || '',
+            features: plan.features || []
+        };
     }
 
     async function handleSubscribe(planSlug, cycle) {
@@ -179,7 +218,7 @@
         }
 
         try {
-            const res = await fetch(apiUrl('/api/subscriptions/subscribe'), {
+            const res = await fetch(apiUrl('/api/stripe/create-checkout-session'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -194,13 +233,8 @@
                 throw new Error(data.message || 'Subscription failed');
             }
 
-            currentUserPlan = planSlug;
-            renderPlans();
-            showToast('Subscription activated! Welcome to your new plan.', 'success');
-
-            setTimeout(() => {
-                window.location.href = '/subscription.html';
-            }, 1500);
+            if (!data.url) throw new Error('Secure checkout is unavailable');
+            window.location.href = data.url;
         } catch (err) {
             showToast(err.message || 'Something went wrong. Please try again.', 'error');
             if (btn) {

@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
         verifyToken(token).then(valid => {
             if (valid) {
                 showLoggedInState();
+                startAccessHeartbeat(token);
             } else {
                 clearAuth();
             }
@@ -19,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try { user = JSON.parse(localStorage.getItem('user')); } catch (e) { user = {}; }
 
         if (desktopBtn) {
-            desktopBtn.textContent = 'Profile';
+            desktopBtn.textContent = `${user.customerAudience === 'USER_PLUS' ? 'User+' : 'User'} Profile`;
             desktopBtn.href = '/profile.html';
 
             if (!desktopBtn.parentNode.querySelector('.nav-signout-btn')) {
@@ -46,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (mobileBtn) {
             mobileBtn.innerHTML = '<i class="fas fa-user"></i>';
             mobileBtn.href = '/profile.html';
-            mobileBtn.title = 'Profile';
+            mobileBtn.title = `${user.customerAudience === 'USER_PLUS' ? 'User+' : 'User'} Profile`;
         }
 
         const mobileAuthSection = document.querySelector('.mobile-menu-auth');
@@ -104,8 +105,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         _id: data.user._id || existing._id,
                         name: data.user.name,
                         email: data.user.email,
-                        avatar: data.user.avatar
+                        avatar: data.user.avatar,
+                        customerAudience: data.user.customerAudience || 'USER',
+                        access: data.user.access || existing.access
                     }));
+                    window.wordethAccess = data.user.access || null;
+                    window.dispatchEvent(new CustomEvent('wordeth-access-updated', { detail: window.wordethAccess }));
                 }
                 return true;
             }
@@ -113,6 +118,41 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (e) {
             return false;
         }
+    }
+
+    function startAccessHeartbeat(t) {
+        let inFlight = false;
+        const send = async () => {
+            if (inFlight || document.visibilityState !== 'visible') return;
+            inFlight = true;
+            try {
+                const res = await fetch(apiUrl('/api/access/heartbeat'), {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${t}` }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (!data.access) return;
+                window.wordethAccess = data.access;
+                const existing = JSON.parse(localStorage.getItem('user') || '{}');
+                localStorage.setItem('user', JSON.stringify({
+                    ...existing,
+                    customerAudience: data.access.customerAudience,
+                    access: data.access
+                }));
+                window.dispatchEvent(new CustomEvent('wordeth-access-updated', { detail: data.access }));
+            } catch (error) {
+                console.warn('[Access] Heartbeat unavailable:', error.message);
+            } finally {
+                inFlight = false;
+            }
+        };
+        send();
+        const interval = setInterval(send, 60000);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') send();
+        });
+        window.addEventListener('beforeunload', () => clearInterval(interval), { once: true });
     }
 
     function clearAuth() {

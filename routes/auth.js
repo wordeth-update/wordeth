@@ -3,6 +3,17 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
+const { getUserAccess } = require('../services/userAccess');
+
+async function publicUserWithAccess(user) {
+    const profile = user.getPublicProfile();
+    try {
+        const access = await getUserAccess(user);
+        return { ...profile, customerAudience: access.customerAudience, access };
+    } catch (error) {
+        return profile;
+    }
+}
 
 // Traditional sign up
 router.post('/signup', [
@@ -44,7 +55,7 @@ router.post('/signup', [
             expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
         });
         
-        res.status(201).json({ token, user: user.getPublicProfile() });
+        res.status(201).json({ token, user: await publicUserWithAccess(user) });
     } catch (error) {
         console.error('Signup error:', error);
         res.status(500).json({ message: 'Server error' });
@@ -72,7 +83,7 @@ router.post('/signin', [
         const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { 
             expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
         });
-        res.json({ token, user: user.getPublicProfile() });
+        res.json({ token, user: await publicUserWithAccess(user) });
     } catch (error) {
         console.error('Signin error:', error);
         res.status(500).json({ message: 'Server error' });
@@ -94,7 +105,7 @@ router.get('/verify', async (req, res) => {
             return res.status(401).json({ message: 'Invalid token' });
         }
 
-        res.json({ user: user.getPublicProfile() });
+        res.json({ user: await publicUserWithAccess(user) });
     } catch (error) {
         res.status(401).json({ message: 'Invalid token' });
     }

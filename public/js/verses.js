@@ -1077,11 +1077,11 @@ class AudioRoomsManager {
 
     _emitRegisterUser() {
         try {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (user && user._id) {
+            const token = localStorage.getItem('authToken');
+            if (token) {
                 const sock = this.lobbySocket || this.socket;
                 if (sock && sock.connected) {
-                    sock.emit('register-user', { userId: user._id, userName: user.name || 'User' });
+                    sock.emit('register-user', { authToken: token });
                 }
             }
         } catch(e) {}
@@ -2055,7 +2055,7 @@ class AudioRoomsManager {
     }
 
     // Modal Management
-    showCreateRoomModal() {
+    async showCreateRoomModal() {
         const token = localStorage.getItem('authToken');
         console.log('[CreateRoom] token:', !!token, 'modal element:', !!this.createRoomModal);
         if (!token) {
@@ -2069,13 +2069,12 @@ class AudioRoomsManager {
             console.log('[CreateRoom] re-queried modal:', !!this.createRoomModal);
         }
         if (this.createRoomModal) {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            const acctType = (user.accountType || 'fan').toLowerCase();
-            const isCreator = ['artist', 'designer', 'creator', 'label'].includes(acctType);
+            const access = await this._fetchAccessStatus();
+            const canCreatePaidRooms = access?.canCreatePaidRooms === true;
             const tokenGroup = document.getElementById('token-price-group');
             if (tokenGroup) {
-                tokenGroup.style.display = isCreator ? '' : 'none';
-                if (!isCreator) {
+                tokenGroup.style.display = canCreatePaidRooms ? '' : 'none';
+                if (!canCreatePaidRooms) {
                     const priceInput = document.getElementById('room-token-price');
                     if (priceInput) priceInput.value = '0';
                 }
@@ -3559,6 +3558,7 @@ class AudioRoomsManager {
     }
 
     _resetJoinState() {
+        this._stopWildcardCountdown();
         this.currentRoom = null;
         this.roomJoinTime = null;
         this._joinConfirmed = false;
@@ -3580,6 +3580,32 @@ class AudioRoomsManager {
         }
     }
 
+    _startWildcardCountdown(expiresAt) {
+        this._stopWildcardCountdown();
+        const audioRoom = document.getElementById('audio-room');
+        if (!audioRoom || !expiresAt) return;
+        const badge = document.createElement('div');
+        badge.id = 'wildcard-peek-countdown';
+        badge.style.cssText = 'position:sticky;top:0;z-index:40;margin:0 auto 0.75rem;width:max-content;padding:0.5rem 0.8rem;border:1px solid rgba(239,68,68,.55);border-radius:999px;background:rgba(30,10,20,.94);color:#fecdd3;font-weight:700;font-size:.82rem;';
+        audioRoom.prepend(badge);
+        const render = () => {
+            const seconds = Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 1000));
+            const minutes = Math.floor(seconds / 60);
+            badge.textContent = `Wildcard peek · ${minutes}:${String(seconds % 60).padStart(2, '0')}`;
+            if (seconds <= 0) this._stopWildcardCountdown();
+        };
+        render();
+        this._wildcardCountdownInterval = setInterval(render, 1000);
+    }
+
+    _stopWildcardCountdown() {
+        if (this._wildcardCountdownInterval) {
+            clearInterval(this._wildcardCountdownInterval);
+            this._wildcardCountdownInterval = null;
+        }
+        document.getElementById('wildcard-peek-countdown')?.remove();
+    }
+
     async _ensureSocket() {
         await this.connectSocket();
         if (!this.socket?.connected) {
@@ -3591,7 +3617,10 @@ class AudioRoomsManager {
     async _socketJoinRoom(payload) {
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => reject(new Error('Room join was not confirmed by the server.')), 10000);
-            this.socket.emit('join-room', payload, (ack) => {
+            this.socket.emit('join-room', {
+                ...payload,
+                authToken: localStorage.getItem('authToken') || null
+            }, (ack) => {
                 clearTimeout(timeout);
                 if (ack && ack.success === false) {
                     reject(new Error(ack.message || 'Server rejected the room join.'));
@@ -3703,7 +3732,11 @@ class AudioRoomsManager {
             setStatus('Creating\u2026');
             const resp = await this._fetchWithTimeout(apiUrl('/api/rooms/create-and-join'), {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache, no-store',
+                    ...this._authHeaders()
+                },
                 body: JSON.stringify({ name: roomName, userId: ctx.userId, userName: ctx.userName, avatar: ctx.avatar, tokenPrice }),
                 cache: 'no-store'
             }, 15000);
@@ -3828,7 +3861,7 @@ class AudioRoomsManager {
         if (audioRoomEl) audioRoomEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    async joinRoom(roomId, isHost = false, isInvite = false) {
+    async joinRoom(roomId, isHost = false, isInvite = false, joinOptions = {}) {
         this._primeSfx();
         if (!roomId) return;
         this._playKeyUnlock();
@@ -3842,10 +3875,23 @@ class AudioRoomsManager {
 
         try {
             this._updateJoiningStatus('Joining room\u2026');
-            const joinPayload = { roomId, userId: ctx.userId, userName: ctx.userName, isHost: ctx.isGuest ? false : isHost, roomName: this._inviteMeta?.name || null, avatar: ctx.avatar };
+            const joinPayload = {
+                roomId,
+                userId: ctx.userId,
+                userName: ctx.userName,
+                isHost: ctx.isGuest ? false : isHost,
+                roomName: this._inviteMeta?.name || null,
+                avatar: ctx.avatar,
+                useWildcard: Boolean(joinOptions.useWildcard)
+            };
             const httpResp = await this._fetchWithTimeout(apiUrl(`/api/rooms/join?_t=${Date.now()}`), {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache, no-store',
+                    'Pragma': 'no-cache',
+                    ...this._authHeaders()
+                },
                 body: JSON.stringify(joinPayload),
                 cache: 'no-store'
             }, 15000);
@@ -3864,6 +3910,7 @@ class AudioRoomsManager {
             joinPayload.userId = ctx.isGuest ? `guest_${sock.id}` : (ctx.user._id || ctx.user.id || sock.id);
             const ack = await this._socketJoinRoom(joinPayload);
             this._joinConfirmed = true;
+            if (ack.wildcardExpiresAt) this._startWildcardCountdown(ack.wildcardExpiresAt);
             console.log('[Join] 3/5 Socket join confirmed');
 
             const effectiveHost = httpData.isHost || isHost;
@@ -3949,6 +3996,23 @@ class AudioRoomsManager {
         return 0;
     }
 
+    async _fetchAccessStatus() {
+        if (window.wordethAccess) return window.wordethAccess;
+        const token = localStorage.getItem('authToken');
+        if (!token) return null;
+        try {
+            const response = await fetch(apiUrl('/api/access/me'), {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) return null;
+            const data = await response.json();
+            window.wordethAccess = data.access || null;
+            return window.wordethAccess;
+        } catch (error) {
+            return null;
+        }
+    }
+
     async _showTokenGate(roomId, tokenPrice) {
         const modal = document.getElementById('token-gate-modal');
         if (!modal) { this.joinRoom(roomId); return; }
@@ -3959,6 +4023,9 @@ class AudioRoomsManager {
         const noSubDiv = document.getElementById('token-gate-no-sub');
 
         document.getElementById('token-gate-price').textContent = tokenPrice;
+        const gateMessage = document.getElementById('token-gate-message');
+        const confirmBtn = document.getElementById('token-gate-confirm');
+        let useWildcard = false;
 
         if (!authToken) {
             actionsDiv.classList.add('hidden');
@@ -3966,23 +4033,38 @@ class AudioRoomsManager {
             noSubDiv.classList.remove('hidden');
             document.getElementById('token-gate-user-balance').textContent = '0';
         } else {
-            const balance = await this._fetchTokenBalance();
-            const sufficient = balance >= tokenPrice;
-            document.getElementById('token-gate-user-balance').textContent = balance;
-            noSubDiv.classList.add('hidden');
-
-            if (sufficient) {
+            const access = await this._fetchAccessStatus();
+            if (access?.customerAudience !== 'USER_PLUS') {
+                const wildcardAvailable = access?.wildcard?.status === 'available';
+                actionsDiv.classList.toggle('hidden', !wildcardAvailable);
+                insufficientDiv.classList.add('hidden');
+                noSubDiv.classList.toggle('hidden', wildcardAvailable);
+                document.getElementById('token-gate-user-balance').textContent = '—';
+                if (wildcardAvailable) {
+                    useWildcard = true;
+                    if (gateMessage) gateMessage.textContent = 'Use your one-time Wildcard to peek into this paid room for 3 minutes—on Wordeth.';
+                    if (confirmBtn) confirmBtn.innerHTML = '<i class="fas fa-eye"></i> Use 3-Minute Wildcard';
+                }
+            } else {
+                const balance = await this._fetchTokenBalance();
+                const sufficient = balance >= tokenPrice;
+                document.getElementById('token-gate-user-balance').textContent = balance;
+                noSubDiv.classList.add('hidden');
+                if (gateMessage) gateMessage.innerHTML = `This paid room costs <strong id="token-gate-price">${tokenPrice}</strong> tokens to enter as User+.`;
+                if (confirmBtn) confirmBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Pay & Join Room';
+                if (sufficient) {
                 actionsDiv.classList.remove('hidden');
                 insufficientDiv.classList.add('hidden');
-            } else if (balance === 0) {
+                } else if (balance === 0) {
                 actionsDiv.classList.add('hidden');
                 insufficientDiv.classList.add('hidden');
                 noSubDiv.classList.remove('hidden');
-            } else {
+                } else {
                 actionsDiv.classList.add('hidden');
                 insufficientDiv.classList.remove('hidden');
                 document.getElementById('token-gate-needed').textContent = tokenPrice;
                 document.getElementById('token-gate-have').textContent = balance;
+                }
             }
         }
 
@@ -3996,10 +4078,9 @@ class AudioRoomsManager {
             cancelBtn3?.removeEventListener('click', onCancel);
         };
 
-        const onConfirm = () => { cleanup(); this.joinRoom(roomId); };
+        const onConfirm = () => { cleanup(); this.joinRoom(roomId, false, false, { useWildcard }); };
         const onCancel = () => { cleanup(); };
 
-        const confirmBtn = document.getElementById('token-gate-confirm');
         const cancelBtn = document.getElementById('token-gate-cancel');
         const cancelBtn2 = document.getElementById('token-gate-cancel-2');
         const cancelBtn3 = document.getElementById('token-gate-cancel-3');
@@ -4039,6 +4120,18 @@ class AudioRoomsManager {
         }
         this.agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
         AgoraRTC.setLogLevel(2);
+        this.agoraClient.on('token-privilege-will-expire', async () => {
+            if (!this.currentRoom || !this.agoraClient) return;
+            try {
+                await this._renewAgoraAccess();
+                console.log('[Agora] access token renewed');
+            } catch (error) {
+                console.warn('[Agora] access renewal denied:', error.message);
+                this.showToast?.(error.message || 'Room audio access ended.', 'fa-lock');
+                await this._agoraLeaveGuarded().catch(() => {});
+                this._restoreLobbyUI();
+            }
+        });
 
         this._showAutoplayBanner = () => {
             if (document.getElementById('agora-autoplay-banner')) return;
@@ -4176,6 +4269,32 @@ class AudioRoomsManager {
         });
     }
 
+    async _requestAgoraToken(roomId) {
+        const authToken = localStorage.getItem('authToken');
+        const response = await this._fetchWithTimeout(apiUrl('/api/agora/token'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+            },
+            body: JSON.stringify({ channelName: roomId })
+        }, 10000);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || `Token request failed (${response.status})`);
+        if (!data.token || !data.appId) throw new Error('Token response incomplete');
+        return data;
+    }
+
+    async _renewAgoraAccess() {
+        if (!this.currentRoom || !this.agoraClient) throw new Error('No active room audio session');
+        const renewed = await this._requestAgoraToken(this.currentRoom);
+        if (Number(renewed.uid) !== Number(this.agoraUid)) {
+            throw new Error('Audio identity changed; please rejoin the room');
+        }
+        await this.agoraClient.renewToken(renewed.token);
+        return renewed;
+    }
+
     async _agoraWithLock(fn) {
         const lockTimeout = 10000;
         if (this._agoraJoinLock) {
@@ -4221,15 +4340,7 @@ class AudioRoomsManager {
 
             console.log('[Agora] joining channel (rtc mode)');
 
-            const authToken = localStorage.getItem('authToken');
-            const resp = await this._fetchWithTimeout(apiUrl('/api/agora/token'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}) },
-                body: JSON.stringify({ channelName: roomId, uid: 0, role: 'publisher' })
-            }, 10000);
-            if (!resp.ok) throw new Error(`Token request failed (${resp.status})`);
-            const data = await resp.json();
-            if (!data.token || !data.appId) throw new Error('Token response incomplete');
+            const data = await this._requestAgoraToken(roomId);
 
             this.agoraAppId = data.appId;
             this._resumeAllAudioContexts();
@@ -4509,6 +4620,14 @@ class AudioRoomsManager {
             }
         });
 
+        sock.on('peek-expired', async (data) => {
+            this._stopWildcardCountdown();
+            try { await this._agoraLeaveGuarded(); } catch (error) {}
+            this.showToast?.(data.message || 'Your Wildcard peek has ended.', 'fa-hourglass-end');
+            this._restoreLobbyUI();
+            window.wordethAccess = null;
+        });
+
         sock.on('room-joined', async (data) => {
             console.log('[room-joined] event received');
 
@@ -4718,7 +4837,9 @@ class AudioRoomsManager {
                 this.isAudioMuted = true;
 
                 if (this.agoraClient) {
-                    this.unpublishAgoraAudio().catch(e => console.warn('Agora unpublish error:', e));
+                    this.unpublishAgoraAudio()
+                        .then(() => this._renewAgoraAccess())
+                        .catch(e => console.warn('Agora crowd authorization refresh error:', e));
                 }
 
                 const selfEl = document.querySelector('[data-participant-id="self"]');
@@ -4758,7 +4879,8 @@ class AudioRoomsManager {
 
             if (this.agoraClient && this.agoraClient.connectionState === 'CONNECTED') {
                 try {
-                    console.log('[Promotion] publishing audio (already host role)');
+                    await this._renewAgoraAccess();
+                    console.log('[Promotion] publishing audio with refreshed stage authorization');
                     await this.publishAgoraAudio();
                     console.log('[Promotion] audio published');
                 } catch (e) {

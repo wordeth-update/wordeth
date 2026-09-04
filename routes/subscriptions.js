@@ -134,97 +134,10 @@ router.get('/my-entitlements', auth, async (req, res) => {
 });
 
 router.post('/subscribe', auth, async (req, res) => {
-    try {
-        const { planSlug, billingCycle } = req.body;
-
-        const plan = await Plan.findOne({ slug: planSlug, active: true });
-        if (!plan) return res.status(404).json({ message: 'Plan not found' });
-
-        if (plan.priceMonthly === 0 && plan.priceYearly === 0) {
-            return res.status(400).json({ message: 'Cannot subscribe to a free plan via checkout' });
-        }
-
-        const cycle = billingCycle === 'yearly' ? 'yearly' : 'monthly';
-        const amount = cycle === 'yearly' ? plan.priceYearly : plan.priceMonthly;
-
-        const now = new Date();
-        const periodEnd = new Date(now);
-        if (cycle === 'yearly') {
-            periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-        } else {
-            periodEnd.setMonth(periodEnd.getMonth() + 1);
-        }
-
-        if (req.user.subscriptionId) {
-            const existingSub = await Subscription.findById(req.user.subscriptionId);
-            if (existingSub && existingSub.isActive()) {
-                const oldPlan = await Plan.findById(existingSub.planId);
-                existingSub.planId = plan._id;
-                existingSub.billingCycle = cycle;
-                existingSub.currentPeriodStart = now;
-                existingSub.currentPeriodEnd = periodEnd;
-                existingSub.nextBillingAmount = amount;
-                existingSub.status = 'active';
-                existingSub.cancelAtPeriodEnd = false;
-                existingSub.canceledAt = null;
-                await existingSub.save();
-
-                const isUpgrade = plan.tier > (oldPlan?.tier || 0);
-                await EventsLedger.create({
-                    actorId: req.user._id,
-                    actorType: 'user',
-                    eventType: isUpgrade ? 'subscription_upgraded' : 'subscription_downgraded',
-                    resourceType: 'subscription',
-                    resourceId: existingSub._id,
-                    amount,
-                    metadata: { planSlug, billingCycle: cycle, previousPlan: oldPlan?.slug }
-                });
-
-                req.user.accountType = plan.category;
-                const roleMap = { fan: 'USER_FAN', designer: 'DESIGNER', artist: 'ARTIST', creator: 'CREATOR', label: 'LABEL_ADMIN' };
-                req.user.role = roleMap[plan.category] || 'USER_FAN';
-                await req.user.save();
-
-                const upgradeGrant = await grantTokensForPlan(req.user, planSlug);
-
-                return res.json({ message: 'Subscription updated', subscription: existingSub, tokenGrant: upgradeGrant });
-            }
-        }
-
-        const subscription = new Subscription({
-            userId: req.user._id,
-            planId: plan._id,
-            status: 'active',
-            billingCycle: cycle,
-            currentPeriodStart: now,
-            currentPeriodEnd: periodEnd,
-            nextBillingAmount: amount
-        });
-        await subscription.save();
-
-        req.user.subscriptionId = subscription._id;
-        req.user.accountType = plan.category;
-        const roleMap = { fan: 'USER_FAN', designer: 'DESIGNER', artist: 'ARTIST', creator: 'CREATOR', label: 'LABEL_ADMIN' };
-        req.user.role = roleMap[plan.category] || 'USER_FAN';
-        await req.user.save();
-
-        await EventsLedger.create({
-            actorId: req.user._id,
-            actorType: 'user',
-            eventType: 'subscription_created',
-            resourceType: 'subscription',
-            resourceId: subscription._id,
-            amount,
-            metadata: { planSlug, billingCycle: cycle }
-        });
-
-        const tokenGrant = await grantTokensForPlan(req.user, planSlug);
-
-        res.status(201).json({ message: 'Subscription created', subscription, tokenGrant });
-    } catch (error) {
-        console.error('Subscribe error:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
+    res.status(410).json({
+        message: 'Subscriptions must be activated through secure checkout.',
+        checkoutEndpoint: '/api/stripe/create-checkout-session'
+    });
 });
 
 router.post('/cancel', auth, async (req, res) => {

@@ -72,6 +72,10 @@ const wagersRoutes = require('./routes/wagers'); // Token wagering
 const audiobankRoutes = require('./routes/audiobank'); // Audio Bank API & admin
 const scheduledRoomsRoutes = require('./routes/scheduledRooms'); // Scheduled rooms & collabs
 const roomTipsRoutes = require('./routes/roomTips'); // Room tip pool
+const accessRoutes = require('./routes/access');
+const auth = require('./middleware/auth');
+const optionalAuth = require('./middleware/optionalAuth');
+const { resolveCustomerAudience, USER_PLUS } = require('./services/userAccess');
 const settlementService = require('./services/settlement'); // Crash-safe payouts
 const { startFulfillmentRecoverySweep } = require('./services/apliiqFulfillment');
 const nudgeScheduler = require('./services/nudgeScheduler'); // Scheduled-room nudges
@@ -79,6 +83,9 @@ const { createWebhookHandler } = require('./routes/stripe');
 const trackingMiddleware = require('./middleware/tracking'); // Event tracking
 
 const app = express();
+if (process.env.NODE_ENV === 'production' && !process.env.STRIPE_WEBHOOK_SECRET) {
+    throw new Error('STRIPE_WEBHOOK_SECRET is required in production');
+}
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: { origin: true, credentials: true },
@@ -590,6 +597,7 @@ app.use('/api/wagers', wagersRoutes); // Token wagering
 app.use('/api/audiobank', audiobankRoutes); // Audio Bank API & admin
 app.use('/api/scheduled-rooms', scheduledRoomsRoutes); // Scheduled rooms & collabs
 app.use('/api/rooms', roomTipsRoutes); // Room tips (mounted before custom room APIs)
+app.use('/api/access', accessRoutes);
 app.use('/api/files', require('./routes/files')); // Files stored in MongoDB (GridFS)
 function generateRoomId() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -601,7 +609,7 @@ function generateRoomId() {
     return id.slice(0, 8) + '_' + id.slice(8);
 }
 
-app.post('/api/rooms/create', async (req, res) => {
+app.post('/api/rooms/create', auth, async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     await waitForRoomsReady();
     const roomId = generateRoomId();
@@ -610,11 +618,14 @@ app.post('/api/rooms/create', async (req, res) => {
     const now = Date.now();
     const roomsMap = getRoomsMap();
     const tokenPrice = parseInt(req.body?.tokenPrice, 10) || 0;
+    if (tokenPrice > 0 && await resolveCustomerAudience(req.user) !== USER_PLUS) {
+        return res.status(403).json({ success: false, message: 'Creating paid rooms requires User+.', code: 'USER_PLUS_REQUIRED' });
+    }
     const room = {
         id: roomId,
         name: req.body?.name || null,
         hostId: null,
-        creatorUserId: null,
+        creatorUserId: String(req.user._id),
         participants: new Map(),
         karaokeEnabled: false,
         videoMode: 'off',
@@ -633,7 +644,7 @@ app.post('/api/rooms/create', async (req, res) => {
     res.json({ id: roomId });
 });
 
-app.post('/api/rooms/create-and-join', async (req, res) => {
+app.post('/api/rooms/create-and-join', auth, async (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     res.setHeader('CDN-Cache-Control', 'no-store');
     res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
@@ -645,8 +656,14 @@ app.post('/api/rooms/create-and-join', async (req, res) => {
     const { saveRoom } = require('./services/redisClient');
     const now = Date.now();
     const roomsMap = getRoomsMap();
-    const { name, userId, userName, avatar, tokenPrice: reqTokenPrice } = req.body;
+    const { name, tokenPrice: reqTokenPrice } = req.body;
+    const userId = String(req.user._id);
+    const userName = req.user.name;
+    const avatar = req.user.avatar;
     const tokenPrice = parseInt(reqTokenPrice, 10) || 0;
+    if (tokenPrice > 0 && await resolveCustomerAudience(req.user) !== USER_PLUS) {
+        return res.status(403).json({ success: false, message: 'Creating paid rooms requires User+.', code: 'USER_PLUS_REQUIRED' });
+    }
     const room = {
         id: roomId,
         name: name || null,
@@ -677,13 +694,16 @@ app.post('/api/rooms/create-and-join', async (req, res) => {
     }
 });
 
-app.post('/api/rooms/join', async (req, res) => {
+app.post('/api/rooms/join', optionalAuth, async (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     res.setHeader('CDN-Cache-Control', 'no-store');
     res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    const { roomId, userId, userName, isHost, roomName, avatar } = req.body;
+    const { roomId, isHost, roomName } = req.body;
+    const userId = req.user ? String(req.user._id) : null;
+    const userName = req.user?.name || 'Guest';
+    const avatar = req.user?.avatar || null;
     console.log(`[Rooms API] HTTP join request: roomId=${roomId}, userName=${userName}, isHost=${isHost}`);
     try {
         const result = await joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar });

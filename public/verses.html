@@ -585,7 +585,7 @@
                     <i class="fas fa-ticket-alt"></i>
                 </div>
                 <div class="token-gate-info">
-                    <p class="token-gate-cost">This room costs <strong id="token-gate-price">0</strong> tokens to enter.</p>
+                    <p class="token-gate-cost" id="token-gate-message">This room costs <strong id="token-gate-price">0</strong> tokens to enter.</p>
                     <p class="token-gate-balance">Your balance: <strong id="token-gate-user-balance">0</strong> tokens</p>
                 </div>
                 <div class="token-gate-actions" id="token-gate-actions">
@@ -600,7 +600,7 @@
                     </div>
                 </div>
                 <div class="token-gate-no-sub hidden" id="token-gate-no-sub">
-                    <p class="token-gate-warning"><i class="fas fa-lock"></i> This room requires tokens to enter. Subscribe to a plan to receive monthly tokens and unlock gated rooms.</p>
+                    <p class="token-gate-warning"><i class="fas fa-lock"></i> Paid rooms are for User+ members. Users can browse every room and earn one 3-minute Wildcard peek after 8 active hours.</p>
                     <div class="token-gate-actions">
                         <button class="cancel-btn" id="token-gate-cancel-3">Cancel</button>
                         <a href="pricing.html" class="create-btn"><i class="fas fa-crown"></i> View Plans</a>
@@ -770,8 +770,9 @@
 
                 <div class="room-modal-pane" data-pane="access">
                     <div class="form-group" id="token-price-group" style="display:none;">
-                        <label for="room-token-price">Token Price (0 = Free)</label>
+                         <label for="room-token-price">User+ Paid Room Price (0 = Free)</label>
                         <input type="number" id="room-token-price" name="room-token-price" placeholder="0" min="0" value="0">
+                         <small>User+ is required to create a paid room. Members still pay the listed token price when entering.</small>
                     </div>
                     <div class="form-group">
                         <label>
@@ -1086,7 +1087,7 @@
     <script src="js/native-screen-capture.js"></script>
     <script src="js/ar-filters.js?v=1770700000"></script>
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.22.0.js"></script>
-    <script data-cfasync="false" src="js/verses.js?v=1788113000"></script>
+    <script data-cfasync="false" src="js/verses.js?v=20260904"></script>
     <script>
         (function () {
             const tabs = document.querySelectorAll('#roomModalTabs .room-modal-tab');
@@ -1099,7 +1100,7 @@
             });
         })();
     </script>
-    <script data-cfasync="false" src="js/nav-auth.js"></script>
+    <script data-cfasync="false" src="js/nav-auth.js?v=20260904"></script>
     <script src="js/notifications.js?v=1787017601"></script>
     <script src="js/cookie-consent.js"></script>
     <script>

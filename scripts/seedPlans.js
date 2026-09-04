@@ -4,15 +4,15 @@ const Plan = require('../models/Plan');
 
 const plans = [
     {
-        name: 'Free',
+        name: 'User',
         slug: 'fan-free',
         category: 'fan',
         tier: 0,
         active: true,
         priceMonthly: 0,
         priceYearly: 0,
-        description: 'Basic access to Wordeth',
-        features: ['Lyric search (with ads)', 'Limited audio rooms', 'Browse packs', 'Watermarked try-on', 'Buy merch'],
+        description: 'Browse every room, join free rooms, and earn a one-time paid-room peek',
+        features: ['Browse every room', 'Join and create free rooms', 'Earn one 3-minute Wildcard after 8 active hours', 'Lyric search', 'Buy merch'],
         entitlements: [
             { key: 'ADS_LEVEL', value: 'FULL' },
             { key: 'AUDIO_ROOM_LIMIT', value: 2 },
@@ -26,15 +26,15 @@ const plans = [
         sortOrder: 0
     },
     {
-        name: 'Fan+',
+        name: 'User+',
         slug: 'fan-plus',
         category: 'fan',
         tier: 1,
         active: true,
         priceMonthly: 3.99,
         priceYearly: 39,
-        description: 'Enhanced fan experience',
-        features: ['Reduced ads', 'Save designs', 'Basic customization', 'Access free designer templates', 'Design history'],
+        description: 'Enter and create paid rooms, plus an enhanced Wordeth experience',
+        features: ['Enter paid rooms (listed token price applies)', 'Create paid rooms', 'Reduced ads', 'Save designs', 'Basic customization', 'Design history'],
         entitlements: [
             { key: 'ADS_LEVEL', value: 'REDUCED' },
             { key: 'AUDIO_ROOM_LIMIT', value: 5 },

@@ -58,8 +58,8 @@ function renderSubscription(subData, allPlans) {
     const cancelNotice = document.getElementById('cancelNotice');
     const upgradeBtn = document.getElementById('upgradeBtn');
 
-    planName.textContent = plan ? plan.name : 'Free Plan';
-    planCategory.textContent = (accountType || 'fan').charAt(0).toUpperCase() + (accountType || 'fan').slice(1);
+    planName.textContent = displayPlanName(plan);
+    planCategory.textContent = (accountType || 'fan') === 'fan' ? 'Customer Access' : (accountType || '').charAt(0).toUpperCase() + (accountType || '').slice(1);
 
     if (subscription && subscription.isActive) {
         const isFree = subscription.nextBillingAmount === 0;
@@ -211,7 +211,10 @@ function renderAvailablePlans(allPlans, currentPlan, accountType, subscription) 
     const container = document.getElementById('availablePlans');
     container.innerHTML = '';
 
-    const relevantPlans = allPlans.filter(p => p.category === (accountType || 'fan'));
+    const relevantPlans = allPlans.filter(p =>
+        p.category === (accountType || 'fan') &&
+        !((accountType || 'fan') === 'fan' && p.slug === 'fan-creator')
+    );
 
     if (relevantPlans.length === 0) {
         container.innerHTML = '<p style="color:rgba(255,255,255,0.4);font-size:0.85rem;">No plans available. <a href="/pricing.html" style="color:var(--mint);">Browse all plans</a></p>';
@@ -224,7 +227,7 @@ function renderAvailablePlans(allPlans, currentPlan, accountType, subscription) 
         const card = document.createElement('div');
         card.className = 'avail-card' + (isCurrent ? ' active-card' : '');
 
-        const features = (p.features || []).slice(0, 4).map(f =>
+        const features = customerPlanFeatures(p).map(f =>
             `<li><i class="fas fa-check"></i> ${escapeHtml(f)}</li>`
         ).join('');
 
@@ -234,11 +237,11 @@ function renderAvailablePlans(allPlans, currentPlan, accountType, subscription) 
         } else if (isFree) {
             btnHTML = `<div class="avail-btn current-btn" style="color:rgba(255,255,255,0.3);">Free Tier</div>`;
         } else {
-            btnHTML = `<button class="avail-btn switch-btn" data-slug="${p.slug}">Switch to ${escapeHtml(p.name)}</button>`;
+            btnHTML = `<button class="avail-btn switch-btn" data-slug="${p.slug}">Switch to ${escapeHtml(displayPlanName(p))}</button>`;
         }
 
         card.innerHTML = `
-            <div class="avail-name">${escapeHtml(p.name)}</div>
+            <div class="avail-name">${escapeHtml(displayPlanName(p))}</div>
             <div class="avail-price">$${p.priceMonthly}<span>/mo</span></div>
             <ul class="avail-features">${features}</ul>
             ${btnHTML}
@@ -253,6 +256,23 @@ function renderAvailablePlans(allPlans, currentPlan, accountType, subscription) 
     });
 }
 
+function displayPlanName(plan) {
+    if (!plan) return 'User';
+    if (plan.slug === 'fan-free') return 'User';
+    if (plan.slug === 'fan-plus' || (plan.category === 'fan' && plan.priceMonthly > 0)) return 'User+';
+    return plan.name;
+}
+
+function customerPlanFeatures(plan) {
+    if (plan.slug === 'fan-free') {
+        return ['Browse every room', 'Join and create free rooms', 'Earn one 3-minute Wildcard', 'Search lyrics'];
+    }
+    if (plan.slug === 'fan-plus') {
+        return ['Enter paid rooms', 'Create paid rooms', 'Listed room token prices still apply', 'Monthly token benefits'];
+    }
+    return (plan.features || []).slice(0, 4);
+}
+
 async function handleSwitch(planSlug) {
     const token = localStorage.getItem('authToken');
     if (!token) return;
@@ -264,7 +284,7 @@ async function handleSwitch(planSlug) {
     }
 
     try {
-        const res = await fetch(apiUrl('/api/subscriptions/subscribe'), {
+        const res = await fetch(apiUrl('/api/stripe/create-checkout-session'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -276,7 +296,8 @@ async function handleSwitch(planSlug) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Switch failed');
 
-        window.location.reload();
+        if (!data.url) throw new Error('Secure checkout is unavailable');
+        window.location.href = data.url;
     } catch (err) {
         showToast(err.message || 'Failed to switch plan', 'error');
         if (btn) {
