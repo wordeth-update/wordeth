@@ -7,6 +7,8 @@ const Plan = require('../models/Plan');
 const Subscription = require('../models/Subscription');
 const EventsLedger = require('../models/EventsLedger');
 const TokenLedger = require('../models/TokenLedger');
+
+const MerchOrder = require('../models/MerchOrder');
 const { grantTokensForPlan } = require('./subscriptions');
 
 const TOKEN_PACKS = [
@@ -171,12 +173,12 @@ function isEventProcessed(eventId) {
 
 function createWebhookHandler(webhookSecret) {
     return async (req, res) => {
+        const sig = req.headers['stripe-signature'];
         if (!webhookSecret) {
-            console.error('[Stripe] STRIPE_WEBHOOK_SECRET is missing — webhook rejected');
+            console.error('[Stripe] STRIPE_WEBHOOK_SECRET is not configured — rejecting unverified webhook');
             return res.status(503).json({ error: 'Webhook verification is not configured' });
         }
         const stripe = getStripeClient();
-        const sig = req.headers['stripe-signature'];
 
         let event;
         try {
@@ -195,6 +197,22 @@ function createWebhookHandler(webhookSecret) {
             switch (event.type) {
                 case 'checkout.session.completed':
                     await handleCheckoutComplete(event.data.object);
+                    break;
+
+                case 'checkout.session.async_payment_succeeded':
+                    await handleCheckoutComplete(event.data.object);
+                    break;
+
+                case 'checkout.session.expired':
+                    await closeUnpaidMerchOrder(event.data.object, 'cancelled');
+                    break;
+
+                case 'checkout.session.async_payment_failed':
+                    await closeUnpaidMerchOrder(event.data.object, 'cancelled');
+                    break;
+
+                case 'charge.refunded':
+                    await handleMerchRefund(event.data.object);
                     break;
 
                 case 'invoice.payment_succeeded':
@@ -223,6 +241,11 @@ function createWebhookHandler(webhookSecret) {
 
 async function handleCheckoutComplete(session) {
     const metadata = session.metadata || {};
+
+    if (metadata.type === 'merch_order') {
+        await handleMerchCheckoutComplete(session);
+        return;
+    }
 
     const existing = await EventsLedger.findOne({ 'metadata.stripeSessionId': session.id });
     if (existing) {
@@ -370,6 +393,9 @@ async function handleCheckoutComplete(session) {
     }
 }
 
+function clean(value, max = 500) {
+    return value == null ? '' : String(value).trim().substring(0, max);
+}
 async function handleInvoicePayment(invoice) {
     if (!invoice.subscription) return;
 
@@ -463,3 +489,181 @@ async function handleSubscriptionCanceled(stripeSub) {
 
 module.exports = router;
 module.exports.createWebhookHandler = createWebhookHandler;
+module.exports.handleCheckoutComplete = handleCheckoutComplete;
+module.exports.handleMerchRefund = handleMerchRefund;
+
+async function closeUnpaidMerchOrder(session, status) {
+    if (session.metadata?.type !== 'merch_order') return;
+    await MerchOrder.updateOne(
+        {
+            _id: session.metadata.merchOrderId,
+            'payment.stripeCheckoutSessionId': session.id,
+            'payment.status': 'unpaid'
+        },
+        {
+            $set: {
+                status,
+                'payment.status': 'cancelled',
+                'payment.closedAt': new Date(),
+                'apliiq.submissionStatus': 'cancelled',
+                'apliiq.nextAttemptAt': null
+            }
+        }
+    );
+}
+
+async function handleMerchRefund(charge) {
+    const paymentIntentId = typeof charge.payment_intent === 'string'
+        ? charge.payment_intent
+        : charge.payment_intent?.id;
+    if (!paymentIntentId) return;
+    const amountRefunded = Math.max(0, Number(charge.amount_refunded) || 0);
+    const chargeAmount = Math.max(0, Number(charge.amount) || 0);
+    const fullyRefunded = charge.refunded === true
+        || (chargeAmount > 0 && amountRefunded >= chargeAmount);
+
+    if (!fullyRefunded) {
+        await MerchOrder.updateOne(
+            {
+                'payment.stripePaymentIntentId': paymentIntentId,
+                'payment.status': 'paid'
+            },
+            {
+                $set: {
+                    'payment.amountRefunded': amountRefunded / 100,
+                    'payment.lastRefundAt': new Date()
+                }
+            }
+        );
+        return;
+    }
+
+    await MerchOrder.updateOne(
+        {
+            'payment.stripePaymentIntentId': paymentIntentId,
+            'payment.status': 'paid',
+            'apliiq.orderId': { $in: ['', null] }
+        },
+        {
+            $set: {
+                status: 'refunded',
+                'payment.status': 'refunded',
+                'payment.amountRefunded': amountRefunded / 100,
+                'payment.lastRefundAt': new Date(),
+                'payment.closedAt': new Date(),
+                'apliiq.submissionStatus': 'cancelled',
+                'apliiq.nextAttemptAt': null,
+                'apliiq.lastError': 'Refunded before fulfillment submission completed'
+            }
+        }
+    );
+    await MerchOrder.updateOne(
+        {
+            'payment.stripePaymentIntentId': paymentIntentId,
+            'payment.status': 'paid',
+            'apliiq.orderId': { $nin: ['', null] }
+        },
+        {
+            $set: {
+                status: 'refunded',
+                'payment.status': 'refunded',
+                'payment.amountRefunded': amountRefunded / 100,
+                'payment.lastRefundAt': new Date(),
+                'payment.closedAt': new Date(),
+                'apliiq.lastError': 'Refunded after the order was submitted; staff review required'
+            }
+        }
+    );
+}
+
+const { submitApliiqOrder } = require('../services/apliiqOrders');
+
+async function handleMerchCheckoutComplete(session) {
+    if (session.payment_status !== 'paid') {
+        throw new Error(`Merch checkout ${session.id} is not paid`);
+    }
+    const orderId = session.metadata?.merchOrderId;
+    if (!orderId) throw new Error('Merch checkout is missing its order ID');
+
+    const stripe = getStripeClient();
+    const shipping = session.shipping_details
+        || session.collected_information?.shipping_details
+        || session.customer_details?.shipping
+        || {};
+    const address = shipping.address || session.customer_details?.address || {};
+    const order = await MerchOrder.findOne({
+        _id: orderId,
+        'payment.stripeCheckoutSessionId': session.id
+    }).select('totalPrice payment.status').lean();
+    if (!order) throw new Error(`Merch order ${orderId} not found`);
+    if (session.amount_subtotal !== Math.round(order.totalPrice * 100)) {
+        throw new Error(`Merch checkout ${session.id} amount does not match the order`);
+    }
+    let rate = null;
+    const rateId = typeof session.shipping_cost?.shipping_rate === 'string'
+        ? session.shipping_cost.shipping_rate
+        : session.shipping_cost?.shipping_rate?.id;
+    if (rateId) rate = await stripe.shippingRates.retrieve(rateId);
+    const shippingCode = clean(rate?.metadata?.wordethShippingCode, 20);
+    if (!['standard', 'upgraded', 'rush'].includes(shippingCode)) {
+        throw new Error(`Merch checkout ${session.id} has an invalid shipping choice`);
+    }
+    const fullName = clean(shipping.name || session.customer_details?.name, 200);
+    const pieces = fullName.split(/\s+/).filter(Boolean);
+    const firstName = clean(pieces.shift(), 100);
+    const lastName = clean(pieces.join(' '), 100);
+    if (!firstName || !lastName || !address.line1 || !address.city || !address.postal_code || !address.country) {
+        throw new Error(`Merch checkout ${session.id} has an incomplete shipping address`);
+    }
+
+    const update = await MerchOrder.updateOne(
+        {
+            _id: orderId,
+            'payment.stripeCheckoutSessionId': session.id,
+            'payment.status': 'unpaid',
+            status: 'pending'
+        },
+        {
+            $set: {
+                shippingAddress: {
+                    name: fullName,
+                    firstName,
+                    lastName,
+                    company: clean(shipping.company, 200),
+                    phone: clean(shipping.phone || session.customer_details?.phone, 100),
+                    line1: clean(address.line1, 300),
+                    line2: clean(address.line2, 300),
+                    city: clean(address.city, 150),
+                    state: clean(address.state, 100),
+                    postalCode: clean(address.postal_code, 50),
+                    countryCode: clean(address.country, 2).toUpperCase()
+                },
+                shippingChoice: {
+                    code: shippingCode,
+                    label: clean(rate?.display_name, 100),
+                    amount: (session.shipping_cost?.amount_total || 0) / 100,
+                    currency: clean(session.currency || 'usd', 10).toLowerCase(),
+                    stripeShippingRateId: clean(rateId, 200)
+                },
+                'payment.status': 'paid',
+                'payment.stripePaymentIntentId': clean(session.payment_intent, 200),
+                'payment.amountPaid': (session.amount_total || 0) / 100,
+                'payment.currency': clean(session.currency || 'usd', 10).toLowerCase(),
+                'payment.paidAt': new Date(),
+                'apliiq.submissionStatus': 'pending',
+                'apliiq.nextAttemptAt': new Date()
+            }
+        }
+    );
+    if (update.modifiedCount === 0) {
+        const existing = await MerchOrder.findById(orderId).select('payment.status').lean();
+        if (existing.payment?.status !== 'paid') {
+            throw new Error(`Merch order ${orderId} is closed and cannot be fulfilled`);
+        }
+    }
+
+    const result = await submitApliiqOrder(orderId);
+    if (result.failed) {
+        console.error(`[Apliiq] Order ${orderId} requires staff attention: ${result.error}`);
+    }
+}

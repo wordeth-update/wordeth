@@ -819,15 +819,11 @@ var MerchDesigner = (function() {
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-shopping-bag"></i> Place Order';
             if (data.success) {
-                showToast('Order placed! We\'ll notify you when it ships.');
-                state.canvas.clear();
-                state.canvas.renderAll();
-                state.frontObjects = [];
-                state.backObjects = [];
-                state.leftObjects = [];
-                state.rightObjects = [];
-                state.qty = 1;
-                updatePrice();
+                if (data.data && data.data.checkoutUrl) {
+                    window.location.assign(data.data.checkoutUrl);
+                    return;
+                }
+                showToast('Checkout could not be opened. Please try again.');
             } else {
                 showToast(data.message || 'Order failed. Please try again.');
             }

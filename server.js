@@ -78,6 +78,7 @@ const optionalAuth = require('./middleware/optionalAuth');
 const { resolveCustomerAudience, USER_PLUS } = require('./services/userAccess');
 const settlementService = require('./services/settlement'); // Crash-safe payouts
 const { startFulfillmentRecoverySweep } = require('./services/apliiqFulfillment');
+const { startApliiqOrderRecoverySweep } = require('./services/apliiqOrders');
 const nudgeScheduler = require('./services/nudgeScheduler'); // Scheduled-room nudges
 const { createWebhookHandler } = require('./routes/stripe');
 const trackingMiddleware = require('./middleware/tracking'); // Event tracking
@@ -105,6 +106,7 @@ if (process.env.NODE_ENV !== 'test') {
     nudgeScheduler.start();
     settlementService.startRecoverySweep();
     startFulfillmentRecoverySweep();
+    startApliiqOrderRecoverySweep();
 }
 
 app.set('trust proxy', 1);

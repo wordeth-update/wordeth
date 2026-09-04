@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const MerchOrder = require('../models/MerchOrder');
 const { reconcilePendingFulfillmentsForOrder } = require('../services/apliiqFulfillment');
+const { getStripeClient } = require('../services/stripeClient');
 
 const VIEWS_BY_PRODUCT = {
     tshirt: ['front','back','left','right'],
@@ -34,6 +35,17 @@ const PRODUCT_CATALOG = {
 const VALID_COLORS = ['black','white','navy','gray','forest','burgundy','sand','slate'];
 const VALID_SIZES = ['XS','S','M','L','XL','2XL','3XL'];
 const MAX_DESIGN_BYTES = 500000;
+const SHIPPING_OPTIONS = [
+    { code: 'standard', label: 'Standard shipping', amount: 599, minDays: 3, maxDays: 7 },
+    { code: 'upgraded', label: 'Upgraded shipping', amount: 1299, minDays: 2, maxDays: 4 },
+    { code: 'rush', label: 'Rush shipping', amount: 2499, minDays: 1, maxDays: 2 }
+];
+
+function checkoutDomain() {
+    return process.env.REPLIT_DOMAINS
+        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+        : process.env.CLIENT_URL || 'http://localhost:5000';
+}
 
 router.post('/orders', auth, async (req, res) => {
     try {
@@ -88,14 +100,70 @@ router.post('/orders', auth, async (req, res) => {
             rightDesign: rightStr,
             designPreview: previewStr,
             templateId: templateId ? String(templateId).substring(0, 100) : null,
-            status: 'pending'
+            status: 'pending',
+            payment: { status: 'unpaid' },
+            apliiq: { submissionStatus: 'not_ready' }
         });
+
+        const stripe = getStripeClient();
+        const domain = checkoutDomain();
+        const session = await stripe.checkout.sessions.create({
+            mode: 'payment',
+            customer_email: req.user.email,
+            line_items: [{
+                price_data: {
+                    currency: 'usd',
+                    product_data: {
+                        name: `${catalogItem.name} — ${order.colorName} / ${size}`,
+                        description: 'Custom Wordeth merchandise'
+                    },
+                    unit_amount: Math.round(unitPrice * 100)
+                },
+                quantity: qty
+            }],
+            shipping_address_collection: {
+                allowed_countries: ['US', 'CA', 'GB', 'AU', 'NZ']
+            },
+            phone_number_collection: { enabled: true },
+            shipping_options: SHIPPING_OPTIONS.map(option => ({
+                shipping_rate_data: {
+                    type: 'fixed_amount',
+                    fixed_amount: { amount: option.amount, currency: 'usd' },
+                    display_name: option.label,
+                    metadata: { wordethShippingCode: option.code },
+                    delivery_estimate: {
+                        minimum: { unit: 'business_day', value: option.minDays },
+                        maximum: { unit: 'business_day', value: option.maxDays }
+                    }
+                }
+            })),
+            metadata: {
+                type: 'merch_order',
+                merchOrderId: order._id.toString(),
+                userId: req.user.id.toString()
+            },
+            payment_intent_data: {
+                metadata: {
+                    type: 'merch_order',
+                    merchOrderId: order._id.toString(),
+                    userId: req.user.id.toString()
+                }
+            },
+            success_url: `${domain}/merch.html?payment=success&order=${order._id}`,
+            cancel_url: `${domain}/merch.html?payment=canceled&order=${order._id}`
+        });
+        order.payment.stripeCheckoutSessionId = session.id;
+        await order.save();
 
         await reconcilePendingFulfillmentsForOrder(order).catch(error => {
             console.error('[Apliiq] Pending fulfillment reconciliation failed:', error.message);
         });
 
-        res.json({ success: true, data: { orderId: order._id, status: order.status }, message: 'Order placed successfully' });
+        res.json({
+            success: true,
+            data: { orderId: order._id, status: order.status, checkoutUrl: session.url, sessionId: session.id },
+            message: 'Checkout created'
+        });
     } catch (error) {
         console.error('Error creating merch order:', error);
         res.status(500).json({ success: false, message: 'Failed to place order' });
@@ -228,7 +296,7 @@ router.get('/fulfillment/queue', auth, async (req, res) => {
         }
 
         var statusFilter = req.query.status || 'pending';
-        var validStatuses = ['pending', 'confirmed', 'production', 'shipped', 'delivered', 'cancelled'];
+        var validStatuses = ['pending', 'confirmed', 'production', 'shipped', 'delivered', 'cancelled', 'refunded'];
         if (!validStatuses.includes(statusFilter)) {
             return res.status(400).json({ success: false, message: 'Invalid status filter' });
         }
@@ -261,6 +329,13 @@ router.get('/fulfillment/queue', auth, async (req, res) => {
                 quantity: o.quantity,
                 totalPrice: o.totalPrice,
                 templateId: o.templateId || null,
+                paymentStatus: o.payment?.status || 'unpaid',
+                apliqSubmission: {
+                    status: o.apliiq?.submissionStatus || 'not_ready',
+                    attempts: o.apliiq?.attempts || 0,
+                    orderId: o.apliiq?.orderId || '',
+                    lastError: o.apliiq?.lastError || ''
+                },
                 availableViews: views,
                 fulfillmentUrl: '/api/merch/orders/' + o._id + '/fulfillment'
             };
@@ -284,7 +359,7 @@ router.patch('/orders/:orderId/status', auth, async (req, res) => {
         }
 
         var { status, trackingNumber, notes } = req.body;
-        var validStatuses = ['pending', 'confirmed', 'production', 'shipped', 'delivered', 'cancelled'];
+        var validStatuses = ['pending', 'confirmed', 'production', 'shipped', 'delivered', 'cancelled', 'refunded'];
         if (!status || !validStatuses.includes(status)) {
             return res.status(400).json({ success: false, message: 'Invalid status' });
         }
@@ -293,7 +368,14 @@ router.patch('/orders/:orderId/status', auth, async (req, res) => {
         if (trackingNumber) update.trackingNumber = String(trackingNumber).substring(0, 200);
         if (notes) update.notes = String(notes).substring(0, 1000);
 
-        var order = await MerchOrder.findByIdAndUpdate(req.params.orderId, update, { new: true })
+        if (status === 'cancelled' || status === 'refunded') {
+            update['payment.status'] = status === 'refunded' ? 'refunded' : 'cancelled';
+            update['payment.closedAt'] = new Date();
+            update['apliiq.submissionStatus'] = 'cancelled';
+            update['apliiq.nextAttemptAt'] = null;
+        }
+
+        var order = await MerchOrder.findByIdAndUpdate(req.params.orderId, { $set: update }, { new: true })
             .select('-frontDesign -backDesign -leftDesign -rightDesign -designPreview');
 
         if (!order) {
