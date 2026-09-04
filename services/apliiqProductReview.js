@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const ApliiqProduct = require('../models/ApliiqProduct');
 
 const PRODUCT_FIELDS = [
     'shippingProfileId', 'taxonomyId', 'type', 'name', 'currency', 'description',
@@ -69,9 +70,69 @@ function approvedSnapshot(product) {
     }, {});
 }
 
+async function registerWordethProductIntent({
+    storeProductId,
+    wordethProduct,
+    productData
+}) {
+    const expectedReviewHash = materialReviewHash(productData);
+    const existing = await ApliiqProduct.findOne({ storeProductId });
+    if (existing && existing.status !== 'pending') {
+        const error = new Error('Only pending product intents can be replaced');
+        error.code = 'INTENT_CONFLICT';
+        throw error;
+    }
+
+    const intentData = {
+        ...productData,
+        reviewHash: expectedReviewHash,
+        wordethProduct,
+        wordethIntent: {
+            verified: true,
+            expectedReviewHash,
+            wordethProduct,
+            createdAt: new Date()
+        }
+    };
+    let product;
+    if (existing) {
+        const existingReviewFilter = existing.reviewHash
+            ? { reviewHash: existing.reviewHash }
+            : { $or: [{ reviewHash: '' }, { reviewHash: { $exists: false } }] };
+        product = await ApliiqProduct.findOneAndUpdate({
+            $and: [
+                { _id: existing._id, status: 'pending' },
+                existingReviewFilter
+            ]
+        }, {
+            $set: intentData
+        }, { new: true, runValidators: true });
+        if (!product) {
+            const error = new Error('The product intent changed while it was being replaced');
+            error.code = 'INTENT_CONFLICT';
+            throw error;
+        }
+    } else {
+        try {
+            product = await ApliiqProduct.create({
+                identityKey: `store:${storeProductId}`,
+                storeProductId,
+                status: 'pending',
+                ...intentData
+            });
+        } catch (error) {
+            if (error?.code === 11000) error.code = 'INTENT_CONFLICT';
+            throw error;
+        }
+    }
+
+    return { product, expectedReviewHash, created: !existing };
+}
+
 module.exports = {
     PRODUCT_FIELDS,
     approvedSnapshot,
     canonicalProduct,
-    materialReviewHash
+    materialReviewHash,
+    registerWordethProductIntent
 };

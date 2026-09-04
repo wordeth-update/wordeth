@@ -6,7 +6,8 @@ const ApliiqProduct = require('../models/ApliiqProduct');
 const ApliiqWarehouseShipment = require('../models/ApliiqWarehouseShipment');
 const {
     approvedSnapshot,
-    materialReviewHash
+    materialReviewHash,
+    registerWordethProductIntent
 } = require('../services/apliiqProductReview');
 const {
     applyFulfillmentPayload,
@@ -532,57 +533,19 @@ router.post('/admin/products/intents', requireAdmin, async (req, res) => {
             variants,
             replaceProduct: Boolean(payload.replaceProduct)
         };
-        const expectedReviewHash = materialReviewHash(productData);
-        const existing = await ApliiqProduct.findOne({ storeProductId });
-        if (existing && existing.status !== 'pending') {
-            return res.status(409).json({ error: 'Only pending product intents can be replaced' });
-        }
-
-        const intentData = {
-            ...productData,
-            reviewHash: expectedReviewHash,
+        const registration = await registerWordethProductIntent({
+            storeProductId,
             wordethProduct,
-            wordethIntent: {
-                verified: true,
-                expectedReviewHash,
-                wordethProduct,
-                createdAt: new Date()
-            }
-        };
-        let product;
-        if (existing) {
-            const existingReviewFilter = existing.reviewHash
-                ? { reviewHash: existing.reviewHash }
-                : { $or: [{ reviewHash: '' }, { reviewHash: { $exists: false } }] };
-            product = await ApliiqProduct.findOneAndUpdate({
-                $and: [
-                    { _id: existing._id, status: 'pending' },
-                    existingReviewFilter
-                ]
-            }, {
-                $set: {
-                    ...intentData
-                }
-            }, { new: true, runValidators: true });
-            if (!product) {
-                return res.status(409).json({ error: 'The product intent changed while it was being replaced' });
-            }
-        } else {
-            product = await ApliiqProduct.create({
-                identityKey: `store:${storeProductId}`,
-                storeProductId,
-                status: 'pending',
-                ...intentData
-            });
-        }
+            productData
+        });
 
-        res.status(existing ? 200 : 201).json({
+        res.status(registration.created ? 201 : 200).json({
             success: true,
-            storeProductId: product.storeProductId,
-            expectedReviewHash
+            storeProductId: registration.product.storeProductId,
+            expectedReviewHash: registration.expectedReviewHash
         });
     } catch (error) {
-        if (error?.code === 11000) {
+        if (error?.code === 'INTENT_CONFLICT') {
             return res.status(409).json({ error: 'This Wordeth product intent changed or conflicts with an existing product' });
         }
         res.status(500).json({ error: 'Unable to register Wordeth product intent' });
