@@ -40,6 +40,12 @@
         .filter-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
         .filter-tab { background: transparent; border: 1px solid var(--dark-border); color: var(--text-secondary); padding: 0.4rem 1rem; border-radius: 20px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; }
         .filter-tab.active, .filter-tab:hover { background: var(--mint); color: var(--dark-bg); border-color: var(--mint); }
+        .ops-card { background: var(--dark-surface); border: 1px solid var(--dark-border); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
+        .ops-card h3 { margin: 0 0 .5rem; }
+        .ops-meta { color: var(--text-secondary); font-size: .8rem; margin-bottom: .75rem; }
+        .ops-actions { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; }
+        .ops-actions select, .ops-actions input { background:var(--dark-bg); color:var(--text-primary); border:1px solid var(--dark-border); border-radius:6px; padding:.45rem; }
+        .status-pill { padding:.2rem .55rem; border-radius:10px; background:rgba(124,106,239,.15); font-size:.72rem; text-transform:uppercase; }
         .admin-login-note { text-align: center; margin-top: 1.5rem; color: var(--text-secondary); font-size: 0.85rem; }
         @media (max-width: 768px) { .section-grid { grid-template-columns: 1fr; } .overview-grid { grid-template-columns: 1fr 1fr; } }
     </style>
@@ -64,6 +70,8 @@
                 <li data-tab="partners"><i class="fas fa-handshake"></i> Partners</li>
                 <li data-tab="ad-oversight"><i class="fas fa-ad"></i> Ad Oversight <span id="pendingCount" class="badge">0</span></li>
                 <li data-tab="create-ad"><i class="fas fa-plus-circle"></i> Create Ad</li>
+                <li data-tab="apliiq-products"><i class="fas fa-shirt"></i> Apliiq Products</li>
+                <li data-tab="warehouse-issues"><i class="fas fa-triangle-exclamation"></i> Warehouse Issues</li>
                 <li data-tab="settings"><i class="fas fa-cog"></i> Settings</li>
             </ul>
             <div class="sidebar-help">
@@ -244,6 +252,23 @@
                     </div>
                     <button type="submit" class="btn-primary">Create Ad</button>
                 </form>
+            </section>
+
+            <section id="apliiq-products-tab" class="tab-content">
+                <h2>Apliiq Product Review</h2>
+                <p class="ops-meta">Map imported products to Wordeth merchandise before approval. Only approved, mapped products can appear in the storefront.</p>
+                <div class="filter-tabs" id="apliiqFilters">
+                    <button class="filter-tab active" data-filter="pending">Pending</button>
+                    <button class="filter-tab" data-filter="approved">Approved</button>
+                    <button class="filter-tab" data-filter="archived">Archived</button>
+                </div>
+                <div id="apliiqProductsList"></div>
+            </section>
+
+            <section id="warehouse-issues-tab" class="tab-content">
+                <h2>Warehouse Discrepancies</h2>
+                <p class="ops-meta">Review shortages, overages, damage, and receiving errors reported by Apliiq.</p>
+                <div id="warehouseIssuesList"></div>
             </section>
 
             <section id="settings-tab" class="tab-content">

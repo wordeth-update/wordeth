@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const ApliiqEvent = require('../models/ApliiqEvent');
 const ApliiqProduct = require('../models/ApliiqProduct');
 const ApliiqWarehouseShipment = require('../models/ApliiqWarehouseShipment');
@@ -19,6 +20,7 @@ const MAX_PRODUCTS_PER_SEARCH = 50;
 const MAX_VARIANTS = 500;
 const MAX_WAREHOUSE_SHIPMENTS = 100;
 const EVENT_LEASE_MS = 5 * 60 * 1000;
+const WORDETH_PRODUCTS = ['tshirt', 'hoodie', 'tank', 'longsleeve', 'sweatshirt', 'hat'];
 
 router.use((req, res, next) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -27,6 +29,23 @@ router.use((req, res, next) => {
     next();
 });
 router.use(parseApliiqJson);
+
+function requireAdmin(req, res, next) {
+    const header = req.headers.authorization;
+    if (!header || !header.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    try {
+        const decoded = jwt.verify(header.substring(7), process.env.JWT_SECRET);
+        if (decoded.role !== 'admin') {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+        req.adminId = stringValue(decoded.advertiserId, 200);
+        next();
+    } catch (error) {
+        return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+}
 
 function stringValue(value, maxLength = 500) {
     if (value === null || value === undefined) return '';
@@ -274,14 +293,51 @@ router.post('/products', async (req, res) => {
             lastSyncedAt: new Date()
         };
 
-        product = await ApliiqProduct.findOneAndUpdate(
-            { identityKey },
-            {
-                $set: productData,
-                $setOnInsert: { identityKey, storeProductId, status: 'pending' }
-            },
-            { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
-        );
+        if (!product) {
+            product = await ApliiqProduct.findOneAndUpdate(
+                { identityKey },
+                {
+                    $set: productData,
+                    $setOnInsert: { identityKey, storeProductId, status: 'pending' }
+                },
+                { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+            );
+        } else {
+            let currentProduct = product;
+            product = null;
+            for (let attempt = 0; attempt < 5 && !product; attempt += 1) {
+                const callbackChangedApprovedProduct =
+                    currentProduct.status === 'approved' &&
+                    currentProduct.lastPayloadHash !== received.hash;
+                const productUpdate = {
+                    $set: {
+                        ...productData,
+                        ...(callbackChangedApprovedProduct ? { status: 'pending' } : {})
+                    }
+                };
+                if (callbackChangedApprovedProduct) {
+                    productUpdate.$push = {
+                        reviewHistory: {
+                            action: 'changes_received',
+                            actorId: 'apliiq-callback',
+                            note: 'Supplier callback changed this product; approval was reset.',
+                            at: new Date()
+                        }
+                    };
+                }
+                product = await ApliiqProduct.findOneAndUpdate(
+                    {
+                        _id: currentProduct._id,
+                        status: currentProduct.status,
+                        lastPayloadHash: currentProduct.lastPayloadHash
+                    },
+                    productUpdate,
+                    { new: true, runValidators: true }
+                );
+                if (!product) currentProduct = await ApliiqProduct.findById(currentProduct._id);
+            }
+            if (!product) throw new Error('Product changed repeatedly while processing callback');
+        }
 
         const result = {
             storeProductId: product.storeProductId,
@@ -335,6 +391,83 @@ router.get('/products/search', async (req, res) => {
     }
 });
 
+router.get('/storefront/products', async (req, res) => {
+    try {
+        const products = await ApliiqProduct.find({
+            status: 'approved',
+            wordethProduct: { $in: WORDETH_PRODUCTS }
+        })
+            .sort({ updatedAt: -1 })
+            .select([
+                'storeProductId', 'wordethProduct', 'shippingProfileId', 'taxonomyId',
+                'type', 'name', 'currency', 'description', 'imageUrls', 'sizes',
+                'colors', 'variants', 'replaceProduct', 'updatedAt'
+            ].join(' '))
+            .lean();
+        res.json({ success: true, products });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Unable to load products' });
+    }
+});
+
+router.get('/admin/products', requireAdmin, async (req, res) => {
+    try {
+        const status = stringValue(req.query.status, 20);
+        const filter = ['pending', 'approved', 'archived'].includes(status) ? { status } : {};
+        const products = await ApliiqProduct.find(filter).sort({ updatedAt: -1 }).limit(200).lean();
+        res.json({ success: true, products });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Unable to load Apliiq products' });
+    }
+});
+
+router.patch('/admin/products/:id', requireAdmin, async (req, res) => {
+    try {
+        const action = stringValue(req.body.action, 20);
+        const wordethProduct = stringValue(req.body.wordethProduct, 30);
+        const expectedPayloadHash = stringValue(req.body.expectedPayloadHash, 100);
+        const note = stringValue(req.body.note, 1000);
+        if (!['approve', 'archive', 'map'].includes(action)) {
+            return res.status(400).json({ error: 'Invalid product action' });
+        }
+        if ((action === 'approve' || action === 'map') && !WORDETH_PRODUCTS.includes(wordethProduct)) {
+            return res.status(400).json({ error: 'A valid Wordeth product mapping is required' });
+        }
+        if (action === 'approve' && !expectedPayloadHash) {
+            return res.status(400).json({ error: 'The reviewed product version is required' });
+        }
+
+        const update = {
+            $push: {
+                reviewHistory: {
+                    action: action === 'approve' ? 'approved' : (action === 'archive' ? 'archived' : 'mapped'),
+                    actorId: req.adminId,
+                    note,
+                    at: new Date()
+                }
+            }
+        };
+        if (action === 'approve') update.$set = { status: 'approved', wordethProduct };
+        if (action === 'archive') update.$set = { status: 'archived' };
+        if (action === 'map') update.$set = { wordethProduct };
+
+        const product = await ApliiqProduct.findOneAndUpdate({
+            _id: req.params.id,
+            ...(action === 'approve' ? { lastPayloadHash: expectedPayloadHash } : {})
+        }, update, {
+            new: true,
+            runValidators: true
+        });
+        if (!product && action === 'approve' && await ApliiqProduct.exists({ _id: req.params.id })) {
+            return res.status(409).json({ error: 'This product changed after it was loaded. Review the latest version before approving.' });
+        }
+        if (!product) return res.status(404).json({ error: 'Product not found' });
+        res.json({ success: true, product });
+    } catch (error) {
+        res.status(error.name === 'CastError' ? 404 : 500).json({ error: 'Unable to update product' });
+    }
+});
+
 router.post('/fulfillment', requireFulfillmentSignature, async (req, res) => {
     let event;
     try {
@@ -377,16 +510,58 @@ router.post('/fulfillment', requireFulfillmentSignature, async (req, res) => {
 
 function normalizeWarehouseItems(items) {
     if (!Array.isArray(items)) return [];
-    return items.slice(0, 500).map(item => ({
-        itemId: stringValue(item.ID ?? item.Id ?? item.id, 200),
-        inventoryId: stringValue(item.InventoryId ?? item.inventoryId, 200),
+    const seen = new Set();
+    return items.slice(0, 500).map((item, index) => {
+        const itemId = stringValue(item.ID ?? item.Id ?? item.id, 200);
+        const inventoryId = stringValue(item.InventoryId ?? item.inventoryId, 200);
+        const baseIssueKey = itemId || inventoryId || `item-${index}`;
+        const issueKey = seen.has(baseIssueKey) ? `${baseIssueKey}-${index}` : baseIssueKey;
+        seen.add(issueKey);
+        return {
+        issueKey,
+        itemId,
+        inventoryId,
         name: stringValue(item.Name ?? item.name, 250),
         type: stringValue(item.Type ?? item.type, 100),
         quantityExpected: numberValue(item.Quantity ?? item.quantity),
         quantityReceived: numberValue(item.Quantity_Received ?? item.quantity_received),
         isActivated: Boolean(item.IsActivated ?? item.isActivated),
-        receivingErrors: stringValue(item.Receiving_Errors ?? item.receiving_errors, 1000)
-    }));
+        receivingErrors: stringValue(item.Receiving_Errors ?? item.receiving_errors, 1000),
+        presentInLatestReport: true
+    }; });
+}
+
+function addMissingIssueKeys(items) {
+    const seen = new Set();
+    let changed = false;
+    const normalized = (items || []).map((item, index) => {
+        const existingKey = stringValue(item.issueKey, 200);
+        const baseIssueKey = existingKey ||
+            stringValue(item.itemId, 200) ||
+            stringValue(item.inventoryId, 200) ||
+            `legacy-item-${index}`;
+        const issueKey = seen.has(baseIssueKey) ? `${baseIssueKey}-${index}` : baseIssueKey;
+        seen.add(issueKey);
+        if (issueKey !== existingKey) changed = true;
+        return { ...item, issueKey };
+    });
+    return { changed, items: normalized };
+}
+
+async function ensureShipmentIssueKeys(shipmentId) {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+        const shipment = await ApliiqWarehouseShipment.findOne({ shipmentId }).lean();
+        if (!shipment) return null;
+        const normalized = addMissingIssueKeys(shipment.items);
+        if (!normalized.changed) return shipment;
+        const updated = await ApliiqWarehouseShipment.findOneAndUpdate(
+            { _id: shipment._id, __v: shipment.__v || 0 },
+            { $set: { items: normalized.items }, $inc: { __v: 1 } },
+            { new: true, runValidators: true }
+        ).lean();
+        if (updated) return updated;
+    }
+    throw new Error(`Shipment ${shipmentId} changed repeatedly while assigning issue keys`);
 }
 
 router.post(
@@ -418,19 +593,58 @@ router.post(
                     item.quantityExpected !== item.quantityReceived || Boolean(item.receivingErrors)
                 );
 
-                await ApliiqWarehouseShipment.findOneAndUpdate(
-                    { shipmentId },
-                    {
-                        $set: {
-                            name: stringValue(shipment.Name ?? shipment.name, 250),
-                            items,
-                            hasDiscrepancies,
-                            completedAt: new Date(),
-                            lastPayloadHash: received.hash
-                        }
-                    },
-                    { upsert: true, runValidators: true, setDefaultsOnInsert: true }
-                );
+                let savedShipment = null;
+                for (let attempt = 0; attempt < 5 && !savedShipment; attempt += 1) {
+                    const existingShipment = await ApliiqWarehouseShipment.findOne({ shipmentId }).lean();
+                    const existingItems = (existingShipment?.items || []).map((item, index) => ({
+                        ...item,
+                        issueKey: item.issueKey || item.itemId || item.inventoryId || `legacy-item-${index}`
+                    }));
+                    const priorIssues = new Map(existingItems.map(item => [item.issueKey, item]));
+                    const itemsWithAudit = items.map(item => {
+                        const prior = priorIssues.get(item.issueKey);
+                        const detailsChanged = prior && (
+                            prior.quantityExpected !== item.quantityExpected ||
+                            prior.quantityReceived !== item.quantityReceived ||
+                            prior.receivingErrors !== item.receivingErrors
+                        );
+                        return {
+                            ...item,
+                            issueStatus: detailsChanged ? 'open' : (prior?.issueStatus || 'open'),
+                            issueAudit: prior?.issueAudit || []
+                        };
+                    });
+                    const incomingKeys = new Set(items.map(item => item.issueKey));
+                    const retainedItems = existingItems
+                        .filter(item => !incomingKeys.has(item.issueKey))
+                        .map(item => ({ ...item, presentInLatestReport: false }));
+                    try {
+                        savedShipment = await ApliiqWarehouseShipment.findOneAndUpdate(
+                            existingShipment
+                                ? { shipmentId, __v: existingShipment.__v || 0 }
+                                : { shipmentId },
+                            {
+                                $set: {
+                                    name: stringValue(shipment.Name ?? shipment.name, 250),
+                                    items: [...itemsWithAudit, ...retainedItems],
+                                    hasDiscrepancies,
+                                    completedAt: new Date(),
+                                    lastPayloadHash: received.hash
+                                },
+                                $inc: { __v: 1 }
+                            },
+                            {
+                                new: true,
+                                upsert: !existingShipment,
+                                runValidators: true,
+                                setDefaultsOnInsert: true
+                            }
+                        );
+                    } catch (error) {
+                        if (error.code !== 11000) throw error;
+                    }
+                }
+                if (!savedShipment) throw new Error(`Shipment ${shipmentId} changed repeatedly`);
                 storedIds.push(shipmentId);
             }
 
@@ -449,5 +663,99 @@ router.post(
         }
     }
 );
+
+router.get('/admin/warehouse/issues', requireAdmin, async (req, res) => {
+    try {
+        const shipmentRows = await ApliiqWarehouseShipment.find({
+            $or: [
+                { hasDiscrepancies: true },
+                { 'items.issueAudit.0': { $exists: true } }
+            ]
+        })
+            .sort({ completedAt: -1 }).limit(200).lean();
+        const shipments = await Promise.all(
+            shipmentRows.map(shipment => ensureShipmentIssueKeys(shipment.shipmentId))
+        );
+        res.json({
+            success: true,
+            shipments: shipments.map(shipment => ({
+                ...shipment,
+                items: shipment.items.filter(item =>
+                    (
+                        item.presentInLatestReport !== false &&
+                        (item.quantityExpected !== item.quantityReceived || Boolean(item.receivingErrors))
+                    ) ||
+                    (item.issueAudit || []).length > 0
+                )
+            }))
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Unable to load warehouse issues' });
+    }
+});
+
+router.patch('/admin/warehouse/shipments/:shipmentId/issues/:issueKey', requireAdmin, async (req, res) => {
+    try {
+        const action = stringValue(req.body.action, 20);
+        const note = stringValue(req.body.note, 1000);
+        if (!['acknowledge', 'resolve'].includes(action)) {
+            return res.status(400).json({ error: 'Invalid issue action' });
+        }
+        const status = action === 'acknowledge' ? 'acknowledged' : 'resolved';
+        await ensureShipmentIssueKeys(req.params.shipmentId);
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+            const currentShipment = await ApliiqWarehouseShipment.findOne({
+                shipmentId: req.params.shipmentId,
+                'items.issueKey': req.params.issueKey
+            }).lean();
+            const currentIssue = currentShipment?.items.find(item => item.issueKey === req.params.issueKey);
+            if (!currentIssue) return res.status(404).json({ error: 'Warehouse issue not found' });
+            const isCurrentDiscrepancy = currentIssue.presentInLatestReport !== false &&
+                (currentIssue.quantityExpected !== currentIssue.quantityReceived || Boolean(currentIssue.receivingErrors));
+            if (!isCurrentDiscrepancy) {
+                return res.status(409).json({ error: 'This item is not a current warehouse discrepancy' });
+            }
+            if (currentIssue.issueStatus === status) {
+                return res.json({ success: true, shipment: currentShipment });
+            }
+            if (action === 'acknowledge' && currentIssue.issueStatus !== 'open') {
+                return res.status(409).json({ error: 'Only open issues can be acknowledged' });
+            }
+            const updatedShipment = await ApliiqWarehouseShipment.findOneAndUpdate(
+                {
+                    shipmentId: req.params.shipmentId,
+                    __v: currentShipment.__v || 0,
+                    items: {
+                        $elemMatch: {
+                            issueKey: req.params.issueKey,
+                            issueStatus: currentIssue.issueStatus,
+                            quantityExpected: currentIssue.quantityExpected,
+                            quantityReceived: currentIssue.quantityReceived,
+                            receivingErrors: currentIssue.receivingErrors,
+                            presentInLatestReport: { $ne: false }
+                        }
+                    }
+                },
+                {
+                    $set: { 'items.$.issueStatus': status },
+                    $push: {
+                        'items.$.issueAudit': {
+                            action: status,
+                            actorId: req.adminId,
+                            note,
+                            at: new Date()
+                        }
+                    },
+                    $inc: { __v: 1 }
+                },
+                { new: true, runValidators: true }
+            );
+            if (updatedShipment) return res.json({ success: true, shipment: updatedShipment });
+        }
+        res.status(409).json({ error: 'The warehouse issue changed. Reload and try again.' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Unable to update warehouse issue' });
+    }
+});
 
 module.exports = router;

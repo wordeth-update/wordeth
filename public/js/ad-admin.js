@@ -71,6 +71,29 @@ class AdAdmin {
             });
         });
 
+        document.querySelectorAll('#apliiqFilters .filter-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#apliiqFilters .filter-tab').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.loadApliiqProducts(btn.dataset.filter);
+            });
+        });
+
+        document.getElementById('apliiqProductsList').addEventListener('click', event => {
+            const button = event.target.closest('[data-product-action]');
+            if (button) this.updateApliiqProduct(button.dataset.productId, button.dataset.productAction);
+        });
+        document.getElementById('warehouseIssuesList').addEventListener('click', event => {
+            const button = event.target.closest('[data-issue-action]');
+            if (button) {
+                this.updateWarehouseIssue(
+                    button.dataset.shipmentId,
+                    button.dataset.issueKey,
+                    button.dataset.issueAction
+                );
+            }
+        });
+
         const imageUrlInput = document.querySelector('input[name="imageUrl"]');
         if (imageUrlInput) {
             imageUrlInput.addEventListener('input', (e) => this.updatePreview(e.target.value));
@@ -132,7 +155,97 @@ class AdAdmin {
             case 'ad-oversight':
                 this.loadAllAds();
                 break;
+            case 'apliiq-products':
+                this.loadApliiqProducts('pending');
+                break;
+            case 'warehouse-issues':
+                this.loadWarehouseIssues();
+                break;
         }
+    }
+
+    async loadApliiqProducts(status) {
+        const list = document.getElementById('apliiqProductsList');
+        list.innerHTML = '<p class="empty-message">Loading products…</p>';
+        const response = await fetch(apiUrl(`/api/apliiq/admin/products?status=${encodeURIComponent(status)}`), {
+            headers: { 'Authorization': `Bearer ${this.token}` }
+        });
+        const data = await response.json();
+        if (!response.ok) return void (list.innerHTML = `<p class="error-message">${this.escapeHtml(data.error || 'Unable to load products')}</p>`);
+        list.innerHTML = data.products.length ? data.products.map(product => `
+            <article class="ops-card">
+                <h3>${this.escapeHtml(product.name)} <span class="status-pill">${this.escapeHtml(product.status)}</span></h3>
+                <div class="ops-meta">${this.escapeHtml(product.type || 'Unknown type')} · ${product.variants.length} variants · ID ${this.escapeHtml(product.storeProductId)}</div>
+                <div class="ops-actions">
+                    <select id="mapping-${product._id}">
+                        ${['tshirt','hoodie','tank','longsleeve','sweatshirt','hat'].map(value => `<option value="${value}" ${product.wordethProduct === value ? 'selected' : ''}>${value}</option>`).join('')}
+                    </select>
+                    <input id="product-note-${product._id}" placeholder="Audit note (optional)" maxlength="1000">
+                    <button class="action-btn" data-product-id="${product._id}" data-product-hash="${product.lastPayloadHash}" data-product-action="map">Save mapping</button>
+                    <button class="action-btn" data-product-id="${product._id}" data-product-hash="${product.lastPayloadHash}" data-product-action="approve">Approve</button>
+                    <button class="action-btn" data-product-id="${product._id}" data-product-hash="${product.lastPayloadHash}" data-product-action="archive">Archive</button>
+                </div>
+            </article>`).join('') : '<p class="empty-message">No products in this queue.</p>';
+    }
+
+    async updateApliiqProduct(id, action) {
+        const response = await fetch(apiUrl(`/api/apliiq/admin/products/${id}`), {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action,
+                wordethProduct: document.getElementById(`mapping-${id}`).value,
+                expectedPayloadHash: document.querySelector(`[data-product-id="${id}"]`).dataset.productHash,
+                note: document.getElementById(`product-note-${id}`).value
+            })
+        });
+        const data = await response.json();
+        if (!response.ok) return alert(data.error || 'Unable to update product');
+        this.loadApliiqProducts(data.product.status);
+    }
+
+    async loadWarehouseIssues() {
+        const list = document.getElementById('warehouseIssuesList');
+        list.innerHTML = '<p class="empty-message">Loading issues…</p>';
+        const response = await fetch(apiUrl('/api/apliiq/admin/warehouse/issues'), {
+            headers: { 'Authorization': `Bearer ${this.token}` }
+        });
+        const data = await response.json();
+        if (!response.ok) return void (list.innerHTML = `<p class="error-message">${this.escapeHtml(data.error || 'Unable to load issues')}</p>`);
+        const issues = data.shipments.flatMap(shipment => shipment.items.map(item => ({ shipment, item })));
+        list.innerHTML = issues.length ? issues.map(({ shipment, item }) => {
+            const safeShipmentId = encodeURIComponent(shipment.shipmentId);
+            const safeIssueKey = encodeURIComponent(item.issueKey);
+            const isCurrent = item.presentInLatestReport !== false &&
+                (item.quantityExpected !== item.quantityReceived || Boolean(item.receivingErrors));
+            const audit = (item.issueAudit || []).map(entry => `
+                <li>${this.escapeHtml(entry.action)} · ${this.escapeHtml(new Date(entry.at).toLocaleString())}${entry.note ? ` · ${this.escapeHtml(entry.note)}` : ''}</li>
+            `).join('');
+            return `
+            <article class="ops-card">
+                <h3>${this.escapeHtml(item.name || item.issueKey)} <span class="status-pill">${this.escapeHtml(item.issueStatus)}</span></h3>
+                <div class="ops-meta">Shipment ${this.escapeHtml(shipment.name || shipment.shipmentId)} · Expected ${item.quantityExpected} · Received ${item.quantityReceived}</div>
+                ${item.receivingErrors ? `<p>${this.escapeHtml(item.receivingErrors)}</p>` : ''}
+                ${isCurrent ? `<div class="ops-actions">
+                    <input id="issue-note-${safeShipmentId}-${safeIssueKey}" placeholder="Audit note (optional)" maxlength="1000">
+                    <button class="action-btn" data-shipment-id="${safeShipmentId}" data-issue-key="${safeIssueKey}" data-issue-action="acknowledge">Acknowledge</button>
+                    <button class="action-btn" data-shipment-id="${safeShipmentId}" data-issue-key="${safeIssueKey}" data-issue-action="resolve">Resolve</button>
+                </div>` : '<p class="ops-meta">Historical issue; not present as a discrepancy in the latest report.</p>'}
+                ${audit ? `<details class="ops-meta"><summary>${item.issueAudit.length} audit event(s)</summary><ul>${audit}</ul></details>` : '<div class="ops-meta">No staff actions yet</div>'}
+            </article>`;
+        }).join('') : '<p class="empty-message">No warehouse discrepancies.</p>';
+    }
+
+    async updateWarehouseIssue(shipmentId, issueKey, action) {
+        const note = document.getElementById(`issue-note-${shipmentId}-${issueKey}`).value;
+        const response = await fetch(apiUrl(`/api/apliiq/admin/warehouse/shipments/${shipmentId}/issues/${issueKey}`), {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, note })
+        });
+        const data = await response.json();
+        if (!response.ok) return alert(data.error || 'Unable to update warehouse issue');
+        this.loadWarehouseIssues();
     }
 
     async loadOverview() {

@@ -2,12 +2,14 @@ require('./setup');
 
 const crypto = require('crypto');
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const request = require('supertest');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 
 process.env.APLIIQ_APP_KEY = 'test-apliiq-app-key';
 process.env.APLIIQ_SHARED_SECRET = 'test-apliiq-shared-secret';
+process.env.JWT_SECRET = 'test-jwt-secret';
 
 const apliqRoutes = require('../routes/apliiq');
 const ApliiqEvent = require('../models/ApliiqEvent');
@@ -69,6 +71,10 @@ function fulfillmentSignature(rawBody) {
         .digest('base64');
 }
 
+function adminToken(role = 'admin') {
+    return jwt.sign({ advertiserId: new mongoose.Types.ObjectId().toString(), role }, process.env.JWT_SECRET);
+}
+
 test('imports an Apliiq product as pending and returns the documented response', async () => {
     const response = await request(app)
         .post('/api/apliiq/products')
@@ -120,6 +126,104 @@ test('returns the minimum product search response Apliiq documents', async () =>
         name: 'Wordeth Tour Tee',
         imageUrls: ['https://example.com/tee.jpg']
     }]);
+});
+
+test('publishes only approved products with a valid Wordeth mapping', async () => {
+    const imported = await request(app).post('/api/apliiq/products').send(productPayload());
+    const product = await ApliiqProduct.findOne();
+
+    await request(app).get('/api/apliiq/storefront/products').expect(200, {
+        success: true,
+        products: []
+    });
+
+    await request(app)
+        .patch(`/api/apliiq/admin/products/${product._id}`)
+        .set('Authorization', `Bearer ${adminToken()}`)
+        .send({
+            action: 'approve',
+            wordethProduct: 'tshirt',
+            expectedPayloadHash: product.lastPayloadHash,
+            note: 'Reviewed sample and variants'
+        })
+        .expect(200);
+
+    const response = await request(app).get('/api/apliiq/storefront/products').expect(200);
+    expect(response.body.products).toHaveLength(1);
+    expect(response.body.products[0].storeProductId).toBe(imported.body.storeProductId);
+    expect(response.body.products[0].reviewHistory).toBeUndefined();
+    expect(response.body.products[0].lastPayloadHash).toBeUndefined();
+    expect((await ApliiqProduct.findById(product._id)).reviewHistory[0].action).toBe('approved');
+});
+
+test('requires an admin token and mapping for product approval', async () => {
+    await request(app).post('/api/apliiq/products').send(productPayload());
+    const product = await ApliiqProduct.findOne();
+
+    await request(app)
+        .patch(`/api/apliiq/admin/products/${product._id}`)
+        .send({ action: 'approve', wordethProduct: 'tshirt' })
+        .expect(401);
+    await request(app)
+        .patch(`/api/apliiq/admin/products/${product._id}`)
+        .set('Authorization', `Bearer ${adminToken('advertiser')}`)
+        .send({ action: 'approve', wordethProduct: 'tshirt' })
+        .expect(403);
+    await request(app)
+        .patch(`/api/apliiq/admin/products/${product._id}`)
+        .set('Authorization', `Bearer ${adminToken()}`)
+        .send({ action: 'approve' })
+        .expect(400);
+});
+
+test('returns an approved product to pending when a later unauthenticated callback changes it', async () => {
+    await request(app).post('/api/apliiq/products').send(productPayload());
+    const product = await ApliiqProduct.findOne();
+    await request(app)
+        .patch(`/api/apliiq/admin/products/${product._id}`)
+        .set('Authorization', `Bearer ${adminToken()}`)
+        .send({
+            action: 'approve',
+            wordethProduct: 'tshirt',
+            expectedPayloadHash: product.lastPayloadHash
+        })
+        .expect(200);
+
+    await request(app)
+        .post('/api/apliiq/products')
+        .send(productPayload({ store_ProductId: product.storeProductId, name: 'Unreviewed changed name' }))
+        .expect(200);
+
+    const changed = await ApliiqProduct.findById(product._id);
+    expect(changed.status).toBe('pending');
+    expect(changed.reviewHistory.at(-1).action).toBe('changes_received');
+    await request(app).get('/api/apliiq/storefront/products').expect(200, {
+        success: true,
+        products: []
+    });
+});
+
+test('rejects approval when the supplier payload changed after staff loaded it', async () => {
+    await request(app).post('/api/apliiq/products').send(productPayload());
+    const loaded = await ApliiqProduct.findOne();
+    await request(app)
+        .post('/api/apliiq/products')
+        .send(productPayload({
+            store_ProductId: loaded.storeProductId,
+            description: 'New supplier details'
+        }))
+        .expect(200);
+
+    await request(app)
+        .patch(`/api/apliiq/admin/products/${loaded._id}`)
+        .set('Authorization', `Bearer ${adminToken()}`)
+        .send({
+            action: 'approve',
+            wordethProduct: 'tshirt',
+            expectedPayloadHash: loaded.lastPayloadHash
+        })
+        .expect(409);
+    expect((await ApliiqProduct.findById(loaded._id)).status).toBe('pending');
 });
 
 test('rejects a fulfillment callback with an invalid signature', async () => {
@@ -350,6 +454,162 @@ test('records warehouse shipment completion and discrepancies', async () => {
     const shipment = await ApliiqWarehouseShipment.findOne({ shipmentId: '1175' });
     expect(shipment.hasDiscrepancies).toBe(true);
     expect(shipment.items[0].quantityReceived).toBe(10);
+    expect(shipment.items[0].issueStatus).toBe('open');
+});
+
+test('lets admins acknowledge and resolve warehouse issues with an audit trail', async () => {
+    await request(app)
+        .post('/api/apliiq/warehouse/shipments/complete')
+        .set('x-apliiq-appId', process.env.APLIIQ_APP_KEY)
+        .send([{ Id: 1175, Items: [{ ID: 1186, Quantity: 12, Quantity_Received: 10 }] }])
+        .expect(200);
+
+    const auth = `Bearer ${adminToken()}`;
+    await request(app)
+        .patch('/api/apliiq/admin/warehouse/shipments/1175/issues/1186')
+        .set('Authorization', auth)
+        .send({ action: 'acknowledge', note: 'Warehouse contacted' })
+        .expect(200);
+    await request(app)
+        .patch('/api/apliiq/admin/warehouse/shipments/1175/issues/1186')
+        .set('Authorization', auth)
+        .send({ action: 'resolve', note: 'Replacement received' })
+        .expect(200);
+
+    const shipment = await ApliiqWarehouseShipment.findOne({ shipmentId: '1175' });
+    expect(shipment.items[0].issueStatus).toBe('resolved');
+    expect(shipment.items[0].issueAudit.map(entry => entry.action)).toEqual(['acknowledged', 'resolved']);
+    expect(shipment.items[0].issueAudit[0].actorId).toBeTruthy();
+});
+
+test('preserves issue audit history but reopens an issue when discrepancy details change', async () => {
+    const sendShipment = quantityReceived => request(app)
+        .post('/api/apliiq/warehouse/shipments/complete')
+        .set('x-apliiq-appId', process.env.APLIIQ_APP_KEY)
+        .send([{ Id: 1175, Items: [{ ID: 1186, Quantity: 12, Quantity_Received: quantityReceived }] }]);
+    await sendShipment(10).expect(200);
+    await request(app)
+        .patch('/api/apliiq/admin/warehouse/shipments/1175/issues/1186')
+        .set('Authorization', `Bearer ${adminToken()}`)
+        .send({ action: 'resolve', note: 'Initial shortage handled' })
+        .expect(200);
+    await sendShipment(9).expect(200);
+
+    const issue = (await ApliiqWarehouseShipment.findOne({ shipmentId: '1175' })).items[0];
+    expect(issue.issueStatus).toBe('open');
+    expect(issue.issueAudit).toHaveLength(1);
+});
+
+test('retains audited warehouse items omitted from a later supplier report', async () => {
+    const auth = `Bearer ${adminToken()}`;
+    await request(app)
+        .post('/api/apliiq/warehouse/shipments/complete')
+        .set('x-apliiq-appId', process.env.APLIIQ_APP_KEY)
+        .send([{ Id: 1175, Items: [{ ID: 1186, Quantity: 12, Quantity_Received: 10 }] }])
+        .expect(200);
+    await request(app)
+        .patch('/api/apliiq/admin/warehouse/shipments/1175/issues/1186')
+        .set('Authorization', auth)
+        .send({ action: 'resolve', note: 'Handled' })
+        .expect(200);
+    await request(app)
+        .post('/api/apliiq/warehouse/shipments/complete')
+        .set('x-apliiq-appId', process.env.APLIIQ_APP_KEY)
+        .send([{ Id: 1175, Items: [] }])
+        .expect(200);
+
+    const shipment = await ApliiqWarehouseShipment.findOne({ shipmentId: '1175' });
+    expect(shipment.items[0].issueAudit).toHaveLength(1);
+    expect(shipment.items[0].presentInLatestReport).toBe(false);
+    const history = await request(app)
+        .get('/api/apliiq/admin/warehouse/issues')
+        .set('Authorization', auth)
+        .expect(200);
+    expect(history.body.shipments[0].items[0].issueKey).toBe('1186');
+});
+
+test('does not let staff act on an item without a current discrepancy or duplicate an action', async () => {
+    const auth = `Bearer ${adminToken()}`;
+    await request(app)
+        .post('/api/apliiq/warehouse/shipments/complete')
+        .set('x-apliiq-appId', process.env.APLIIQ_APP_KEY)
+        .send([{ Id: 1175, Items: [
+            { ID: 1186, Quantity: 12, Quantity_Received: 12 },
+            { ID: 1187, Quantity: 12, Quantity_Received: 10 }
+        ] }])
+        .expect(200);
+    await request(app)
+        .patch('/api/apliiq/admin/warehouse/shipments/1175/issues/1186')
+        .set('Authorization', auth)
+        .send({ action: 'resolve' })
+        .expect(409);
+    const resolve = () => request(app)
+        .patch('/api/apliiq/admin/warehouse/shipments/1175/issues/1187')
+        .set('Authorization', auth)
+        .send({ action: 'resolve' });
+    await resolve().expect(200);
+    await resolve().expect(200);
+    const shipment = await ApliiqWarehouseShipment.findOne({ shipmentId: '1175' });
+    expect(shipment.items.find(item => item.issueKey === '1187').issueAudit).toHaveLength(1);
+});
+
+test('preserves staff audit actions when a warehouse callback races the update', async () => {
+    const auth = `Bearer ${adminToken()}`;
+    const shipment = quantityReceived => request(app)
+        .post('/api/apliiq/warehouse/shipments/complete')
+        .set('x-apliiq-appId', process.env.APLIIQ_APP_KEY)
+        .send([{ Id: 1175, Items: [{ ID: 1186, Quantity: 12, Quantity_Received: quantityReceived }] }]);
+    await shipment(10).expect(200);
+
+    const [callbackResponse, adminResponse] = await Promise.all([
+        shipment(9),
+        request(app)
+            .patch('/api/apliiq/admin/warehouse/shipments/1175/issues/1186')
+            .set('Authorization', auth)
+            .send({ action: 'resolve', note: 'Handled during callback' })
+    ]);
+    expect(callbackResponse.status).toBe(200);
+    expect(adminResponse.status).toBe(200);
+    const issue = (await ApliiqWarehouseShipment.findOne({ shipmentId: '1175' })).items[0];
+    expect(issue.issueAudit).toHaveLength(1);
+    expect(issue.issueAudit[0].action).toBe('resolved');
+});
+
+test('backfills legacy shipment issue keys so existing discrepancies can be resolved', async () => {
+    await ApliiqWarehouseShipment.collection.insertOne({
+        shipmentId: 'legacy-1175',
+        name: 'Legacy shipment',
+        items: [{
+            itemId: 'legacy-item-1',
+            inventoryId: 'legacy-inventory-1',
+            name: 'Legacy insert',
+            quantityExpected: 12,
+            quantityReceived: 10,
+            receivingErrors: 'Two missing'
+        }],
+        hasDiscrepancies: true,
+        completedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        __v: 0
+    });
+    const auth = `Bearer ${adminToken()}`;
+
+    const listing = await request(app)
+        .get('/api/apliiq/admin/warehouse/issues')
+        .set('Authorization', auth)
+        .expect(200);
+    expect(listing.body.shipments[0].items[0].issueKey).toBe('legacy-item-1');
+    await request(app)
+        .patch('/api/apliiq/admin/warehouse/shipments/legacy-1175/issues/legacy-item-1')
+        .set('Authorization', auth)
+        .send({ action: 'resolve', note: 'Resolved after feature launch' })
+        .expect(200);
+
+    const shipment = await ApliiqWarehouseShipment.findOne({ shipmentId: 'legacy-1175' });
+    expect(shipment.items[0].issueKey).toBe('legacy-item-1');
+    expect(shipment.items[0].issueStatus).toBe('resolved');
+    expect(shipment.items[0].issueAudit[0].note).toBe('Resolved after feature launch');
 });
 
 test('rejects warehouse completion with the wrong app ID', async () => {

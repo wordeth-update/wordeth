@@ -15,6 +15,17 @@ const apliqVariantSchema = new mongoose.Schema({
     dimensionUnit: { type: String, default: '' }
 }, { _id: false });
 
+const productReviewSchema = new mongoose.Schema({
+    action: {
+        type: String,
+        enum: ['approved', 'archived', 'mapped', 'changes_received'],
+        required: true
+    },
+    actorId: { type: String, required: true },
+    note: { type: String, default: '' },
+    at: { type: Date, default: Date.now }
+}, { _id: false });
+
 const apliqProductSchema = new mongoose.Schema({
     identityKey: { type: String, required: true, unique: true, index: true },
     storeProductId: { type: String, required: true, unique: true, index: true },
@@ -35,6 +46,13 @@ const apliqProductSchema = new mongoose.Schema({
         default: 'pending',
         index: true
     },
+    wordethProduct: {
+        type: String,
+        enum: ['', 'tshirt', 'hoodie', 'tank', 'longsleeve', 'sweatshirt', 'hat'],
+        default: '',
+        index: true
+    },
+    reviewHistory: { type: [productReviewSchema], default: [] },
     lastPayloadHash: { type: String, default: '' },
     lastSyncedAt: { type: Date, default: Date.now }
 }, { timestamps: true });

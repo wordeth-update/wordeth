@@ -1,6 +1,14 @@
 const mongoose = require('mongoose');
 
+const issueAuditSchema = new mongoose.Schema({
+    action: { type: String, enum: ['acknowledged', 'resolved'], required: true },
+    actorId: { type: String, required: true },
+    note: { type: String, default: '' },
+    at: { type: Date, default: Date.now }
+}, { _id: false });
+
 const warehouseItemSchema = new mongoose.Schema({
+    issueKey: { type: String, required: true },
     itemId: { type: String, default: '' },
     inventoryId: { type: String, default: '' },
     name: { type: String, default: '' },
@@ -8,7 +16,14 @@ const warehouseItemSchema = new mongoose.Schema({
     quantityExpected: { type: Number, default: 0 },
     quantityReceived: { type: Number, default: 0 },
     isActivated: { type: Boolean, default: false },
-    receivingErrors: { type: String, default: '' }
+    receivingErrors: { type: String, default: '' },
+    presentInLatestReport: { type: Boolean, default: true },
+    issueStatus: {
+        type: String,
+        enum: ['open', 'acknowledged', 'resolved'],
+        default: 'open'
+    },
+    issueAudit: { type: [issueAuditSchema], default: [] }
 }, { _id: false });
 
 const warehouseShipmentSchema = new mongoose.Schema({
