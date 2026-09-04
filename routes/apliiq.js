@@ -5,6 +5,10 @@ const ApliiqEvent = require('../models/ApliiqEvent');
 const ApliiqProduct = require('../models/ApliiqProduct');
 const ApliiqWarehouseShipment = require('../models/ApliiqWarehouseShipment');
 const {
+    approvedSnapshot,
+    materialReviewHash
+} = require('../services/apliiqProductReview');
+const {
     applyFulfillmentPayload,
     extractFulfillment,
     reconcilePendingFulfillmentEvent
@@ -262,18 +266,41 @@ router.post('/products', async (req, res) => {
         if (suppliedStoreProductId) {
             product = await ApliiqProduct.findOne({ storeProductId: suppliedStoreProductId });
         }
-        if (!product) {
-            product = await ApliiqProduct.findOne({
+        if (!product && !suppliedStoreProductId) {
+            const skuMatches = await ApliiqProduct.find({
                 'variants.sku': { $in: variants.map(variant => variant.sku) }
-            });
+            }).limit(2);
+            if (skuMatches.length === 1) {
+                const match = skuMatches[0];
+                const incomingReviewHash = materialReviewHash({
+                    shippingProfileId: stringValue(payload.shippingProfileId, 200),
+                    taxonomyId: stringValue(payload.taxonomyId, 200),
+                    type: stringValue(payload.type, 100),
+                    name,
+                    currency: stringValue(payload.currency || 'USD', 10),
+                    description: stringValue(payload.description, 10000),
+                    imageUrls: stringArray(payload.imageUrls, 20, 2000).map(httpsUrl).filter(Boolean),
+                    sizes: stringArray(payload.sizes, 100, 50),
+                    colors: stringArray(payload.colors, 100, 100),
+                    variants,
+                    replaceProduct: Boolean(payload.replaceProduct)
+                });
+                const exactVerifiedIntent =
+                    match.wordethIntent?.verified === true &&
+                    match.wordethIntent.expectedReviewHash === incomingReviewHash;
+                if (match.status !== 'approved' || exactVerifiedIntent) product = match;
+            }
         }
 
         const skuIdentity = variants.map(variant => variant.sku).sort().join('|');
-        const identityKey = product
+        let identityKey = product
             ? product.identityKey
             : (suppliedStoreProductId
                 ? `store:${suppliedStoreProductId}`
                 : `skus:${payloadHash(skuIdentity)}`);
+        if (!product && await ApliiqProduct.exists({ identityKey })) {
+            identityKey = `quarantine:${payloadHash(`${identityKey}:${received.hash}`)}`;
+        }
         const storeProductId = product
             ? product.storeProductId
             : (suppliedStoreProductId || crypto.randomUUID());
@@ -292,6 +319,7 @@ router.post('/products', async (req, res) => {
             lastPayloadHash: received.hash,
             lastSyncedAt: new Date()
         };
+        productData.reviewHash = materialReviewHash(productData);
 
         if (!product) {
             product = await ApliiqProduct.findOneAndUpdate(
@@ -306,13 +334,40 @@ router.post('/products', async (req, res) => {
             let currentProduct = product;
             product = null;
             for (let attempt = 0; attempt < 5 && !product; attempt += 1) {
+                const currentReviewHash =
+                    currentProduct.reviewHash || materialReviewHash(currentProduct);
+                const verifiedWordethProduct =
+                    currentProduct.status !== 'archived' &&
+                    currentProduct.wordethIntent?.verified === true &&
+                    currentProduct.wordethIntent.expectedReviewHash === productData.reviewHash &&
+                    WORDETH_PRODUCTS.includes(currentProduct.wordethIntent.wordethProduct) &&
+                    (
+                        suppliedStoreProductId === currentProduct.storeProductId ||
+                        !suppliedStoreProductId
+                    );
                 const callbackChangedApprovedProduct =
                     currentProduct.status === 'approved' &&
-                    currentProduct.lastPayloadHash !== received.hash;
+                    currentReviewHash !== productData.reviewHash &&
+                    !verifiedWordethProduct;
                 const productUpdate = {
                     $set: {
                         ...productData,
-                        ...(callbackChangedApprovedProduct ? { status: 'pending' } : {})
+                        ...(callbackChangedApprovedProduct ? {
+                            status: 'pending',
+                            approvedSnapshot:
+                                currentProduct.approvedSnapshot ||
+                                approvedSnapshot(currentProduct),
+                            approvedReviewHash:
+                                currentProduct.approvedReviewHash || currentReviewHash
+                        } : {}),
+                        ...(verifiedWordethProduct ? {
+                            status: 'approved',
+                            wordethProduct: currentProduct.wordethIntent.wordethProduct,
+                            approvedSnapshot: approvedSnapshot(productData),
+                            approvedReviewHash: productData.reviewHash,
+                            'wordethIntent.verified': false,
+                            'wordethIntent.expectedReviewHash': ''
+                        } : {})
                     }
                 };
                 if (callbackChangedApprovedProduct) {
@@ -320,17 +375,29 @@ router.post('/products', async (req, res) => {
                         reviewHistory: {
                             action: 'changes_received',
                             actorId: 'apliiq-callback',
-                            note: 'Supplier callback changed this product; approval was reset.',
+                            note: 'Material supplier changes require review; the last approved version remains live.',
+                            at: new Date()
+                        }
+                    };
+                } else if (verifiedWordethProduct && currentProduct.status !== 'approved') {
+                    productUpdate.$push = {
+                        reviewHistory: {
+                            action: 'auto_approved',
+                            actorId: 'wordeth-verification',
+                            note: 'Auto-approved because the callback exactly matched a verified Wordeth product intent.',
                             at: new Date()
                         }
                     };
                 }
-                product = await ApliiqProduct.findOneAndUpdate(
-                    {
+                product = await ApliiqProduct.findOneAndUpdate({
+                    $and: [{
                         _id: currentProduct._id,
                         status: currentProduct.status,
                         lastPayloadHash: currentProduct.lastPayloadHash
-                    },
+                    }, currentProduct.reviewHash
+                        ? { reviewHash: currentProduct.reviewHash }
+                        : { $or: [{ reviewHash: '' }, { reviewHash: { $exists: false } }] }]
+                },
                     productUpdate,
                     { new: true, runValidators: true }
                 );
@@ -394,17 +461,34 @@ router.get('/products/search', async (req, res) => {
 router.get('/storefront/products', async (req, res) => {
     try {
         const products = await ApliiqProduct.find({
-            status: 'approved',
+            status: { $ne: 'archived' },
             wordethProduct: { $in: WORDETH_PRODUCTS }
         })
             .sort({ updatedAt: -1 })
             .select([
                 'storeProductId', 'wordethProduct', 'shippingProfileId', 'taxonomyId',
                 'type', 'name', 'currency', 'description', 'imageUrls', 'sizes',
-                'colors', 'variants', 'replaceProduct', 'updatedAt'
+                'colors', 'variants', 'replaceProduct', 'status', 'approvedSnapshot', 'updatedAt'
             ].join(' '))
             .lean();
-        res.json({ success: true, products });
+        res.json({
+            success: true,
+            products: products.reduce((published, product) => {
+                if (product.status === 'approved') {
+                    published.push(product);
+                } else if (product.approvedSnapshot) {
+                    published.push({
+                        _id: product._id,
+                        storeProductId: product.storeProductId,
+                        wordethProduct: product.wordethProduct,
+                        ...product.approvedSnapshot,
+                        updatedAt: product.updatedAt,
+                        updatePendingReview: true
+                    });
+                }
+                return published;
+            }, [])
+        });
     } catch (error) {
         res.status(500).json({ success: false, error: 'Unable to load products' });
     }
@@ -421,11 +505,96 @@ router.get('/admin/products', requireAdmin, async (req, res) => {
     }
 });
 
+router.post('/admin/products/intents', requireAdmin, async (req, res) => {
+    try {
+        const payload = req.body.product || req.body;
+        const wordethProduct = stringValue(req.body.wordethProduct || payload.wordethProduct, 30);
+        const name = stringValue(payload.name, 250);
+        const variants = normalizeVariants(payload.variants);
+        if (!WORDETH_PRODUCTS.includes(wordethProduct)) {
+            return res.status(400).json({ error: 'A valid Wordeth product mapping is required' });
+        }
+        if (!name || variants.length === 0) {
+            return res.status(400).json({ error: 'Product name and at least one variant SKU are required' });
+        }
+
+        const storeProductId = stringValue(payload.store_ProductId || payload.storeProductId, 200) || crypto.randomUUID();
+        const productData = {
+            shippingProfileId: stringValue(payload.shippingProfileId, 200),
+            taxonomyId: stringValue(payload.taxonomyId, 200),
+            type: stringValue(payload.type, 100),
+            name,
+            currency: stringValue(payload.currency || 'USD', 10),
+            description: stringValue(payload.description, 10000),
+            imageUrls: stringArray(payload.imageUrls, 20, 2000).map(httpsUrl).filter(Boolean),
+            sizes: stringArray(payload.sizes, 100, 50),
+            colors: stringArray(payload.colors, 100, 100),
+            variants,
+            replaceProduct: Boolean(payload.replaceProduct)
+        };
+        const expectedReviewHash = materialReviewHash(productData);
+        const existing = await ApliiqProduct.findOne({ storeProductId });
+        if (existing && existing.status !== 'pending') {
+            return res.status(409).json({ error: 'Only pending product intents can be replaced' });
+        }
+
+        const intentData = {
+            ...productData,
+            reviewHash: expectedReviewHash,
+            wordethProduct,
+            wordethIntent: {
+                verified: true,
+                expectedReviewHash,
+                wordethProduct,
+                createdAt: new Date()
+            }
+        };
+        let product;
+        if (existing) {
+            const existingReviewFilter = existing.reviewHash
+                ? { reviewHash: existing.reviewHash }
+                : { $or: [{ reviewHash: '' }, { reviewHash: { $exists: false } }] };
+            product = await ApliiqProduct.findOneAndUpdate({
+                $and: [
+                    { _id: existing._id, status: 'pending' },
+                    existingReviewFilter
+                ]
+            }, {
+                $set: {
+                    ...intentData
+                }
+            }, { new: true, runValidators: true });
+            if (!product) {
+                return res.status(409).json({ error: 'The product intent changed while it was being replaced' });
+            }
+        } else {
+            product = await ApliiqProduct.create({
+                identityKey: `store:${storeProductId}`,
+                storeProductId,
+                status: 'pending',
+                ...intentData
+            });
+        }
+
+        res.status(existing ? 200 : 201).json({
+            success: true,
+            storeProductId: product.storeProductId,
+            expectedReviewHash
+        });
+    } catch (error) {
+        if (error?.code === 11000) {
+            return res.status(409).json({ error: 'This Wordeth product intent changed or conflicts with an existing product' });
+        }
+        res.status(500).json({ error: 'Unable to register Wordeth product intent' });
+    }
+});
+
 router.patch('/admin/products/:id', requireAdmin, async (req, res) => {
     try {
         const action = stringValue(req.body.action, 20);
         const wordethProduct = stringValue(req.body.wordethProduct, 30);
         const expectedPayloadHash = stringValue(req.body.expectedPayloadHash, 100);
+        const expectedReviewHash = stringValue(req.body.expectedReviewHash, 100);
         const note = stringValue(req.body.note, 1000);
         if (!['approve', 'archive', 'map'].includes(action)) {
             return res.status(400).json({ error: 'Invalid product action' });
@@ -433,8 +602,19 @@ router.patch('/admin/products/:id', requireAdmin, async (req, res) => {
         if ((action === 'approve' || action === 'map') && !WORDETH_PRODUCTS.includes(wordethProduct)) {
             return res.status(400).json({ error: 'A valid Wordeth product mapping is required' });
         }
-        if (action === 'approve' && !expectedPayloadHash) {
+        if (action === 'approve' && !expectedReviewHash && !expectedPayloadHash) {
             return res.status(400).json({ error: 'The reviewed product version is required' });
+        }
+
+        const currentProduct = await ApliiqProduct.findById(req.params.id);
+        if (!currentProduct) return res.status(404).json({ error: 'Product not found' });
+        const currentReviewHash =
+            currentProduct.reviewHash || materialReviewHash(currentProduct);
+        const reviewedVersionMatches = expectedReviewHash
+            ? expectedReviewHash === currentReviewHash
+            : expectedPayloadHash === currentProduct.lastPayloadHash;
+        if (action === 'approve' && !reviewedVersionMatches) {
+            return res.status(409).json({ error: 'This product changed after it was loaded. Review the latest version before approving.' });
         }
 
         const update = {
@@ -447,18 +627,36 @@ router.patch('/admin/products/:id', requireAdmin, async (req, res) => {
                 }
             }
         };
-        if (action === 'approve') update.$set = { status: 'approved', wordethProduct };
+        if (action === 'approve') {
+            update.$set = {
+                status: 'approved',
+                wordethProduct,
+                approvedReviewHash: currentReviewHash,
+                approvedSnapshot: approvedSnapshot(currentProduct)
+            };
+        }
         if (action === 'archive') update.$set = { status: 'archived' };
         if (action === 'map') update.$set = { wordethProduct };
 
-        const product = await ApliiqProduct.findOneAndUpdate({
-            _id: req.params.id,
-            ...(action === 'approve' ? { lastPayloadHash: expectedPayloadHash } : {})
-        }, update, {
+        const versionFilter = action === 'approve'
+            ? {
+                $and: [
+                    { _id: req.params.id },
+                    currentProduct.reviewHash
+                        ? { reviewHash: currentReviewHash }
+                        : { $or: [
+                            { reviewHash: currentReviewHash },
+                            { reviewHash: '' },
+                            { reviewHash: { $exists: false } }
+                        ] }
+                ]
+            }
+            : { _id: req.params.id };
+        const product = await ApliiqProduct.findOneAndUpdate(versionFilter, update, {
             new: true,
             runValidators: true
         });
-        if (!product && action === 'approve' && await ApliiqProduct.exists({ _id: req.params.id })) {
+        if (!product && action === 'approve') {
             return res.status(409).json({ error: 'This product changed after it was loaded. Review the latest version before approving.' });
         }
         if (!product) return res.status(404).json({ error: 'Product not found' });

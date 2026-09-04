@@ -17,6 +17,7 @@ const ApliiqProduct = require('../models/ApliiqProduct');
 const ApliiqWarehouseShipment = require('../models/ApliiqWarehouseShipment');
 const MerchOrder = require('../models/MerchOrder');
 const { reconcilePendingFulfillmentsForOrder } = require('../services/apliiqFulfillment');
+const { materialReviewHash } = require('../services/apliiqProductReview');
 
 const app = express();
 app.use('/api/apliiq', express.raw({ type: 'application/json' }), apliqRoutes);
@@ -196,11 +197,136 @@ test('returns an approved product to pending when a later unauthenticated callba
 
     const changed = await ApliiqProduct.findById(product._id);
     expect(changed.status).toBe('pending');
+    expect(changed.approvedSnapshot.name).toBe('Wordeth Tour Tee');
     expect(changed.reviewHistory.at(-1).action).toBe('changes_received');
-    await request(app).get('/api/apliiq/storefront/products').expect(200, {
-        success: true,
-        products: []
-    });
+    const storefront = await request(app).get('/api/apliiq/storefront/products').expect(200);
+    expect(storefront.body.products).toHaveLength(1);
+    expect(storefront.body.products[0].name).toBe('Wordeth Tour Tee');
+    expect(storefront.body.products[0].updatePendingReview).toBe(true);
+});
+
+test('keeps approval when callback metadata or array ordering changes but material product data does not', async () => {
+    await request(app).post('/api/apliiq/products').send(productPayload());
+    const product = await ApliiqProduct.findOne();
+    await request(app)
+        .patch(`/api/apliiq/admin/products/${product._id}`)
+        .set('Authorization', `Bearer ${adminToken()}`)
+        .send({
+            action: 'approve',
+            wordethProduct: 'tshirt',
+            expectedReviewHash: product.reviewHash
+        })
+        .expect(200);
+
+    await request(app)
+        .post('/api/apliiq/products')
+        .send(productPayload({
+            store_ProductId: product.storeProductId,
+            callbackTimestamp: '2030-01-01T00:00:00Z',
+            sizes: ['m', 's']
+        }))
+        .expect(200);
+
+    const unchanged = await ApliiqProduct.findById(product._id);
+    expect(unchanged.status).toBe('approved');
+    expect(unchanged.reviewHistory.filter(item => item.action === 'changes_received')).toHaveLength(0);
+});
+
+test('auto-approves only an exact callback match for a pre-registered verified Wordeth intent', async () => {
+    const payload = productPayload();
+    const intent = await request(app)
+        .post('/api/apliiq/admin/products/intents')
+        .set('Authorization', `Bearer ${adminToken()}`)
+        .send({ wordethProduct: 'tshirt', product: payload })
+        .expect(201);
+
+    await request(app).post('/api/apliiq/products').send(payload).expect(200);
+
+    const product = await ApliiqProduct.findOne({ storeProductId: intent.body.storeProductId });
+    expect(product.status).toBe('approved');
+    expect(product.wordethProduct).toBe('tshirt');
+    expect(product.approvedReviewHash).toBe(intent.body.expectedReviewHash);
+    expect(product.wordethIntent.verified).toBe(false);
+    expect(product.reviewHistory.at(-1).action).toBe('auto_approved');
+});
+
+test('does not replace a Wordeth intent after its product has been approved', async () => {
+    const payload = productPayload();
+    const intent = await request(app)
+        .post('/api/apliiq/admin/products/intents')
+        .set('Authorization', `Bearer ${adminToken()}`)
+        .send({ wordethProduct: 'tshirt', product: payload })
+        .expect(201);
+    await request(app).post('/api/apliiq/products').send(payload).expect(200);
+
+    await request(app)
+        .post('/api/apliiq/admin/products/intents')
+        .set('Authorization', `Bearer ${adminToken()}`)
+        .send({
+            wordethProduct: 'tshirt',
+            product: productPayload({
+                store_ProductId: intent.body.storeProductId,
+                name: 'Unreviewed replacement'
+            })
+        })
+        .expect(409);
+
+    const product = await ApliiqProduct.findOne({ storeProductId: intent.body.storeProductId });
+    expect(product.status).toBe('approved');
+    expect(product.name).toBe('Wordeth Tour Tee');
+    expect(product.wordethIntent.verified).toBe(false);
+});
+
+test('does not let an unknown supplied product ID hijack an approved product through a shared SKU', async () => {
+    await request(app).post('/api/apliiq/products').send(productPayload());
+    const original = await ApliiqProduct.findOne();
+    await request(app)
+        .patch(`/api/apliiq/admin/products/${original._id}`)
+        .set('Authorization', `Bearer ${adminToken()}`)
+        .send({
+            action: 'approve',
+            wordethProduct: 'tshirt',
+            expectedReviewHash: original.reviewHash
+        })
+        .expect(200);
+
+    await request(app)
+        .post('/api/apliiq/products')
+        .send(productPayload({
+            store_ProductId: 'unknown-collision',
+            name: 'Untrusted collision'
+        }))
+        .expect(200);
+
+    const unchanged = await ApliiqProduct.findById(original._id);
+    const collision = await ApliiqProduct.findOne({ storeProductId: 'unknown-collision' });
+    expect(unchanged.status).toBe('approved');
+    expect(unchanged.name).toBe('Wordeth Tour Tee');
+    expect(collision.status).toBe('pending');
+    expect(await ApliiqProduct.countDocuments({})).toBe(2);
+});
+
+test('allows approval when only raw callback metadata changed after staff loaded the product', async () => {
+    await request(app).post('/api/apliiq/products').send(productPayload());
+    const loaded = await ApliiqProduct.findOne();
+
+    await request(app)
+        .post('/api/apliiq/products')
+        .send(productPayload({
+            store_ProductId: loaded.storeProductId,
+            callbackTimestamp: '2030-01-01T00:00:00Z'
+        }))
+        .expect(200);
+
+    await request(app)
+        .patch(`/api/apliiq/admin/products/${loaded._id}`)
+        .set('Authorization', `Bearer ${adminToken()}`)
+        .send({
+            action: 'approve',
+            wordethProduct: 'tshirt',
+            expectedReviewHash: loaded.reviewHash
+        })
+        .expect(200);
 });
 
 test('rejects approval when the supplier payload changed after staff loaded it', async () => {

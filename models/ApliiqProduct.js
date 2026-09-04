@@ -18,7 +18,7 @@ const apliqVariantSchema = new mongoose.Schema({
 const productReviewSchema = new mongoose.Schema({
     action: {
         type: String,
-        enum: ['approved', 'archived', 'mapped', 'changes_received'],
+        enum: ['approved', 'auto_approved', 'archived', 'mapped', 'changes_received'],
         required: true
     },
     actorId: { type: String, required: true },
@@ -54,6 +54,19 @@ const apliqProductSchema = new mongoose.Schema({
     },
     reviewHistory: { type: [productReviewSchema], default: [] },
     lastPayloadHash: { type: String, default: '' },
+    reviewHash: { type: String, default: '', index: true },
+    approvedReviewHash: { type: String, default: '' },
+    approvedSnapshot: { type: mongoose.Schema.Types.Mixed, default: null },
+    wordethIntent: {
+        verified: { type: Boolean, default: false },
+        expectedReviewHash: { type: String, default: '' },
+        wordethProduct: {
+            type: String,
+            enum: ['', 'tshirt', 'hoodie', 'tank', 'longsleeve', 'sweatshirt', 'hat'],
+            default: ''
+        },
+        createdAt: { type: Date, default: null }
+    },
     lastSyncedAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 

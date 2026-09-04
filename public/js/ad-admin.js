@@ -176,14 +176,15 @@ class AdAdmin {
             <article class="ops-card">
                 <h3>${this.escapeHtml(product.name)} <span class="status-pill">${this.escapeHtml(product.status)}</span></h3>
                 <div class="ops-meta">${this.escapeHtml(product.type || 'Unknown type')} · ${product.variants.length} variants · ID ${this.escapeHtml(product.storeProductId)}</div>
+                ${product.approvedSnapshot ? '<div class="ops-meta">The last approved version remains live while these changes are reviewed.</div>' : ''}
                 <div class="ops-actions">
                     <select id="mapping-${product._id}">
                         ${['tshirt','hoodie','tank','longsleeve','sweatshirt','hat'].map(value => `<option value="${value}" ${product.wordethProduct === value ? 'selected' : ''}>${value}</option>`).join('')}
                     </select>
                     <input id="product-note-${product._id}" placeholder="Audit note (optional)" maxlength="1000">
-                    <button class="action-btn" data-product-id="${product._id}" data-product-hash="${product.lastPayloadHash}" data-product-action="map">Save mapping</button>
-                    <button class="action-btn" data-product-id="${product._id}" data-product-hash="${product.lastPayloadHash}" data-product-action="approve">Approve</button>
-                    <button class="action-btn" data-product-id="${product._id}" data-product-hash="${product.lastPayloadHash}" data-product-action="archive">Archive</button>
+                    <button class="action-btn" data-product-id="${product._id}" data-product-hash="${product.reviewHash || product.lastPayloadHash}" data-product-action="map">Save mapping</button>
+                    <button class="action-btn" data-product-id="${product._id}" data-product-hash="${product.reviewHash || product.lastPayloadHash}" data-product-action="approve">Approve</button>
+                    <button class="action-btn" data-product-id="${product._id}" data-product-hash="${product.reviewHash || product.lastPayloadHash}" data-product-action="archive">Archive</button>
                 </div>
             </article>`).join('') : '<p class="empty-message">No products in this queue.</p>';
     }
@@ -195,7 +196,7 @@ class AdAdmin {
             body: JSON.stringify({
                 action,
                 wordethProduct: document.getElementById(`mapping-${id}`).value,
-                expectedPayloadHash: document.querySelector(`[data-product-id="${id}"]`).dataset.productHash,
+                expectedReviewHash: document.querySelector(`[data-product-id="${id}"]`).dataset.productHash,
                 note: document.getElementById(`product-note-${id}`).value
             })
         });
