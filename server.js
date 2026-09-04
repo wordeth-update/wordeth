@@ -53,6 +53,7 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
 const lyricsRoutes = require('./routes/lyrics'); // Re-enabled with Genius API key
 const merchRoutes = require('./routes/merch');
+const apliqRoutes = require('./routes/apliiq');
 const templateRoutes = require('./routes/templates');
 const adsRoutes = require('./routes/ads'); // Advertising system
 const analyticsRoutes = require('./routes/analytics'); // Usage metrics
@@ -72,6 +73,7 @@ const audiobankRoutes = require('./routes/audiobank'); // Audio Bank API & admin
 const scheduledRoomsRoutes = require('./routes/scheduledRooms'); // Scheduled rooms & collabs
 const roomTipsRoutes = require('./routes/roomTips'); // Room tip pool
 const settlementService = require('./services/settlement'); // Crash-safe payouts
+const { startFulfillmentRecoverySweep } = require('./services/apliiqFulfillment');
 const nudgeScheduler = require('./services/nudgeScheduler'); // Scheduled-room nudges
 const { createWebhookHandler } = require('./routes/stripe');
 const trackingMiddleware = require('./middleware/tracking'); // Event tracking
@@ -95,6 +97,7 @@ nudgeScheduler.init({ io, connectedUsers: global._connectedUsers });
 if (process.env.NODE_ENV !== 'test') {
     nudgeScheduler.start();
     settlementService.startRecoverySweep();
+    startFulfillmentRecoverySweep();
 }
 
 app.set('trust proxy', 1);
@@ -206,6 +209,13 @@ app.use(cors({
 app.post('/api/stripe/webhook',
     express.raw({ type: 'application/json' }),
     createWebhookHandler(process.env.STRIPE_WEBHOOK_SECRET)
+);
+
+// Apliiq callbacks require the exact raw JSON bytes for HMAC verification.
+app.use(
+    '/api/apliiq',
+    express.raw({ type: 'application/json', limit: '2mb' }),
+    apliqRoutes
 );
 
 // Middleware

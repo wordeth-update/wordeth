@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const mongoose = require('mongoose');
+const MerchOrder = require('../models/MerchOrder');
+const { reconcilePendingFulfillmentsForOrder } = require('../services/apliiqFulfillment');
 
 const VIEWS_BY_PRODUCT = {
     tshirt: ['front','back','left','right'],
@@ -20,31 +21,6 @@ const PRINT_AREAS = {
     sweatshirt: { front: { x: 28, y: 20, w: 44, h: 44 }, back: { x: 28, y: 18, w: 44, h: 46 }, left: { x: 12, y: 22, w: 28, h: 35 }, right: { x: 60, y: 22, w: 28, h: 35 } },
     hat:        { front: { x: 20, y: 25, w: 60, h: 40 }, back: { x: 20, y: 25, w: 60, h: 40 }, left: { x: 10, y: 25, w: 35, h: 40 }, right: { x: 55, y: 25, w: 35, h: 40 } }
 };
-
-const merchOrderSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    product: { type: String, required: true },
-    productName: { type: String, required: true },
-    color: { type: String, required: true },
-    colorName: { type: String },
-    size: { type: String, required: true },
-    quantity: { type: Number, required: true, min: 1 },
-    unitPrice: { type: Number, required: true },
-    totalPrice: { type: Number, required: true },
-    artistName: String,
-    artistId: String,
-    frontDesign: String,
-    backDesign: String,
-    leftDesign: String,
-    rightDesign: String,
-    designPreview: String,
-    templateId: String,
-    status: { type: String, default: 'pending', enum: ['pending', 'confirmed', 'production', 'shipped', 'delivered', 'cancelled'] },
-    trackingNumber: String,
-    notes: String
-}, { timestamps: true });
-
-const MerchOrder = mongoose.models.MerchOrder || mongoose.model('MerchOrder', merchOrderSchema);
 
 const PRODUCT_CATALOG = {
     tshirt:     { name: 'T-Shirt',     price: 29.99 },
@@ -113,6 +89,10 @@ router.post('/orders', auth, async (req, res) => {
             designPreview: previewStr,
             templateId: templateId ? String(templateId).substring(0, 100) : null,
             status: 'pending'
+        });
+
+        await reconcilePendingFulfillmentsForOrder(order).catch(error => {
+            console.error('[Apliiq] Pending fulfillment reconciliation failed:', error.message);
         });
 
         res.json({ success: true, data: { orderId: order._id, status: order.status }, message: 'Order placed successfully' });
