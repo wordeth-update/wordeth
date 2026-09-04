@@ -85,7 +85,7 @@ const trackingMiddleware = require('./middleware/tracking'); // Event tracking
 
 const app = express();
 if (process.env.NODE_ENV === 'production' && !process.env.STRIPE_WEBHOOK_SECRET) {
-    throw new Error('STRIPE_WEBHOOK_SECRET is required in production');
+    console.warn('⚠️  STRIPE_WEBHOOK_SECRET is not configured — Stripe webhooks will remain disabled');
 }
 const server = http.createServer(app);
 const io = new Server(server, {
