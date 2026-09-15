@@ -168,6 +168,15 @@ router.post('/:userId', auth, upload.single('audio'), async (req, res) => {
             }
         }
 
+        // The phone, when the app is closed or on another screen. Best effort;
+        // the message is already saved and the socket delivery above stands.
+        const { pushToUser } = require('../services/push');
+        pushToUser(otherId, {
+            title: req.user.name || 'New message',
+            body: message.text || '🎤 Audio message',
+            data: { type: 'message', fromUserId: String(myId) }
+        }).catch(err => console.error('[Push] message push error:', err.message));
+
         res.json(message);
     } catch (error) {
         console.error('Send message error:', error);
