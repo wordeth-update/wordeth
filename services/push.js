@@ -69,4 +69,20 @@ async function pushNotification(notification) {
     }
 }
 
-module.exports = { pushNotification, isExpoToken, describe, sendToTokens };
+/**
+ * Pushes one message to every device of one person. For things that are
+ * not stored Notifications — a direct message, say — and so never pass
+ * through the post-save hook.
+ */
+async function pushToUser(userId, message) {
+    const User = require('../models/User');
+    const user = await User.findById(userId).select('pushTokens').lean();
+    const tokens = (user && user.pushTokens || []).map(t => t.token);
+    if (tokens.length === 0) return;
+    const dead = await sendToTokens(tokens, message);
+    if (dead.length > 0) {
+        await User.updateOne({ _id: userId }, { $pull: { pushTokens: { token: { $in: dead } } } });
+    }
+}
+
+module.exports = { pushNotification, pushToUser, isExpoToken, describe, sendToTokens };
