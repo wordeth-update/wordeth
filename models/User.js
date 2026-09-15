@@ -181,6 +181,15 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: null
     },
+    // Expo push tokens for the native app, one per installed device.
+    pushTokens: {
+        type: [{
+            token: { type: String, required: true },
+            platform: { type: String, enum: ['ios', 'android'], required: true },
+            updatedAt: { type: Date, default: Date.now }
+        }],
+        default: []
+    },
     stripeCustomerId: {
         type: String,
         default: null,

@@ -644,4 +644,38 @@ router.delete('/account', auth, async (req, res) => {
     }
 });
 
+// ── Push tokens (native app) ──────────────────────────────────────────
+const { isExpoToken } = require('../services/push');
+
+// Register this device for push. Idempotent: the same token updates in place.
+router.post('/push-token', auth, async (req, res) => {
+    try {
+        const { token, platform } = req.body || {};
+        if (!isExpoToken(token)) return res.status(400).json({ message: 'A valid Expo push token is required' });
+        if (!['ios', 'android'].includes(platform)) return res.status(400).json({ message: 'platform must be ios or android' });
+        await User.updateOne({ _id: req.user._id }, { $pull: { pushTokens: { token } } });
+        await User.updateOne(
+            { _id: req.user._id },
+            { $push: { pushTokens: { $each: [{ token, platform, updatedAt: new Date() }], $slice: -10 } } }
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Push token error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Forget this device (sign-out on the phone).
+router.delete('/push-token', auth, async (req, res) => {
+    try {
+        const { token } = req.body || {};
+        if (!isExpoToken(token)) return res.status(400).json({ message: 'A valid Expo push token is required' });
+        await User.updateOne({ _id: req.user._id }, { $pull: { pushTokens: { token } } });
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Push token error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 module.exports = router; 

@@ -199,40 +199,67 @@ function setupSignaling(io) {
         if (saved > 0) console.log(`[Heartbeat] Refreshed ${saved} room(s) in Redis`);
     }, 5 * 60 * 1000);
 
+    /**
+     * Connection-level authentication.
+     *
+     * A client may present its JWT in the handshake (`auth.token`); when it
+     * does, the socket is bound to that account before any event is handled.
+     * Guests are still admitted — listening in a free room needs no account —
+     * but a bad token is refused outright rather than silently downgraded,
+     * because a client that sent one expected to be someone.
+     */
+    io.use(async (socket, next) => {
+        const token = socket.handshake && socket.handshake.auth && socket.handshake.auth.token;
+        if (!token) return next();
+        const user = await authenticatedSocketUser(token);
+        if (!user) return next(new Error('Invalid or expired token'));
+        socket.handshakeUser = user;
+        next();
+    });
+
     io.on('connection', (socket) => {
         console.log(`Socket connected: ${socket.id}`);
 
+        /**
+         * Ties this socket to a verified account: invites, notifications and
+         * room identity all key off it. Reached two ways — from the handshake
+         * (the native app sends its JWT as `auth.token`) or from the legacy
+         * `register-user` event the website still emits after connecting.
+         */
+        const registerSocketUser = (verifiedUser) => {
+            const userId = String(verifiedUser._id);
+            const userName = verifiedUser.name || 'User';
+            socket.registeredUserId = userId;
+            socket.registeredUserName = userName;
+            if (!connectedUsers.has(userId)) {
+                connectedUsers.set(userId, new Set());
+            }
+            const userSockets = connectedUsers.get(userId);
+            userSockets.add(socket.id);
+            if (userSockets.size > 1) {
+                const stale = [];
+                for (const sid of userSockets) {
+                    if (sid === socket.id) continue;
+                    const oldSock = io.sockets.sockets.get(sid);
+                    if (!oldSock || !oldSock.connected || !oldSock.roomId) {
+                        stale.push(sid);
+                    }
+                }
+                for (const sid of stale) {
+                    userSockets.delete(sid);
+                    const oldSock = io.sockets.sockets.get(sid);
+                    if (oldSock) oldSock.disconnect(true);
+                }
+            }
+            console.log(`User registered: ${userName} (${userId}) on socket ${socket.id} (${userSockets.size} connections)`);
+        };
+
+        if (socket.handshakeUser) registerSocketUser(socket.handshakeUser);
+
         socket.on('register-user', async ({ authToken } = {}) => {
             const verifiedUser = await authenticatedSocketUser(authToken);
-            if (verifiedUser) {
-                const userId = String(verifiedUser._id);
-                const userName = verifiedUser.name || 'User';
-                socket.registeredUserId = userId;
-                socket.registeredUserName = userName;
-                if (!connectedUsers.has(userId)) {
-                    connectedUsers.set(userId, new Set());
-                }
-                const userSockets = connectedUsers.get(userId);
-                userSockets.add(socket.id);
-                if (userSockets.size > 1) {
-                    const stale = [];
-                    for (const sid of userSockets) {
-                        if (sid === socket.id) continue;
-                        const oldSock = io.sockets.sockets.get(sid);
-                        if (!oldSock || !oldSock.connected || !oldSock.roomId) {
-                            stale.push(sid);
-                        }
-                    }
-                    for (const sid of stale) {
-                        userSockets.delete(sid);
-                        const oldSock = io.sockets.sockets.get(sid);
-                        if (oldSock) oldSock.disconnect(true);
-                    }
-                }
-                console.log(`User registered: ${userName} (${userId}) on socket ${socket.id} (${userSockets.size} connections)`);
-            } else {
-                socket.emit('registration-error', { message: 'Sign in again to register this connection.' });
-            }
+            if (verifiedUser) registerSocketUser(verifiedUser);
+            else socket.emit('registration-error', { message: 'Sign in again to register this connection.' });
         });
 
         socket.on('room-invite', async ({ targetUserId, roomId, roomName, inviterName }) => {
@@ -848,7 +875,10 @@ function setupSignaling(io) {
             console.log(`${participant.userName} left room ${roomId} (${room.participants.size} remaining)`);
         });
 
-        socket.on('chat-message', ({ roomId, message, sender }) => {
+        socket.on('chat-message', ({ roomId, message } = {}) => {
+            // Only members speak in a room, and only in the one they are in.
+            if (!roomId || socket.roomId !== roomId) return;
+            if (typeof message !== 'string' || message.trim().length === 0 || message.length > 1000) return;
             socket.to(roomId).emit('chat-message', {
                 sender: socket.userName,
                 message,

@@ -45,4 +45,11 @@ const notificationSchema = new mongoose.Schema({
 notificationSchema.index({ userId: 1, createdAt: -1 });
 notificationSchema.index({ userId: 1, read: 1 });
 
+// Every stored notification is also pushed to the recipient's phones. The
+// hook runs after the write, so a push failure can never lose the record.
+notificationSchema.post('save', function (doc) {
+    const { pushNotification } = require('../services/push');
+    pushNotification(doc).catch(err => console.error('[Push] send error:', err.message));
+});
+
 module.exports = mongoose.model('Notification', notificationSchema);
