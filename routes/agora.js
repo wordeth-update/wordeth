@@ -83,7 +83,9 @@ router.post('/token', auth, async (req, res) => {
       accessSeconds,
       Math.min(PRIVILEGE_EXPIRY_SECONDS, accessSeconds),
       canPublishAudio ? accessSeconds : 0,
-      0,
+      // Video (camera, screen share) goes with the stage: hosts and speakers
+      // may publish it; the crowd may not. Same rule as audio.
+      canPublishAudio ? accessSeconds : 0,
       0
     );
 
