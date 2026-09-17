@@ -22,6 +22,13 @@ const replaySchema = new mongoose.Schema({
         default: '',
         trim: true
     },
+    // The recording itself, when the host's app uploaded one: a /api/files
+    // path. Empty for rooms recorded nowhere, which is every room before
+    // the native app.
+    audioUrl: {
+        type: String,
+        default: ''
+    },
     genre: {
         type: String,
         default: '',

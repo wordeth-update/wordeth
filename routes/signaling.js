@@ -745,6 +745,8 @@ function setupSignaling(io) {
                 isLocked: room.isLocked,
                 stageAccess: room.stageAccess || 'invite-only',
                 tokenPrice: room.tokenPrice || 0,
+                roomType: room.roomType || 'conversation',
+                recording: !!room.recording,
                 wildcardExpiresAt: paidEntryAccess?.wildcard ? paidEntryAccess.expiresAt : null
             };
             socket.emit('room-joined', joinData);
@@ -1097,6 +1099,17 @@ function setupSignaling(io) {
                     }
                     break;
 
+                case 'recording':
+                    // The host's phone is recording the room. Everyone is told,
+                    // and the flag rides in the join ack for late arrivals.
+                    if (socket.id === room.hostId) {
+                        room.recording = !!data.on;
+                        socket.to(roomId).emit('room-event', { event, data: { on: room.recording, hostName: socket.userName } });
+                        saveRoom(roomId, room);
+                        io.emit('rooms-updated', getActiveRooms());
+                    }
+                    break;
+
                 case 'topic-change':
                     if (socket.id === room.hostId) {
                         socket.to(roomId).emit('room-event', { event, data });
@@ -1336,6 +1349,8 @@ function getActiveRooms() {
             })),
             isLocked: room.isLocked,
             karaokeEnabled: room.karaokeEnabled,
+            roomType: room.roomType || 'conversation',
+            recording: !!room.recording,
             videoMode: room.videoMode || 'off',
             tokenPrice: room.tokenPrice || 0,
             createdAt: room.createdAt

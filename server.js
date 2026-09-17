@@ -666,13 +666,18 @@ app.post('/api/rooms/create-and-join', auth, async (req, res) => {
     if (tokenPrice > 0 && await resolveCustomerAudience(req.user) !== USER_PLUS) {
         return res.status(403).json({ success: false, message: 'Creating paid rooms requires User+.', code: 'USER_PLUS_REQUIRED' });
     }
+    const ROOM_TYPES = ['conversation', 'karaoke', 'class', 'battle'];
+    const roomType = ROOM_TYPES.includes(req.body.roomType) ? req.body.roomType : 'conversation';
     const room = {
         id: roomId,
         name: name || null,
         hostId: userId || null,
         creatorUserId: userId || null,
         participants: new Map(),
-        karaokeEnabled: false,
+        roomType,
+        recording: false,
+        // A karaoke room is for singing: karaoke is on from the start.
+        karaokeEnabled: roomType === 'karaoke',
         videoMode: 'off',
         activeVideos: new Set(),
         isLocked: false,
