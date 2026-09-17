@@ -735,6 +735,23 @@
         }
     });
 
+    /* Pointer parallax on the stage (fine pointers only; never under reduced motion). */
+    (function initParallax() {
+        var stage = document.querySelector('.liq-stage');
+        if (!stage || reduceMotion || !window.matchMedia('(pointer: fine)').matches) return;
+        var raf = null, tx = 0, ty = 0;
+        document.addEventListener('mousemove', function (e) {
+            tx = (e.clientX / window.innerWidth - 0.5) * 2;
+            ty = (e.clientY / window.innerHeight - 0.5) * 2;
+            if (raf) return;
+            raf = requestAnimationFrame(function () {
+                raf = null;
+                stage.style.setProperty('--px', tx.toFixed(3));
+                stage.style.setProperty('--py', ty.toFixed(3));
+            });
+        }, { passive: true });
+    })();
+
     window.addEventListener('popstate', function () { route(); });
     window.addEventListener('hashchange', function () { route(); });
     window.addEventListener('online', function () { toast('Back online.'); });
