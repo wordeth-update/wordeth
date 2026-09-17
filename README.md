@@ -32,6 +32,7 @@ Integration tests spin up an isolated database per file (memory-server by defaul
 ## Lyric IQ
 
 * **Play**: `/lyric-iq.html` — guest play with no account, then "Save your Lyric IQ".
+* **Worlds as levels**: the meadow (starting out), the city (Lyric IQ 50+), the desert (75+). Streak runs climb through all three live; Rapid Fire plays in the city. Add `?world=meadow|city|desert` to preview any world.
 * **Modes**: Play (10 mixed), Daily 10 (one canonical set per UTC day), Rapid Fire (60 s), Streak (until a miss), optional genre category.
 * **Question types**: finish the lyric, missing word, missing phrase, next line, guess the song, guess the artist; multiple choice and typed.
 * **Lyric IQ**: 0–100 identity metric with genre / era / recall / recognition sub-scores, explained in [`docs/lyric-iq/LYRIC_IQ_MODEL.md`](docs/lyric-iq/LYRIC_IQ_MODEL.md).

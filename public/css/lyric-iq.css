@@ -3,7 +3,7 @@
    Wordeth palette (mint / purple / hot pink / electric blue / gold) and type
    (Unbounded display, Outfit body) in a deep, bright, playful world: thoughts
    drift high as soft forms, become letter blocks as they descend, and land as
-   words on rounded mint hills. Chunky outlines, bouncy buttons, adult-playful.
+   words in a lit-up city or a sunset desert. Chunky outlines, bouncy buttons.
    ========================================================================== */
 
 :root {
@@ -143,6 +143,11 @@ html { -webkit-text-size-adjust: 100%; }
 .liq-block--5 { left: 11%; bottom: 50vh; animation-delay: -3s; width: 40px; height: 40px; opacity: 0.85; }
 @keyframes liq-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
+/* Worlds: only the active one is shown; the sky recolours with it. */
+.liq-world { position: absolute; inset: 0; opacity: 0; transition: opacity 600ms var(--liq-ease); pointer-events: none; }
+body[data-world="meadow"] .liq-world--meadow, body[data-world="city"] .liq-world--city, body[data-world="desert"] .liq-world--desert { opacity: 1; }
+
+/* --- Meadow (level 1) -------------------------------------------------- */
 .liq-hill { position: absolute; left: 50%; transform: translateX(-50%); border-radius: 50%; border: var(--liq-border) solid var(--liq-ink); }
 .liq-hill--back { bottom: -32vh; width: 190vw; height: 60vh; background: var(--liq-hill-back); border-color: rgba(18, 8, 58, 0.18); }
 .liq-hill--mid { bottom: -36vh; width: 150vw; height: 58vh; left: 62%; background: var(--liq-hill-mid); border-color: rgba(18, 8, 58, 0.35); }
@@ -151,6 +156,69 @@ html { -webkit-text-size-adjust: 100%; }
     position: absolute; left: 0; right: 0; bottom: 0; height: 6vh;
     background: repeating-linear-gradient(90deg, var(--liq-ground) 0 22px, #0C8C6B 22px 44px);
     border-top: var(--liq-border) solid var(--liq-ink);
+}
+body[data-world="city"] .liq-sky { background: linear-gradient(180deg, #3A1A9E 0%, #6C3BFF 30%, #4F8DFF 62%, #7FD6FF 100%); }
+body[data-world="desert"] .liq-sky { background: linear-gradient(180deg, #5B2BE0 0%, #A23DFF 26%, #FF2D78 56%, #FF9A3D 82%, #FFE500 100%); }
+body[data-world="desert"] .liq-cloud { opacity: 0.55; }
+
+/* --- City (level 2) ---------------------------------------------------- */
+.liq-skyline { position: absolute; left: 0; right: 0; bottom: 7vh; height: 60vh; }
+.liq-skyline--far { opacity: 0.6; filter: blur(0.6px); bottom: 12vh; }
+.liq-tower {
+    position: absolute; left: var(--x); width: var(--w); height: var(--h); bottom: 0;
+    background: var(--c); border-radius: 6px 6px 0 0;
+}
+.liq-tower--lit {
+    border: var(--liq-border) solid var(--liq-ink); border-bottom: 0; border-radius: 10px 10px 0 0;
+    background-color: var(--c);
+    background-image: radial-gradient(ellipse 3px 4px at 50% 50%, var(--liq-gold) 96%, transparent 100%);
+    background-size: 16px 20px; background-position: 6px 10px;
+    box-shadow: inset -8px 0 0 rgba(18, 8, 58, 0.18);
+}
+.liq-tower--lit::before { content: ''; position: absolute; left: 30%; right: 30%; top: -14px; height: 14px; background: var(--liq-ink); border-radius: 4px 4px 0 0; }
+.liq-tower--sign::after {
+    content: 'LYRIC IQ'; position: absolute; left: 8%; right: 8%; top: 14%; padding: 4px 0; text-align: center;
+    font-family: var(--liq-display); font-weight: 900; font-size: clamp(0.5rem, 1.2vw, 0.8rem); letter-spacing: 0.06em;
+    color: var(--liq-mint); background: var(--liq-ink); border: 2px solid var(--liq-mint); border-radius: 8px;
+    box-shadow: 0 0 14px rgba(0, 229, 168, 0.7); animation: liq-neon 2.6s ease-in-out infinite;
+}
+@keyframes liq-neon { 0%, 100% { box-shadow: 0 0 14px rgba(0, 229, 168, 0.7); } 50% { box-shadow: 0 0 26px rgba(0, 229, 168, 0.95); } }
+.liq-street {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 7vh;
+    background: var(--liq-ink); border-top: var(--liq-border) solid #2C1B6B;
+}
+.liq-street::before { content: ''; position: absolute; left: 0; right: 0; top: 46%; height: 5px; background: repeating-linear-gradient(90deg, var(--liq-mint) 0 34px, transparent 34px 58px); opacity: 0.95; }
+.liq-street::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 10px; background: repeating-linear-gradient(90deg, #4C25B0 0 40px, #3C1C8F 40px 80px); }
+
+/* --- Desert (level 3) -------------------------------------------------- */
+.liq-sun {
+    position: absolute; right: 8%; top: 22%; width: clamp(110px, 18vw, 220px); height: clamp(110px, 18vw, 220px); border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #FFF3A0, var(--liq-gold) 60%, #FFC53D 100%);
+    border: var(--liq-border) solid var(--liq-ink); box-shadow: 0 0 60px rgba(255, 229, 0, 0.55), 0 0 140px rgba(255, 45, 120, 0.35);
+}
+.liq-mesa {
+    position: absolute; left: var(--x); width: var(--w); height: var(--h); bottom: 20vh;
+    background: var(--c); border: var(--liq-border) solid var(--liq-ink); border-bottom: 0; border-radius: 22px 22px 0 0;
+    background-image: repeating-linear-gradient(180deg, transparent 0 14%, rgba(18, 8, 58, 0.14) 14% 20%);
+    opacity: 0.9;
+}
+.liq-mesa--near { bottom: 12vh; opacity: 1; }
+.liq-dune { position: absolute; left: 50%; transform: translateX(-50%); border-radius: 50%; border: var(--liq-border) solid var(--liq-ink); }
+.liq-dune--far { bottom: -30vh; width: 190vw; height: 56vh; left: 20%; background: #FF8FB8; border-color: rgba(18, 8, 58, 0.25); }
+.liq-dune--mid { bottom: -34vh; width: 160vw; height: 54vh; left: 76%; background: #FFC24D; border-color: rgba(18, 8, 58, 0.45); }
+.liq-dune--front { bottom: -42vh; width: 180vw; height: 62vh; left: 38%; background: var(--liq-gold); }
+.liq-cactus {
+    position: absolute; left: var(--x); bottom: 9vh; width: 26px; height: var(--h);
+    background: var(--liq-mint); border: var(--liq-border) solid var(--liq-ink); border-radius: 14px 14px 6px 6px;
+}
+.liq-cactus::before, .liq-cactus::after {
+    content: ''; position: absolute; width: 16px; height: 45%; background: var(--liq-mint); border: var(--liq-border) solid var(--liq-ink); border-radius: 10px;
+}
+.liq-cactus::before { left: -22px; top: 26%; }
+.liq-cactus::after { right: -22px; top: 12%; }
+.liq-sand {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 7vh;
+    background: repeating-linear-gradient(90deg, #E9B400 0 22px, #D4A000 22px 44px); border-top: var(--liq-border) solid var(--liq-ink);
 }
 
 /* --------------------------------------------------------------------------
@@ -201,7 +269,8 @@ html { -webkit-text-size-adjust: 100%; }
 /* --------------------------------------------------------------------------
    Type
    -------------------------------------------------------------------------- */
-.liq-kicker { font-family: var(--liq-display); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--liq-purple); }
+.liq-kicker { font-family: var(--liq-display); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #fff; text-shadow: 1px 1px 0 var(--liq-ink), -1px -1px 0 var(--liq-ink), 1px -1px 0 var(--liq-ink), -1px 1px 0 var(--liq-ink); }
+.liq-result__hero .liq-kicker, .liq-section .liq-kicker { color: var(--liq-purple); text-shadow: none; }
 .liq-h1 {
     font-family: var(--liq-display); font-weight: 900; font-size: clamp(2.5rem, 12vw, 4.6rem); line-height: 0.95; letter-spacing: -0.01em; margin: 0;
     text-transform: uppercase; color: #fff;
@@ -276,7 +345,7 @@ html { -webkit-text-size-adjust: 100%; }
 }
 .liq-chip:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--liq-ink); }
 .liq-chip[aria-pressed="true"] { background: var(--liq-purple); color: #fff; }
-.liq-entry__foot { font-size: 0.82rem; font-weight: 600; color: var(--liq-ink); opacity: 0.8; }
+.liq-entry__foot { font-size: 0.82rem; font-weight: 600; color: var(--liq-ink); background: rgba(255, 255, 255, 0.85); border-radius: 12px; padding: 8px 12px; width: max-content; max-width: 100%; margin: 0; }
 .liq-entry__foot a { color: var(--liq-ink); }
 
 /* --------------------------------------------------------------------------
@@ -454,7 +523,7 @@ html { -webkit-text-size-adjust: 100%; }
     .liq-block--5, .liq-thought--3 { display: none; }
 }
 @media (max-width: 767px) {
-    /* Phones: the column is the whole width, so blocks rest on the ground at the edges. */
+    /* Phones: the column is the whole width, so blocks rest on the street / sand at the edges. */
     .liq-block--2, .liq-block--3, .liq-block--5 { display: none; }
     .liq-block--1 { left: 4%; bottom: 7.5vh; width: 38px; height: 38px; font-size: 1rem; }
     .liq-block--4 { right: 4%; bottom: 9vh; width: 38px; height: 38px; font-size: 1rem; }
@@ -466,6 +535,9 @@ html { -webkit-text-size-adjust: 100%; }
 }
 @media (min-width: 768px) {
     :root { --liq-gutter: 24px; --liq-max: 680px; }
+    /* Keep the skyline behind the column low so buttons stay clean. */
+    .liq-tower--center { height: calc(var(--h) * 0.5); }
+    .liq-mesa:not(.liq-mesa--near) { bottom: 14vh; }
     .liq-choices { grid-template-columns: 1fr 1fr; }
     .liq-choices--lines { grid-template-columns: 1fr; }
     .liq-lyric { font-size: clamp(1.8rem, 4.2vw, 2.5rem); padding: 24px 28px; }
@@ -480,7 +552,8 @@ html { -webkit-text-size-adjust: 100%; }
    Reduced motion
    -------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
-    .liq-cloud, .liq-sparkle, .liq-thought, .liq-block { animation: none; }
+    .liq-cloud, .liq-sparkle, .liq-thought, .liq-block, .liq-tower--sign::after { animation: none; }
+    .liq-world { transition: none; }
     .liq-enter, .liq-choice--correct { animation: none; }
     .liq-timer__fill { transition: none; }
     .liq-btn, .liq-choice, .liq-mode, .liq-chip, .liq-top__nav a { transition: none; }

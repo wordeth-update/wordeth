@@ -10,6 +10,11 @@
     var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     var ADVANCE_DELAY = { QUICK_PLAY: 1100, DAILY_10: 1200, RAPID_FIRE: 420, STREAK: 1100 };
+    /* Worlds are levels: meadow → city → desert. */
+    var WORLDS = ['meadow', 'city', 'desert'];
+    var WORLD_NAMES = { meadow: 'the meadow', city: 'the city', desert: 'the desert' };
+    var WORLD_IQ_TIERS = [{ min: 75, world: 'desert' }, { min: 50, world: 'city' }, { min: -1, world: 'meadow' }];
+    var WORLD_STREAK_TIERS = [{ min: 10, world: 'desert' }, { min: 5, world: 'city' }, { min: 0, world: 'meadow' }];
     var TYPED_EXTRA_DELAY = 700;
 
     var state = {
@@ -55,6 +60,30 @@
     function clearTimers() {
         if (state.timer) { clearInterval(state.timer); state.timer = null; }
         if (state.advanceTimer) { clearTimeout(state.advanceTimer); state.advanceTimer = null; }
+    }
+    /** Switch the stage world; each game drops you into one of the two worlds. */
+    function setWorld(world) {
+        if (WORLDS.indexOf(world) < 0) world = WORLDS[0];
+        state.world = world;
+        document.body.setAttribute('data-world', world);
+    }
+    function forcedWorld() {
+        var forced = new URLSearchParams(location.search).get('world');
+        return forced && WORLDS.indexOf(forced) >= 0 ? forced : null;
+    }
+    function tierWorld(tiers, value) {
+        var v = value === null || value === undefined ? -1 : value;
+        for (var i = 0; i < tiers.length; i++) if (v >= tiers[i].min) return tiers[i].world;
+        return 'meadow';
+    }
+    function worldForIq(value) { return tierWorld(WORLD_IQ_TIERS, value); }
+    function worldForStreak(streak) { return tierWorld(WORLD_STREAK_TIERS, streak); }
+    /** The world a new game opens in: Streak always starts in the meadow and climbs; Rapid Fire is the city; otherwise your Lyric IQ tier. */
+    function worldForMode(mode) {
+        if (forcedWorld()) return forcedWorld();
+        if (mode === 'STREAK') return 'meadow';
+        if (mode === 'RAPID_FIRE') return 'city';
+        return worldForIq(state.lyricIq);
     }
     function isTypingTarget(el) {
         return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
@@ -128,6 +157,8 @@
                 var modes = {};
                 cfg.modes.forEach(function (m) { modes[m.key] = m; });
                 var iq = profile && profile.lyricIq ? profile.lyricIq : null;
+                state.lyricIq = iq ? iq.value : null;
+                setWorld(forcedWorld() || worldForIq(state.lyricIq));
                 var dailyMeta = 'Ten. Same set for everyone.';
                 var dailyDone = false;
                 if (daily && daily.status === 'COMPLETED') { dailyDone = true; dailyMeta = 'Done · ' + daily.summary.correct + '/' + daily.questionCount; }
@@ -169,6 +200,7 @@
     function startGame(mode) {
         clearTimers();
         state.lastMode = mode;
+        setWorld(worldForMode(mode));
         renderLoading(mode === 'DAILY_10' ? 'Setting today’s ten' : 'Finding the line');
         var req = mode === 'DAILY_10' ? api.startDaily() : api.startSession(mode, state.category !== 'all' ? state.category : null, state.challengeCode);
         req.then(function (data) {
@@ -411,6 +443,11 @@
         }
         api.track(res.correct ? 'answer_correct' : 'answer_incorrect', { game_mode: mode, question_number: state.session.answered, difficulty: q.difficulty, response_time: res.responseTimeMs, score: state.session.score, streak: res.streak });
 
+        // Streak: the world levels up with the run.
+        if (mode === 'STREAK' && res.correct && !forcedWorld()) {
+            var nextWorld = worldForStreak(res.streak);
+            if (nextWorld !== state.world) { setWorld(nextWorld); toast('Level up. Welcome to ' + WORLD_NAMES[nextWorld] + '.', 2200); }
+        }
         state.next = res.sessionCompleted ? { done: true, results: res.results } : { question: res.nextQuestion };
         state.advanceTimer = setTimeout(advance, delay);
     }
@@ -433,6 +470,7 @@
         p.then(function (r) {
             state.results = r;
             state.session = r.session;
+            if (r.lyricIq && r.lyricIq.after !== null) state.lyricIq = r.lyricIq.after;
             api.track('game_complete', { game_mode: r.session.gameMode, score: r.session.score, streak: r.session.bestStreak, correct: r.session.correctCount });
             setRoute('#results/' + r.session.id);
             renderResults(r, { daily: r.session.gameMode === 'DAILY_10' });
@@ -710,6 +748,7 @@
     /* Boot                                                                */
     /* ------------------------------------------------------------------ */
     var params = new URLSearchParams(location.search);
+    setWorld(params.get('world') || 'meadow');
     if (params.get('challenge')) state.challengeCode = params.get('challenge').slice(0, 64);
     if (params.get('mode') && /^[A-Z_]+$/.test(params.get('mode'))) state.lastMode = params.get('mode');
 

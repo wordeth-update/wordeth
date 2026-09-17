@@ -46,4 +46,5 @@ Consequential architectural choices for Wordeth Lyric IQ. Trivial choices are no
 ## 2026-09-17 — Art direction: bright brand world, not a dark concept
 **Decision.** Drop the dark oxblood "inside the mouth" direction. The game world is "the world between thought and speech": Wordeth's own palette and type in a bright, deep, cartoon-platformer scene (thoughts drift high, become letter blocks, land as words on mint hills), playful for adults.
 **Reason.** Product review found the dark direction depressing and off brand; the game must feel like stepping into another world that is inviting and replayable, with room for its own sound design later.
+**Follow-up.** Three worlds (meadow, city, desert) double as levels tied to Lyric IQ tier and to the live Streak count, so progress is visible as a change of place rather than a number. All scenery is CSS, no image assets, so it ships with the page and recolours with the brand tokens.
 **Tradeoff.** Bright surfaces need dark ink outlines and white cards for legibility; decorative layers are pushed to the edges on phones so they never sit behind answers.
