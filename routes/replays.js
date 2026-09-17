@@ -6,6 +6,66 @@ const User = require('../models/User');
 const TokenLedger = require('../models/TokenLedger');
 const EventsLedger = require('../models/EventsLedger');
 
+const multer = require('multer');
+const fileStorage = require('../services/fileStorage');
+const mediaUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 120 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('audio/') || file.mimetype === 'application/octet-stream') cb(null, true);
+        else cb(new Error('Only audio files allowed'));
+    }
+});
+
+/**
+ * The recording of a room, from the host's phone.
+ *
+ * The app records the room's mixed audio locally and uploads it when the
+ * host stops or leaves. The replay record may not exist yet (the server
+ * writes one ten minutes after a room empties), so this finds or creates
+ * it by roomId, and only the room's creator may attach media to it.
+ */
+router.post('/room/:roomId/media', auth, mediaUpload.single('audio'), async (req, res) => {
+    try {
+        const { roomId } = req.params;
+        if (!req.file) return res.status(400).json({ message: 'No recording uploaded' });
+        let replay = await Replay.findOne({ roomId, status: { $ne: 'removed' } });
+        if (replay && String(replay.creatorUserId) !== String(req.user._id)) {
+            return res.status(403).json({ message: 'Only the room creator can attach a recording' });
+        }
+        const ext = (req.file.mimetype.split('/')[1] || 'm4a').replace(/[^a-z0-9]/gi, '') || 'm4a';
+        const key = `replays/${roomId}-${Date.now()}.${ext}`;
+        await fileStorage.uploadBytes(key, req.file.buffer, req.file.mimetype);
+        const duration = Math.max(0, parseInt(req.body.duration) || 0);
+        if (!replay) {
+            replay = await Replay.create({
+                roomId,
+                creatorUserId: req.user._id,
+                title: (req.body.title || 'Untitled Room').toString().trim().slice(0, 200),
+                genre: (req.body.genre || '').toString().slice(0, 50),
+                duration,
+                participantCount: Math.max(0, parseInt(req.body.participantCount) || 0),
+                tokenPrice: 0,
+                status: 'available',
+                audioUrl: fileStorage.publicUrl(key)
+            });
+        } else {
+            if (replay.audioUrl) {
+                const oldKey = decodeURIComponent(replay.audioUrl.replace(/^\/api\/files\//, ''));
+                fileStorage.deleteByKey(oldKey).catch(() => {});
+            }
+            replay.audioUrl = fileStorage.publicUrl(key);
+            if (duration > replay.duration) replay.duration = duration;
+            if (replay.status === 'processing') replay.status = 'available';
+            await replay.save();
+        }
+        res.json(replay);
+    } catch (error) {
+        console.error('Error attaching replay media:', error);
+        res.status(500).json({ message: error.message === 'Only audio files allowed' ? error.message : 'Server error' });
+    }
+});
+
 router.post('/', auth, async (req, res) => {
     try {
         const creatorTypes = ['artist', 'designer', 'creator', 'label'];
