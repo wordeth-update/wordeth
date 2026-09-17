@@ -5,7 +5,7 @@ const ROOT = path.resolve(__dirname, '..');
 const WWW = path.join(ROOT, 'www');
 
 const FRONTEND_FILES = [
-    'index.html', 'verses.html', 'lyrics.html', 'merch.html',
+    'index.html', 'verses.html', 'lyrics.html', 'lyric-iq.html', 'merch.html',
     'articles.html', 'signin.html', 'signup.html', 'profile.html',
     'w-admin.html', 'admin-ads.html', 'admin-usage.html',
     'ad-admin.html', 'ad-register.html', 'privacy.html',

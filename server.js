@@ -73,6 +73,7 @@ const audiobankRoutes = require('./routes/audiobank'); // Audio Bank API & admin
 const scheduledRoomsRoutes = require('./routes/scheduledRooms'); // Scheduled rooms & collabs
 const roomTipsRoutes = require('./routes/roomTips'); // Room tip pool
 const accessRoutes = require('./routes/access');
+const lyricIq = require('./src/lyriciq'); // Wordeth Lyric IQ game subsystem
 const auth = require('./middleware/auth');
 const optionalAuth = require('./middleware/optionalAuth');
 const { resolveCustomerAudience, USER_PLUS } = require('./services/userAccess');
@@ -134,13 +135,17 @@ app.use(helmet({
 }));
 
 // Rate limiting — use real client IP behind Cloudflare/proxies
+// Lyric IQ gameplay (one request per answer, ~1/sec in Rapid Fire) carries its own
+// per-player limiters in src/lyriciq/routes/index.js, so it is exempt from this coarse cap.
+const LYRICIQ_PATH_PREFIXES = ['/api/game/', '/api/daily', '/api/profile/', '/api/leaderboards/'];
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 300,
     message: 'Too many requests from this IP, please try again later.',
     keyGenerator: (req) => {
         return req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
-    }
+    },
+    skip: (req) => LYRICIQ_PATH_PREFIXES.some((prefix) => req.originalUrl.startsWith(prefix))
 });
 app.use('/api/', limiter);
 
@@ -181,6 +186,7 @@ if (mongoUri && mongoUri !== 'mongodb://localhost:27017/wordeth') {
     .then(() => {
         if (process.env.NODE_ENV !== 'test') {
             console.log('✅ Connected to MongoDB Atlas');
+            lyricIq.bootstrap().catch((err) => console.error('[lyriciq] bootstrap failed:', err.message));
         }
     })
     .catch(err => {
@@ -601,6 +607,7 @@ app.use('/api/scheduled-rooms', scheduledRoomsRoutes); // Scheduled rooms & coll
 app.use('/api/rooms', roomTipsRoutes); // Room tips (mounted before custom room APIs)
 app.use('/api/access', accessRoutes);
 app.use('/api/files', require('./routes/files')); // Files stored in MongoDB (GridFS)
+lyricIq.mount(app, '/api'); // Lyric IQ: /api/game, /api/daily, /api/profile, /api/leaderboards, /api/internal
 function generateRoomId() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const bytes = crypto.randomBytes(18);

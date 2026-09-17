@@ -25,7 +25,7 @@ function classifyTier(eventCount) {
 }
 
 const trackingLimiter = new Map();
-const TRACK_LIMIT = 60;
+const TRACK_LIMIT = 240; // per IP per minute — Lyric IQ Rapid Fire emits ~3 events/sec per player
 const TRACK_WINDOW = 60000;
 
 function checkTrackingRate(ip) {
@@ -61,7 +61,7 @@ router.post('/track', (req, res) => {
         return res.status(400).json({ error: 'eventType and segment required' });
     }
 
-    const allowedSegments = ['lyrics', 'community', 'merch', 'auth', 'general', 'verses', 'tournament'];
+    const allowedSegments = ['lyrics', 'community', 'merch', 'auth', 'general', 'verses', 'tournament', 'lyriciq'];
     if (!allowedSegments.includes(segment)) {
         return res.status(400).json({ error: 'Invalid segment' });
     }

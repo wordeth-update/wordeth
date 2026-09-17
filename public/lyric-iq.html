@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Lyric IQ — Wordeth</title>
+    <meta name="description" content="How well do you actually know music? Finish the lyric, name the song, call the artist. Get your Lyric IQ.">
+    <meta name="theme-color" content="#0a0507">
+    <meta property="og:title" content="Wordeth Lyric IQ">
+    <meta property="og:description" content="The lyric already exists inside you. Say it.">
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..700,0..100;1,9..144,300..700,0..100&family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="css/lyric-iq.css?v=1">
+</head>
+<body class="liq-body">
+    <div class="liq-stage" aria-hidden="true">
+        <div class="liq-stage__arch liq-stage__arch--outer"></div>
+        <div class="liq-stage__arch liq-stage__arch--mid"></div>
+        <div class="liq-stage__arch liq-stage__arch--inner"></div>
+        <div class="liq-stage__glow"></div>
+        <div class="liq-stage__gloss"></div>
+        <div class="liq-stage__floor"></div>
+    </div>
+
+    <a class="liq-skip" href="#liq-main">Skip to game</a>
+
+    <header class="liq-top">
+        <a href="/" class="liq-wordmark" aria-label="Wordeth home">Wordeth</a>
+        <nav class="liq-top__nav" aria-label="Lyric IQ">
+            <a href="#play" data-route="play">Play</a>
+            <a href="#profile" data-route="profile">Profile</a>
+            <a href="#leaderboard" data-route="leaderboard">Board</a>
+            <a href="/signin.html?return=%2Flyric-iq.html" id="liq-auth-link" class="liq-top__auth">Sign in</a>
+        </nav>
+    </header>
+
+    <main id="liq-main" class="liq-main" tabindex="-1"></main>
+
+    <div id="liq-live" class="liq-sr-only" aria-live="polite" aria-atomic="true"></div>
+    <div id="liq-toast" class="liq-toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="js/config.js"></script>
+    <script src="js/lyric-iq/copy.js?v=1"></script>
+    <script src="js/lyric-iq/api.js?v=1"></script>
+    <script src="js/lyric-iq/app.js?v=1"></script>
+</body>
+</html>
