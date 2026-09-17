@@ -42,3 +42,8 @@ Consequential architectural choices for Wordeth Lyric IQ. Trivial choices are no
 ## 2026-09-17 — Tests accept `MONGODB_TEST_URI` with a memory-server fallback
 **Decision.** Lyric IQ tests connect to `MONGODB_TEST_URI` when set (one database per test file) and otherwise start mongodb-memory-server.
 **Reason.** The binary download for memory-server is blocked in some CI/sandbox networks; this made the suites runnable against FerretDB/SQLite locally and against real mongod anywhere.
+
+## 2026-09-17 — Art direction: bright brand world, not a dark concept
+**Decision.** Drop the dark oxblood "inside the mouth" direction. The game world is "the world between thought and speech": Wordeth's own palette and type in a bright, deep, cartoon-platformer scene (thoughts drift high, become letter blocks, land as words on mint hills), playful for adults.
+**Reason.** Product review found the dark direction depressing and off brand; the game must feel like stepping into another world that is inviting and replayable, with room for its own sound design later.
+**Tradeoff.** Bright surfaces need dark ink outlines and white cards for legibility; decorative layers are pushed to the edges on phones so they never sit behind answers.

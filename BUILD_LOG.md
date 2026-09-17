@@ -44,7 +44,7 @@ Concise stage-by-stage record so another engineer or agent can continue without 
 **Tests.** `unit/lyricIq.test.js`, `integration/profile.test.js`, leaderboard assertions in `daily.test.js`.
 
 ## Stage 20 — Art direction and polish
-**Built.** "Inside the mouth" stage from layered CSS radial arches, a slow breathing glow (disabled under reduced motion), gloss highlight; Fraunces editorial serif for lyric and brand, Inter for UI; oxblood/wine/plum/flesh/ivory palette; correct = mint highlight, wrong = flesh.
+**Built.** First pass used a dark "inside the mouth" concept; replaced after review with the brand-centred world ("the world between thought and speech"): Wordeth palette (mint, purple, hot pink, electric blue, gold) and type (Unbounded display, Outfit body) in a bright cartoon-platformer world with depth — purple far ridges, drifting thought forms, letter blocks that thoughts become as they descend, rounded mint hills, chunky outlined type and bouncy buttons, lyric in a speech bubble. Sound and soundtrack are planned for a later stage.
 **Issues found / fixed.** Header overflow at 320 px and "Sign in" wrapping; stat tiles truncating at phone width; two-button rows wrapping; blur filter in entrance animation; 429s from the analytics per-IP cap during Rapid Fire.
 **Verified.** No horizontal scroll and all visible controls ≥ 40 px at 320/375/390/430/768/1024/1440.
 

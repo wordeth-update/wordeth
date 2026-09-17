@@ -55,4 +55,4 @@ Mobile builds (`npm run mobile:build`) include `lyric-iq.html` and its assets.
 
 ## Roadmap (not started by design)
 
-Real-time multiplayer, King of the Hill, tournaments, artist/label-sponsored challenges, Verses integration, personalised difficulty, AI hosts, audio recognition, live events, teams, social feeds.
+Sound design and soundtrack (the world gets its own audio), real-time multiplayer, King of the Hill, tournaments, artist/label-sponsored challenges, Verses integration, personalised difficulty, AI hosts, audio recognition, live events, teams, social feeds.

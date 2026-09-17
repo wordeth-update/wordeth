@@ -139,8 +139,8 @@
                     '<section class="liq-entry">' +
                     '<div class="liq-entry__head liq-enter">' +
                     '<div class="liq-kicker">Wordeth</div>' +
-                    '<h1 class="liq-h1">Lyric IQ</h1>' +
-                    '<p class="liq-entry__thesis">The lyric already exists inside you. We’re just waiting for you to say it.</p>' +
+                    '<h1 class="liq-h1">Lyric <span class="liq-h1__wonder">IQ</span></h1>' +
+                    '<p class="liq-entry__thesis">The world between thought and speech. This is where words go to be spoken.</p>' +
                     (iq && iq.value !== null ? '<div class="liq-entry__iq"><strong>' + esc(iq.value) + '</strong><span class="liq-muted">your Lyric IQ' + (iq.provisional ? ' · provisional' : '') + '</span></div>' : '') +
                     '</div>' +
                     '<div class="liq-entry__primary">' +
