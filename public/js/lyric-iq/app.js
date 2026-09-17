@@ -160,6 +160,9 @@
                 var iq = profile && profile.lyricIq ? profile.lyricIq : null;
                 state.lyricIq = iq ? iq.value : null;
                 setWorld(forcedWorld() || worldForIq(state.lyricIq));
+                // Signed in via the shared cookie: this origin has no stored user yet, so name the header from the profile.
+                var authLink = document.getElementById('liq-auth-link');
+                if (authLink && profile && profile.player && !profile.player.isGuest && authLink.textContent === 'Signed in') authLink.textContent = profile.player.displayName || 'Profile';
                 var dailyMeta = 'Ten. Same set for everyone.';
                 var dailyDone = false;
                 if (daily && daily.status === 'COMPLETED') { dailyDone = true; dailyMeta = 'Done · ' + daily.summary.correct + '/' + daily.questionCount; }

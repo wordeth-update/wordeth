@@ -49,6 +49,16 @@ Lyric IQ has its own front door on the same server. With `LYRICIQ_PLAY_HOST=play
 - Share text and challenge links use `LYRICIQ_PUBLIC_URL` (defaults to the play host).
 - With `AUTH_COOKIE_DOMAIN=.wordeth.com`, signing in on either origin also sets a `wordeth_token` cookie for the parent domain, so the game and the site share the account. Sign-out clears it through `POST /api/auth/signout`.
 
+### Test it locally before DNS
+
+Add `127.0.0.1 wordeth.test` and `127.0.0.1 play.wordeth.test` to your hosts file, then:
+
+```bash
+LYRICIQ_PLAY_HOST=play.wordeth.test AUTH_COOKIE_DOMAIN=.wordeth.test MONGODB_URI=<uri> npm run dev
+```
+
+Open `http://wordeth.test:5000` (site) and `http://play.wordeth.test:5000` (game). Sign in on one and reload the other. Outside production the security headers do not force HTTPS, so plain HTTP on custom hostnames works; in production they do.
+
 To go live: add a CNAME `play` → your Railway service hostname, add `play.wordeth.com` as a custom domain on the service, and set the three variables above.
 
 ## Deploy

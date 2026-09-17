@@ -128,6 +128,8 @@ app.use(helmet({
             mediaSrc: ["'self'", "blob:"],
             workerSrc: ["'self'", "blob:", "https://cdn.jsdelivr.net", "https://unpkg.com"],
             frameSrc: ["https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com", "https://youtube-nocookie.com", "https://checkout.stripe.com"],
+            // Only force HTTPS in production: local testing on custom hostnames (play.wordeth.test) runs over plain HTTP.
+            upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
         },
     },
     crossOriginEmbedderPolicy: false,
