@@ -327,7 +327,7 @@ async function buildResults(session, player) {
         },
         breakdown,
         dailyStreak,
-        share: buildSharePayload({ lyricIq, session, displayName: player.displayName, dailyStreak, challengeUrl: `/lyric-iq.html?challenge=${session._id}` }),
+        share: buildSharePayload({ lyricIq, session, displayName: player.displayName, dailyStreak, challengeUrl: `${config.publicUrl}/?challenge=${session._id}` }),
         isGuest: !!player.isGuest
     };
 }

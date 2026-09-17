@@ -9,7 +9,20 @@
     function safeSet(key, v) { try { localStorage.setItem(key, v); } catch (e) { /* storage blocked */ } }
     function safeRemove(key) { try { localStorage.removeItem(key); } catch (e) { /* ignore */ } }
 
-    function authToken() { return safeGet('authToken'); }
+    function cookieToken() {
+        try {
+            var m = document.cookie.match(/(?:^|;\s*)wordeth_token=([^;]+)/);
+            return m ? decodeURIComponent(m[1]) : null;
+        } catch (e) { return null; }
+    }
+    /* Token from this origin's storage, else the shared .wordeth.com cookie (play.wordeth.com ↔ wordeth.com). */
+    function authToken() {
+        var t = safeGet('authToken');
+        if (t) return t;
+        var c = cookieToken();
+        if (c) safeSet('authToken', c);
+        return c;
+    }
     function guestToken() { return safeGet(GUEST_KEY); }
 
     function headers(json) {

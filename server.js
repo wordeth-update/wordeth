@@ -74,6 +74,7 @@ const scheduledRoomsRoutes = require('./routes/scheduledRooms'); // Scheduled ro
 const roomTipsRoutes = require('./routes/roomTips'); // Room tip pool
 const accessRoutes = require('./routes/access');
 const lyricIq = require('./src/lyriciq'); // Wordeth Lyric IQ game subsystem
+const { createPlayHostMiddleware } = require('./src/lyriciq/middleware/playHost'); // play.wordeth.com front door
 const auth = require('./middleware/auth');
 const optionalAuth = require('./middleware/optionalAuth');
 const { resolveCustomerAudience, USER_PLUS } = require('./services/userAccess');
@@ -205,6 +206,7 @@ if (mongoUri && mongoUri !== 'mongodb://localhost:27017/wordeth') {
 const allowedOrigins = [
     'https://wordeth.com',
     'https://www.wordeth.com',
+    process.env.LYRICIQ_PLAY_HOST ? `https://${process.env.LYRICIQ_PLAY_HOST.split(',')[0].trim()}` : null,
     process.env.CLIENT_URL,
     process.env.CORS_ORIGIN
 ].filter(Boolean);
@@ -529,6 +531,9 @@ app.get('/api/coming-soon/signups', _csAuth, _csRequireRole('ADMIN'), async (req
         return res.status(500).json({ success: false, message: 'Failed to fetch waitlist' });
     }
 });
+
+// play.wordeth.com serves the Lyric IQ page at "/"; "/play" on the main site bridges to it.
+app.use(createPlayHostMiddleware());
 
 const _htmlCache = new Map();
 app.use((req, res, next) => {

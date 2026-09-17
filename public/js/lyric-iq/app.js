@@ -96,6 +96,7 @@
         var link = document.getElementById('liq-auth-link');
         if (link) {
             if (api.hasAuth()) {
+                link.setAttribute('data-signed-in', 'true');
                 var name = 'Signed in';
                 try { var u = JSON.parse(localStorage.getItem('user') || '{}'); if (u && u.name) name = u.name; } catch (e) { /* ignore */ }
                 link.textContent = name;
@@ -188,7 +189,7 @@
                         cats.map(function (c) { return '<button class="liq-chip" data-action="category" data-category="' + esc(c.genre) + '" aria-pressed="' + (state.category === c.genre) + '">' + esc(catLabels[c.genre] || c.genre) + '</button>'; }).join('') +
                         '</div>' : '') +
                     '</div>' +
-                    '<p class="liq-entry__foot">' + (cfg.synthetic ? 'Development catalog: test content, not real lyrics. ' : '') + (daily && daily.dailyStreak > 1 ? esc(daily.dailyStreak) + '-day daily streak. ' : '') + (!api.hasAuth() ? 'No account needed to play.' : '') + '</p>' +
+                    '<p class="liq-entry__foot">' + (cfg.synthetic ? 'Development catalog: test content, not real lyrics. ' : '') + (daily && daily.dailyStreak > 1 ? esc(daily.dailyStreak) + '-day daily streak. ' : '') + (!api.hasAuth() ? 'No account needed to play. ' : '') + '<a href="https://wordeth.com">Part of Wordeth</a></p>' +
                     '</section>'
                 );
                 api.track('game_view', {});

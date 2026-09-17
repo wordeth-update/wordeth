@@ -48,3 +48,9 @@ Consequential architectural choices for Wordeth Lyric IQ. Trivial choices are no
 **Reason.** Product review found the dark direction depressing and off brand; the game must feel like stepping into another world that is inviting and replayable, with room for its own sound design later.
 **Follow-up.** Three worlds (meadow, city, desert) double as levels tied to Lyric IQ tier and to the live Streak count, so progress is visible as a change of place rather than a number. All scenery is CSS, no image assets, so it ships with the page and recolours with the brand tokens.
 **Tradeoff.** Bright surfaces need dark ink outlines and white cards for legibility; decorative layers are pushed to the edges on phones so they never sit behind answers.
+
+## 2026-09-17 — play.wordeth.com: own front door, shared backend
+**Decision.** Serve Lyric IQ at its own subdomain from the existing server via host-aware routing, rather than as a page under the main site or as a separate application.
+**Reason.** The game's world and the site's chrome want different presentation, and a share link that reads "play.wordeth.com" reads like a game. Splitting the backend would duplicate users, auth, payments and the catalog and break the Lyric IQ ↔ Wordeth profile link that gives the game its value.
+**Alternatives.** Page under the main nav (kept as `/lyric-iq.html`, still works); separate repo and deploy (possible later, the subsystem is isolated in `src/lyriciq/`).
+**Tradeoff.** Two origins need shared sign-in; solved with a `.wordeth.com` cookie that mirrors the JWT (same exposure as localStorage). Requires DNS and a Railway custom domain.

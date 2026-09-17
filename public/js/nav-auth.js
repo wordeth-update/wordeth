@@ -1,4 +1,12 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // Shared sign-in with play.wordeth.com: pick up the .wordeth.com cookie when this origin has no token yet.
+    if (!localStorage.getItem('authToken')) {
+        const m = document.cookie.match(/(?:^|;\s*)wordeth_token=([^;]+)/);
+        if (m) {
+            localStorage.setItem('authToken', decodeURIComponent(m[1]));
+            if (!localStorage.getItem('user')) localStorage.setItem('user', JSON.stringify({}));
+        }
+    }
     const token = localStorage.getItem('authToken');
     const userStr = localStorage.getItem('user');
     const desktopBtn = document.querySelector('.nav-signin-btn');
@@ -158,6 +166,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function clearAuth() {
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
+        fetch(apiUrl('/api/auth/signout'), { method: 'POST', credentials: 'same-origin' }).catch(function () {});
     }
 
     function handleSignOut(e) {

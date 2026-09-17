@@ -40,6 +40,17 @@ Integration tests spin up an isolated database per file (memory-server by defaul
 * **Content controls**: `/api/internal/*` (internal key or admin JWT) disables tracks, artists, albums, providers, territories, modes or explicit content without a deploy.
 * **History**: [`BUILD_LOG.md`](BUILD_LOG.md) and [`DECISIONS.md`](DECISIONS.md).
 
+## play.wordeth.com
+
+Lyric IQ has its own front door on the same server. With `LYRICIQ_PLAY_HOST=play.wordeth.com` set:
+
+- `https://play.wordeth.com/` serves the game with none of the main-site chrome; the API, sign-in pages and static assets work there too.
+- `https://wordeth.com/play` redirects to it (in development, `/play` serves the page directly and `http://play.localhost:5000/` behaves like the play host).
+- Share text and challenge links use `LYRICIQ_PUBLIC_URL` (defaults to the play host).
+- With `AUTH_COOKIE_DOMAIN=.wordeth.com`, signing in on either origin also sets a `wordeth_token` cookie for the parent domain, so the game and the site share the account. Sign-out clears it through `POST /api/auth/signout`.
+
+To go live: add a CNAME `play` → your Railway service hostname, add `play.wordeth.com` as a custom domain on the service, and set the three variables above.
+
 ## Deploy
 
 Production builds run from the root `Dockerfile` on Railway (`npm ci --omit=dev`, `node server.js`). Set the environment variables from `.env.example` in the Railway dashboard; for Lyric IQ add `MUSIXMATCH_API_KEY`, `LYRICIQ_LYRIC_PROVIDER=musixmatch`, `LYRICIQ_INCLUDE_SYNTHETIC=false`, `LYRICIQ_INTERNAL_API_KEY` and `LYRICIQ_DAILY_SEED_SALT`. The catalog seeds itself from the Musixmatch charts on first boot when fewer than 20 licensed tracks exist; run `npm run lyriciq:seed` for more.

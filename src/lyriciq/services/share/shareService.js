@@ -1,6 +1,7 @@
 'use strict';
 
 const { GENRE_LABELS } = require('../lyricIq/lyricIqService');
+const config = require('../../config');
 
 /**
  * Builds the reusable share payload. Reveals identity/status only — never
@@ -53,7 +54,7 @@ function buildSharePayload({ lyricIq, session = null, displayName = null, dailyS
         stats.push({ label: 'Daily streak', value: dailyStreak });
     }
     lines.push('');
-    lines.push('wordeth.com/lyric-iq');
+    lines.push(config.publicUrl.replace(/^https?:\/\//, ''));
 
     return {
         headline: iqValue !== null ? `LYRIC IQ: ${iqValue}` : 'LYRIC IQ',

@@ -198,7 +198,11 @@ const config = {
 
     internal: {
         apiKey: env.LYRICIQ_INTERNAL_API_KEY || ''
-    }
+    },
+
+    /** Where the game lives for share links and previews. */
+    publicUrl: (env.LYRICIQ_PUBLIC_URL || (env.LYRICIQ_PLAY_HOST ? `https://${env.LYRICIQ_PLAY_HOST.split(',')[0].trim()}` : 'https://play.wordeth.com')).replace(/\/+$/, ''),
+    playHost: env.LYRICIQ_PLAY_HOST || ''
 };
 
 module.exports = config;

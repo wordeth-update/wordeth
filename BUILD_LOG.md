@@ -57,6 +57,10 @@ Answer keys never serialised (asserted in tests); Helmet + existing CSP; express
 ## Stage 23 — Documentation
 README, `.env.example`, `docs/lyric-iq/{API,ARCHITECTURE,LYRIC_IQ_MODEL,GAME_ENGINE}.md`, DECISIONS.md, this log, `wordeth.md` section.
 
+## Stage 24 — play.wordeth.com
+**Built.** Host-aware middleware (`src/lyriciq/middleware/playHost.js`): the play host serves the game at "/", "/play" on the main site redirects to it in production and serves it directly in development. Shared sign-in cookie on `.wordeth.com` (`services/authCookie.js`, set on sign-up/sign-in, cleared by new `POST /api/auth/signout`); the game client and the site nav read it as a fallback. Share text and challenge links use `LYRICIQ_PUBLIC_URL`. Canonical/OG tags point at the play host; homepage nav links to `/play`.
+**Tests.** `unit/playHost.test.js` (routing on both hosts, query preservation, redirect, dev fallback, cookie set/clear).
+
 ## Remaining risks
 * Distractor quality on real catalog text is heuristic; watch `question_rejected` rates and `INSUFFICIENT_DISTRACTORS` after seeding Musixmatch content.
 * Musixmatch partial lyric bodies (plan-dependent) reduce usable lines; charts seeding may include instrumentals/non-English tracks — eligibility filters handle the flags Musixmatch exposes.
