@@ -360,6 +360,12 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
 .liq-entry__iq strong { font-family: var(--liq-display); font-size: 1.6rem; font-weight: 900; line-height: 1; }
 .liq-entry__iq span { font-weight: 700; color: var(--liq-ink); }
 .liq-entry__primary { display: grid; gap: 12px; }
+.liq-entry__modes { display: grid; gap: 8px; }
+.liq-entry__modes-label {
+    font-family: var(--liq-display); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--liq-ink); background: rgba(255, 255, 255, 0.85); border: 2px solid var(--liq-ink); border-radius: 999px;
+    padding: 6px 12px; width: max-content; box-shadow: 0 3px 0 var(--liq-ink);
+}
 .liq-entry__secondary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .liq-mode {
     appearance: none; border: var(--liq-border) solid var(--liq-ink); background: var(--liq-paper); color: var(--liq-ink);
@@ -412,7 +418,10 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
 .liq-q { display: grid; gap: 14px; flex: 1; align-content: center; }
 .liq-q__meta { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-family: var(--liq-display); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #fff; text-shadow: 1px 1px 0 var(--liq-ink), -1px -1px 0 var(--liq-ink), 1px -1px 0 var(--liq-ink), -1px 1px 0 var(--liq-ink); }
 .liq-q__meta em { font-style: normal; font-family: var(--liq-body); font-weight: 700; font-size: 0.8rem; text-transform: none; letter-spacing: 0; text-align: right; max-width: 58%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.liq-q__meta > span:first-child { white-space: nowrap; }
+.liq-q__meta > span:first-child { flex: 1 1 auto; min-width: 0; }
+.liq-q__meta em { flex: 0 1 auto; }
+.liq-q { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.liq-input { min-width: 0; }
 
 /* The lyric lives in a speech bubble — you are about to say it. */
 .liq-lyric {
@@ -569,6 +578,8 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
     .liq-block { animation-duration: 5s; }
 }
 @media (min-width: 480px) {
+    .liq-entry__modes { grid-template-columns: auto 1fr; align-items: center; gap: 12px; }
+    .liq-entry__modes-label { writing-mode: vertical-rl; transform: rotate(180deg); padding: 12px 6px; align-self: stretch; display: inline-flex; align-items: center; justify-content: center; }
     .liq-stats { grid-template-columns: repeat(4, 1fr); }
     .liq-result__actions--row { grid-template-columns: 1fr 1fr; }
 }

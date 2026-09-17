@@ -176,11 +176,13 @@
                     '</div>' +
                     '<div class="liq-entry__primary">' +
                     '<button class="liq-btn liq-btn--primary liq-btn--block" data-action="play" data-mode="QUICK_PLAY" autofocus>Play</button>' +
+                    '<div class="liq-entry__modes" role="group" aria-labelledby="liq-modes-label">' +
+                    '<span class="liq-entry__modes-label" id="liq-modes-label">Modes</span>' +
                     '<div class="liq-entry__secondary">' +
                     (modes.DAILY_10 ? '<button class="liq-mode' + (dailyDone ? ' liq-mode--done' : '') + '" data-action="play" data-mode="DAILY_10"><span class="liq-mode__name">Daily 10</span><span class="liq-mode__meta">' + esc(dailyMeta) + '</span></button>' : '') +
                     (modes.RAPID_FIRE ? '<button class="liq-mode" data-action="play" data-mode="RAPID_FIRE"><span class="liq-mode__name">Rapid Fire</span><span class="liq-mode__meta">60 seconds. Go.</span></button>' : '') +
                     (modes.STREAK ? '<button class="liq-mode" data-action="play" data-mode="STREAK"><span class="liq-mode__name">Streak</span><span class="liq-mode__meta">Until you miss.</span></button>' : '') +
-                    '</div>' +
+                    '</div></div>' +
                     (cats.length > 1 ? '<div class="liq-chips" role="group" aria-label="Choose category">' +
                         '<button class="liq-chip" data-action="category" data-category="all" aria-pressed="' + (state.category === 'all') + '">Everything</button>' +
                         cats.map(function (c) { return '<button class="liq-chip" data-action="category" data-category="' + esc(c.genre) + '" aria-pressed="' + (state.category === c.genre) + '">' + esc(catLabels[c.genre] || c.genre) + '</button>'; }).join('') +
