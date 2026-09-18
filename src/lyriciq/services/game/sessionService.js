@@ -359,6 +359,11 @@ async function getResults(sessionId, player) {
     if (session.status === 'ACTIVE' && isPastDeadline(session)) {
         return completeSession(session, player, 'TIME_UP');
     }
+    // Asking for results on a live session is the player ending it early (the End button):
+    // close it out so the run counts, the leaderboard sees it and the share card exists.
+    if (session.status === 'ACTIVE') {
+        return completeSession(session, player, 'ENDED_EARLY');
+    }
     return buildResults(session, player);
 }
 

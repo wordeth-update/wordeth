@@ -178,3 +178,25 @@ describe('question timing', () => {
         await request(app).post(`/api/game/sessions/${sid}/questions/000000000000000000000000/shown`).set('X-Guest-Token', guest).expect(404);
     });
 });
+
+
+describe('ending a round early', () => {
+    test('asking for results on a live session completes it, so it counts and has a share page', async () => {
+        const GameSession = require('../../../src/lyriciq/models/GameSession');
+        const start = await request(app).post('/api/game/sessions').send({}).expect(201);
+        const guest = start.body.guestToken; const sid = start.body.session.id;
+        await request(app).post(`/api/game/sessions/${sid}/answer`).set('X-Guest-Token', guest).send(await submissionFor(start.body.question)).expect(200);
+        const res = await request(app).get(`/api/game/sessions/${sid}/results`).set('X-Guest-Token', guest).expect(200);
+        expect(res.body.session.status).toBe('COMPLETED');
+        expect(res.body.session.endReason).toBe('ENDED_EARLY');
+        expect(res.body.share.pagePath).toBe(`/s/${sid}`);
+        const doc = await GameSession.findById(sid).lean();
+        expect(doc.status).toBe('COMPLETED');
+        expect(doc.shareCard).toBeTruthy();
+        // A second read is stable and does not re-complete.
+        const again = await request(app).get(`/api/game/sessions/${sid}/results`).set('X-Guest-Token', guest).expect(200);
+        expect(again.body.session.endReason).toBe('ENDED_EARLY');
+        // The session cannot take further answers.
+        await request(app).get(`/api/game/sessions/${sid}/question`).set('X-Guest-Token', guest).expect(409);
+    });
+});

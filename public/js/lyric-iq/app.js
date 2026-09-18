@@ -618,7 +618,7 @@
         if (delta !== null && delta !== undefined && delta !== 0) deltaHtml = '<span class="liq-iq__delta ' + (delta > 0 ? 'liq-iq__delta--up' : 'liq-iq__delta--down') + '">' + (delta > 0 ? '+' : '') + esc(delta) + '</span>';
         else if (iq.before === null && value !== null) deltaHtml = '<span class="liq-iq__delta">new</span>';
         var answered = s.correctCount + s.wrongCount;
-        var kicker = opts.daily ? 'Daily 10 · ' + esc(s.dailyDateKey || '') : esc(copy.MODE_LABELS[s.gameMode] || 'Session') + (s.endReason === 'TIME_UP' ? ' · time' : '');
+        var kicker = opts.daily ? 'Daily 10 · ' + esc(s.dailyDateKey || '') : esc(copy.MODE_LABELS[s.gameMode] || 'Session') + (s.endReason === 'TIME_UP' ? ' · time' : (s.endReason === 'ENDED_EARLY' ? ' · ended early' : ''));
         var headline = opts.daily ? esc(s.correctCount) + '/' + esc(s.questionCount) : (s.gameMode === 'STREAK' ? 'Streak of ' + esc(s.bestStreak) : (s.gameMode === 'RAPID_FIRE' ? esc(s.correctCount) + ' in 60 seconds' : esc(s.correctCount) + '/' + esc(answered)));
         var genres = iq.subScores && iq.subScores.genres ? Object.keys(iq.subScores.genres) : [];
         var subHtml = '';
@@ -673,14 +673,57 @@
     function shareUrlFor(r) {
         return r.share.pagePath ? location.origin + r.share.pagePath : location.origin + '/lyric-iq.html?challenge=' + encodeURIComponent(r.session.id);
     }
+    /** Copy with the clipboard API where the page is secure, else the old select-and-copy trick (works on plain http). */
     function copyText(payload, okMessage) {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(payload).then(function () { toast(okMessage || 'Copied. Go post it.'); }).catch(function () { toast('Could not copy.'); });
-        } else {
-            toast('Sharing is not available here.');
-        }
+        var done = function () { toast(okMessage || 'Copied. Go post it.'); };
+        var legacy = function () {
+            try {
+                var ta = document.createElement('textarea');
+                ta.value = payload; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.top = '-1000px';
+                document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, payload.length);
+                var ok = document.execCommand && document.execCommand('copy');
+                document.body.removeChild(ta);
+                if (ok) done(); else toast('Select the link and copy it.');
+            } catch (e) { toast('Select the link and copy it.'); }
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(payload).then(done).catch(legacy);
+        else legacy();
     }
-    /** Share sheet with the card image attached when the browser allows files; otherwise text + link. */
+    /** In-page share sheet: the card, the link and direct hand-offs. Used wherever the native sheet is unavailable (plain http, desktop). */
+    function openShareSheet(r) {
+        closeShareSheet();
+        var url = shareUrlFor(r);
+        var text = r.share.short || r.share.text;
+        var enc = encodeURIComponent;
+        var value = r.lyricIq && r.lyricIq.after !== null ? r.lyricIq.after : 'card';
+        var sheet = document.createElement('div');
+        sheet.className = 'liq-sheet'; sheet.id = 'liq-sheet'; sheet.setAttribute('role', 'dialog'); sheet.setAttribute('aria-modal', 'true'); sheet.setAttribute('aria-label', 'Share your Lyric IQ');
+        sheet.innerHTML =
+            '<div class="liq-sheet__backdrop" data-action="sheet-close"></div>' +
+            '<div class="liq-sheet__panel liq-enter">' +
+            '<div class="liq-sheet__head"><div class="liq-kicker">Share it</div><button class="liq-sheet__close" data-action="sheet-close" aria-label="Close">✕</button></div>' +
+            (r.share.cardPath ? '<img class="liq-card__img" src="' + esc(r.share.cardPath) + '" alt="Your Lyric IQ card" width="1200" height="630">' : '') +
+            '<div class="liq-sheet__link"><input class="liq-input liq-sheet__url" type="text" readonly value="' + esc(url) + '" aria-label="Share link" onfocus="this.select()"><button class="liq-btn liq-btn--sm" data-action="copy-link">Copy</button></div>' +
+            '<div class="liq-sheet__grid">' +
+            '<a class="liq-btn liq-btn--sm" href="sms:?&body=' + enc(text + ' ' + url) + '" data-action="share-to" data-to="sms">Messages</a>' +
+            '<a class="liq-btn liq-btn--sm" href="https://wa.me/?text=' + enc(text + ' ' + url) + '" target="_blank" rel="noopener" data-action="share-to" data-to="whatsapp">WhatsApp</a>' +
+            '<a class="liq-btn liq-btn--sm" href="https://twitter.com/intent/tweet?text=' + enc(text) + '&url=' + enc(url) + '" target="_blank" rel="noopener" data-action="share-to" data-to="x">X</a>' +
+            '<a class="liq-btn liq-btn--sm" href="https://www.facebook.com/sharer/sharer.php?u=' + enc(url) + '" target="_blank" rel="noopener" data-action="share-to" data-to="facebook">Facebook</a>' +
+            (r.share.cardPath ? '<a class="liq-btn liq-btn--sm" href="' + esc(r.share.cardPath) + '" download="lyric-iq-' + esc(value) + '.png" data-action="share-to" data-to="download">Save card</a>' : '') +
+            (r.share.storyPath ? '<a class="liq-btn liq-btn--sm" href="' + esc(r.share.storyPath) + '" download="lyric-iq-' + esc(value) + '-story.png" data-action="share-to" data-to="story">Save for Stories</a>' : '') +
+            '</div>' +
+            '<p class="liq-sheet__hint">On your phone over https the Share button opens the system share sheet with the card attached.</p>' +
+            '</div>';
+        document.body.appendChild(sheet);
+        document.body.classList.add('liq-body--sheet');
+        var close = sheet.querySelector('.liq-sheet__close'); if (close) close.focus();
+    }
+    function closeShareSheet() {
+        var el = document.getElementById('liq-sheet');
+        if (el) el.parentNode.removeChild(el);
+        document.body.classList.remove('liq-body--sheet');
+    }
+    /** Share: the system sheet with the card attached where the page is secure and the browser allows files; otherwise the in-page sheet. */
     function share() {
         var r = state.results;
         if (!r || !r.share) return;
@@ -688,8 +731,8 @@
         var url = shareUrlFor(r);
         var text = r.share.short || r.share.text;
         var fallback = function () {
-            if (navigator.share) return navigator.share({ title: 'Wordeth Lyric IQ', text: text, url: url }).catch(function () {});
-            copyText(text + '\n' + url);
+            if (navigator.share) return navigator.share({ title: 'Wordeth Lyric IQ', text: text, url: url }).catch(function (err) { if (err && err.name !== 'AbortError') openShareSheet(r); });
+            openShareSheet(r);
         };
         if (!navigator.share || !navigator.canShare || !r.share.cardPath || typeof File === 'undefined') return fallback();
         fetch(r.share.cardPath).then(function (res) { if (!res.ok) throw new Error('card'); return res.blob(); }).then(function (blob) {
@@ -818,6 +861,15 @@
         renderEntry();
     }
 
+    // The share sheet lives outside <main>; route its clicks through the same handler.
+    document.body.addEventListener('click', function (e) {
+        var sheet = e.target.closest('#liq-sheet'); if (!sheet) return;
+        var el = e.target.closest('[data-action]'); if (!el) return;
+        var action = el.getAttribute('data-action');
+        if (action === 'sheet-close') { e.preventDefault(); closeShareSheet(); }
+        else if (action === 'copy-link') { e.preventDefault(); if (state.results) { api.track('share_link_copy', { game_mode: state.results.session.gameMode }); copyText(shareUrlFor(state.results), 'Link copied.'); } }
+        else if (action === 'share-to' && state.results) api.track('share_to', { game_mode: state.results.session.gameMode, target: el.getAttribute('data-to') });
+    });
     main.addEventListener('click', function (e) {
         var el = e.target.closest('[data-action]');
         if (!el) return;
@@ -840,6 +892,8 @@
             case 'quit': quitGame(); break;
             case 'share': share(); break;
             case 'copy-link': { e.preventDefault(); if (state.results) { api.track('share_link_copy', { game_mode: state.results.session.gameMode }); copyText(shareUrlFor(state.results), 'Link copied.'); } break; }
+            case 'sheet-close': e.preventDefault(); closeShareSheet(); break;
+            case 'share-to': if (state.results) api.track('share_to', { game_mode: state.results.session.gameMode, target: el.getAttribute('data-to') }); break;
             case 'save-story': if (state.results) api.track('share_story_save', { game_mode: state.results.session.gameMode }); break;
             case 'share-profile': {
                 var sp = state.profileShare;
@@ -870,6 +924,7 @@
     });
 
     document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && document.getElementById('liq-sheet')) { closeShareSheet(); return; }
         if (e.metaKey || e.ctrlKey || e.altKey) return;
         if (!state.session || !state.question || location.hash !== '#game') return;
         if (isTypingTarget(document.activeElement)) return; // never hijack text inputs

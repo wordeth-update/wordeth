@@ -369,6 +369,21 @@ body[data-world="block"] .liq-world--block, body[data-world="court"] .liq-world-
 .liq-card__actions .liq-btn--primary { font-size: 1.1rem; min-height: 56px; }
 @media (min-width: 480px) { .liq-card__actions { grid-template-columns: 1.2fr 1fr 1fr; } }
 
+/* In-page share sheet (fallback for plain http and desktop browsers without a system sheet) */
+.liq-sheet { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; }
+.liq-sheet__backdrop { position: absolute; inset: 0; background: rgba(11, 10, 20, 0.72); }
+.liq-sheet__panel { position: relative; width: 100%; max-width: 560px; max-height: calc(100dvh - 24px); overflow: auto; background: var(--liq-cream); color: var(--liq-ink); border: var(--liq-border) solid var(--liq-ink); border-bottom: 0; border-radius: 26px 26px 0 0; padding: 14px 16px calc(20px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 12px; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5); }
+.liq-sheet__head { display: flex; align-items: center; justify-content: space-between; }
+.liq-sheet__head .liq-kicker { color: var(--liq-rust); text-shadow: none; }
+.liq-sheet__close { appearance: none; border: 2px solid var(--liq-ink); background: #fff; color: var(--liq-ink); width: var(--liq-tap); height: var(--liq-tap); border-radius: 50%; font: inherit; font-weight: 800; cursor: pointer; box-shadow: 0 3px 0 var(--liq-ink); }
+.liq-sheet__link { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.liq-sheet__url { min-width: 0; font-size: 0.9rem; font-weight: 600; padding: 0 12px; min-height: 42px; }
+.liq-sheet__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.liq-sheet__grid .liq-btn { background: #fff; }
+.liq-sheet__hint { margin: 0; font-size: 0.8rem; color: var(--liq-muted); font-weight: 600; }
+.liq-body--sheet { overflow: hidden; }
+@media (min-width: 640px) { .liq-sheet { align-items: center; padding: 24px; } .liq-sheet__panel { border-bottom: var(--liq-border) solid var(--liq-ink); border-radius: 26px; max-height: calc(100dvh - 48px); } .liq-sheet__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
 /* --------------------------------------------------------------------------
    Results
    -------------------------------------------------------------------------- */
