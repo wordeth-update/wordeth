@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Lyric IQ — Wordeth</title>
+    <meta name="description" content="How well do you actually know music? Finish the lyric, name the song, call the artist. Get your Lyric IQ.">
+    <meta name="theme-color" content="#151A3A">
+    <link rel="canonical" href="https://play.wordeth.com/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://play.wordeth.com/">
+    <meta property="og:image" content="https://play.wordeth.com/images/logo.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta property="og:title" content="Wordeth Lyric IQ">
+    <meta property="og:description" content="The world between thought and speech. Where words go to be spoken.">
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="css/lyric-iq.css?v=17">
+</head>
+<body class="liq-body" data-world="block">
+    <!-- The world between thought and speech, drawn as three streets worlds that are
+         levels: the block (starting out), the court (Lyric IQ 50+), the rooftop (75+);
+         a Streak run climbs through them live. Scenes are SVG, inlined by app.js. -->
+    <div class="liq-stage" aria-hidden="true">
+        <div class="liq-sky"></div>
+        <div class="liq-world liq-world--block"></div>
+        <div class="liq-world liq-world--court"></div>
+        <div class="liq-world liq-world--rooftop"></div>
+        <div class="liq-block liq-par-near liq-block--1">W</div>
+        <div class="liq-block liq-par-near liq-block--2">O</div>
+        <div class="liq-block liq-par-near liq-block--3">R</div>
+        <div class="liq-block liq-par-near liq-block--4">D</div>
+        <div class="liq-block liq-par-near liq-block--5">?</div>
+    </div>
+
+    <a class="liq-skip" href="#liq-main">Skip to game</a>
+
+    <header class="liq-top">
+        <a href="/" class="liq-wordmark" aria-label="Wordeth home"><img class="liq-wordmark__img" src="images/logo.png" alt="Wordeth" width="1500" height="1201" decoding="async"></a>
+        <nav class="liq-top__nav" aria-label="Lyric IQ">
+            <a href="#play" data-route="play">Play</a>
+            <a href="#profile" data-route="profile">Profile</a>
+            <a href="#leaderboard" data-route="leaderboard">Board</a>
+            <a href="/signin.html?return=%2Flyric-iq.html" id="liq-auth-link" class="liq-top__auth">Sign in</a>
+        </nav>
+    </header>
+
+    <main id="liq-main" class="liq-main" tabindex="-1"></main>
+
+    <div id="liq-live" class="liq-sr-only" aria-live="polite" aria-atomic="true"></div>
+    <div id="liq-toast" class="liq-toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="js/config.js"></script>
+    <script src="js/lyric-iq/copy.js?v=1"></script>
+    <script src="js/lyric-iq/api.js?v=2"></script>
+    <script src="js/lyric-iq/app.js?v=16"></script>
+</body>
+</html>

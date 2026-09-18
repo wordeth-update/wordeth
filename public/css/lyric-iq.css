@@ -1,0 +1,511 @@
+/* ==========================================================================
+   Wordeth Lyric IQ — the world between thought and speech.
+   "Lyric IQ Streets": three drawn worlds, played as levels. The block at
+   golden hour (starting out), the court at sundown (Lyric IQ 50+), and the
+   rooftop at night (75+); a Streak run climbs through them live. Cream cards,
+   near-black ink outlines, amber / mint / hot pink accents; Unbounded display,
+   Outfit body. Scenes are SVG (images/lyric-iq/streets-*.svg), inlined at
+   runtime so their signs and graffiti use the display font.
+   ========================================================================== */
+
+:root {
+    /* Brand accents */
+    --liq-mint: #00E5A8;
+    --liq-mint-light: #7CF5D3;
+    --liq-mint-deep: #00A87D;
+    --liq-pink: #FF2D78;
+    --liq-blue: #6FB8E6;
+    --liq-gold: #F2B632;
+    --liq-gold-light: #FFC94A;
+    --liq-orange: #E0812E;
+    --liq-rust: #8E3B2F;           /* accent for kickers and quotes on cream */
+    /* Legacy token names kept for the few rules that still read them */
+    --liq-purple: var(--liq-rust);
+    --liq-purple-vivid: var(--liq-orange);
+    --liq-purple-light: var(--liq-gold);
+
+    /* Streets */
+    --liq-ink: #0B0A14;            /* outlines + text on cream */
+    --liq-ink-soft: #3B2A2A;
+    --liq-cream: #F4EBDD;
+    --liq-sky-top: #151A3A;
+    --liq-sky: #3B2E63;
+    --liq-sky-low: #F3A85A;
+    --liq-paper: #F4EBDD;
+    --liq-paper-2: #FFFFFF;
+    --liq-muted: #6B5F57;
+    --liq-faint: #9C8E82;
+
+    --liq-correct: #00E5A8;
+    --liq-wrong: #FF2D78;
+
+    --liq-display: 'Unbounded', 'Arial Black', sans-serif;
+    --liq-body: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+    --liq-gutter: 16px;
+    --liq-max: 640px;
+    --liq-tap: 44px;
+    --liq-radius: 18px;
+    --liq-border: 3px;
+    --liq-lift: 5px;               /* chunky bottom shadow */
+    --liq-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --liq-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --liq-fast: 120ms;
+    --liq-med: 260ms;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
+.liq-body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: var(--liq-sky);
+    color: var(--liq-ink);
+    font-family: var(--liq-body);
+    font-size: 16px;
+    line-height: 1.45;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* --------------------------------------------------------------------------
+   Stage — sky fallback, three drawn worlds, letter blocks
+   -------------------------------------------------------------------------- */
+.liq-stage { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: var(--liq-ink); --px: 0; --py: 0; }
+/* Pointer parallax: near layers move more than far ones (desktop only, see app.js). */
+.liq-par-far { translate: calc(var(--px) * 6px) calc(var(--py) * 3px); }
+.liq-par-mid { translate: calc(var(--px) * 14px) calc(var(--py) * 6px); }
+.liq-par-near { translate: calc(var(--px) * 26px) calc(var(--py) * 10px); }
+
+/* The sky paints instantly and matches each scene's gradient, so the SVG fades in over the right colour. */
+.liq-sky { position: absolute; inset: 0; transition: background 600ms var(--liq-ease); background: linear-gradient(180deg, #151A3A 0%, #3B2E63 35%, #8E4A5E 68%, #D9784A 88%, #F3A85A 100%); }
+body[data-world="court"] .liq-sky { background: linear-gradient(180deg, #1B1240 0%, #5A2A5E 40%, #C85A44 72%, #F4B25A 100%); }
+body[data-world="rooftop"] .liq-sky { background: linear-gradient(180deg, #05071A 0%, #141C4A 50%, #2B2F6E 85%, #4A3C7A 100%); }
+
+/* Worlds: only the active one is shown. */
+.liq-world { position: absolute; inset: 0; opacity: 0; transition: opacity 700ms var(--liq-ease); pointer-events: none; }
+body[data-world="block"] .liq-world--block, body[data-world="court"] .liq-world--court, body[data-world="rooftop"] .liq-world--rooftop { opacity: 1; }
+.liq-scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* Letter blocks: thoughts becoming words. Hidden while a round is on screen. */
+.liq-body[data-screen="game"] .liq-block { display: none; }
+.liq-block {
+    position: absolute; width: 46px; height: 46px; border-radius: 12px;
+    border: var(--liq-border) solid var(--liq-ink); background: var(--liq-gold); color: var(--liq-ink);
+    font-family: var(--liq-display); font-weight: 900; font-size: 1.15rem; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 5px 0 var(--liq-ink), inset 0 -6px 0 rgba(11, 10, 20, 0.14), inset 0 6px 0 rgba(255, 255, 255, 0.28);
+    animation: liq-bob 4.2s ease-in-out infinite;
+}
+.liq-block--1 { left: 6%; bottom: 30vh; background: var(--liq-mint); }
+.liq-block--2 { left: 15%; bottom: 36vh; animation-delay: -1.1s; background: var(--liq-blue); }
+.liq-block--3 { right: 16%; bottom: 34vh; animation-delay: -2.3s; background: var(--liq-pink); color: var(--liq-cream); }
+.liq-block--4 { right: 6%; bottom: 27vh; animation-delay: -0.6s; background: var(--liq-orange); }
+.liq-block--5 { left: 11%; bottom: 50vh; animation-delay: -3s; width: 40px; height: 40px; opacity: 0.85; background: var(--liq-cream); }
+@keyframes liq-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+/* --------------------------------------------------------------------------
+   Chrome
+   -------------------------------------------------------------------------- */
+.liq-skip { position: absolute; left: -9999px; top: 8px; z-index: 100; background: var(--liq-ink); color: var(--liq-cream); padding: 8px 12px; border-radius: 10px; min-height: var(--liq-tap); display: inline-flex; align-items: center; }
+.liq-skip:focus { left: 8px; }
+.liq-sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+.liq-top {
+    position: relative; z-index: 2;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 12px var(--liq-gutter);
+    max-width: 960px; margin: 0 auto;
+}
+.liq-wordmark {
+    font-family: var(--liq-display); font-weight: 900; font-size: 1rem; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--liq-cream); text-decoration: none; min-height: var(--liq-tap); display: inline-flex; align-items: center;
+    text-shadow: 2px 2px 0 var(--liq-ink), -1px -1px 0 var(--liq-ink), 1px -1px 0 var(--liq-ink), -1px 1px 0 var(--liq-ink);
+}
+.liq-wordmark__img { height: 44px; width: auto; display: block; filter: drop-shadow(0 0 8px rgba(244, 235, 221, 0.45)) drop-shadow(0 3px 0 var(--liq-ink)); }
+.liq-top__nav { display: flex; gap: 6px; flex-shrink: 0; }
+.liq-top__nav a {
+    color: var(--liq-ink); text-decoration: none; font-weight: 700; font-size: 0.85rem; white-space: nowrap;
+    padding: 0 12px; min-height: var(--liq-tap); display: inline-flex; align-items: center; border-radius: 999px;
+    background: rgba(244, 235, 221, 0.9); border: 2px solid transparent;
+    transition: background var(--liq-fast) var(--liq-ease), transform var(--liq-fast) var(--liq-bounce);
+}
+.liq-top__nav a:hover { background: #fff; transform: translateY(-1px); }
+.liq-top__nav a { border-color: var(--liq-ink); box-shadow: 0 3px 0 var(--liq-ink); }
+.liq-top__nav a[aria-current="page"] { background: var(--liq-ink); color: var(--liq-cream); }
+.liq-top__nav a.liq-top__auth { background: var(--liq-gold); border-color: var(--liq-ink); }
+
+.liq-main {
+    position: relative; z-index: 1;
+    max-width: var(--liq-max); margin: 0 auto;
+    padding: 8px var(--liq-gutter) calc(72px + env(safe-area-inset-bottom, 0px));
+    min-height: calc(100vh - 68px); min-height: calc(100dvh - 68px);
+    outline: none;
+}
+:where(button, a, input):focus-visible { outline: 3px solid var(--liq-pink); outline-offset: 3px; }
+
+.liq-toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 50;
+    background: var(--liq-ink); color: var(--liq-cream); padding: 12px 18px; border-radius: 999px;
+    font-weight: 700; font-size: 0.92rem; max-width: calc(100vw - 32px);
+    border: var(--liq-border) solid var(--liq-cream); box-shadow: 0 6px 0 rgba(11, 10, 20, 0.35);
+}
+
+/* --------------------------------------------------------------------------
+   Type
+   -------------------------------------------------------------------------- */
+.liq-kicker { font-family: var(--liq-display); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--liq-cream); text-shadow: 1px 1px 0 var(--liq-ink), -1px -1px 0 var(--liq-ink), 1px -1px 0 var(--liq-ink), -1px 1px 0 var(--liq-ink); }
+.liq-result__hero .liq-kicker, .liq-section .liq-kicker { color: var(--liq-purple); text-shadow: none; }
+.liq-h1 {
+    font-family: var(--liq-display); font-weight: 900; font-size: clamp(2.5rem, 12vw, 4.6rem); line-height: 0.95; letter-spacing: -0.01em; margin: 0;
+    text-transform: uppercase; color: var(--liq-cream);
+    text-shadow: -2px -2px 0 var(--liq-ink), 2px -2px 0 var(--liq-ink), -2px 2px 0 var(--liq-ink), 2px 2px 0 var(--liq-ink), 0 6px 0 var(--liq-ink), 0 10px 0 rgba(11, 10, 20, 0.25);
+}
+.liq-h1 .liq-h1__wonder {
+    display: block; font-size: 1.28em; line-height: 0.9; margin-top: 0.04em;
+    background: linear-gradient(180deg, var(--liq-mint) 0%, var(--liq-gold) 62%, var(--liq-orange) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(2px 2px 0 var(--liq-ink)) drop-shadow(-1px -1px 0 var(--liq-ink)) drop-shadow(0 5px 0 var(--liq-ink));
+}
+.liq-h2 { font-family: var(--liq-display); font-weight: 800; font-size: clamp(1.4rem, 6vw, 2rem); line-height: 1.1; margin: 0; color: var(--liq-ink); }
+.liq-muted { color: var(--liq-muted); }
+.liq-faint { color: var(--liq-faint); }
+
+/* --------------------------------------------------------------------------
+   Chunky buttons
+   -------------------------------------------------------------------------- */
+.liq-btn {
+    appearance: none; border: var(--liq-border) solid var(--liq-ink); background: var(--liq-paper); color: var(--liq-ink);
+    font: inherit; font-weight: 800; min-height: 52px; padding: 0 22px; border-radius: 999px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;
+    box-shadow: 0 var(--liq-lift) 0 var(--liq-ink);
+    transition: transform var(--liq-fast) var(--liq-bounce), box-shadow var(--liq-fast) var(--liq-ease), background var(--liq-fast);
+    -webkit-tap-highlight-color: transparent;
+}
+.liq-btn:hover { transform: translateY(-2px); box-shadow: 0 calc(var(--liq-lift) + 2px) 0 var(--liq-ink); }
+.liq-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--liq-ink); }
+.liq-btn:disabled { opacity: 0.55; cursor: default; transform: none; }
+.liq-btn--primary {
+    background: var(--liq-gold); font-family: var(--liq-display); font-weight: 900; font-size: 1.4rem; letter-spacing: 0.06em; text-transform: uppercase;
+    min-height: 68px; padding: 0 44px; border-radius: 26px;
+    box-shadow: 0 7px 0 var(--liq-ink), 0 14px 30px rgba(242, 182, 50, 0.35);
+}
+.liq-btn--primary:hover { background: var(--liq-gold-light); box-shadow: 0 9px 0 var(--liq-ink), 0 18px 34px rgba(242, 182, 50, 0.4); }
+.liq-btn--primary:active { box-shadow: 0 2px 0 var(--liq-ink); }
+.liq-btn--ghost { background: var(--liq-paper-2); }
+.liq-btn--block { width: 100%; }
+.liq-btn--sm { min-height: 42px; padding: 0 16px; font-size: 0.9rem; box-shadow: 0 3px 0 var(--liq-ink); }
+
+/* --------------------------------------------------------------------------
+   Entry
+   -------------------------------------------------------------------------- */
+.liq-entry { display: flex; flex-direction: column; justify-content: center; gap: 22px; min-height: calc(100vh - 150px); min-height: calc(100dvh - 150px); padding: 20px 0 8px; }
+.liq-entry__head { display: grid; gap: 12px; }
+.liq-entry__thesis { font-weight: 600; font-size: clamp(1.05rem, 4.2vw, 1.25rem); color: var(--liq-ink); margin: 0; max-width: 30ch; background: rgba(244, 235, 221, 0.94); border-radius: 14px; padding: 8px 12px; display: inline-block; border: 2px solid rgba(11, 10, 20, 0.12); }
+.liq-entry__iq { display: inline-flex; align-items: center; gap: 10px; background: var(--liq-gold); border: var(--liq-border) solid var(--liq-ink); border-radius: 999px; padding: 6px 14px 6px 10px; box-shadow: 0 4px 0 var(--liq-ink); width: max-content; max-width: 100%; }
+.liq-entry__iq strong { font-family: var(--liq-display); font-size: 1.6rem; font-weight: 900; line-height: 1; }
+.liq-entry__iq span { font-weight: 700; color: var(--liq-ink); }
+.liq-entry__primary { display: grid; gap: 12px; }
+.liq-entry--step { justify-content: flex-start; gap: 18px; padding-top: 12px; }
+.liq-btn--hero { min-height: 84px; font-size: 1.75rem; border-radius: 30px; }
+.liq-h1--step { font-size: clamp(2rem, 8vw, 2.9rem); }
+.liq-entry__nav { display: flex; justify-content: flex-start; }
+
+/* Step indicator: Play › Mode › Genre */
+.liq-steps { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; flex-wrap: wrap; }
+.liq-steps__item {
+    display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 12px 0 6px; border-radius: 999px;
+    font-family: var(--liq-display); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--liq-ink); background: rgba(244, 235, 221, 0.9); border: 2px solid rgba(11, 10, 20, 0.25);
+}
+.liq-steps__n { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--liq-ink); color: var(--liq-cream); font-size: 0.7rem; }
+.liq-steps__item--current { background: var(--liq-gold); border-color: var(--liq-ink); box-shadow: 0 3px 0 var(--liq-ink); }
+.liq-steps__item--done { background: var(--liq-mint-light); border-color: var(--liq-ink); }
+.liq-steps__item--done .liq-steps__n { background: var(--liq-mint); color: var(--liq-ink); }
+
+/* Mode / genre cards */
+.liq-modegrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.liq-mode {
+    appearance: none; border: var(--liq-border) solid var(--liq-ink); background: var(--liq-paper); color: var(--liq-ink);
+    font: inherit; border-radius: var(--liq-radius); padding: 12px 10px; min-height: 68px; text-align: left; cursor: pointer;
+    display: grid; gap: 2px; box-shadow: 0 var(--liq-lift) 0 var(--liq-ink);
+    transition: transform var(--liq-fast) var(--liq-bounce), box-shadow var(--liq-fast); -webkit-tap-highlight-color: transparent;
+}
+.liq-mode:hover { transform: translateY(-2px); box-shadow: 0 7px 0 var(--liq-ink); }
+.liq-mode:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--liq-ink); }
+.liq-mode:disabled { opacity: 0.5; cursor: default; }
+.liq-mode__name { font-family: var(--liq-display); font-weight: 800; font-size: 0.92rem; line-height: 1.15; }
+.liq-mode__meta { font-size: 0.74rem; font-weight: 600; color: var(--liq-muted); }
+.liq-mode--big { min-height: 96px; padding: 16px 14px; gap: 6px; align-content: center; }
+.liq-mode--big .liq-mode__name { font-size: 1.15rem; }
+.liq-mode--big .liq-mode__meta { font-size: 0.8rem; }
+.liq-mode--done { background: var(--liq-mint-light); }
+.liq-mode--done .liq-mode__meta { color: var(--liq-ink); }
+.liq-mode--picked { background: var(--liq-gold); }
+.liq-mode[aria-pressed="true"] { background: var(--liq-ink); color: var(--liq-mint); }
+.liq-mode[aria-pressed="true"] .liq-mode__meta { color: rgba(244, 235, 221, 0.94); }
+.liq-mode[aria-pressed="true"]::after { content: "✓"; position: absolute; top: 10px; right: 12px; font-weight: 900; }
+.liq-mode { position: relative; }
+
+.liq-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.liq-chip {
+    appearance: none; border: 2px solid var(--liq-ink); background: rgba(244, 235, 221, 0.94); color: var(--liq-ink);
+    font: inherit; font-size: 0.86rem; font-weight: 700; min-height: 40px; padding: 0 14px; border-radius: 999px; cursor: pointer;
+    box-shadow: 0 3px 0 var(--liq-ink); transition: transform var(--liq-fast) var(--liq-bounce); -webkit-tap-highlight-color: transparent;
+}
+.liq-chip:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--liq-ink); }
+.liq-chip[aria-pressed="true"] { background: var(--liq-ink); color: var(--liq-mint); }
+.liq-entry__foot { font-size: 0.82rem; font-weight: 600; color: var(--liq-ink); background: rgba(244, 235, 221, 0.94); border-radius: 12px; padding: 8px 12px; width: max-content; max-width: 100%; margin: 0; }
+.liq-entry__foot a { color: var(--liq-ink); display: inline-flex; align-items: center; min-height: var(--liq-tap); padding: 0 10px; margin: -12px 0 -12px 2px; border-radius: 999px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+
+/* --------------------------------------------------------------------------
+   Game
+   -------------------------------------------------------------------------- */
+.liq-game { display: flex; flex-direction: column; gap: 16px; padding-top: 6px; min-height: calc(100vh - 150px); min-height: calc(100dvh - 150px); }
+.liq-game__bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-family: var(--liq-display); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.liq-game__bar > span { display: inline-flex; align-items: center; gap: 8px; }
+.liq-game__bar > span:first-child { background: var(--liq-paper); border: 2px solid var(--liq-ink); border-radius: 999px; padding: 8px 12px; box-shadow: 0 3px 0 var(--liq-ink); }
+.liq-game__bar strong { color: var(--liq-ink); font-weight: 900; }
+.liq-game__score { background: var(--liq-gold); border: 2px solid var(--liq-ink); border-radius: 999px; padding: 8px 12px; box-shadow: 0 3px 0 var(--liq-ink); color: var(--liq-ink); }
+.liq-game__streak { color: var(--liq-pink); }
+.liq-game__quit { appearance: none; background: rgba(244, 235, 221, 0.85); border: 2px solid var(--liq-ink); border-radius: 999px; color: var(--liq-ink); font: inherit; font-family: var(--liq-display); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; min-height: 40px; padding: 0 12px; cursor: pointer; }
+.liq-game__quit:hover { background: #fff; }
+
+.liq-timer-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.liq-timer__clock { min-width: 58px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; padding: 0 12px; border-radius: 999px; background: var(--liq-paper); border: 2px solid var(--liq-ink); box-shadow: 0 3px 0 var(--liq-ink); font-family: var(--liq-display); font-weight: 900; font-size: 1.05rem; font-variant-numeric: tabular-nums; color: var(--liq-ink); }
+.liq-timer__clock--urgent { background: var(--liq-pink); color: var(--liq-cream); animation: liq-tick 1s ease-in-out infinite; }
+@keyframes liq-tick { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+.liq-timer { height: 14px; width: 100%; background: var(--liq-paper); border: 2px solid var(--liq-ink); border-radius: 999px; overflow: hidden; box-shadow: 0 3px 0 var(--liq-ink); }
+.liq-timer__fill { height: 100%; width: 100%; background: var(--liq-mint); transform-origin: left; transition: transform 250ms linear; }
+.liq-timer__fill--urgent { background: var(--liq-pink); }
+
+.liq-progress { display: flex; gap: 5px; }
+.liq-progress__dot { flex: 1; height: 10px; background: rgba(244, 235, 221, 0.85); border: 2px solid var(--liq-ink); border-radius: 999px; }
+.liq-progress__dot--done { background: var(--liq-mint); }
+.liq-progress__dot--wrong { background: var(--liq-pink); }
+.liq-progress__dot--current { background: var(--liq-gold); }
+
+.liq-q { display: grid; gap: 14px; flex: 1; align-content: center; }
+.liq-q__meta { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-family: var(--liq-display); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--liq-cream); text-shadow: 1px 1px 0 var(--liq-ink), -1px -1px 0 var(--liq-ink), 1px -1px 0 var(--liq-ink), -1px 1px 0 var(--liq-ink); }
+.liq-q__meta em { font-style: normal; font-family: var(--liq-body); font-weight: 700; font-size: 0.8rem; text-transform: none; letter-spacing: 0; text-align: right; max-width: 58%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.liq-q__meta > span:first-child { flex: 1 1 auto; min-width: 0; }
+.liq-q__meta em { flex: 0 1 auto; }
+.liq-q { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.liq-input { min-width: 0; }
+
+/* The lyric lives in a speech bubble — you are about to say it. */
+.liq-lyric {
+    position: relative;
+    font-family: var(--liq-body); font-weight: 700; font-size: clamp(1.45rem, 6.4vw, 2.2rem); line-height: 1.25; margin: 0;
+    background: var(--liq-paper); color: var(--liq-ink); border: var(--liq-border) solid var(--liq-ink); border-radius: 24px;
+    padding: 18px 20px; box-shadow: 0 6px 0 var(--liq-ink);
+    text-wrap: balance;
+}
+.liq-lyric::after {
+    content: ''; position: absolute; left: 34px; bottom: -18px; width: 22px; height: 22px;
+    background: var(--liq-paper); border-right: var(--liq-border) solid var(--liq-ink); border-bottom: var(--liq-border) solid var(--liq-ink);
+    transform: rotate(45deg); border-bottom-right-radius: 4px;
+}
+.liq-lyric__line { display: block; }
+.liq-lyric__line--context { color: var(--liq-muted); font-size: 0.72em; font-weight: 600; margin-bottom: 0.3em; }
+.liq-lyric__quote { color: var(--liq-purple); }
+.liq-blank {
+    display: inline-block; min-width: 2.4ch; margin: 0 0.12em; vertical-align: baseline;
+    border-bottom: 4px solid var(--liq-pink); color: transparent; user-select: none;
+    transition: color var(--liq-med) var(--liq-ease);
+}
+.liq-blank--w2 { min-width: 5ch; }
+.liq-blank--w3 { min-width: 8ch; }
+.liq-blank--revealed { color: var(--liq-ink); border-bottom-color: transparent; user-select: auto; background: var(--liq-mint-light); border-radius: 8px; padding: 0 0.2em; }
+.liq-blank--revealed.liq-blank--wrong { background: #FFD0E0; }
+
+.liq-enter { animation: liq-pop var(--liq-med) var(--liq-bounce) both; }
+@keyframes liq-pop { from { opacity: 0; transform: translateY(10px) scale(0.96); } to { opacity: 1; transform: none; } }
+
+.liq-choices { display: grid; gap: 10px; margin-top: 10px; }
+.liq-choice {
+    appearance: none; width: 100%; border: var(--liq-border) solid var(--liq-ink); background: var(--liq-paper); color: var(--liq-ink);
+    font: inherit; font-size: 1.05rem; font-weight: 700; text-align: left; min-height: 56px; padding: 10px 14px 10px 10px; border-radius: var(--liq-radius);
+    display: flex; align-items: center; gap: 12px; cursor: pointer; position: relative; box-shadow: 0 var(--liq-lift) 0 var(--liq-ink);
+    transition: transform var(--liq-fast) var(--liq-bounce), box-shadow var(--liq-fast), background var(--liq-fast); -webkit-tap-highlight-color: transparent;
+}
+.liq-choice:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 7px 0 var(--liq-ink); }
+.liq-choice:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 var(--liq-ink); }
+.liq-choice:disabled { cursor: default; }
+.liq-choice__key { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 10px; border: 2px solid var(--liq-ink); background: var(--liq-paper-2); color: var(--liq-ink); font-family: var(--liq-display); font-size: 0.78rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+.liq-choice__text { flex: 1; }
+.liq-choice--correct { background: var(--liq-mint); animation: liq-bounce 420ms var(--liq-bounce); }
+.liq-choice--correct .liq-choice__key { background: var(--liq-ink); color: var(--liq-mint); }
+.liq-choice--wrong { background: var(--liq-pink); color: var(--liq-cream); }
+.liq-choice--wrong .liq-choice__key { background: var(--liq-ink); color: var(--liq-cream); border-color: var(--liq-ink); }
+.liq-choice--dim { background: var(--liq-paper-2); color: var(--liq-muted); border-color: rgba(11, 10, 20, 0.55); box-shadow: 0 2px 0 rgba(11, 10, 20, 0.55); }
+.liq-choice--dim .liq-choice__key { color: var(--liq-muted); border-color: rgba(11, 10, 20, 0.45); }
+@keyframes liq-bounce { 0% { transform: scale(1); } 40% { transform: scale(1.04) translateY(-4px); } 100% { transform: scale(1); } }
+
+.liq-typed { display: grid; gap: 10px; margin-top: 10px; }
+.liq-input {
+    width: 100%; appearance: none; border: var(--liq-border) solid var(--liq-ink); background: var(--liq-paper); color: var(--liq-ink);
+    font-family: var(--liq-body); font-weight: 700; font-size: 1.3rem; padding: 12px 16px; min-height: 56px; border-radius: var(--liq-radius); box-shadow: inset 0 3px 0 rgba(11, 10, 20, 0.08);
+}
+.liq-input::placeholder { color: var(--liq-faint); font-weight: 500; }
+.liq-input:focus { outline: 3px solid var(--liq-gold); outline-offset: 2px; }
+.liq-typed__row { display: flex; gap: 10px; }
+.liq-typed__row .liq-input { flex: 1; }
+.liq-typed__hint { font-size: 0.82rem; font-weight: 600; color: var(--liq-cream); text-shadow: 1px 1px 0 var(--liq-ink), -1px -1px 0 var(--liq-ink), 1px -1px 0 var(--liq-ink), -1px 1px 0 var(--liq-ink); }
+.liq-typed__hint strong { color: var(--liq-gold); }
+
+.liq-feedback { display: grid; gap: 6px; min-height: 84px; align-content: start; scroll-margin-bottom: 24px; }
+.liq-feedback__line { font-family: var(--liq-display); font-size: 1.35rem; font-weight: 900; line-height: 1.1; color: var(--liq-cream); text-shadow: -2px -2px 0 var(--liq-ink), 2px -2px 0 var(--liq-ink), -2px 2px 0 var(--liq-ink), 2px 2px 0 var(--liq-ink), 0 4px 0 var(--liq-ink); }
+.liq-feedback--correct .liq-feedback__line { color: var(--liq-mint); }
+.liq-feedback--wrong .liq-feedback__line { color: var(--liq-pink); }
+.liq-feedback__detail { font-size: 0.88rem; font-weight: 600; color: var(--liq-ink); display: flex; flex-wrap: wrap; gap: 6px 12px; background: rgba(244, 235, 221, 0.94); border-radius: 12px; padding: 8px 12px; border: 2px solid rgba(11, 10, 20, 0.12); }
+.liq-feedback__detail strong { font-family: var(--liq-display); font-weight: 800; }
+.liq-feedback__next { margin-top: 8px; }
+
+/* --------------------------------------------------------------------------
+   Share card (results screen)
+   -------------------------------------------------------------------------- */
+.liq-card { display: grid; gap: 12px; }
+.liq-card__img { display: block; width: 100%; height: auto; aspect-ratio: 1200 / 630; border-radius: var(--liq-radius); border: var(--liq-border) solid var(--liq-ink); box-shadow: 0 7px 0 var(--liq-ink), 0 18px 40px rgba(0, 0, 0, 0.45); background: #151A3A; }
+.liq-card__actions { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.liq-card__actions .liq-btn--primary { font-size: 1.1rem; min-height: 56px; }
+@media (min-width: 480px) { .liq-card__actions { grid-template-columns: 1.2fr 1fr 1fr; } }
+
+/* In-page share sheet (fallback for plain http and desktop browsers without a system sheet) */
+.liq-sheet { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; }
+.liq-sheet__backdrop { position: absolute; inset: 0; background: rgba(11, 10, 20, 0.72); }
+.liq-sheet__panel { position: relative; width: 100%; max-width: 560px; max-height: calc(100dvh - 24px); overflow: auto; background: var(--liq-cream); color: var(--liq-ink); border: var(--liq-border) solid var(--liq-ink); border-bottom: 0; border-radius: 26px 26px 0 0; padding: 14px 16px calc(20px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 12px; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5); }
+.liq-sheet__head { display: flex; align-items: center; justify-content: space-between; }
+.liq-sheet__head .liq-kicker { color: var(--liq-rust); text-shadow: none; }
+.liq-sheet__close { appearance: none; border: 2px solid var(--liq-ink); background: #fff; color: var(--liq-ink); width: var(--liq-tap); height: var(--liq-tap); border-radius: 50%; font: inherit; font-weight: 800; cursor: pointer; box-shadow: 0 3px 0 var(--liq-ink); }
+.liq-sheet__link { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.liq-sheet__url { min-width: 0; font-size: 0.9rem; font-weight: 600; padding: 0 12px; min-height: 42px; }
+.liq-sheet__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.liq-sheet__grid .liq-btn { background: #fff; }
+.liq-sheet__hint { margin: 0; font-size: 0.8rem; color: var(--liq-muted); font-weight: 600; }
+.liq-body--sheet { overflow: hidden; }
+@media (min-width: 640px) { .liq-sheet { align-items: center; padding: 24px; } .liq-sheet__panel { border-bottom: var(--liq-border) solid var(--liq-ink); border-radius: 26px; max-height: calc(100dvh - 48px); } .liq-sheet__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* --------------------------------------------------------------------------
+   Results
+   -------------------------------------------------------------------------- */
+.liq-result { display: grid; gap: 22px; padding-top: 8px; }
+.liq-result__hero { display: grid; gap: 8px; background: var(--liq-paper); border: var(--liq-border) solid var(--liq-ink); border-radius: 26px; padding: 20px; box-shadow: 0 7px 0 var(--liq-ink); }
+.liq-iq { display: flex; align-items: baseline; gap: 14px; }
+.liq-iq__value {
+    font-family: var(--liq-display); font-weight: 900; font-size: clamp(4.6rem, 24vw, 8rem); line-height: 0.9; letter-spacing: -0.03em;
+    background: linear-gradient(180deg, var(--liq-mint) 0%, var(--liq-blue) 50%, var(--liq-purple-vivid) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(2px 2px 0 var(--liq-ink)) drop-shadow(-1px -1px 0 var(--liq-ink)) drop-shadow(0 5px 0 var(--liq-ink));
+}
+.liq-iq__delta { font-family: var(--liq-display); font-size: 1.15rem; font-weight: 800; color: var(--liq-muted); }
+.liq-iq__delta--up { color: var(--liq-mint-deep); }
+.liq-iq__delta--down { color: var(--liq-pink); }
+.liq-iq__line { font-weight: 700; color: var(--liq-ink); font-size: 1.05rem; }
+.liq-iq__note { font-size: 0.8rem; font-weight: 600; color: var(--liq-muted); }
+
+.liq-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.liq-stat { border: var(--liq-border) solid var(--liq-ink); background: var(--liq-paper); border-radius: var(--liq-radius); padding: 12px 12px 10px; display: grid; gap: 2px; min-width: 0; box-shadow: 0 4px 0 var(--liq-ink); }
+.liq-stat__v { font-family: var(--liq-display); font-size: 1.35rem; font-weight: 900; line-height: 1; white-space: nowrap; color: var(--liq-ink); }
+.liq-stat__k { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--liq-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.liq-result__actions { display: grid; gap: 12px; }
+.liq-result__actions--row { grid-template-columns: 1fr; }
+
+.liq-save { border: var(--liq-border) solid var(--liq-ink); background: linear-gradient(180deg, #FFF6B8, var(--liq-gold)); border-radius: 22px; padding: 18px; display: grid; gap: 10px; box-shadow: 0 6px 0 var(--liq-ink); }
+.liq-save__title { font-family: var(--liq-display); font-size: 1.15rem; font-weight: 900; margin: 0; color: var(--liq-ink); }
+.liq-save__text { margin: 0; font-size: 0.92rem; font-weight: 600; color: var(--liq-ink); }
+
+.liq-breakdown { list-style: none; margin: 0; padding: 4px 0 0; display: grid; gap: 8px; }
+.liq-breakdown__row { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: center; font-size: 0.88rem; padding: 10px 12px; background: var(--liq-paper); border: 2px solid var(--liq-ink); border-radius: 14px; box-shadow: 0 3px 0 var(--liq-ink); }
+.liq-breakdown__mark { width: 26px; height: 26px; border-radius: 8px; border: 2px solid var(--liq-ink); display: inline-flex; align-items: center; justify-content: center; font-weight: 900; }
+.liq-breakdown__row--correct .liq-breakdown__mark { background: var(--liq-mint); }
+.liq-breakdown__row--wrong .liq-breakdown__mark { background: var(--liq-pink); color: var(--liq-cream); }
+.liq-breakdown__track { color: var(--liq-ink); font-weight: 700; }
+.liq-breakdown__track small { display: block; color: var(--liq-muted); font-weight: 600; font-size: 0.76rem; }
+.liq-breakdown__pts { color: var(--liq-ink); font-family: var(--liq-display); font-size: 0.72rem; font-weight: 800; white-space: nowrap; }
+
+.liq-subscores { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+
+/* --------------------------------------------------------------------------
+   Profile + leaderboard
+   -------------------------------------------------------------------------- */
+.liq-section { display: grid; gap: 12px; background: var(--liq-paper); border: var(--liq-border) solid var(--liq-ink); border-radius: 22px; padding: 16px; box-shadow: 0 5px 0 var(--liq-ink); }
+.liq-section + .liq-section { margin-top: 4px; }
+.liq-explain { margin: 0; padding-left: 18px; color: var(--liq-ink); font-size: 0.92rem; font-weight: 500; display: grid; gap: 6px; }
+.liq-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; font-weight: 600; }
+.liq-table th, .liq-table td { text-align: left; padding: 9px 6px; border-bottom: 2px solid var(--liq-paper-2); }
+.liq-table th { font-family: var(--liq-display); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--liq-muted); }
+.liq-table td.num, .liq-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.liq-table tr.liq-me td { color: var(--liq-purple); font-weight: 800; }
+.liq-tabs { display: flex; gap: 8px; }
+.liq-empty { color: var(--liq-muted); font-weight: 600; padding: 12px 0; }
+.liq-faint { font-weight: 600; }
+
+/* --------------------------------------------------------------------------
+   States
+   -------------------------------------------------------------------------- */
+.liq-state { display: grid; gap: 14px; padding: 40px 0; }
+.liq-state__title { font-family: var(--liq-display); font-size: 1.5rem; font-weight: 900; margin: 0; color: var(--liq-cream); text-shadow: -2px -2px 0 var(--liq-ink), 2px -2px 0 var(--liq-ink), -2px 2px 0 var(--liq-ink), 2px 2px 0 var(--liq-ink), 0 4px 0 var(--liq-ink); }
+.liq-state__text { margin: 0; font-weight: 600; color: var(--liq-ink); background: rgba(244, 235, 221, 0.94); border-radius: 12px; padding: 8px 12px; }
+.liq-spinner { width: 26px; height: 26px; border-radius: 50%; border: 4px solid var(--liq-ink); border-top-color: var(--liq-mint); animation: liq-spin 800ms linear infinite; }
+@keyframes liq-spin { to { transform: rotate(360deg); } }
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+@media (max-width: 419px) {
+    .liq-top__nav a[data-route="play"] { display: none; }
+    .liq-top__nav a { padding: 0 9px; font-size: 0.8rem; }
+    .liq-wordmark__img { height: 34px; }
+}
+@media (max-width: 359px) {
+    .liq-modegrid { grid-template-columns: 1fr; }
+    .liq-btn--hero { min-height: 72px; font-size: 1.5rem; }
+    .liq-top { padding-left: 12px; padding-right: 12px; }
+    .liq-block--5 { display: none; }
+}
+@media (max-width: 767px) {
+    /* Phones: the column is the whole width, so blocks rest on the sidewalk at the edges. */
+    .liq-block--2, .liq-block--3, .liq-block--5 { display: none; }
+    .liq-block--1 { left: 4%; bottom: 7.5vh; width: 38px; height: 38px; font-size: 1rem; }
+    .liq-block--4 { right: 4%; bottom: 9vh; width: 38px; height: 38px; font-size: 1rem; }
+    .liq-block { animation-duration: 5s; }
+}
+@media (min-width: 480px) {
+    .liq-stats { grid-template-columns: repeat(4, 1fr); }
+    .liq-result__actions--row { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 768px) {
+    :root { --liq-gutter: 24px; --liq-max: 680px; }
+    .liq-block--1 { left: 5%; bottom: 17vh; }
+    .liq-block--2 { left: 13%; bottom: 21vh; }
+    .liq-block--3 { right: 14%; bottom: 19vh; }
+    .liq-block--4 { right: 5%; bottom: 16vh; }
+    .liq-block--5 { left: 9%; bottom: 33vh; }
+    .liq-choices { grid-template-columns: 1fr 1fr; }
+    .liq-choices--lines { grid-template-columns: 1fr; }
+    .liq-lyric { font-size: clamp(1.8rem, 4.2vw, 2.5rem); padding: 24px 28px; }
+    .liq-result__actions { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 1024px) {
+    :root { --liq-max: 720px; }
+    .liq-top { padding: 20px var(--liq-gutter); }
+    .liq-wordmark__img { height: 56px; }
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    .liq-block { animation: none; }
+    .liq-world { transition: none; }
+    .liq-par-far, .liq-par-mid, .liq-par-near { translate: 0 0; }
+    .liq-enter, .liq-choice--correct { animation: none; }
+    .liq-timer__fill { transition: none; }
+    .liq-timer__clock--urgent { animation: none; }
+    .liq-btn, .liq-choice, .liq-mode, .liq-chip, .liq-top__nav a { transition: none; }
+    .liq-spinner { animation-duration: 2s; }
+}

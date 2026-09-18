@@ -73,6 +73,8 @@ const audiobankRoutes = require('./routes/audiobank'); // Audio Bank API & admin
 const scheduledRoomsRoutes = require('./routes/scheduledRooms'); // Scheduled rooms & collabs
 const roomTipsRoutes = require('./routes/roomTips'); // Room tip pool
 const accessRoutes = require('./routes/access');
+const lyricIq = require('./src/lyriciq'); // Wordeth Lyric IQ game subsystem
+const { createPlayHostMiddleware } = require('./src/lyriciq/middleware/playHost'); // play.wordeth.com front door
 const auth = require('./middleware/auth');
 const optionalAuth = require('./middleware/optionalAuth');
 const { resolveCustomerAudience, USER_PLUS } = require('./services/userAccess');
@@ -126,6 +128,8 @@ app.use(helmet({
             mediaSrc: ["'self'", "blob:"],
             workerSrc: ["'self'", "blob:", "https://cdn.jsdelivr.net", "https://unpkg.com"],
             frameSrc: ["https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com", "https://youtube-nocookie.com", "https://checkout.stripe.com"],
+            // Only force HTTPS in production: local testing on custom hostnames (play.wordeth.test) runs over plain HTTP.
+            upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
         },
     },
     crossOriginEmbedderPolicy: false,
@@ -134,13 +138,17 @@ app.use(helmet({
 }));
 
 // Rate limiting — use real client IP behind Cloudflare/proxies
+// Lyric IQ gameplay (one request per answer, ~1/sec in Rapid Fire) carries its own
+// per-player limiters in src/lyriciq/routes/index.js, so it is exempt from this coarse cap.
+const LYRICIQ_PATH_PREFIXES = ['/api/game/', '/api/daily', '/api/profile/', '/api/leaderboards/'];
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 300,
     message: 'Too many requests from this IP, please try again later.',
     keyGenerator: (req) => {
         return req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
-    }
+    },
+    skip: (req) => LYRICIQ_PATH_PREFIXES.some((prefix) => req.originalUrl.startsWith(prefix))
 });
 app.use('/api/', limiter);
 
@@ -181,6 +189,7 @@ if (mongoUri && mongoUri !== 'mongodb://localhost:27017/wordeth') {
     .then(() => {
         if (process.env.NODE_ENV !== 'test') {
             console.log('✅ Connected to MongoDB Atlas');
+            lyricIq.bootstrap().catch((err) => console.error('[lyriciq] bootstrap failed:', err.message));
         }
     })
     .catch(err => {
@@ -199,6 +208,7 @@ if (mongoUri && mongoUri !== 'mongodb://localhost:27017/wordeth') {
 const allowedOrigins = [
     'https://wordeth.com',
     'https://www.wordeth.com',
+    process.env.LYRICIQ_PLAY_HOST ? `https://${process.env.LYRICIQ_PLAY_HOST.split(',')[0].trim()}` : null,
     process.env.CLIENT_URL,
     process.env.CORS_ORIGIN
 ].filter(Boolean);
@@ -524,6 +534,9 @@ app.get('/api/coming-soon/signups', _csAuth, _csRequireRole('ADMIN'), async (req
     }
 });
 
+// play.wordeth.com serves the Lyric IQ page at "/"; "/play" on the main site bridges to it.
+app.use(createPlayHostMiddleware());
+
 const _htmlCache = new Map();
 app.use((req, res, next) => {
     const ext = path.extname(req.path);
@@ -601,6 +614,7 @@ app.use('/api/scheduled-rooms', scheduledRoomsRoutes); // Scheduled rooms & coll
 app.use('/api/rooms', roomTipsRoutes); // Room tips (mounted before custom room APIs)
 app.use('/api/access', accessRoutes);
 app.use('/api/files', require('./routes/files')); // Files stored in MongoDB (GridFS)
+lyricIq.mount(app, '/api'); // Lyric IQ: /api/game, /api/daily, /api/profile, /api/leaderboards, /api/internal
 function generateRoomId() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const bytes = crypto.randomBytes(18);

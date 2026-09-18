@@ -1,4 +1,5 @@
 const express = require('express');
+const { setAuthCookie, clearAuthCookie } = require('../services/authCookie');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
@@ -55,6 +56,7 @@ router.post('/signup', [
             expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
         });
         
+        setAuthCookie(res, token);
         res.status(201).json({ token, user: await publicUserWithAccess(user) });
     } catch (error) {
         console.error('Signup error:', error);
@@ -83,11 +85,18 @@ router.post('/signin', [
         const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { 
             expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
         });
+        setAuthCookie(res, token);
         res.json({ token, user: await publicUserWithAccess(user) });
     } catch (error) {
         console.error('Signin error:', error);
         res.status(500).json({ message: 'Server error' });
     }
+});
+
+// Sign out: clears the shared cross-subdomain cookie (clients clear their own storage)
+router.post('/signout', (req, res) => {
+    clearAuthCookie(res);
+    res.json({ success: true });
 });
 
 // Verify token
