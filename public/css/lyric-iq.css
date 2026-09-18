@@ -273,6 +273,10 @@ body[data-world="block"] .liq-world--block, body[data-world="court"] .liq-world-
 .liq-game__quit { appearance: none; background: rgba(244, 235, 221, 0.85); border: 2px solid var(--liq-ink); border-radius: 999px; color: var(--liq-ink); font: inherit; font-family: var(--liq-display); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; min-height: 40px; padding: 0 12px; cursor: pointer; }
 .liq-game__quit:hover { background: #fff; }
 
+.liq-timer-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.liq-timer__clock { min-width: 58px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; padding: 0 12px; border-radius: 999px; background: var(--liq-paper); border: 2px solid var(--liq-ink); box-shadow: 0 3px 0 var(--liq-ink); font-family: var(--liq-display); font-weight: 900; font-size: 1.05rem; font-variant-numeric: tabular-nums; color: var(--liq-ink); }
+.liq-timer__clock--urgent { background: var(--liq-pink); color: var(--liq-cream); animation: liq-tick 1s ease-in-out infinite; }
+@keyframes liq-tick { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
 .liq-timer { height: 14px; width: 100%; background: var(--liq-paper); border: 2px solid var(--liq-ink); border-radius: 999px; overflow: hidden; box-shadow: 0 3px 0 var(--liq-ink); }
 .liq-timer__fill { height: 100%; width: 100%; background: var(--liq-mint); transform-origin: left; transition: transform 250ms linear; }
 .liq-timer__fill--urgent { background: var(--liq-pink); }
@@ -501,6 +505,7 @@ body[data-world="block"] .liq-world--block, body[data-world="court"] .liq-world-
     .liq-par-far, .liq-par-mid, .liq-par-near { translate: 0 0; }
     .liq-enter, .liq-choice--correct { animation: none; }
     .liq-timer__fill { transition: none; }
+    .liq-timer__clock--urgent { animation: none; }
     .liq-btn, .liq-choice, .liq-mode, .liq-chip, .liq-top__nav a { transition: none; }
     .liq-spinner { animation-duration: 2s; }
 }

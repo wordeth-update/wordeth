@@ -410,7 +410,10 @@
         updateHeader('play');
         var s = state.session; var q = state.question;
         state.answered = false; state.pending = false;
-        var timer = s.gameMode === 'RAPID_FIRE' ? '<div class="liq-timer" aria-hidden="true"><div class="liq-timer__fill" id="liq-timer-fill"></div></div>' : '';
+        var timer = s.gameMode === 'RAPID_FIRE'
+            ? '<div class="liq-timer-row"><div class="liq-timer" aria-hidden="true"><div class="liq-timer__fill" id="liq-timer-fill"></div></div>' +
+              '<span class="liq-timer__clock" id="liq-timer-clock" role="timer" aria-live="off" aria-label="Seconds left">' + esc(Math.max(0, Math.ceil((new Date(s.deadlineAt).getTime() - Date.now()) / 1000))) + '</span></div>'
+            : '';
         render(
             '<section class="liq-game" aria-label="Game">' +
             barHtml() + timer + progressDots() +
@@ -453,11 +456,21 @@
         var deadline = new Date(state.session.deadlineAt).getTime();
         var total = Math.max(1, deadline - Date.now());
         var fill = document.getElementById('liq-timer-fill');
+        var clock = document.getElementById('liq-timer-clock');
+        var lastShown = null;
         state.timer = setInterval(function () {
             var left = deadline - Date.now();
             if (fill) {
                 fill.style.transform = 'scaleX(' + Math.max(0, left / total) + ')';
                 if (left < 10000) fill.classList.add('liq-timer__fill--urgent');
+            }
+            if (clock) {
+                var secs = Math.max(0, Math.ceil(left / 1000));
+                if (secs !== lastShown) {
+                    clock.textContent = secs;
+                    lastShown = secs;
+                    if (secs <= 10) { clock.classList.add('liq-timer__clock--urgent'); if (secs <= 5) announce(secs + ' seconds'); }
+                }
             }
             if (left <= 0) {
                 clearTimers();
