@@ -61,6 +61,11 @@ README, `.env.example`, `docs/lyric-iq/{API,ARCHITECTURE,LYRIC_IQ_MODEL,GAME_ENG
 **Built.** Host-aware middleware (`src/lyriciq/middleware/playHost.js`): the play host serves the game at "/", "/play" on the main site redirects to it in production and serves it directly in development. Shared sign-in cookie on `.wordeth.com` (`services/authCookie.js`, set on sign-up/sign-in, cleared by new `POST /api/auth/signout`); the game client and the site nav read it as a fallback. Share text and challenge links use `LYRICIQ_PUBLIC_URL`. Canonical/OG tags point at the play host; homepage nav links to `/play`.
 **Tests.** `unit/playHost.test.js` (routing on both hosts, query preservation, redirect, dev fallback, cookie set/clear).
 
+## Stage 25 — Stepped setup flow and phone fixes
+**Built.** The entry screen no longer shows every control at once. It is now three steps with a step bar (Play › Mode › Genre): the landing has one Play button (plus "Resume today's Daily 10" when a set is in progress); the Mode screen offers Play, Daily 10, Rapid Fire and Streak as cards (Daily 10 begins immediately since its set is fixed); the Genre screen offers Everything plus each catalog genre as pressable cards with a Begin button. Back buttons on each step; routes `#mode` and `#genre` are deep-linkable; `?mode=` and `#daily` still start directly. Setup steps are tracked as `setup_step`, `mode_select`, `genre_select`.
+**Phone fixes** (from a real iPhone run at 192.168.x.x): the feedback card could land below the fold behind Safari's toolbar, so it now scrolls into view on answer and the main column reserves safe-area bottom padding; unchosen answers dim by colour instead of opacity so the scene never shows through them; the floating letter blocks hide while a round is on screen (`body[data-screen="game"]`).
+**Verified.** Headless Chromium at 320, 390 and 1280 px: no horizontal overflow on any step, all tap targets ≥ 40 px, first question in < 100 ms after Begin, no page errors.
+
 ## Remaining risks
 * Distractor quality on real catalog text is heuristic; watch `question_rejected` rates and `INSUFFICIENT_DISTRACTORS` after seeding Musixmatch content.
 * Musixmatch partial lyric bodies (plan-dependent) reduce usable lines; charts seeding may include instrumentals/non-English tracks — eligibility filters handle the flags Musixmatch exposes.

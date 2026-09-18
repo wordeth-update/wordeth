@@ -30,6 +30,7 @@
         timer: null,
         advanceTimer: null,
         lastMode: 'QUICK_PLAY',
+        modePicked: false,   // the player chose a mode in this visit (highlights it when they come back a step)
         questionShownAt: 0
     };
 
@@ -146,58 +147,135 @@
         return api.config().then(function (cfg) { state.config = cfg; return cfg; });
     }
 
-    function renderEntry() {
-        updateHeader('play');
-        clearTimers();
-        state.session = null; state.question = null;
-        renderLoading('Warming up');
-        Promise.all([loadConfig(), api.daily().catch(function () { return null; }), (api.hasAuth() || api.hasGuest()) ? api.profile().catch(function () { return null; }) : Promise.resolve(null)])
+    var CAT_LABELS = { hiphop: 'Hip-Hop', rnb: 'R&B', pop: 'Pop', rock: 'Rock', country: 'Country' };
+    var CAT_META = { all: 'Every genre in the catalog.', hiphop: 'Bars, flow and punchlines.', rnb: 'Slow jams and smooth hooks.', pop: 'The hooks everybody knows.', rock: 'Riffs, anthems and choruses.', country: 'Stories, trucks and heartbreak.' };
+    var MODE_META = {
+        QUICK_PLAY: { name: 'Play', meta: 'Ten questions. Your pace.' },
+        DAILY_10: { name: 'Daily 10', meta: 'Ten. Same set for everyone.' },
+        RAPID_FIRE: { name: 'Rapid Fire', meta: '60 seconds. Go.' },
+        STREAK: { name: 'Streak', meta: 'Until you miss.' }
+    };
+
+    /** Entry data: config, today's daily and (when known) the player's profile. Cached for the flow. */
+    function loadEntry() {
+        return Promise.all([loadConfig(), api.daily().catch(function () { return null; }), (api.hasAuth() || api.hasGuest()) ? api.profile().catch(function () { return null; }) : Promise.resolve(null)])
             .then(function (all) {
                 var cfg = all[0]; var daily = all[1]; var profile = all[2];
                 state.daily = daily;
-                var modes = {};
-                cfg.modes.forEach(function (m) { modes[m.key] = m; });
                 var iq = profile && profile.lyricIq ? profile.lyricIq : null;
                 state.lyricIq = iq ? iq.value : null;
                 setWorld(forcedWorld() || worldForIq(state.lyricIq));
                 // Signed in via the shared cookie: this origin has no stored user yet, so name the header from the profile.
                 var authLink = document.getElementById('liq-auth-link');
                 if (authLink && profile && profile.player && !profile.player.isGuest && authLink.textContent === 'Signed in') authLink.textContent = profile.player.displayName || 'Profile';
-                var dailyMeta = 'Ten. Same set for everyone.';
-                var dailyDone = false;
-                if (daily && daily.status === 'COMPLETED') { dailyDone = true; dailyMeta = 'Done · ' + daily.summary.correct + '/' + daily.questionCount; }
-                else if (daily && daily.status === 'ACTIVE') { dailyMeta = 'In progress · resume'; }
-                var cats = (cfg.categories || []).filter(function (c) { return c.genre !== 'other'; });
-                var catLabels = { hiphop: 'Hip-Hop', rnb: 'R&B', pop: 'Pop', rock: 'Rock', country: 'Country' };
+                return { cfg: cfg, daily: daily, iq: iq };
+            });
+    }
 
-                render(
-                    '<section class="liq-entry">' +
-                    '<div class="liq-entry__head liq-enter">' +
-                    '<div class="liq-kicker">Wordeth</div>' +
-                    '<h1 class="liq-h1">Lyric <span class="liq-h1__wonder">IQ</span></h1>' +
-                    '<p class="liq-entry__thesis">The world between thought and speech. This is where words go to be spoken.</p>' +
-                    (iq && iq.value !== null ? '<div class="liq-entry__iq"><strong>' + esc(iq.value) + '</strong><span class="liq-muted">your Lyric IQ' + (iq.provisional ? ' · provisional' : '') + '</span></div>' : '') +
-                    '</div>' +
-                    '<div class="liq-entry__primary">' +
-                    '<button class="liq-btn liq-btn--primary liq-btn--block" data-action="play" data-mode="QUICK_PLAY" autofocus>Play</button>' +
-                    '<div class="liq-entry__modes" role="group" aria-labelledby="liq-modes-label">' +
-                    '<span class="liq-entry__modes-label" id="liq-modes-label">Modes</span>' +
-                    '<div class="liq-entry__secondary">' +
-                    (modes.DAILY_10 ? '<button class="liq-mode' + (dailyDone ? ' liq-mode--done' : '') + '" data-action="play" data-mode="DAILY_10"><span class="liq-mode__name">Daily 10</span><span class="liq-mode__meta">' + esc(dailyMeta) + '</span></button>' : '') +
-                    (modes.RAPID_FIRE ? '<button class="liq-mode" data-action="play" data-mode="RAPID_FIRE"><span class="liq-mode__name">Rapid Fire</span><span class="liq-mode__meta">60 seconds. Go.</span></button>' : '') +
-                    (modes.STREAK ? '<button class="liq-mode" data-action="play" data-mode="STREAK"><span class="liq-mode__name">Streak</span><span class="liq-mode__meta">Until you miss.</span></button>' : '') +
-                    '</div></div>' +
-                    (cats.length > 1 ? '<div class="liq-chips" role="group" aria-label="Choose category">' +
-                        '<button class="liq-chip" data-action="category" data-category="all" aria-pressed="' + (state.category === 'all') + '">Everything</button>' +
-                        cats.map(function (c) { return '<button class="liq-chip" data-action="category" data-category="' + esc(c.genre) + '" aria-pressed="' + (state.category === c.genre) + '">' + esc(catLabels[c.genre] || c.genre) + '</button>'; }).join('') +
-                        '</div>' : '') +
-                    '</div>' +
-                    '<p class="liq-entry__foot">' + (cfg.synthetic ? 'Development catalog: test content, not real lyrics. ' : '') + (daily && daily.dailyStreak > 1 ? esc(daily.dailyStreak) + '-day daily streak. ' : '') + (!api.hasAuth() ? 'No account needed to play. ' : '') + '<a href="https://wordeth.com">Part of Wordeth</a></p>' +
-                    '</section>'
-                );
-                api.track('game_view', {});
-            })
-            .catch(function (err) { renderError(err, 'home'); });
+    function stepsHtml(current) {
+        var steps = ['Play', 'Mode', 'Genre'];
+        return '<ol class="liq-steps" aria-label="Setup steps">' + steps.map(function (s, i) {
+            var n = i + 1;
+            var cls = n < current ? ' liq-steps__item--done' : (n === current ? ' liq-steps__item--current' : '');
+            return '<li class="liq-steps__item' + cls + '"' + (n === current ? ' aria-current="step"' : '') + '><span class="liq-steps__n">' + n + '</span>' + s + '</li>';
+        }).join('') + '</ol>';
+    }
+
+    /** Step 1: one thing to do. Press Play. */
+    function renderEntry() {
+        updateHeader('play');
+        clearTimers();
+        state.session = null; state.question = null;
+        renderLoading('Warming up');
+        loadEntry().then(function (d) {
+            var cfg = d.cfg; var daily = d.daily; var iq = d.iq;
+            render(
+                '<section class="liq-entry">' +
+                '<div class="liq-entry__head liq-enter">' +
+                '<div class="liq-kicker">Wordeth</div>' +
+                '<h1 class="liq-h1">Lyric <span class="liq-h1__wonder">IQ</span></h1>' +
+                '<p class="liq-entry__thesis">The world between thought and speech. This is where words go to be spoken.</p>' +
+                (iq && iq.value !== null ? '<div class="liq-entry__iq"><strong>' + esc(iq.value) + '</strong><span class="liq-muted">your Lyric IQ' + (iq.provisional ? ' · provisional' : '') + '</span></div>' : '') +
+                '</div>' +
+                '<div class="liq-entry__primary">' +
+                '<button class="liq-btn liq-btn--primary liq-btn--block liq-btn--hero" data-action="go" data-step="mode" autofocus>Play</button>' +
+                (daily && daily.status === 'ACTIVE' ? '<button class="liq-btn liq-btn--ghost liq-btn--block" data-action="play" data-mode="DAILY_10">Resume today’s Daily 10</button>' : '') +
+                '</div>' +
+                '<p class="liq-entry__foot">' + (cfg.synthetic ? 'Development catalog: test content, not real lyrics. ' : '') + (daily && daily.dailyStreak > 1 ? esc(daily.dailyStreak) + '-day daily streak. ' : '') + (!api.hasAuth() ? 'No account needed to play. ' : '') + '<a href="https://wordeth.com">Part of Wordeth</a></p>' +
+                '</section>'
+            );
+            api.track('game_view', {});
+        }).catch(function (err) { renderError(err, 'home'); });
+    }
+
+    /** Step 2: choose how you want to play. Daily 10 is a fixed set, so it begins right away. */
+    function renderModes() {
+        updateHeader('play');
+        clearTimers();
+        renderLoading('Warming up');
+        loadEntry().then(function (d) {
+            var cfg = d.cfg; var daily = d.daily;
+            var order = ['QUICK_PLAY', 'DAILY_10', 'RAPID_FIRE', 'STREAK'];
+            var enabled = {};
+            cfg.modes.forEach(function (m) { enabled[m.key] = m; });
+            var dailyDone = daily && daily.status === 'COMPLETED';
+            var cards = order.filter(function (k) { return enabled[k]; }).map(function (k) {
+                var m = MODE_META[k];
+                var meta = m.meta;
+                var cls = 'liq-mode liq-mode--big';
+                if (k === 'DAILY_10') {
+                    if (dailyDone) { cls += ' liq-mode--done'; meta = 'Done · ' + daily.summary.correct + '/' + daily.questionCount; }
+                    else if (daily && daily.status === 'ACTIVE') meta = 'In progress · resume';
+                }
+                if (state.modePicked && k === state.lastMode) cls += ' liq-mode--picked';
+                return '<button class="' + cls + '" data-action="select-mode" data-mode="' + k + '"><span class="liq-mode__name">' + m.name + '</span><span class="liq-mode__meta">' + esc(meta) + '</span></button>';
+            }).join('');
+            render(
+                '<section class="liq-entry liq-entry--step liq-enter">' +
+                stepsHtml(2) +
+                '<div class="liq-entry__head">' +
+                '<h1 class="liq-h1 liq-h1--step">Pick your <span class="liq-h1__wonder">mode</span></h1>' +
+                '</div>' +
+                '<div class="liq-modegrid" role="group" aria-label="Game modes">' + cards + '</div>' +
+                '<div class="liq-entry__nav"><button class="liq-btn liq-btn--ghost liq-btn--sm" data-action="go" data-step="play">Back</button></div>' +
+                '</section>'
+            );
+        }).catch(function (err) { renderError(err, 'home'); });
+    }
+
+    /** Step 3: choose a genre, then begin. */
+    function renderGenre() {
+        updateHeader('play');
+        clearTimers();
+        if (state.lastMode === 'DAILY_10') return startGame('DAILY_10');
+        renderLoading('Warming up');
+        loadEntry().then(function (d) {
+            var cfg = d.cfg;
+            var cats = (cfg.categories || []).filter(function (c) { return c.genre !== 'other'; });
+            if (cats.length < 2) return startGame(state.lastMode);
+            var m = MODE_META[state.lastMode] || MODE_META.QUICK_PLAY;
+            var options = [{ genre: 'all', label: 'Everything', meta: CAT_META.all }].concat(cats.map(function (c) {
+                return { genre: c.genre, label: CAT_LABELS[c.genre] || c.genre, meta: CAT_META[c.genre] || (c.count ? c.count + ' tracks' : '') };
+            }));
+            render(
+                '<section class="liq-entry liq-entry--step liq-enter">' +
+                stepsHtml(3) +
+                '<div class="liq-entry__head">' +
+                '<div class="liq-kicker">Mode · ' + esc(m.name) + '</div>' +
+                '<h1 class="liq-h1 liq-h1--step">Pick your <span class="liq-h1__wonder">genre</span></h1>' +
+                '</div>' +
+                '<div class="liq-modegrid" role="group" aria-label="Choose genre">' +
+                options.map(function (o) {
+                    return '<button class="liq-mode liq-mode--big liq-genre" data-action="category" data-category="' + esc(o.genre) + '" aria-pressed="' + (state.category === o.genre) + '"><span class="liq-mode__name">' + esc(o.label) + '</span>' + (o.meta ? '<span class="liq-mode__meta">' + esc(o.meta) + '</span>' : '') + '</button>';
+                }).join('') +
+                '</div>' +
+                '<div class="liq-entry__primary">' +
+                '<button class="liq-btn liq-btn--primary liq-btn--block" data-action="begin">Begin</button>' +
+                '<div class="liq-entry__nav"><button class="liq-btn liq-btn--ghost liq-btn--sm" data-action="go" data-step="mode">Back</button></div>' +
+                '</div>' +
+                '</section>'
+            );
+        }).catch(function (err) { renderError(err, 'home'); });
     }
 
     /* ------------------------------------------------------------------ */
@@ -215,6 +293,7 @@
             state.question = data.question;
             state.results = null;
             setRoute('#game');
+            document.body.setAttribute('data-screen', 'game');
             api.track('game_start', { game_mode: mode, category: state.category, resumed: !!data.resumed });
             if (!data.question) return finishAndShowResults();
             renderGame();
@@ -438,6 +517,8 @@
             fb.innerHTML = '<div class="liq-feedback__line liq-enter">' + esc(line) + '</div>' +
                 '<div class="liq-feedback__detail">' + detail.join('<span aria-hidden="true">·</span>') + '</div>' +
                 (showNext ? '<div class="liq-feedback__next"><button class="liq-btn liq-btn--sm" data-action="advance">' + (res.sessionCompleted ? 'See result' : 'Next') + ' →</button></div>' : '');
+            // On phones the card can land below the fold (behind Safari's toolbar): bring it into view.
+            try { fb.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' }); } catch (e) { /* older engines */ }
         }
         announce((res.correct ? 'Correct. ' : 'Not quite. The answer was ' + res.canonicalAnswer + '. ') + line);
         var bar = document.getElementById('liq-bar'); if (bar) bar.outerHTML = barHtml();
@@ -668,6 +749,7 @@
     /* ------------------------------------------------------------------ */
     function route() {
         var hash = location.hash || '#play';
+        document.body.setAttribute('data-screen', hash.slice(1).split('/')[0] || 'play');
         if (hash.indexOf('#results/') === 0) {
             var id = hash.slice(9);
             if (state.results && state.results.session.id === id) return renderResults(state.results, { daily: state.results.session.gameMode === 'DAILY_10' });
@@ -678,6 +760,8 @@
             if (state.session && state.question && state.session.status === 'ACTIVE') return renderGame();
             return renderEntry();
         }
+        if (hash === '#mode') return renderModes();
+        if (hash === '#genre') return renderGenre();
         if (hash === '#daily') return startGame('DAILY_10');
         if (hash === '#profile') return renderProfile();
         if (hash === '#leaderboard') return renderLeaderboard();
@@ -690,11 +774,14 @@
         var action = el.getAttribute('data-action');
         switch (action) {
             case 'play': e.preventDefault(); startGame(el.getAttribute('data-mode') || 'QUICK_PLAY'); break;
+            case 'go': { e.preventDefault(); var step = el.getAttribute('data-step'); api.track('setup_step', { step: step }); setRoute('#' + step); route(); break; }
+            case 'select-mode': { e.preventDefault(); var picked = el.getAttribute('data-mode') || 'QUICK_PLAY'; state.lastMode = picked; state.modePicked = true; api.track('mode_select', { game_mode: picked }); if (picked === 'DAILY_10') return startGame(picked); setRoute('#genre'); route(); break; }
+            case 'begin': e.preventDefault(); api.track('genre_select', { game_mode: state.lastMode, category: state.category }); startGame(state.lastMode || 'QUICK_PLAY'); break;
             case 'replay': e.preventDefault(); api.track('replay_click', { game_mode: el.getAttribute('data-mode') }); startGame(el.getAttribute('data-mode') || 'QUICK_PLAY'); break;
             case 'retry-start': e.preventDefault(); startGame(state.lastMode); break;
             case 'category': {
                 state.category = el.getAttribute('data-category');
-                var chips = main.querySelectorAll('.liq-chip[data-action="category"]');
+                var chips = main.querySelectorAll('[data-action="category"]');
                 for (var i = 0; i < chips.length; i++) chips[i].setAttribute('aria-pressed', String(chips[i] === el));
                 break;
             }

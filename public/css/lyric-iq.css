@@ -137,6 +137,7 @@ html { -webkit-text-size-adjust: 100%; }
 .liq-far--2 { bottom: -18vh; width: 120vw; height: 48vh; left: 74%; background: linear-gradient(180deg, #BB4FFF, #6C3BFF); opacity: 0.5; }
 
 /* Letter blocks: thoughts becoming words. */
+.liq-body[data-screen="game"] .liq-block { display: none; }
 .liq-block {
     position: absolute; width: 46px; height: 46px; border-radius: 12px;
     border: var(--liq-border) solid var(--liq-ink); background: var(--liq-gold); color: var(--liq-ink);
@@ -291,7 +292,7 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
 .liq-main {
     position: relative; z-index: 1;
     max-width: var(--liq-max); margin: 0 auto;
-    padding: 8px var(--liq-gutter) 64px;
+    padding: 8px var(--liq-gutter) calc(72px + env(safe-area-inset-bottom, 0px));
     min-height: calc(100vh - 68px); min-height: calc(100dvh - 68px);
     outline: none;
 }
@@ -360,13 +361,25 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
 .liq-entry__iq strong { font-family: var(--liq-display); font-size: 1.6rem; font-weight: 900; line-height: 1; }
 .liq-entry__iq span { font-weight: 700; color: var(--liq-ink); }
 .liq-entry__primary { display: grid; gap: 12px; }
-.liq-entry__modes { display: grid; gap: 8px; }
-.liq-entry__modes-label {
-    font-family: var(--liq-display); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
-    color: var(--liq-ink); background: rgba(255, 255, 255, 0.85); border: 2px solid var(--liq-ink); border-radius: 999px;
-    padding: 6px 12px; width: max-content; box-shadow: 0 3px 0 var(--liq-ink);
+.liq-entry--step { justify-content: flex-start; gap: 18px; padding-top: 12px; }
+.liq-btn--hero { min-height: 84px; font-size: 1.75rem; border-radius: 30px; }
+.liq-h1--step { font-size: clamp(2rem, 8vw, 2.9rem); }
+.liq-entry__nav { display: flex; justify-content: flex-start; }
+
+/* Step indicator: Play › Mode › Genre */
+.liq-steps { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; flex-wrap: wrap; }
+.liq-steps__item {
+    display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 12px 0 6px; border-radius: 999px;
+    font-family: var(--liq-display); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--liq-ink); background: rgba(255, 255, 255, 0.75); border: 2px solid rgba(18, 8, 58, 0.25);
 }
-.liq-entry__secondary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.liq-steps__n { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--liq-ink); color: #fff; font-size: 0.7rem; }
+.liq-steps__item--current { background: var(--liq-gold); border-color: var(--liq-ink); box-shadow: 0 3px 0 var(--liq-ink); }
+.liq-steps__item--done { background: var(--liq-mint-light); border-color: var(--liq-ink); }
+.liq-steps__item--done .liq-steps__n { background: var(--liq-mint); color: var(--liq-ink); }
+
+/* Mode / genre cards */
+.liq-modegrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .liq-mode {
     appearance: none; border: var(--liq-border) solid var(--liq-ink); background: var(--liq-paper); color: var(--liq-ink);
     font: inherit; border-radius: var(--liq-radius); padding: 12px 10px; min-height: 68px; text-align: left; cursor: pointer;
@@ -378,8 +391,16 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
 .liq-mode:disabled { opacity: 0.5; cursor: default; }
 .liq-mode__name { font-family: var(--liq-display); font-weight: 800; font-size: 0.92rem; line-height: 1.15; }
 .liq-mode__meta { font-size: 0.74rem; font-weight: 600; color: var(--liq-muted); }
+.liq-mode--big { min-height: 96px; padding: 16px 14px; gap: 6px; align-content: center; }
+.liq-mode--big .liq-mode__name { font-size: 1.15rem; }
+.liq-mode--big .liq-mode__meta { font-size: 0.8rem; }
 .liq-mode--done { background: var(--liq-mint-light); }
 .liq-mode--done .liq-mode__meta { color: var(--liq-ink); }
+.liq-mode--picked { background: var(--liq-gold); }
+.liq-mode[aria-pressed="true"] { background: var(--liq-purple); color: #fff; }
+.liq-mode[aria-pressed="true"] .liq-mode__meta { color: rgba(255, 255, 255, 0.85); }
+.liq-mode[aria-pressed="true"]::after { content: "✓"; position: absolute; top: 10px; right: 12px; font-weight: 900; }
+.liq-mode { position: relative; }
 
 .liq-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .liq-chip {
@@ -468,7 +489,8 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
 .liq-choice--correct .liq-choice__key { background: var(--liq-ink); color: var(--liq-mint); }
 .liq-choice--wrong { background: var(--liq-pink); color: #fff; }
 .liq-choice--wrong .liq-choice__key { background: var(--liq-ink); color: #fff; border-color: var(--liq-ink); }
-.liq-choice--dim { opacity: 0.5; }
+.liq-choice--dim { background: var(--liq-paper-2); color: var(--liq-muted); border-color: rgba(18, 8, 58, 0.55); box-shadow: 0 2px 0 rgba(18, 8, 58, 0.55); }
+.liq-choice--dim .liq-choice__key { color: var(--liq-muted); border-color: rgba(18, 8, 58, 0.45); }
 @keyframes liq-bounce { 0% { transform: scale(1); } 40% { transform: scale(1.04) translateY(-4px); } 100% { transform: scale(1); } }
 
 .liq-typed { display: grid; gap: 10px; margin-top: 10px; }
@@ -483,7 +505,7 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
 .liq-typed__hint { font-size: 0.82rem; font-weight: 600; color: #fff; text-shadow: 1px 1px 0 var(--liq-ink), -1px -1px 0 var(--liq-ink), 1px -1px 0 var(--liq-ink), -1px 1px 0 var(--liq-ink); }
 .liq-typed__hint strong { color: var(--liq-gold); }
 
-.liq-feedback { display: grid; gap: 6px; min-height: 84px; align-content: start; }
+.liq-feedback { display: grid; gap: 6px; min-height: 84px; align-content: start; scroll-margin-bottom: 24px; }
 .liq-feedback__line { font-family: var(--liq-display); font-size: 1.35rem; font-weight: 900; line-height: 1.1; color: #fff; text-shadow: -2px -2px 0 var(--liq-ink), 2px -2px 0 var(--liq-ink), -2px 2px 0 var(--liq-ink), 2px 2px 0 var(--liq-ink), 0 4px 0 var(--liq-ink); }
 .liq-feedback--correct .liq-feedback__line { color: var(--liq-mint); }
 .liq-feedback--wrong .liq-feedback__line { color: var(--liq-pink); }
@@ -565,7 +587,8 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
     .liq-wordmark { font-size: 0.9rem; }
 }
 @media (max-width: 359px) {
-    .liq-entry__secondary { grid-template-columns: 1fr; }
+    .liq-modegrid { grid-template-columns: 1fr; }
+    .liq-btn--hero { min-height: 72px; font-size: 1.5rem; }
     .liq-top { padding-left: 12px; padding-right: 12px; }
     .liq-cloud--3 { display: none; }
     .liq-block--5, .liq-thought--3 { display: none; }
@@ -578,8 +601,6 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
     .liq-block { animation-duration: 5s; }
 }
 @media (min-width: 480px) {
-    .liq-entry__modes { grid-template-columns: auto 1fr; align-items: center; gap: 12px; }
-    .liq-entry__modes-label { writing-mode: vertical-rl; transform: rotate(180deg); padding: 12px 6px; align-self: stretch; display: inline-flex; align-items: center; justify-content: center; }
     .liq-stats { grid-template-columns: repeat(4, 1fr); }
     .liq-result__actions--row { grid-template-columns: 1fr 1fr; }
 }
