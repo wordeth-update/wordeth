@@ -429,6 +429,8 @@
     function swapQuestion(next) {
         state.question = next;
         state.answered = false; state.pending = false;
+        // This question was generated during the last answer; tell the server it is on screen now so the clock starts here.
+        if (state.session) api.shown(state.session.id, next.id).catch(function () { /* timing falls back to generation time */ });
         var container = document.getElementById('liq-q');
         var fb = document.getElementById('liq-feedback');
         if (!container) return renderGame();

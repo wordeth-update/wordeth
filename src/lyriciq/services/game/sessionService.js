@@ -162,6 +162,23 @@ async function serveNextQuestion(session, player, flags = null) {
     return question;
 }
 
+/**
+ * The client reports the moment a pre-generated question hit the screen. Accepted
+ * once per question and only within a short grace window after generation, so a
+ * slow "shown" cannot buy unlimited reading time.
+ */
+async function markQuestionShown(sessionId, player, questionId) {
+    const session = await loadOwnedSession(sessionId, player);
+    if (!mongoose.isValidObjectId(questionId)) throw badRequest('INVALID_QUESTION', 'questionId is required');
+    const question = await QuestionInstance.findOne({ _id: questionId, sessionId: session._id }).select('servedAt shownAt status').lean();
+    if (!question) throw notFound('QUESTION_NOT_FOUND', 'Question not found in this session');
+    if (question.status !== 'PENDING' || question.shownAt) return { ok: true, changed: false };
+    const now = Date.now();
+    const shownAt = new Date(Math.min(now, question.servedAt.getTime() + config.session.shownGraceMs));
+    const r = await QuestionInstance.updateOne({ _id: question._id, status: 'PENDING', shownAt: null }, { $set: { shownAt } });
+    return { ok: true, changed: r.modifiedCount > 0 };
+}
+
 /* ------------------------------------------------------------------ */
 /* Answer submission                                                   */
 /* ------------------------------------------------------------------ */
@@ -188,7 +205,10 @@ async function submitAnswer(sessionId, player, { questionId, answer, choiceIndex
         throw conflict('QUESTION_ALREADY_ANSWERED', 'This question has already been answered', { status: existing.status });
     }
 
-    const responseTimeMs = Math.max(0, now.getTime() - question.servedAt.getTime());
+    // Questions are generated during the previous answer's round trip, so time the
+    // player from when the client showed it (bounded), not from generation.
+    const startedAt = question.shownAt && question.shownAt > question.servedAt ? question.shownAt : question.servedAt;
+    const responseTimeMs = Math.max(0, now.getTime() - startedAt.getTime());
     const evaluation = evaluateAnswer({ answerType: question.answerType, answerKey: question.answerKey, choices: question.choices }, { answer, choiceIndex });
     const streakBefore = session.currentStreak;
     const scoring = scoreAnswer({ correct: evaluation.correct, difficulty: question.difficulty, responseTimeMs, streakBefore, answerType: question.answerType });
@@ -402,6 +422,7 @@ async function claimGuest(user, guestId) {
 module.exports = {
     createSession,
     getCurrentQuestion,
+    markQuestionShown,
     serveNextQuestion,
     submitAnswer,
     completeSession,

@@ -41,6 +41,34 @@ Integration tests spin up an isolated database per file (memory-server by defaul
 * **Content controls**: `/api/internal/*` (internal key or admin JWT) disables tracks, artists, albums, providers, territories, modes or explicit content without a deploy.
 * **History**: [`BUILD_LOG.md`](BUILD_LOG.md) and [`DECISIONS.md`](DECISIONS.md).
 
+### Real lyrics (Musixmatch)
+
+The site's lyrics page and Lyric IQ share one key, `MUSIXMATCH_API_KEY`. When it is set, Lyric IQ uses Musixmatch automatically and, in production, drops the synthetic test catalog. Keep the key in `.env` locally and in Railway variables in production; never commit it.
+
+**First run on your machine**
+
+```
+# in ~/wordeth-web/.env
+MUSIXMATCH_API_KEY=your_key_here
+LYRICIQ_INCLUDE_SYNTHETIC=false
+
+# pull the US chart + the top of each genre, then warm lyrics for the 150 most popular tracks
+node scripts/lyriciq-seed-catalog.js --refresh
+
+npm run dev
+```
+
+Then check the catalog at `GET /api/internal/catalog/stats` (internal key or admin JWT): track counts per genre, generation attempts and rejection reasons. The refresh runs again every `LYRICIQ_CATALOG_REFRESH_HOURS` (default 24) while the server is up, and can be triggered with `POST /api/internal/catalog/refresh`.
+
+**What the pipeline does per question**
+
+1. **Pick a track** from the eligible pool: weighted random, popular first, less popular as the target difficulty rises, never repeating a track within a session, narrowed to the chosen genre.
+2. **Get the lyric body** from the stored copy (warmed ahead of play, cached under the licence TTL); only a never-seen track costs a Musixmatch call.
+3. **Build the question**: choose a template and a line, pick the blank, generate distractors from the same song, the same genre and the catalog, validate, score difficulty. Rejected attempts retry with another line or track (`LYRICIQ_MAX_GENERATION_ATTEMPTS`).
+4. **Serve it early**: the next question is generated during the previous answer's round trip and shown after the feedback beat; the client reports when it is on screen so response time is measured honestly.
+
+Tracks whose lyrics turn out to be in a language outside `LYRICIQ_ALLOWED_LANGUAGES` (default `en`) are retired on first fetch.
+
 ## play.wordeth.com
 
 Lyric IQ has its own front door on the same server. With `LYRICIQ_PLAY_HOST=play.wordeth.com` set:

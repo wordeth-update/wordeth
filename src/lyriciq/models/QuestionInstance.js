@@ -37,6 +37,7 @@ const questionInstanceSchema = new mongoose.Schema({
     },
     status: { type: String, enum: ['PENDING', 'ANSWERED', 'EXPIRED', 'REJECTED'], default: 'PENDING', index: true },
     servedAt: { type: Date, default: Date.now },
+    shownAt: { type: Date, default: null },     // when the client actually displayed a pre-generated question
     expiresAt: { type: Date, required: true },
     answeredAt: { type: Date, default: null },
     questionVersion: { type: Number, default: 1 },

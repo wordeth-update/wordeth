@@ -65,6 +65,14 @@ router.get('/sessions/:id/question',
     })
 );
 
+router.post('/sessions/:id/questions/:qid/shown',
+    playerIdentity(),
+    validate([param('id').isMongoId(), param('qid').isMongoId()]),
+    asyncHandler(async (req, res) => {
+        res.json(await sessionService.markQuestionShown(req.params.id, req.player, req.params.qid));
+    })
+);
+
 router.post('/sessions/:id/answer',
     playerIdentity(),
     validate([

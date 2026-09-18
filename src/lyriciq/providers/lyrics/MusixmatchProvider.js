@@ -138,6 +138,28 @@ class MusixmatchProvider extends LyricProvider {
         });
     }
 
+    /**
+     * Top-rated tracks in one Wordeth genre via track.search + f_music_genre_id.
+     * Musixmatch genre tags are often missing on chart rows, so tracks found this
+     * way take the requested genre when their own tags do not map to one.
+     */
+    async getGenreTracks({ genre, page = 1, pageSize = config.provider.musixmatch.seedPageSize, language = null } = {}) {
+        const genreId = config.provider.musixmatch.genreIds[genre];
+        if (!genreId) throw new ProviderError('BAD_REQUEST', `No Musixmatch genre id for "${genre}"`, { provider: this.name });
+        const params = { f_music_genre_id: genreId, f_has_lyrics: 1, s_track_rating: 'desc', page, page_size: pageSize };
+        const lang = language || (config.provider.allowedLanguages.length === 1 ? config.provider.allowedLanguages[0] : null);
+        if (lang) params.f_lyrics_language = lang;
+        const body = await this._call('track.search', params);
+        const list = body?.track_list;
+        if (!Array.isArray(list)) throw new ProviderError('BAD_PAYLOAD', 'Musixmatch genre search payload missing track_list', { provider: this.name });
+        logger.debug('provider_genre_fetched', { provider: this.name, count: list.length, genre, page });
+        return list.map((item) => {
+            const t = this._normalizeTrack(item.track);
+            if (t.primaryGenre === 'other') t.primaryGenre = genre;
+            return t;
+        });
+    }
+
     async getPopularTracks({ country = 'us', page = 1, pageSize = config.provider.musixmatch.seedPageSize, chart = 'top' } = {}) {
         const body = await this._call('chart.tracks.get', { country, page, page_size: pageSize, chart_name: chart, f_has_lyrics: 1 });
         const list = body?.track_list;

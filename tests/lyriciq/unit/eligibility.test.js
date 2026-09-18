@@ -33,3 +33,13 @@ describe('isTrackEligibleForGame', () => {
         expect(isTrackEligibleForGame({ ...other, artistKey: 'x', explicit: false }, { gameMode: 'DAILY_10' }, snap).eligible).toBe(true);
     });
 });
+
+describe('language gate', () => {
+    const base = { _id: 't9', artist: 'Los Ecos', artistKey: 'los-ecos', provider: 'musixmatch', hasLyrics: true, instrumental: false, primaryGenre: 'other', status: 'ACTIVE' };
+    test('tracks outside the allowed languages are not playable', () => {
+        expect(isTrackEligibleForGame({ ...base, language: 'es' }).reason).toBe('LANGUAGE_NOT_ALLOWED');
+        expect(isTrackEligibleForGame({ ...base, language: 'en' }).eligible).toBe(true);
+        expect(isTrackEligibleForGame({ ...base, language: 'es' }, { allowedLanguages: ['en', 'es'] }).eligible).toBe(true);
+        expect(isTrackEligibleForGame({ ...base, language: null }).eligible).toBe(true); // unknown until the lyric is fetched
+    });
+});

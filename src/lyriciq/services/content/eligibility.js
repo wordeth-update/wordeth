@@ -1,6 +1,7 @@
 'use strict';
 
 const { slugify } = require('../../providers/lyrics/normalizeTrack');
+const config = require('../../config');
 
 /**
  * Centralised gameplay eligibility. Pure: takes a track, a context and a
@@ -15,6 +16,9 @@ function isTrackEligibleForGame(track, context = {}, restrictions = emptyRestric
     if (!track.hasLyrics) return reject('NO_LYRICS');
     if (track.instrumental) return reject('INSTRUMENTAL');
     if (track.synthetic && context.allowSynthetic === false) return reject('SYNTHETIC_NOT_ALLOWED');
+
+    const allowedLanguages = context.allowedLanguages || config.provider.allowedLanguages;
+    if (track.language && allowedLanguages.length && !allowedLanguages.includes(String(track.language).toLowerCase())) return reject('LANGUAGE_NOT_ALLOWED');
 
     const mode = context.gameMode || null;
     const appliesTo = (r) => !r.gameModes?.length || !mode || r.gameModes.includes(mode);

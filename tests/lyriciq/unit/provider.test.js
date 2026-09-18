@@ -60,3 +60,24 @@ describe('MusixmatchProvider', () => {
         expect(extractUsableLines('[Chorus]\nreal line here\n')).toEqual(['real line here']);
     });
 });
+
+describe('MusixmatchProvider genre seeding', () => {
+    test('searches by Musixmatch genre id, top rated first, and falls back to the requested genre', async () => {
+        let seen = null;
+        const untagged = { ...rawTrack, track_id: 9, primary_genres: { music_genre_list: [] } };
+        const p = provider(async (url, opts) => { seen = { url, params: opts.params }; return mm({ track_list: [{ track: rawTrack }, { track: untagged }] }); });
+        const list = await p.getGenreTracks({ genre: 'rnb', page: 2 });
+        expect(seen.url).toBe('/track.search');
+        expect(seen.params).toMatchObject({ f_music_genre_id: 15, f_has_lyrics: 1, s_track_rating: 'desc', page: 2, f_lyrics_language: 'en' });
+        expect(list[0].primaryGenre).toBe('hiphop');   // its own tag wins
+        expect(list[1].primaryGenre).toBe('rnb');      // untagged takes the requested genre
+    });
+    test('rejects an unknown genre without calling the network', async () => {
+        const p = provider(async () => { throw new Error('should not be called'); });
+        await expect(p.getGenreTracks({ genre: 'polka' })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    });
+    test('carries the lyric language through', async () => {
+        const p = provider(async () => mm({ lyrics: { lyrics_id: 7, lyrics_body: 'Una línea\nOtra línea', lyrics_language: 'es' } }));
+        expect((await p.getLyrics(1)).language).toBe('es');
+    });
+});

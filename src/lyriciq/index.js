@@ -31,6 +31,7 @@ async function ensureTemplates() {
 }
 
 let sweepTimer = null;
+let refreshTimer = null;
 
 async function bootstrap({ exitOnFailure = process.env.NODE_ENV !== 'test' } = {}) {
     validateLyricIqEnv({ exitOnFailure });
@@ -52,11 +53,19 @@ async function bootstrap({ exitOnFailure = process.env.NODE_ENV !== 'test' } = {
         sweepTimer = setInterval(() => sessionService.expireStaleSessions().catch((err) => logger.error('sweep_failed', { message: err.message })), 5 * 60 * 1000);
         sweepTimer.unref();
     }
+    // Keep the licensed catalog moving: new chart / genre tracks and warmed lyrics on a schedule.
+    if (!refreshTimer && process.env.NODE_ENV !== 'test' && config.provider.name !== 'synthetic' && config.catalog.refreshHours > 0) {
+        const every = Math.max(1, config.catalog.refreshHours) * 60 * 60 * 1000;
+        refreshTimer = setInterval(() => catalogService.refreshCatalog().catch((err) => logger.error('catalog_refresh_failed', { message: err.message })), every);
+        refreshTimer.unref();
+        logger.info('catalog_refresh_scheduled', { everyHours: config.catalog.refreshHours });
+    }
     return { ok: true, catalog };
 }
 
 function stop() {
     if (sweepTimer) { clearInterval(sweepTimer); sweepTimer = null; }
+    if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
 }
 
 module.exports = { mount, bootstrap, stop, ensureTemplates };

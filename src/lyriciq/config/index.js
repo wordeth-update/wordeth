@@ -41,8 +41,13 @@ const config = {
             // Seed queries used when the catalog needs new tracks from Musixmatch.
             seedPageSize: intEnv('LYRICIQ_MUSIXMATCH_SEED_PAGE_SIZE', 25),
             // How many lines of a lyric body may be used in prompts (licence-driven).
-            maxExcerptLines: intEnv('LYRICIQ_MAX_EXCERPT_LINES', 2)
+            maxExcerptLines: intEnv('LYRICIQ_MAX_EXCERPT_LINES', 2),
+            // Musixmatch music_genre_id per Wordeth category (iTunes genre ids), used for
+            // genre-targeted seeding via track.search f_music_genre_id.
+            genreIds: { hiphop: 18, rnb: 15, pop: 14, rock: 21, country: 6 }
         },
+        /** Lyric languages that may be played (ISO 639-1). Tracks in other languages are disabled on first fetch. */
+        allowedLanguages: (env.LYRICIQ_ALLOWED_LANGUAGES || 'en').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
         /** Always allow the synthetic catalog to merge in (dev/test only by default). */
         includeSynthetic: boolEnv('LYRICIQ_INCLUDE_SYNTHETIC', env.NODE_ENV !== 'production')
     },
@@ -58,9 +63,25 @@ const config = {
         maxEntriesPerNamespace: intEnv('LYRICIQ_CACHE_MAX_ENTRIES', 2000)
     },
 
+    /** Catalog upkeep: scheduled pulls from the provider and lyric warming. */
+    catalog: {
+        // Hours between refreshes in-process (0 disables; use the seed script / internal route instead).
+        refreshHours: floatEnv('LYRICIQ_CATALOG_REFRESH_HOURS', 24),
+        // Chart pages and per-genre search pages pulled on each refresh.
+        chartPages: intEnv('LYRICIQ_CATALOG_CHART_PAGES', 2),
+        genrePages: intEnv('LYRICIQ_CATALOG_GENRE_PAGES', 2),
+        // Lyric bodies fetched ahead of play per refresh, most popular first, and the pause between calls.
+        warmLyricsPerRun: intEnv('LYRICIQ_CATALOG_WARM_LYRICS', 150),
+        warmDelayMs: intEnv('LYRICIQ_CATALOG_WARM_DELAY_MS', 250),
+        // Below this many playable licensed tracks the catalog is refreshed at boot.
+        minLicensedTracks: intEnv('LYRICIQ_CATALOG_MIN_TRACKS', 60)
+    },
+
     /** Session lifecycle. */
     session: {
         questionTtlMs: intEnv('LYRICIQ_QUESTION_TTL_MS', 3 * 60 * 1000),
+        // A pre-generated question counts as shown when the client says so, up to this long after it was generated.
+        shownGraceMs: intEnv('LYRICIQ_SHOWN_GRACE_MS', 10 * 1000),
         idleExpiryMs: intEnv('LYRICIQ_SESSION_IDLE_EXPIRY_MS', 30 * 60 * 1000),
         maxGenerationAttempts: intEnv('LYRICIQ_MAX_GENERATION_ATTEMPTS', 12),
         guestTokenTtl: env.LYRICIQ_GUEST_TOKEN_TTL || '30d'

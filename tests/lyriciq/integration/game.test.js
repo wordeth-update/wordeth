@@ -146,3 +146,35 @@ describe('guest session lifecycle', () => {
         expect(res.body.flags.guestPlay).toBe(true);
     });
 });
+
+describe('question timing', () => {
+    test('a pre-generated question is timed from when the client shows it, within a grace window', async () => {
+        const QuestionInstance = require('../../../src/lyriciq/models/QuestionInstance');
+        const start = await request(app).post('/api/game/sessions').send({}).expect(201);
+        const guest = start.body.guestToken; const sid = start.body.session.id;
+        // Answer the first question; the response carries the pre-generated second one.
+        const first = await request(app).post(`/api/game/sessions/${sid}/answer`).set('X-Guest-Token', guest).send(await submissionFor(start.body.question)).expect(200);
+        const next = first.body.nextQuestion;
+        expect(next).toBeTruthy();
+        // Pretend it was generated a while ago (the previous answer's round trip plus feedback).
+        await QuestionInstance.updateOne({ _id: next.id }, { $set: { servedAt: new Date(Date.now() - 4000) } });
+        const shown = await request(app).post(`/api/game/sessions/${sid}/questions/${next.id}/shown`).set('X-Guest-Token', guest).expect(200);
+        expect(shown.body).toEqual({ ok: true, changed: true });
+        const again = await request(app).post(`/api/game/sessions/${sid}/questions/${next.id}/shown`).set('X-Guest-Token', guest).expect(200);
+        expect(again.body.changed).toBe(false);
+        const answered = await request(app).post(`/api/game/sessions/${sid}/answer`).set('X-Guest-Token', guest).send(await submissionFor(next)).expect(200);
+        // Timed from "shown" (moments ago), not from generation 4 s ago.
+        expect(answered.body.responseTimeMs).toBeLessThan(2500);
+    });
+    test('a very late "shown" is clamped to the grace window', async () => {
+        const QuestionInstance = require('../../../src/lyriciq/models/QuestionInstance');
+        const start = await request(app).post('/api/game/sessions').send({}).expect(201);
+        const guest = start.body.guestToken; const sid = start.body.session.id;
+        const q = start.body.question;
+        await QuestionInstance.updateOne({ _id: q.id }, { $set: { servedAt: new Date(Date.now() - 60000) } });
+        await request(app).post(`/api/game/sessions/${sid}/questions/${q.id}/shown`).set('X-Guest-Token', guest).expect(200);
+        const doc = await QuestionInstance.findById(q.id).lean();
+        expect(doc.shownAt.getTime() - doc.servedAt.getTime()).toBeLessThanOrEqual(10000);
+        await request(app).post(`/api/game/sessions/${sid}/questions/000000000000000000000000/shown`).set('X-Guest-Token', guest).expect(404);
+    });
+});

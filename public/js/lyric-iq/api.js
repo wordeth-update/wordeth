@@ -84,6 +84,7 @@
             return request('POST', '/api/game/sessions', { gameMode: gameMode, category: category || undefined, challengeCode: challengeCode || undefined });
         },
         question: function (sessionId) { return request('GET', '/api/game/sessions/' + sessionId + '/question'); },
+        shown: function (sessionId, questionId) { return request('POST', '/api/game/sessions/' + sessionId + '/questions/' + questionId + '/shown', {}, { timeoutMs: 6000 }); },
         answer: function (sessionId, payload) { return request('POST', '/api/game/sessions/' + sessionId + '/answer', payload, { timeoutMs: 15000 }); },
         results: function (sessionId) { return request('GET', '/api/game/sessions/' + sessionId + '/results'); },
         abandon: function (sessionId) { return request('POST', '/api/game/sessions/' + sessionId + '/abandon', {}); },

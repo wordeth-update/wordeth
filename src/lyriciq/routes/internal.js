@@ -95,9 +95,18 @@ router.put('/flags/:key', validate([param('key').isString().matches(/^[a-zA-Z]+$
 }));
 
 /** Catalog operations. */
-router.post('/catalog/seed', validate([body('queries').optional().isArray({ max: 50 }), body('pages').optional().isInt({ min: 1, max: 10 }).toInt(), body('country').optional().isString().isLength({ min: 2, max: 2 })]), asyncHandler(async (req, res) => {
-    const inserted = await catalogService.seedFromProvider({ queries: req.body.queries || [], pages: req.body.pages || 1, country: req.body.country || 'us', chart: true });
+router.post('/catalog/seed', validate([body('queries').optional().isArray({ max: 50 }), body('pages').optional().isInt({ min: 1, max: 10 }).toInt(), body('country').optional().isString().isLength({ min: 2, max: 2 }), body('genres').optional().isArray({ max: 10 }), body('genrePages').optional().isInt({ min: 1, max: 10 }).toInt()]), asyncHandler(async (req, res) => {
+    const inserted = await catalogService.seedFromProvider({ queries: req.body.queries || [], pages: req.body.pages || 1, country: req.body.country || 'us', chart: true, genres: req.body.genres || [], genrePages: req.body.genrePages || 1 });
     res.json({ inserted });
+}));
+
+/** Full upkeep pass (chart + genres + lyric warming). Runs on a schedule too; this triggers it now. */
+router.post('/catalog/refresh', validate([body('warm').optional().isInt({ min: 0, max: 2000 }).toInt(), body('chartPages').optional().isInt({ min: 0, max: 10 }).toInt(), body('genrePages').optional().isInt({ min: 0, max: 10 }).toInt()]), asyncHandler(async (req, res) => {
+    res.json(await catalogService.refreshCatalog({ warm: req.body.warm, chartPages: req.body.chartPages, genrePages: req.body.genrePages }));
+}));
+
+router.post('/catalog/warm', validate([body('limit').optional().isInt({ min: 1, max: 2000 }).toInt()]), asyncHandler(async (req, res) => {
+    res.json(await catalogService.warmLyrics({ limit: req.body.limit }));
 }));
 
 router.get('/catalog/stats', asyncHandler(async (req, res) => {

@@ -30,6 +30,9 @@ Returns `201` with `{ session, question, player, guestToken? }`. The first quest
 ### `GET /api/game/sessions/:id/question`
 The current pending question. An expired pending question is retired and replaced without penalty. `409 SESSION_NOT_ACTIVE` (with `details.status`) when the session is over.
 
+### `POST /api/game/sessions/:id/questions/:qid/shown`
+The next question is generated during the previous answer's round trip and returned as `nextQuestion`. When the client puts it on screen it posts here so the response clock starts then, not at generation. Accepted once per pending question and clamped to `LYRICIQ_SHOWN_GRACE_MS` (10 s) after generation, so a late call cannot buy reading time. Returns `{ ok, changed }`.
+
 ### `POST /api/game/sessions/:id/answer`
 Body: `{ "questionId": "...", "choiceIndex": 2 }` for multiple choice or `{ "questionId": "...", "answer": "tonight" }` for typed.
 
@@ -98,7 +101,9 @@ Requires `X-Internal-Key: <LYRICIQ_INTERNAL_API_KEY>` or an admin user JWT.
 | `POST /api/internal/questions/:id/reject` `{ reason, disableTrack? }` | Retire a served question, optionally disable its track |
 | `GET/POST/DELETE /api/internal/restrictions` | Generic restrictions: TRACK, ARTIST, ALBUM, PROVIDER, TERRITORY, GAME_MODE, EXPLICIT |
 | `GET /api/internal/flags`, `PUT /api/internal/flags/:key` `{ enabled }` | Feature flags |
-| `POST /api/internal/catalog/seed` `{ queries?, pages?, country? }` | Pull tracks from the licensed provider |
+| `POST /api/internal/catalog/seed` `{ queries?, pages?, country?, genres?, genrePages? }` | Pull tracks from the licensed provider: country chart, per-genre top lists, free-text queries |
+| `POST /api/internal/catalog/refresh` `{ warm?, chartPages?, genrePages? }` | Full upkeep pass (chart + every genre + lyric warming); the same job the in-process schedule runs |
+| `POST /api/internal/catalog/warm` `{ limit? }` | Fetch lyric bodies ahead of play for the most popular tracks without a fresh stored copy |
 | `GET /api/internal/catalog/stats` | Catalog counts and generation/rejection statistics |
 | `GET /api/internal/daily/:dateKey/audit` | Full daily spec including answer keys |
 
