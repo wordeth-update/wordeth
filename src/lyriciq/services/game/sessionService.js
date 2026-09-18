@@ -17,7 +17,7 @@ const { scoreAnswer } = require('../scoring/scoringService');
 const metricsService = require('../lyricIq/playerMetricsService');
 const { refreshLyricIq, computeLyricIq } = require('../lyricIq/lyricIqService');
 const leaderboardService = require('../leaderboard/leaderboardService');
-const { buildSharePayload } = require('../share/shareService');
+const { buildSharePayload, buildShareCard } = require('../share/shareService');
 const { secureRandom } = require('../../utilities/random');
 
 let engine = null;
@@ -303,6 +303,8 @@ async function completeSession(session, player, endReason = 'COMPLETED') {
         }
         const lyricIq = await refreshLyricIq(player.key);
         session.lyricIqAfter = lyricIq.value;
+        const metricsNow = await metricsService.getMetrics(player.key);
+        session.shareCard = buildShareCard({ lyricIq, session, displayName: player.displayName, isGuest: !!player.isGuest, dailyStreak: metricsNow?.daily?.streak || 0 });
         await session.save();
         await leaderboardService.recordSessionResult(player, session, lyricIq.value);
         logger.event('session_completed', { sessionId: String(session._id), playerKey: player.key, gameMode: session.gameMode, score: session.score, correct: session.correctCount, wrong: session.wrongCount, bestStreak: session.bestStreak, endReason, lyricIq: lyricIq.value });

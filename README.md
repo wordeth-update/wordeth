@@ -34,6 +34,7 @@ Integration tests spin up an isolated database per file (memory-server by defaul
 * **Play**: `/lyric-iq.html` — guest play with no account, then "Save your Lyric IQ".
 * **Worlds as levels** ("Lyric IQ Streets"): the block at golden hour (starting out), the court at sundown (Lyric IQ 50+), the rooftop at night (75+). Streak runs climb through all three live; Rapid Fire plays on the court. Add `?world=block|court|rooftop` to preview any world. Scenes are hand-drawn SVG in `public/images/lyric-iq/`, inlined at runtime so their signs and graffiti use the display font; phones get portrait cuts of the block and rooftop.
 * **Setup flow**: Play → pick a mode → pick a genre → Begin. Three short steps instead of one crowded screen.
+* **Share cards**: every finished round gets a public page at `/s/:id` with link-preview tags and a card drawn on the player's world (1200×630 for previews, 1080×1920 for Stories). The results screen shares the actual image through the phone's share sheet, saves the story cut, or copies the link. Cards need headless Chromium: Puppeteer's bundled browser, or `PUPPETEER_EXECUTABLE_PATH`.
 * **Modes**: Play (10 mixed), Daily 10 (one canonical set per UTC day), Rapid Fire (60 s), Streak (until a miss), optional genre category.
 * **Question types**: finish the lyric, missing word, missing phrase, next line, guess the song, guess the artist; multiple choice and typed.
 * **Lyric IQ**: 0–100 identity metric with genre / era / recall / recognition sub-scores, explained in [`docs/lyric-iq/LYRIC_IQ_MODEL.md`](docs/lyric-iq/LYRIC_IQ_MODEL.md).

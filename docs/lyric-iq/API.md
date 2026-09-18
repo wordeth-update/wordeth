@@ -65,6 +65,16 @@ Results for any session the caller owns: public session state, Lyric IQ before/a
 ### `POST /api/game/sessions/:id/abandon`
 Ends an active session early.
 
+## Share pages (public, site root)
+
+### `GET /s/:sessionId`
+Public landing page for a completed session: Open Graph and Twitter tags (title, description, `og:image`), the card image, and a "Take the test" link to `/play?challenge=:sessionId`. Shows only the public snapshot taken at completion (first name or "Someone on Wordeth", Lyric IQ, result headline, top genre, daily streak, world); never lyrics or answers. 404 for unknown or unfinished sessions.
+
+### `GET /s/:sessionId/card.png`
+The share card as PNG, 1200×630. `?format=story` returns the 1080×1920 cut for Stories. Rendered by headless Chromium on the player's world scene, cached in memory and served `immutable` (a completed session never changes).
+
+The results payload's `share` object carries `pagePath`, `cardPath`, `storyPath` (for the client's origin) and `pageUrl`, `cardUrl`, `storyUrl` (absolute, on `LYRICIQ_PUBLIC_URL`), plus `short`, a one-sentence caption for share sheets.
+
 ## Daily 10
 
 ### `GET /api/daily`

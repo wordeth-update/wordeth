@@ -361,6 +361,15 @@ body[data-world="block"] .liq-world--block, body[data-world="court"] .liq-world-
 .liq-feedback__next { margin-top: 8px; }
 
 /* --------------------------------------------------------------------------
+   Share card (results screen)
+   -------------------------------------------------------------------------- */
+.liq-card { display: grid; gap: 12px; }
+.liq-card__img { display: block; width: 100%; height: auto; aspect-ratio: 1200 / 630; border-radius: var(--liq-radius); border: var(--liq-border) solid var(--liq-ink); box-shadow: 0 7px 0 var(--liq-ink), 0 18px 40px rgba(0, 0, 0, 0.45); background: #151A3A; }
+.liq-card__actions { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.liq-card__actions .liq-btn--primary { font-size: 1.1rem; min-height: 56px; }
+@media (min-width: 480px) { .liq-card__actions { grid-template-columns: 1.2fr 1fr 1fr; } }
+
+/* --------------------------------------------------------------------------
    Results
    -------------------------------------------------------------------------- */
 .liq-result { display: grid; gap: 22px; padding-top: 8px; }

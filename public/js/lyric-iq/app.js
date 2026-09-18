@@ -650,9 +650,16 @@
             '<div class="liq-stat"><div class="liq-stat__v">' + esc(fmtMs(s.averageResponseMs)) + '</div><div class="liq-stat__k">Avg time</div></div>' +
             '</div>' +
             subHtml +
+            (r.share && r.share.cardPath ? '<div class="liq-card liq-enter">' +
+                '<img class="liq-card__img" src="' + esc(r.share.cardPath) + '" alt="Share card: Lyric IQ ' + esc(value === null ? 'unscored' : value) + '" width="1200" height="630" loading="eager" decoding="async">' +
+                '<div class="liq-card__actions">' +
+                '<button class="liq-btn liq-btn--primary" data-action="share">Share</button>' +
+                '<a class="liq-btn" href="' + esc(r.share.storyPath) + '" download="lyric-iq-' + esc(value === null ? 'card' : value) + '-story.png" data-action="save-story">Save for Stories</a>' +
+                '<button class="liq-btn liq-btn--ghost" data-action="copy-link">Copy link</button>' +
+                '</div></div>' : '') +
             '<div class="liq-result__actions">' +
             '<button class="liq-btn liq-btn--primary" data-action="replay" data-mode="' + esc(s.gameMode === 'DAILY_10' ? 'QUICK_PLAY' : s.gameMode) + '">' + (s.gameMode === 'DAILY_10' ? 'Play more' : 'Play again') + '</button>' +
-            '<button class="liq-btn" data-action="share">Share result</button>' +
+            (r.share && r.share.cardPath ? '' : '<button class="liq-btn" data-action="share">Share result</button>') +
             (s.gameMode !== 'DAILY_10' && state.daily && state.daily.status !== 'COMPLETED' ? '<button class="liq-btn liq-btn--ghost" data-action="play" data-mode="DAILY_10">Daily 10</button>' : '') +
             '<a class="liq-btn liq-btn--ghost" href="#profile">Your profile</a>' +
             '</div>' +
@@ -663,22 +670,36 @@
         announce('Session complete. Lyric IQ ' + (value === null ? 'not yet scored' : value) + '. ' + headline);
     }
 
+    function shareUrlFor(r) {
+        return r.share.pagePath ? location.origin + r.share.pagePath : location.origin + '/lyric-iq.html?challenge=' + encodeURIComponent(r.session.id);
+    }
+    function copyText(payload, okMessage) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(payload).then(function () { toast(okMessage || 'Copied. Go post it.'); }).catch(function () { toast('Could not copy.'); });
+        } else {
+            toast('Sharing is not available here.');
+        }
+    }
+    /** Share sheet with the card image attached when the browser allows files; otherwise text + link. */
     function share() {
         var r = state.results;
         if (!r || !r.share) return;
         api.track('share_click', { game_mode: r.session.gameMode });
-        var text = r.share.text;
-        var url = location.origin + '/lyric-iq.html' + (r.share.url ? '?challenge=' + encodeURIComponent(r.session.id) : '');
-        if (navigator.share) {
-            navigator.share({ title: 'Wordeth Lyric IQ', text: text, url: url }).catch(function () {});
-            return;
-        }
-        var payload = text + '\n' + url;
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(payload).then(function () { toast('Copied. Go post it.'); }).catch(function () { toast('Could not copy.'); });
-        } else {
-            toast('Sharing is not available here.');
-        }
+        var url = shareUrlFor(r);
+        var text = r.share.short || r.share.text;
+        var fallback = function () {
+            if (navigator.share) return navigator.share({ title: 'Wordeth Lyric IQ', text: text, url: url }).catch(function () {});
+            copyText(text + '\n' + url);
+        };
+        if (!navigator.share || !navigator.canShare || !r.share.cardPath || typeof File === 'undefined') return fallback();
+        fetch(r.share.cardPath).then(function (res) { if (!res.ok) throw new Error('card'); return res.blob(); }).then(function (blob) {
+            var file = new File([blob], 'lyric-iq-' + (r.lyricIq.after === null ? 'card' : r.lyricIq.after) + '.png', { type: 'image/png' });
+            if (navigator.canShare({ files: [file] })) {
+                api.track('share_card', { game_mode: r.session.gameMode });
+                return navigator.share({ files: [file], title: 'Wordeth Lyric IQ', text: text + ' ' + url }).catch(function () {});
+            }
+            return fallback();
+        }).catch(fallback);
     }
 
     /* ------------------------------------------------------------------ */
@@ -818,6 +839,8 @@
             case 'advance': advance(); break;
             case 'quit': quitGame(); break;
             case 'share': share(); break;
+            case 'copy-link': { e.preventDefault(); if (state.results) { api.track('share_link_copy', { game_mode: state.results.session.gameMode }); copyText(shareUrlFor(state.results), 'Link copied.'); } break; }
+            case 'save-story': if (state.results) api.track('share_story_save', { game_mode: state.results.session.gameMode }); break;
             case 'share-profile': {
                 var sp = state.profileShare;
                 if (!sp) break;

@@ -9,6 +9,8 @@ const config = require('./config');
 const { validateLyricIqEnv } = require('./config/env');
 const logger = require('./utilities/logger');
 const { createLyricIqRouter } = require('./routes');
+const { createSharePagesRouter } = require('./routes/sharePages');
+const cardRenderer = require('./services/share/cardRenderer');
 const catalogService = require('./services/content/catalogService');
 const sessionService = require('./services/game/sessionService');
 const QuestionTemplate = require('./models/QuestionTemplate');
@@ -16,6 +18,7 @@ const { templates } = require('./engines/question/templates');
 
 function mount(app, basePath = '/api') {
     app.use(basePath, createLyricIqRouter());
+    app.use(createSharePagesRouter()); // /s/:id and /s/:id/card.png at the site root
     return app;
 }
 
@@ -66,6 +69,7 @@ async function bootstrap({ exitOnFailure = process.env.NODE_ENV !== 'test' } = {
 function stop() {
     if (sweepTimer) { clearInterval(sweepTimer); sweepTimer = null; }
     if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+    cardRenderer.stop().catch(() => {});
 }
 
 module.exports = { mount, bootstrap, stop, ensureTemplates };

@@ -38,6 +38,8 @@ const gameSessionSchema = new mongoose.Schema({
         referredByPlayerKey: { type: String, default: null }
     },
     endReason: { type: String, default: null },
+    // Public share snapshot taken at completion (name, Lyric IQ, headline, top genre); never lyrics.
+    shareCard: { type: mongoose.Schema.Types.Mixed, default: null },
     schemaVersion: { type: Number, default: 1 }
 }, { timestamps: true });
 
