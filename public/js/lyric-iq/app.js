@@ -10,11 +10,15 @@
     var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     var ADVANCE_DELAY = { QUICK_PLAY: 1100, DAILY_10: 1200, RAPID_FIRE: 420, STREAK: 1100 };
-    /* Worlds are levels: meadow → city → desert. */
-    var WORLDS = ['meadow', 'city', 'desert'];
-    var WORLD_NAMES = { meadow: 'the meadow', city: 'the city', desert: 'the desert' };
-    var WORLD_IQ_TIERS = [{ min: 75, world: 'desert' }, { min: 50, world: 'city' }, { min: -1, world: 'meadow' }];
-    var WORLD_STREAK_TIERS = [{ min: 10, world: 'desert' }, { min: 5, world: 'city' }, { min: 0, world: 'meadow' }];
+    /* Worlds are levels: the block → the court → the rooftop. */
+    var WORLDS = ['block', 'court', 'rooftop'];
+    var WORLD_NAMES = { block: 'the block', court: 'the court', rooftop: 'the rooftop' };
+    var WORLD_IQ_TIERS = [{ min: 75, world: 'rooftop' }, { min: 50, world: 'court' }, { min: -1, world: 'block' }];
+    var WORLD_STREAK_TIERS = [{ min: 10, world: 'rooftop' }, { min: 5, world: 'court' }, { min: 0, world: 'block' }];
+    /* Scene art: one SVG per world, with a portrait cut for phones where one was drawn. */
+    var SCENE_BASE = 'images/lyric-iq/streets-';
+    var SCENE_PHONE = { block: true, rooftop: true };
+    var sceneCache = {};
     var TYPED_EXTRA_DELAY = 700;
 
     var state = {
@@ -62,11 +66,34 @@
         if (state.timer) { clearInterval(state.timer); state.timer = null; }
         if (state.advanceTimer) { clearTimeout(state.advanceTimer); state.advanceTimer = null; }
     }
-    /** Switch the stage world; each game drops you into one of the two worlds. */
+    /** Switch the stage world; each game drops you into one of the three worlds. */
     function setWorld(world) {
         if (WORLDS.indexOf(world) < 0) world = WORLDS[0];
         state.world = world;
         document.body.setAttribute('data-world', world);
+        loadScene(world);
+    }
+    function phoneScene() {
+        return window.matchMedia && window.matchMedia('(max-width: 767px) and (orientation: portrait)').matches;
+    }
+    /** Fetch a world's SVG once and inline it, so the display font applies to its signs and graffiti. */
+    function loadScene(world) {
+        var host = document.querySelector('.liq-world--' + world);
+        if (!host) return Promise.resolve();
+        var variant = phoneScene() && SCENE_PHONE[world] ? world + '-phone' : world;
+        if (host.getAttribute('data-scene') === variant) return Promise.resolve();
+        var url = SCENE_BASE + variant + '.svg?v=1';
+        var p = sceneCache[variant] || (sceneCache[variant] = fetch(url).then(function (r) { if (!r.ok) throw new Error('scene ' + r.status); return r.text(); }));
+        return p.then(function (svg) {
+            if (host.getAttribute('data-scene') === variant) return;
+            host.innerHTML = svg;
+            host.setAttribute('data-scene', variant);
+        }).catch(function () { /* the CSS sky stands in */ });
+    }
+    /** Warm the other worlds once the page is idle so a level-up never waits on the network. */
+    function preloadScenes() {
+        var run = function () { WORLDS.forEach(function (w) { if (w !== state.world) loadScene(w); }); };
+        if (window.requestIdleCallback) window.requestIdleCallback(run, { timeout: 4000 }); else setTimeout(run, 2500);
     }
     function forcedWorld() {
         var forced = new URLSearchParams(location.search).get('world');
@@ -75,15 +102,15 @@
     function tierWorld(tiers, value) {
         var v = value === null || value === undefined ? -1 : value;
         for (var i = 0; i < tiers.length; i++) if (v >= tiers[i].min) return tiers[i].world;
-        return 'meadow';
+        return 'block';
     }
     function worldForIq(value) { return tierWorld(WORLD_IQ_TIERS, value); }
     function worldForStreak(streak) { return tierWorld(WORLD_STREAK_TIERS, streak); }
-    /** The world a new game opens in: Streak always starts in the meadow and climbs; Rapid Fire is the city; otherwise your Lyric IQ tier. */
+    /** The world a new game opens in: Streak always starts on the block and climbs; Rapid Fire is the court; otherwise your Lyric IQ tier. */
     function worldForMode(mode) {
         if (forcedWorld()) return forcedWorld();
-        if (mode === 'STREAK') return 'meadow';
-        if (mode === 'RAPID_FIRE') return 'city';
+        if (mode === 'STREAK') return 'block';
+        if (mode === 'RAPID_FIRE') return 'court';
         return worldForIq(state.lyricIq);
     }
     function isTypingTarget(el) {
@@ -858,7 +885,14 @@
     /* Boot                                                                */
     /* ------------------------------------------------------------------ */
     var params = new URLSearchParams(location.search);
-    setWorld(params.get('world') || 'meadow');
+    setWorld(params.get('world') || 'block');
+    preloadScenes();
+    // Rotating a phone swaps between the portrait and wide cuts of the current scene.
+    if (window.matchMedia) {
+        var orient = window.matchMedia('(orientation: portrait)');
+        var onOrient = function () { loadScene(state.world); };
+        if (orient.addEventListener) orient.addEventListener('change', onOrient); else if (orient.addListener) orient.addListener(onOrient);
+    }
     if (params.get('challenge')) state.challengeCode = params.get('challenge').slice(0, 64);
     if (params.get('mode') && /^[A-Z_]+$/.test(params.get('mode'))) state.lastMode = params.get('mode');
 

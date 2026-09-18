@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Lyric IQ — Wordeth</title>
     <meta name="description" content="How well do you actually know music? Finish the lyric, name the song, call the artist. Get your Lyric IQ.">
-    <meta name="theme-color" content="#6C3BFF">
+    <meta name="theme-color" content="#151A3A">
     <link rel="canonical" href="https://play.wordeth.com/">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://play.wordeth.com/">
@@ -17,71 +17,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap">
-    <link rel="stylesheet" href="css/lyric-iq.css?v=13">
+    <link rel="stylesheet" href="css/lyric-iq.css?v=14">
 </head>
-<body class="liq-body" data-world="meadow">
-    <!-- The world between thought and speech. Three worlds are levels: the meadow
-         (starting out), the city (Lyric IQ 50+), the desert (75+); a Streak run
-         climbs through them live. Thoughts drift high as soft forms and become
-         letter blocks as they descend. -->
+<body class="liq-body" data-world="block">
+    <!-- The world between thought and speech, drawn as three streets worlds that are
+         levels: the block (starting out), the court (Lyric IQ 50+), the rooftop (75+);
+         a Streak run climbs through them live. Scenes are SVG, inlined by app.js. -->
     <div class="liq-stage" aria-hidden="true">
         <div class="liq-sky"></div>
-        <div class="liq-sparkle liq-sparkle--1"></div>
-        <div class="liq-sparkle liq-sparkle--2"></div>
-        <div class="liq-sparkle liq-sparkle--3"></div>
-        <div class="liq-thought liq-par-far liq-thought--1"></div>
-        <div class="liq-thought liq-par-far liq-thought--2"></div>
-        <div class="liq-thought liq-par-far liq-thought--3"></div>
-        <div class="liq-cloud liq-par-mid liq-cloud--1"></div>
-        <div class="liq-cloud liq-par-mid liq-cloud--2"></div>
-        <div class="liq-cloud liq-par-mid liq-cloud--3"></div>
-
-        <div class="liq-world liq-world--meadow">
-            <div class="liq-hill liq-par-far liq-hill--back"></div>
-            <div class="liq-hill liq-par-mid liq-hill--mid"></div>
-            <div class="liq-hill liq-par-near liq-hill--front"></div>
-            <div class="liq-ground"></div>
-        </div>
-
-        <div class="liq-world liq-world--city">
-            <div class="liq-skyline liq-par-far liq-skyline--far">
-                <i class="liq-tower" style="--x:0%;--w:9%;--h:34vh;--c:#5A2BC7"></i>
-                <i class="liq-tower" style="--x:10%;--w:6%;--h:46vh;--c:#4C25B0"></i>
-                <i class="liq-tower" style="--x:18%;--w:11%;--h:30vh;--c:#5A2BC7"></i>
-                <i class="liq-tower" style="--x:31%;--w:7%;--h:52vh;--c:#4C25B0"></i>
-                <i class="liq-tower" style="--x:40%;--w:12%;--h:38vh;--c:#5A2BC7"></i>
-                <i class="liq-tower" style="--x:55%;--w:8%;--h:44vh;--c:#4C25B0"></i>
-                <i class="liq-tower" style="--x:65%;--w:10%;--h:32vh;--c:#5A2BC7"></i>
-                <i class="liq-tower" style="--x:77%;--w:7%;--h:56vh;--c:#4C25B0"></i>
-                <i class="liq-tower" style="--x:86%;--w:14%;--h:36vh;--c:#5A2BC7"></i>
-            </div>
-            <div class="liq-skyline liq-par-mid liq-skyline--near">
-                <i class="liq-tower liq-tower--lit" style="--x:-2%;--w:12%;--h:26vh;--c:#8B2FFF"></i>
-                <i class="liq-tower liq-tower--lit" style="--x:12%;--w:8%;--h:36vh;--c:#00C8FF"></i>
-                <i class="liq-tower liq-tower--lit liq-tower--sign" style="--x:22%;--w:14%;--h:22vh;--c:#BB4FFF"></i>
-                <i class="liq-tower liq-tower--lit liq-tower--center" style="--x:38%;--w:7%;--h:30vh;--c:#8B2FFF"></i>
-                <i class="liq-tower liq-tower--lit liq-tower--center" style="--x:47%;--w:11%;--h:18vh;--c:#00C8FF"></i>
-                <i class="liq-tower liq-tower--lit liq-tower--center" style="--x:60%;--w:9%;--h:33vh;--c:#FF2D78"></i>
-                <i class="liq-tower liq-tower--lit" style="--x:71%;--w:13%;--h:24vh;--c:#8B2FFF"></i>
-                <i class="liq-tower liq-tower--lit" style="--x:86%;--w:8%;--h:40vh;--c:#00C8FF"></i>
-                <i class="liq-tower liq-tower--lit" style="--x:95%;--w:9%;--h:28vh;--c:#BB4FFF"></i>
-            </div>
-            <div class="liq-street"></div>
-        </div>
-
-        <div class="liq-world liq-world--desert">
-            <div class="liq-sun"></div>
-            <i class="liq-mesa liq-par-far" style="--x:4%;--w:22%;--h:26vh;--c:#8B2FFF"></i>
-            <i class="liq-mesa liq-par-far" style="--x:60%;--w:30%;--h:30vh;--c:#BB4FFF"></i>
-            <i class="liq-mesa liq-par-mid liq-mesa--near" style="--x:80%;--w:18%;--h:20vh;--c:#FF2D78"></i>
-            <div class="liq-dune liq-par-far liq-dune--far"></div>
-            <div class="liq-dune liq-par-mid liq-dune--mid"></div>
-            <div class="liq-dune liq-par-near liq-dune--front"></div>
-            <i class="liq-cactus liq-par-near" style="--x:9%;--h:16vh"></i>
-            <i class="liq-cactus liq-par-near" style="--x:84%;--h:12vh"></i>
-            <div class="liq-sand"></div>
-        </div>
-
+        <div class="liq-world liq-world--block"></div>
+        <div class="liq-world liq-world--court"></div>
+        <div class="liq-world liq-world--rooftop"></div>
         <div class="liq-block liq-par-near liq-block--1">W</div>
         <div class="liq-block liq-par-near liq-block--2">O</div>
         <div class="liq-block liq-par-near liq-block--3">R</div>
@@ -92,7 +38,7 @@
     <a class="liq-skip" href="#liq-main">Skip to game</a>
 
     <header class="liq-top">
-        <a href="/" class="liq-wordmark" aria-label="Wordeth home">Wordeth</a>
+        <a href="/" class="liq-wordmark" aria-label="Wordeth home"><img class="liq-wordmark__img" src="images/logo.png" alt="Wordeth" width="1500" height="1201" decoding="async"></a>
         <nav class="liq-top__nav" aria-label="Lyric IQ">
             <a href="#play" data-route="play">Play</a>
             <a href="#profile" data-route="profile">Profile</a>
@@ -109,6 +55,6 @@
     <script src="js/config.js"></script>
     <script src="js/lyric-iq/copy.js?v=1"></script>
     <script src="js/lyric-iq/api.js?v=1"></script>
-    <script src="js/lyric-iq/app.js?v=10"></script>
+    <script src="js/lyric-iq/app.js?v=11"></script>
 </body>
 </html>

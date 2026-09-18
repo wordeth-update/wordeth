@@ -1,38 +1,40 @@
 /* ==========================================================================
    Wordeth Lyric IQ — the world between thought and speech.
-   Wordeth palette (mint / purple / hot pink / electric blue / gold) and type
-   (Unbounded display, Outfit body) in a deep, bright, playful world: thoughts
-   drift high as soft forms, become letter blocks as they descend, and land as
-   words in a lit-up city or a sunset desert. Chunky outlines, bouncy buttons.
+   "Lyric IQ Streets": three drawn worlds, played as levels. The block at
+   golden hour (starting out), the court at sundown (Lyric IQ 50+), and the
+   rooftop at night (75+); a Streak run climbs through them live. Cream cards,
+   near-black ink outlines, amber / mint / hot pink accents; Unbounded display,
+   Outfit body. Scenes are SVG (images/lyric-iq/streets-*.svg), inlined at
+   runtime so their signs and graffiti use the display font.
    ========================================================================== */
 
 :root {
-    /* Wordeth brand */
+    /* Brand accents */
     --liq-mint: #00E5A8;
     --liq-mint-light: #7CF5D3;
     --liq-mint-deep: #00A87D;
-    --liq-purple: #8B2FFF;
-    --liq-purple-vivid: #BB4FFF;
-    --liq-purple-light: #D4A8FF;
     --liq-pink: #FF2D78;
-    --liq-blue: #00C8FF;
-    --liq-gold: #FFE500;
+    --liq-blue: #6FB8E6;
+    --liq-gold: #F2B632;
+    --liq-gold-light: #FFC94A;
+    --liq-orange: #E0812E;
+    --liq-rust: #8E3B2F;           /* accent for kickers and quotes on cream */
+    /* Legacy token names kept for the few rules that still read them */
+    --liq-purple: var(--liq-rust);
+    --liq-purple-vivid: var(--liq-orange);
+    --liq-purple-light: var(--liq-gold);
 
-    /* World */
-    --liq-ink: #12083A;            /* outlines + text on light surfaces */
-    --liq-ink-soft: #3B2A6E;
-    --liq-sky-top: #6C3BFF;
-    --liq-sky: #4FC7FF;
-    --liq-sky-low: #C6F2FF;
-    --liq-cloud: #ffffff;
-    --liq-hill-back: #A8F2DA;
-    --liq-hill-mid: #4FE9BE;
-    --liq-hill-front: #00E5A8;
-    --liq-ground: #0FA57E;
-    --liq-paper: #ffffff;
-    --liq-paper-2: #F4F0FF;
-    --liq-muted: #6B5E96;
-    --liq-faint: #9A8FC2;
+    /* Streets */
+    --liq-ink: #0B0A14;            /* outlines + text on cream */
+    --liq-ink-soft: #3B2A2A;
+    --liq-cream: #F4EBDD;
+    --liq-sky-top: #151A3A;
+    --liq-sky: #3B2E63;
+    --liq-sky-low: #F3A85A;
+    --liq-paper: #F4EBDD;
+    --liq-paper-2: #FFFFFF;
+    --liq-muted: #6B5F57;
+    --liq-faint: #9C8E82;
 
     --liq-correct: #00E5A8;
     --liq-wrong: #FF2D78;
@@ -69,201 +71,44 @@ html { -webkit-text-size-adjust: 100%; }
 }
 
 /* --------------------------------------------------------------------------
-   Stage — sky, clouds, hills
+   Stage — sky fallback, three drawn worlds, letter blocks
    -------------------------------------------------------------------------- */
-.liq-stage { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; --px: 0; --py: 0; }
-.liq-stage::after {
-    content: ''; position: absolute; inset: 0; z-index: 5;
-    background: radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(18, 8, 58, 0.22) 100%);
-}
+.liq-stage { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: var(--liq-ink); --px: 0; --py: 0; }
 /* Pointer parallax: near layers move more than far ones (desktop only, see app.js). */
 .liq-par-far { translate: calc(var(--px) * 6px) calc(var(--py) * 3px); }
 .liq-par-mid { translate: calc(var(--px) * 14px) calc(var(--py) * 6px); }
 .liq-par-near { translate: calc(var(--px) * 26px) calc(var(--py) * 10px); }
-.liq-sky {
-    position: absolute; inset: 0;
-    background: linear-gradient(180deg, var(--liq-sky-top) 0%, #4F8DFF 18%, var(--liq-sky) 42%, var(--liq-sky-low) 78%, #E8FBFF 100%);
-}
-.liq-cloud {
-    position: absolute;
-    background: linear-gradient(180deg, #ffffff 0%, #EEF3FF 70%, #DCE6FF 100%);
-    border-radius: 999px;
-    box-shadow: 0 8px 0 rgba(18, 8, 58, 0.10), inset 0 -10px 0 rgba(140, 160, 255, 0.22);
-    animation: liq-drift 26s linear infinite;
-}
-.liq-cloud::before, .liq-cloud::after {
-    content: ''; position: absolute; background: inherit; border-radius: 50%;
-}
-.liq-cloud--1 { width: 180px; height: 56px; top: 12%; left: -6%; opacity: 0.95; }
-.liq-cloud--1::before { width: 80px; height: 80px; left: 26px; top: -40px; }
-.liq-cloud--1::after { width: 56px; height: 56px; left: 96px; top: -24px; }
-.liq-cloud--2 { width: 130px; height: 44px; top: 24%; right: -4%; opacity: 0.9; animation-duration: 34s; animation-direction: reverse; }
-.liq-cloud--2::before { width: 60px; height: 60px; left: 18px; top: -30px; }
-.liq-cloud--2::after { width: 44px; height: 44px; left: 66px; top: -18px; }
-.liq-cloud--3 { width: 220px; height: 64px; top: 40%; left: 30%; opacity: 0.8; animation-duration: 44s; }
-.liq-cloud--3::before { width: 96px; height: 96px; left: 40px; top: -48px; }
-.liq-cloud--3::after { width: 64px; height: 64px; left: 128px; top: -28px; }
-@keyframes liq-drift {
-    from { transform: translateX(0); }
-    50% { transform: translateX(60px); }
-    to { transform: translateX(0); }
-}
-.liq-sparkle {
-    position: absolute; width: 14px; height: 14px;
-    background: var(--liq-gold);
-    clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
-    animation: liq-twinkle 3.2s ease-in-out infinite;
-}
-.liq-sparkle--1 { top: 9%; left: 22%; }
-.liq-sparkle--2 { top: 19%; right: 18%; width: 10px; height: 10px; animation-delay: 1.1s; }
-.liq-sparkle--3 { top: 33%; left: 12%; width: 9px; height: 9px; animation-delay: 2s; }
-@keyframes liq-twinkle { 0%, 100% { opacity: 0.35; transform: scale(0.8) rotate(0); } 50% { opacity: 1; transform: scale(1.15) rotate(20deg); } }
 
-/* Thoughts: soft translucent forms drifting upward in the far distance. */
-.liq-thought {
-    position: absolute; border-radius: 46% 54% 52% 48% / 58% 44% 56% 42%;
-    background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.55), rgba(212, 168, 255, 0.35) 55%, rgba(139, 47, 255, 0.05) 100%);
-    filter: blur(1px);
-    animation: liq-rise 22s ease-in-out infinite;
-}
-.liq-thought--1 { width: 160px; height: 120px; left: 8%; top: 28%; }
-.liq-thought--2 { width: 110px; height: 90px; right: 10%; top: 8%; animation-duration: 28s; animation-delay: -9s; }
-.liq-thought--3 { width: 220px; height: 150px; left: 55%; top: 20%; animation-duration: 36s; animation-delay: -18s; opacity: 0.7; }
-@keyframes liq-rise { 0% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-40px) rotate(6deg); } 100% { transform: translateY(0) rotate(0); } }
+/* The sky paints instantly and matches each scene's gradient, so the SVG fades in over the right colour. */
+.liq-sky { position: absolute; inset: 0; transition: background 600ms var(--liq-ease); background: linear-gradient(180deg, #151A3A 0%, #3B2E63 35%, #8E4A5E 68%, #D9784A 88%, #F3A85A 100%); }
+body[data-world="court"] .liq-sky { background: linear-gradient(180deg, #1B1240 0%, #5A2A5E 40%, #C85A44 72%, #F4B25A 100%); }
+body[data-world="rooftop"] .liq-sky { background: linear-gradient(180deg, #05071A 0%, #141C4A 50%, #2B2F6E 85%, #4A3C7A 100%); }
 
-/* Far ridges: depth behind the hills. */
-.liq-far { position: absolute; left: 50%; transform: translateX(-50%); border-radius: 50%; filter: blur(0.5px); }
-.liq-far--1 { bottom: -14vh; width: 130vw; height: 52vh; left: 28%; background: linear-gradient(180deg, #A78BFF, #8B2FFF); opacity: 0.55; }
-.liq-far--2 { bottom: -18vh; width: 120vw; height: 48vh; left: 74%; background: linear-gradient(180deg, #BB4FFF, #6C3BFF); opacity: 0.5; }
+/* Worlds: only the active one is shown. */
+.liq-world { position: absolute; inset: 0; opacity: 0; transition: opacity 700ms var(--liq-ease); pointer-events: none; }
+body[data-world="block"] .liq-world--block, body[data-world="court"] .liq-world--court, body[data-world="rooftop"] .liq-world--rooftop { opacity: 1; }
+.liq-scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
-/* Letter blocks: thoughts becoming words. */
+/* Letter blocks: thoughts becoming words. Hidden while a round is on screen. */
 .liq-body[data-screen="game"] .liq-block { display: none; }
 .liq-block {
     position: absolute; width: 46px; height: 46px; border-radius: 12px;
     border: var(--liq-border) solid var(--liq-ink); background: var(--liq-gold); color: var(--liq-ink);
     font-family: var(--liq-display); font-weight: 900; font-size: 1.15rem; display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 5px 0 var(--liq-ink), inset 0 -6px 0 rgba(18, 8, 58, 0.14);
+    box-shadow: 0 5px 0 var(--liq-ink), inset 0 -6px 0 rgba(11, 10, 20, 0.14), inset 0 6px 0 rgba(255, 255, 255, 0.28);
     animation: liq-bob 4.2s ease-in-out infinite;
 }
 .liq-block--1 { left: 6%; bottom: 30vh; background: var(--liq-mint); }
 .liq-block--2 { left: 15%; bottom: 36vh; animation-delay: -1.1s; background: var(--liq-blue); }
-.liq-block--3 { right: 16%; bottom: 34vh; animation-delay: -2.3s; background: var(--liq-pink); color: #fff; }
-.liq-block--4 { right: 6%; bottom: 27vh; animation-delay: -0.6s; background: var(--liq-purple-vivid); color: #fff; }
-.liq-block--5 { left: 11%; bottom: 50vh; animation-delay: -3s; width: 40px; height: 40px; opacity: 0.85; }
+.liq-block--3 { right: 16%; bottom: 34vh; animation-delay: -2.3s; background: var(--liq-pink); color: var(--liq-cream); }
+.liq-block--4 { right: 6%; bottom: 27vh; animation-delay: -0.6s; background: var(--liq-orange); }
+.liq-block--5 { left: 11%; bottom: 50vh; animation-delay: -3s; width: 40px; height: 40px; opacity: 0.85; background: var(--liq-cream); }
 @keyframes liq-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-
-/* Worlds: only the active one is shown; the sky recolours with it. */
-.liq-world { position: absolute; inset: 0; opacity: 0; transition: opacity 600ms var(--liq-ease); pointer-events: none; }
-body[data-world="meadow"] .liq-world--meadow, body[data-world="city"] .liq-world--city, body[data-world="desert"] .liq-world--desert { opacity: 1; }
-
-/* --- Meadow (level 1) -------------------------------------------------- */
-.liq-hill { position: absolute; left: 50%; transform: translateX(-50%); border-radius: 50%; border: var(--liq-border) solid var(--liq-ink); }
-.liq-world--meadow::before { content: ''; position: absolute; left: 0; right: 0; bottom: 18vh; height: 30vh; background: radial-gradient(60% 100% at 50% 100%, rgba(255, 255, 255, 0.45), transparent 70%); }
-.liq-hill--back { bottom: -32vh; width: 190vw; height: 60vh; background: linear-gradient(180deg, #D9FBEF 0%, #B4F3DF 45%, #9BE9CF 100%); border-color: rgba(18, 8, 58, 0.14); box-shadow: inset 0 16px 0 rgba(255, 255, 255, 0.5); }
-.liq-hill--mid { bottom: -36vh; width: 150vw; height: 58vh; left: 62%; background: linear-gradient(180deg, #8DF4D3 0%, #4FE9BE 50%, #2ED2A6 100%); border-color: rgba(18, 8, 58, 0.3); box-shadow: inset 0 14px 0 rgba(255, 255, 255, 0.3); }
-.liq-hill--front { bottom: -44vh; width: 170vw; height: 64vh; left: 36%; background: linear-gradient(180deg, #3DF5C2 0%, #00E5A8 38%, #00C08A 100%); box-shadow: inset 0 18px 0 rgba(255, 255, 255, 0.28), inset 0 -40px 60px rgba(0, 120, 90, 0.25); overflow: hidden; }
-.liq-hill--front::after {
-    content: ''; position: absolute; left: 10%; right: 10%; top: 5%; height: 12%;
-    background:
-        radial-gradient(circle, #FF2D78 2.5px, transparent 3px) 0 0 / 61px 33px,
-        radial-gradient(circle, #FFE500 2.5px, transparent 3px) 23px 17px / 47px 29px,
-        radial-gradient(circle, #ffffff 2px, transparent 2.5px) 41px 7px / 83px 37px;
-    opacity: 0.9;
-}
-.liq-ground {
-    position: absolute; left: 0; right: 0; bottom: 0; height: 6vh;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 40%), repeating-linear-gradient(90deg, var(--liq-ground) 0 22px, #0C8C6B 22px 44px);
-    border-top: var(--liq-border) solid var(--liq-ink);
-}
-body[data-world="city"] .liq-sky { background: linear-gradient(180deg, #3A1A9E 0%, #6C3BFF 30%, #4F8DFF 62%, #7FD6FF 100%); }
-body[data-world="desert"] .liq-sky { background: linear-gradient(180deg, #5B2BE0 0%, #A23DFF 26%, #FF2D78 56%, #FF9A3D 82%, #FFE500 100%); }
-body[data-world="desert"] .liq-cloud { opacity: 0.55; }
-
-/* --- City (level 2) ---------------------------------------------------- */
-.liq-world--city::before {
-    content: ''; position: absolute; left: 0; right: 0; top: 0; height: 55%;
-    background:
-        radial-gradient(circle, rgba(255, 255, 255, 0.9) 1px, transparent 1.6px) 0 0 / 90px 70px,
-        radial-gradient(circle, rgba(255, 255, 255, 0.6) 0.8px, transparent 1.3px) 45px 35px / 90px 70px,
-        radial-gradient(circle, rgba(255, 229, 0, 0.8) 1px, transparent 1.6px) 20px 50px / 180px 140px;
-    mask-image: linear-gradient(180deg, #000 30%, transparent 100%);
-    -webkit-mask-image: linear-gradient(180deg, #000 30%, transparent 100%);
-}
-.liq-world--city::after { content: ''; position: absolute; left: 0; right: 0; bottom: 7vh; height: 34vh; background: linear-gradient(180deg, transparent, rgba(0, 200, 255, 0.16) 70%, rgba(0, 229, 168, 0.22)); }
-.liq-skyline { position: absolute; left: 0; right: 0; bottom: 7vh; height: 60vh; }
-.liq-skyline--far { opacity: 0.75; bottom: 12vh; }
-.liq-tower {
-    position: absolute; left: var(--x); width: var(--w); height: var(--h); bottom: 0;
-    background: linear-gradient(180deg, rgba(120, 90, 255, 0.15) 0%, var(--c) 55%);  /* tops fade into the haze */
-    border-radius: 6px 6px 0 0;
-}
-.liq-tower--lit {
-    border: var(--liq-border) solid var(--liq-ink); border-bottom: 0; border-radius: 10px 10px 0 0;
-    background-color: var(--c);
-    background-image:
-        radial-gradient(ellipse 3px 4px at 50% 50%, var(--liq-gold) 96%, transparent 100%),
-        radial-gradient(ellipse 3px 4px at 50% 50%, rgba(18, 8, 58, 0.38) 96%, transparent 100%),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.04) 35%, rgba(18, 8, 58, 0.28) 100%);
-    background-size: 32px 20px, 32px 40px, 100% 100%; background-position: 6px 10px, 22px 30px, 0 0;
-    box-shadow: inset 0 6px 0 rgba(255, 255, 255, 0.18);
-}
-.liq-tower--lit::before { content: ''; position: absolute; left: 30%; right: 30%; top: -14px; height: 14px; background: var(--liq-ink); border-radius: 4px 4px 0 0; }
-.liq-tower--sign::after {
-    content: 'LYRIC IQ'; position: absolute; left: 8%; right: 8%; top: 14%; padding: 4px 0; text-align: center;
-    font-family: var(--liq-display); font-weight: 900; font-size: clamp(0.5rem, 1.2vw, 0.8rem); letter-spacing: 0.06em;
-    color: var(--liq-mint); background: var(--liq-ink); border: 2px solid var(--liq-mint); border-radius: 8px;
-    box-shadow: 0 0 14px rgba(0, 229, 168, 0.7); animation: liq-neon 2.6s ease-in-out infinite;
-}
-@keyframes liq-neon { 0%, 100% { box-shadow: 0 0 14px rgba(0, 229, 168, 0.7); } 50% { box-shadow: 0 0 26px rgba(0, 229, 168, 0.95); } }
-.liq-street {
-    position: absolute; left: 0; right: 0; bottom: 0; height: 7vh;
-    background: linear-gradient(180deg, #1B1050 0%, #120A3A 100%); border-top: var(--liq-border) solid #2C1B6B;
-    box-shadow: inset 0 22px 30px -14px rgba(0, 229, 168, 0.28);
-}
-.liq-street::before { content: ''; position: absolute; left: 0; right: 0; top: 46%; height: 5px; background: repeating-linear-gradient(90deg, var(--liq-mint) 0 34px, transparent 34px 58px); opacity: 0.95; box-shadow: 0 0 10px rgba(0, 229, 168, 0.7); }
-.liq-street::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 10px; background: repeating-linear-gradient(90deg, #4C25B0 0 40px, #3C1C8F 40px 80px); }
-
-/* --- Desert (level 3) -------------------------------------------------- */
-.liq-sun {
-    position: absolute; right: 8%; top: 22%; width: clamp(110px, 18vw, 220px); height: clamp(110px, 18vw, 220px); border-radius: 50%;
-    background: radial-gradient(circle at 40% 35%, #FFF8C2, var(--liq-gold) 58%, #FFB63D 100%);
-    border: var(--liq-border) solid var(--liq-ink); box-shadow: 0 0 60px rgba(255, 229, 0, 0.6), 0 0 160px rgba(255, 120, 60, 0.45);
-}
-.liq-sun::before { content: ''; position: absolute; inset: -30%; border-radius: 50%; background: radial-gradient(circle, rgba(255, 240, 150, 0.35), transparent 70%); }
-.liq-world--desert::before { content: ''; position: absolute; left: 0; right: 0; bottom: 14vh; height: 30vh; background: linear-gradient(180deg, transparent, rgba(255, 229, 0, 0.32)); }
-.liq-mesa {
-    position: absolute; left: var(--x); width: var(--w); height: var(--h); bottom: 20vh;
-    background-color: var(--c); border: var(--liq-border) solid var(--liq-ink); border-bottom: 0; border-radius: 22px 22px 0 0;
-    background-image:
-        repeating-linear-gradient(180deg, transparent 0 14%, rgba(18, 8, 58, 0.14) 14% 20%),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.04) 40%, rgba(18, 8, 58, 0.3) 100%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.35), transparent 30%);
-    opacity: 0.92;
-}
-.liq-mesa--near { bottom: 12vh; opacity: 1; }
-.liq-dune { position: absolute; left: 50%; transform: translateX(-50%); border-radius: 50%; border: var(--liq-border) solid var(--liq-ink); }
-.liq-dune--far { bottom: -30vh; width: 190vw; height: 56vh; left: 20%; background: linear-gradient(180deg, #FFC1D8 0%, #FF8FB8 60%); border-color: rgba(18, 8, 58, 0.2); box-shadow: inset 0 16px 0 rgba(255, 255, 255, 0.35); }
-.liq-dune--mid { bottom: -34vh; width: 160vw; height: 54vh; left: 76%; background: linear-gradient(180deg, #FFE08A 0%, #FFC24D 45%, #F5A623 100%); border-color: rgba(18, 8, 58, 0.4); box-shadow: inset 0 14px 0 rgba(255, 255, 255, 0.35); }
-.liq-dune--front { bottom: -42vh; width: 180vw; height: 62vh; left: 38%; background: linear-gradient(180deg, #FFF27A 0%, var(--liq-gold) 40%, #E8C400 100%); box-shadow: inset 0 18px 0 rgba(255, 255, 255, 0.45), inset 0 -40px 60px rgba(200, 120, 0, 0.18); overflow: hidden; }
-.liq-dune--front::after { content: ''; position: absolute; left: 12%; right: 12%; top: 6%; height: 14%; background: radial-gradient(circle, rgba(18, 8, 58, 0.18) 2px, transparent 2.6px) 0 0 / 64px 28px, radial-gradient(circle, rgba(255, 255, 255, 0.5) 1.5px, transparent 2px) 30px 14px / 64px 28px; }
-.liq-cactus {
-    position: absolute; left: var(--x); bottom: 9vh; width: 26px; height: var(--h);
-    background: linear-gradient(90deg, #4FF5C8 0%, var(--liq-mint) 55%, #00B98A 100%); border: var(--liq-border) solid var(--liq-ink); border-radius: 14px 14px 6px 6px;
-}
-.liq-cactus::before, .liq-cactus::after {
-    content: ''; position: absolute; width: 16px; height: 45%; background: var(--liq-mint); border: var(--liq-border) solid var(--liq-ink); border-radius: 10px;
-}
-.liq-cactus::before { left: -22px; top: 26%; }
-.liq-cactus::after { right: -22px; top: 12%; }
-.liq-sand {
-    position: absolute; left: 0; right: 0; bottom: 0; height: 7vh;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent 40%), repeating-linear-gradient(90deg, #E9B400 0 22px, #D4A000 22px 44px); border-top: var(--liq-border) solid var(--liq-ink);
-}
 
 /* --------------------------------------------------------------------------
    Chrome
    -------------------------------------------------------------------------- */
-.liq-skip { position: absolute; left: -9999px; top: 8px; z-index: 100; background: var(--liq-ink); color: #fff; padding: 8px 12px; border-radius: 10px; min-height: var(--liq-tap); display: inline-flex; align-items: center; }
+.liq-skip { position: absolute; left: -9999px; top: 8px; z-index: 100; background: var(--liq-ink); color: var(--liq-cream); padding: 8px 12px; border-radius: 10px; min-height: var(--liq-tap); display: inline-flex; align-items: center; }
 .liq-skip:focus { left: 8px; }
 .liq-sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
@@ -275,18 +120,20 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
 }
 .liq-wordmark {
     font-family: var(--liq-display); font-weight: 900; font-size: 1rem; letter-spacing: 0.04em; text-transform: uppercase;
-    color: #fff; text-decoration: none; min-height: var(--liq-tap); display: inline-flex; align-items: center;
+    color: var(--liq-cream); text-decoration: none; min-height: var(--liq-tap); display: inline-flex; align-items: center;
     text-shadow: 2px 2px 0 var(--liq-ink), -1px -1px 0 var(--liq-ink), 1px -1px 0 var(--liq-ink), -1px 1px 0 var(--liq-ink);
 }
+.liq-wordmark__img { height: 44px; width: auto; display: block; filter: drop-shadow(0 0 8px rgba(244, 235, 221, 0.45)) drop-shadow(0 3px 0 var(--liq-ink)); }
 .liq-top__nav { display: flex; gap: 6px; flex-shrink: 0; }
 .liq-top__nav a {
     color: var(--liq-ink); text-decoration: none; font-weight: 700; font-size: 0.85rem; white-space: nowrap;
     padding: 0 12px; min-height: var(--liq-tap); display: inline-flex; align-items: center; border-radius: 999px;
-    background: rgba(255, 255, 255, 0.75); border: 2px solid transparent;
+    background: rgba(244, 235, 221, 0.9); border: 2px solid transparent;
     transition: background var(--liq-fast) var(--liq-ease), transform var(--liq-fast) var(--liq-bounce);
 }
 .liq-top__nav a:hover { background: #fff; transform: translateY(-1px); }
-.liq-top__nav a[aria-current="page"] { background: var(--liq-ink); color: #fff; }
+.liq-top__nav a { border-color: var(--liq-ink); box-shadow: 0 3px 0 var(--liq-ink); }
+.liq-top__nav a[aria-current="page"] { background: var(--liq-ink); color: var(--liq-cream); }
 .liq-top__nav a.liq-top__auth { background: var(--liq-gold); border-color: var(--liq-ink); }
 
 .liq-main {
@@ -300,24 +147,24 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
 
 .liq-toast {
     position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 50;
-    background: var(--liq-ink); color: #fff; padding: 12px 18px; border-radius: 999px;
+    background: var(--liq-ink); color: var(--liq-cream); padding: 12px 18px; border-radius: 999px;
     font-weight: 700; font-size: 0.92rem; max-width: calc(100vw - 32px);
-    border: var(--liq-border) solid #fff; box-shadow: 0 6px 0 rgba(18, 8, 58, 0.25);
+    border: var(--liq-border) solid var(--liq-cream); box-shadow: 0 6px 0 rgba(11, 10, 20, 0.35);
 }
 
 /* --------------------------------------------------------------------------
    Type
    -------------------------------------------------------------------------- */
-.liq-kicker { font-family: var(--liq-display); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #fff; text-shadow: 1px 1px 0 var(--liq-ink), -1px -1px 0 var(--liq-ink), 1px -1px 0 var(--liq-ink), -1px 1px 0 var(--liq-ink); }
+.liq-kicker { font-family: var(--liq-display); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--liq-cream); text-shadow: 1px 1px 0 var(--liq-ink), -1px -1px 0 var(--liq-ink), 1px -1px 0 var(--liq-ink), -1px 1px 0 var(--liq-ink); }
 .liq-result__hero .liq-kicker, .liq-section .liq-kicker { color: var(--liq-purple); text-shadow: none; }
 .liq-h1 {
     font-family: var(--liq-display); font-weight: 900; font-size: clamp(2.5rem, 12vw, 4.6rem); line-height: 0.95; letter-spacing: -0.01em; margin: 0;
-    text-transform: uppercase; color: #fff;
-    text-shadow: -2px -2px 0 var(--liq-ink), 2px -2px 0 var(--liq-ink), -2px 2px 0 var(--liq-ink), 2px 2px 0 var(--liq-ink), 0 6px 0 var(--liq-ink), 0 10px 0 rgba(18, 8, 58, 0.25);
+    text-transform: uppercase; color: var(--liq-cream);
+    text-shadow: -2px -2px 0 var(--liq-ink), 2px -2px 0 var(--liq-ink), -2px 2px 0 var(--liq-ink), 2px 2px 0 var(--liq-ink), 0 6px 0 var(--liq-ink), 0 10px 0 rgba(11, 10, 20, 0.25);
 }
 .liq-h1 .liq-h1__wonder {
     display: block; font-size: 1.28em; line-height: 0.9; margin-top: 0.04em;
-    background: linear-gradient(180deg, var(--liq-mint) 0%, var(--liq-blue) 48%, var(--liq-pink) 100%);
+    background: linear-gradient(180deg, var(--liq-mint) 0%, var(--liq-gold) 62%, var(--liq-orange) 100%);
     -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
     text-shadow: none;
     filter: drop-shadow(2px 2px 0 var(--liq-ink)) drop-shadow(-1px -1px 0 var(--liq-ink)) drop-shadow(0 5px 0 var(--liq-ink));
@@ -341,11 +188,11 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
 .liq-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--liq-ink); }
 .liq-btn:disabled { opacity: 0.55; cursor: default; transform: none; }
 .liq-btn--primary {
-    background: var(--liq-mint); font-family: var(--liq-display); font-weight: 900; font-size: 1.4rem; letter-spacing: 0.04em; text-transform: uppercase;
+    background: var(--liq-gold); font-family: var(--liq-display); font-weight: 900; font-size: 1.4rem; letter-spacing: 0.06em; text-transform: uppercase;
     min-height: 68px; padding: 0 44px; border-radius: 26px;
-    box-shadow: 0 7px 0 var(--liq-ink), 0 14px 30px rgba(0, 229, 168, 0.35);
+    box-shadow: 0 7px 0 var(--liq-ink), 0 14px 30px rgba(242, 182, 50, 0.35);
 }
-.liq-btn--primary:hover { background: var(--liq-mint-light); box-shadow: 0 9px 0 var(--liq-ink), 0 18px 34px rgba(0, 229, 168, 0.4); }
+.liq-btn--primary:hover { background: var(--liq-gold-light); box-shadow: 0 9px 0 var(--liq-ink), 0 18px 34px rgba(242, 182, 50, 0.4); }
 .liq-btn--primary:active { box-shadow: 0 2px 0 var(--liq-ink); }
 .liq-btn--ghost { background: var(--liq-paper-2); }
 .liq-btn--block { width: 100%; }
@@ -356,7 +203,7 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
    -------------------------------------------------------------------------- */
 .liq-entry { display: flex; flex-direction: column; justify-content: center; gap: 22px; min-height: calc(100vh - 150px); min-height: calc(100dvh - 150px); padding: 20px 0 8px; }
 .liq-entry__head { display: grid; gap: 12px; }
-.liq-entry__thesis { font-weight: 600; font-size: clamp(1.05rem, 4.2vw, 1.25rem); color: var(--liq-ink); margin: 0; max-width: 30ch; background: rgba(255, 255, 255, 0.8); border-radius: 14px; padding: 8px 12px; display: inline-block; border: 2px solid rgba(18, 8, 58, 0.12); }
+.liq-entry__thesis { font-weight: 600; font-size: clamp(1.05rem, 4.2vw, 1.25rem); color: var(--liq-ink); margin: 0; max-width: 30ch; background: rgba(244, 235, 221, 0.94); border-radius: 14px; padding: 8px 12px; display: inline-block; border: 2px solid rgba(11, 10, 20, 0.12); }
 .liq-entry__iq { display: inline-flex; align-items: center; gap: 10px; background: var(--liq-gold); border: var(--liq-border) solid var(--liq-ink); border-radius: 999px; padding: 6px 14px 6px 10px; box-shadow: 0 4px 0 var(--liq-ink); width: max-content; max-width: 100%; }
 .liq-entry__iq strong { font-family: var(--liq-display); font-size: 1.6rem; font-weight: 900; line-height: 1; }
 .liq-entry__iq span { font-weight: 700; color: var(--liq-ink); }
@@ -371,9 +218,9 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
 .liq-steps__item {
     display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 12px 0 6px; border-radius: 999px;
     font-family: var(--liq-display); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--liq-ink); background: rgba(255, 255, 255, 0.75); border: 2px solid rgba(18, 8, 58, 0.25);
+    color: var(--liq-ink); background: rgba(244, 235, 221, 0.9); border: 2px solid rgba(11, 10, 20, 0.25);
 }
-.liq-steps__n { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--liq-ink); color: #fff; font-size: 0.7rem; }
+.liq-steps__n { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--liq-ink); color: var(--liq-cream); font-size: 0.7rem; }
 .liq-steps__item--current { background: var(--liq-gold); border-color: var(--liq-ink); box-shadow: 0 3px 0 var(--liq-ink); }
 .liq-steps__item--done { background: var(--liq-mint-light); border-color: var(--liq-ink); }
 .liq-steps__item--done .liq-steps__n { background: var(--liq-mint); color: var(--liq-ink); }
@@ -397,20 +244,20 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
 .liq-mode--done { background: var(--liq-mint-light); }
 .liq-mode--done .liq-mode__meta { color: var(--liq-ink); }
 .liq-mode--picked { background: var(--liq-gold); }
-.liq-mode[aria-pressed="true"] { background: var(--liq-purple); color: #fff; }
-.liq-mode[aria-pressed="true"] .liq-mode__meta { color: rgba(255, 255, 255, 0.85); }
+.liq-mode[aria-pressed="true"] { background: var(--liq-ink); color: var(--liq-mint); }
+.liq-mode[aria-pressed="true"] .liq-mode__meta { color: rgba(244, 235, 221, 0.94); }
 .liq-mode[aria-pressed="true"]::after { content: "✓"; position: absolute; top: 10px; right: 12px; font-weight: 900; }
 .liq-mode { position: relative; }
 
 .liq-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .liq-chip {
-    appearance: none; border: 2px solid var(--liq-ink); background: rgba(255, 255, 255, 0.85); color: var(--liq-ink);
+    appearance: none; border: 2px solid var(--liq-ink); background: rgba(244, 235, 221, 0.94); color: var(--liq-ink);
     font: inherit; font-size: 0.86rem; font-weight: 700; min-height: 40px; padding: 0 14px; border-radius: 999px; cursor: pointer;
     box-shadow: 0 3px 0 var(--liq-ink); transition: transform var(--liq-fast) var(--liq-bounce); -webkit-tap-highlight-color: transparent;
 }
 .liq-chip:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--liq-ink); }
-.liq-chip[aria-pressed="true"] { background: var(--liq-purple); color: #fff; }
-.liq-entry__foot { font-size: 0.82rem; font-weight: 600; color: var(--liq-ink); background: rgba(255, 255, 255, 0.85); border-radius: 12px; padding: 8px 12px; width: max-content; max-width: 100%; margin: 0; }
+.liq-chip[aria-pressed="true"] { background: var(--liq-ink); color: var(--liq-mint); }
+.liq-entry__foot { font-size: 0.82rem; font-weight: 600; color: var(--liq-ink); background: rgba(244, 235, 221, 0.94); border-radius: 12px; padding: 8px 12px; width: max-content; max-width: 100%; margin: 0; }
 .liq-entry__foot a { color: var(--liq-ink); display: inline-flex; align-items: center; min-height: var(--liq-tap); padding: 0 10px; margin: -12px 0 -12px 2px; border-radius: 999px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
 
 /* --------------------------------------------------------------------------
@@ -423,7 +270,7 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
 .liq-game__bar strong { color: var(--liq-ink); font-weight: 900; }
 .liq-game__score { background: var(--liq-gold); border: 2px solid var(--liq-ink); border-radius: 999px; padding: 8px 12px; box-shadow: 0 3px 0 var(--liq-ink); color: var(--liq-ink); }
 .liq-game__streak { color: var(--liq-pink); }
-.liq-game__quit { appearance: none; background: rgba(255, 255, 255, 0.7); border: 2px solid var(--liq-ink); border-radius: 999px; color: var(--liq-ink); font: inherit; font-family: var(--liq-display); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; min-height: 40px; padding: 0 12px; cursor: pointer; }
+.liq-game__quit { appearance: none; background: rgba(244, 235, 221, 0.85); border: 2px solid var(--liq-ink); border-radius: 999px; color: var(--liq-ink); font: inherit; font-family: var(--liq-display); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; min-height: 40px; padding: 0 12px; cursor: pointer; }
 .liq-game__quit:hover { background: #fff; }
 
 .liq-timer { height: 14px; width: 100%; background: var(--liq-paper); border: 2px solid var(--liq-ink); border-radius: 999px; overflow: hidden; box-shadow: 0 3px 0 var(--liq-ink); }
@@ -431,13 +278,13 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
 .liq-timer__fill--urgent { background: var(--liq-pink); }
 
 .liq-progress { display: flex; gap: 5px; }
-.liq-progress__dot { flex: 1; height: 10px; background: rgba(255, 255, 255, 0.7); border: 2px solid var(--liq-ink); border-radius: 999px; }
+.liq-progress__dot { flex: 1; height: 10px; background: rgba(244, 235, 221, 0.85); border: 2px solid var(--liq-ink); border-radius: 999px; }
 .liq-progress__dot--done { background: var(--liq-mint); }
 .liq-progress__dot--wrong { background: var(--liq-pink); }
 .liq-progress__dot--current { background: var(--liq-gold); }
 
 .liq-q { display: grid; gap: 14px; flex: 1; align-content: center; }
-.liq-q__meta { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-family: var(--liq-display); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #fff; text-shadow: 1px 1px 0 var(--liq-ink), -1px -1px 0 var(--liq-ink), 1px -1px 0 var(--liq-ink), -1px 1px 0 var(--liq-ink); }
+.liq-q__meta { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-family: var(--liq-display); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--liq-cream); text-shadow: 1px 1px 0 var(--liq-ink), -1px -1px 0 var(--liq-ink), 1px -1px 0 var(--liq-ink), -1px 1px 0 var(--liq-ink); }
 .liq-q__meta em { font-style: normal; font-family: var(--liq-body); font-weight: 700; font-size: 0.8rem; text-transform: none; letter-spacing: 0; text-align: right; max-width: 58%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .liq-q__meta > span:first-child { flex: 1 1 auto; min-width: 0; }
 .liq-q__meta em { flex: 0 1 auto; }
@@ -487,29 +334,29 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
 .liq-choice__text { flex: 1; }
 .liq-choice--correct { background: var(--liq-mint); animation: liq-bounce 420ms var(--liq-bounce); }
 .liq-choice--correct .liq-choice__key { background: var(--liq-ink); color: var(--liq-mint); }
-.liq-choice--wrong { background: var(--liq-pink); color: #fff; }
-.liq-choice--wrong .liq-choice__key { background: var(--liq-ink); color: #fff; border-color: var(--liq-ink); }
-.liq-choice--dim { background: var(--liq-paper-2); color: var(--liq-muted); border-color: rgba(18, 8, 58, 0.55); box-shadow: 0 2px 0 rgba(18, 8, 58, 0.55); }
-.liq-choice--dim .liq-choice__key { color: var(--liq-muted); border-color: rgba(18, 8, 58, 0.45); }
+.liq-choice--wrong { background: var(--liq-pink); color: var(--liq-cream); }
+.liq-choice--wrong .liq-choice__key { background: var(--liq-ink); color: var(--liq-cream); border-color: var(--liq-ink); }
+.liq-choice--dim { background: var(--liq-paper-2); color: var(--liq-muted); border-color: rgba(11, 10, 20, 0.55); box-shadow: 0 2px 0 rgba(11, 10, 20, 0.55); }
+.liq-choice--dim .liq-choice__key { color: var(--liq-muted); border-color: rgba(11, 10, 20, 0.45); }
 @keyframes liq-bounce { 0% { transform: scale(1); } 40% { transform: scale(1.04) translateY(-4px); } 100% { transform: scale(1); } }
 
 .liq-typed { display: grid; gap: 10px; margin-top: 10px; }
 .liq-input {
     width: 100%; appearance: none; border: var(--liq-border) solid var(--liq-ink); background: var(--liq-paper); color: var(--liq-ink);
-    font-family: var(--liq-body); font-weight: 700; font-size: 1.3rem; padding: 12px 16px; min-height: 56px; border-radius: var(--liq-radius); box-shadow: inset 0 3px 0 rgba(18, 8, 58, 0.08);
+    font-family: var(--liq-body); font-weight: 700; font-size: 1.3rem; padding: 12px 16px; min-height: 56px; border-radius: var(--liq-radius); box-shadow: inset 0 3px 0 rgba(11, 10, 20, 0.08);
 }
 .liq-input::placeholder { color: var(--liq-faint); font-weight: 500; }
-.liq-input:focus { outline: 3px solid var(--liq-blue); outline-offset: 2px; }
+.liq-input:focus { outline: 3px solid var(--liq-gold); outline-offset: 2px; }
 .liq-typed__row { display: flex; gap: 10px; }
 .liq-typed__row .liq-input { flex: 1; }
-.liq-typed__hint { font-size: 0.82rem; font-weight: 600; color: #fff; text-shadow: 1px 1px 0 var(--liq-ink), -1px -1px 0 var(--liq-ink), 1px -1px 0 var(--liq-ink), -1px 1px 0 var(--liq-ink); }
+.liq-typed__hint { font-size: 0.82rem; font-weight: 600; color: var(--liq-cream); text-shadow: 1px 1px 0 var(--liq-ink), -1px -1px 0 var(--liq-ink), 1px -1px 0 var(--liq-ink), -1px 1px 0 var(--liq-ink); }
 .liq-typed__hint strong { color: var(--liq-gold); }
 
 .liq-feedback { display: grid; gap: 6px; min-height: 84px; align-content: start; scroll-margin-bottom: 24px; }
-.liq-feedback__line { font-family: var(--liq-display); font-size: 1.35rem; font-weight: 900; line-height: 1.1; color: #fff; text-shadow: -2px -2px 0 var(--liq-ink), 2px -2px 0 var(--liq-ink), -2px 2px 0 var(--liq-ink), 2px 2px 0 var(--liq-ink), 0 4px 0 var(--liq-ink); }
+.liq-feedback__line { font-family: var(--liq-display); font-size: 1.35rem; font-weight: 900; line-height: 1.1; color: var(--liq-cream); text-shadow: -2px -2px 0 var(--liq-ink), 2px -2px 0 var(--liq-ink), -2px 2px 0 var(--liq-ink), 2px 2px 0 var(--liq-ink), 0 4px 0 var(--liq-ink); }
 .liq-feedback--correct .liq-feedback__line { color: var(--liq-mint); }
 .liq-feedback--wrong .liq-feedback__line { color: var(--liq-pink); }
-.liq-feedback__detail { font-size: 0.88rem; font-weight: 600; color: var(--liq-ink); display: flex; flex-wrap: wrap; gap: 6px 12px; background: rgba(255, 255, 255, 0.85); border-radius: 12px; padding: 8px 12px; border: 2px solid rgba(18, 8, 58, 0.12); }
+.liq-feedback__detail { font-size: 0.88rem; font-weight: 600; color: var(--liq-ink); display: flex; flex-wrap: wrap; gap: 6px 12px; background: rgba(244, 235, 221, 0.94); border-radius: 12px; padding: 8px 12px; border: 2px solid rgba(11, 10, 20, 0.12); }
 .liq-feedback__detail strong { font-family: var(--liq-display); font-weight: 800; }
 .liq-feedback__next { margin-top: 8px; }
 
@@ -547,7 +394,7 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
 .liq-breakdown__row { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: center; font-size: 0.88rem; padding: 10px 12px; background: var(--liq-paper); border: 2px solid var(--liq-ink); border-radius: 14px; box-shadow: 0 3px 0 var(--liq-ink); }
 .liq-breakdown__mark { width: 26px; height: 26px; border-radius: 8px; border: 2px solid var(--liq-ink); display: inline-flex; align-items: center; justify-content: center; font-weight: 900; }
 .liq-breakdown__row--correct .liq-breakdown__mark { background: var(--liq-mint); }
-.liq-breakdown__row--wrong .liq-breakdown__mark { background: var(--liq-pink); color: #fff; }
+.liq-breakdown__row--wrong .liq-breakdown__mark { background: var(--liq-pink); color: var(--liq-cream); }
 .liq-breakdown__track { color: var(--liq-ink); font-weight: 700; }
 .liq-breakdown__track small { display: block; color: var(--liq-muted); font-weight: 600; font-size: 0.76rem; }
 .liq-breakdown__pts { color: var(--liq-ink); font-family: var(--liq-display); font-size: 0.72rem; font-weight: 800; white-space: nowrap; }
@@ -573,8 +420,8 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
    States
    -------------------------------------------------------------------------- */
 .liq-state { display: grid; gap: 14px; padding: 40px 0; }
-.liq-state__title { font-family: var(--liq-display); font-size: 1.5rem; font-weight: 900; margin: 0; color: #fff; text-shadow: -2px -2px 0 var(--liq-ink), 2px -2px 0 var(--liq-ink), -2px 2px 0 var(--liq-ink), 2px 2px 0 var(--liq-ink), 0 4px 0 var(--liq-ink); }
-.liq-state__text { margin: 0; font-weight: 600; color: var(--liq-ink); background: rgba(255, 255, 255, 0.85); border-radius: 12px; padding: 8px 12px; }
+.liq-state__title { font-family: var(--liq-display); font-size: 1.5rem; font-weight: 900; margin: 0; color: var(--liq-cream); text-shadow: -2px -2px 0 var(--liq-ink), 2px -2px 0 var(--liq-ink), -2px 2px 0 var(--liq-ink), 2px 2px 0 var(--liq-ink), 0 4px 0 var(--liq-ink); }
+.liq-state__text { margin: 0; font-weight: 600; color: var(--liq-ink); background: rgba(244, 235, 221, 0.94); border-radius: 12px; padding: 8px 12px; }
 .liq-spinner { width: 26px; height: 26px; border-radius: 50%; border: 4px solid var(--liq-ink); border-top-color: var(--liq-mint); animation: liq-spin 800ms linear infinite; }
 @keyframes liq-spin { to { transform: rotate(360deg); } }
 
@@ -584,17 +431,16 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
 @media (max-width: 419px) {
     .liq-top__nav a[data-route="play"] { display: none; }
     .liq-top__nav a { padding: 0 9px; font-size: 0.8rem; }
-    .liq-wordmark { font-size: 0.9rem; }
+    .liq-wordmark__img { height: 34px; }
 }
 @media (max-width: 359px) {
     .liq-modegrid { grid-template-columns: 1fr; }
     .liq-btn--hero { min-height: 72px; font-size: 1.5rem; }
     .liq-top { padding-left: 12px; padding-right: 12px; }
-    .liq-cloud--3 { display: none; }
-    .liq-block--5, .liq-thought--3 { display: none; }
+    .liq-block--5 { display: none; }
 }
 @media (max-width: 767px) {
-    /* Phones: the column is the whole width, so blocks rest on the street / sand at the edges. */
+    /* Phones: the column is the whole width, so blocks rest on the sidewalk at the edges. */
     .liq-block--2, .liq-block--3, .liq-block--5 { display: none; }
     .liq-block--1 { left: 4%; bottom: 7.5vh; width: 38px; height: 38px; font-size: 1rem; }
     .liq-block--4 { right: 4%; bottom: 9vh; width: 38px; height: 38px; font-size: 1rem; }
@@ -606,9 +452,11 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
 }
 @media (min-width: 768px) {
     :root { --liq-gutter: 24px; --liq-max: 680px; }
-    /* Keep the skyline behind the column low so buttons stay clean. */
-    .liq-tower--center { height: calc(var(--h) * 0.5); }
-    .liq-mesa:not(.liq-mesa--near) { bottom: 14vh; }
+    .liq-block--1 { left: 5%; bottom: 17vh; }
+    .liq-block--2 { left: 13%; bottom: 21vh; }
+    .liq-block--3 { right: 14%; bottom: 19vh; }
+    .liq-block--4 { right: 5%; bottom: 16vh; }
+    .liq-block--5 { left: 9%; bottom: 33vh; }
     .liq-choices { grid-template-columns: 1fr 1fr; }
     .liq-choices--lines { grid-template-columns: 1fr; }
     .liq-lyric { font-size: clamp(1.8rem, 4.2vw, 2.5rem); padding: 24px 28px; }
@@ -617,13 +465,14 @@ body[data-world="desert"] .liq-cloud { opacity: 0.55; }
 @media (min-width: 1024px) {
     :root { --liq-max: 720px; }
     .liq-top { padding: 20px var(--liq-gutter); }
+    .liq-wordmark__img { height: 56px; }
 }
 
 /* --------------------------------------------------------------------------
    Reduced motion
    -------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
-    .liq-cloud, .liq-sparkle, .liq-thought, .liq-block, .liq-tower--sign::after { animation: none; }
+    .liq-block { animation: none; }
     .liq-world { transition: none; }
     .liq-par-far, .liq-par-mid, .liq-par-near { translate: 0 0; }
     .liq-enter, .liq-choice--correct { animation: none; }
