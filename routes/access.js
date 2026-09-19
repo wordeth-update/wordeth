@@ -16,7 +16,7 @@ router.get('/me', auth, async (req, res) => {
     }
 });
 
-router.post('/heartbeat', auth, async (req, res) => {
+router.post('/heartbeat', auth, require('../middleware/limits').heartbeat, async (req, res) => {
     try {
         res.json({ success: true, access: await recordActiveHeartbeat(req.user._id) });
     } catch (error) {

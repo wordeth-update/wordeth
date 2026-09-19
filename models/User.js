@@ -226,9 +226,10 @@ userSchema.pre('save', async function(next) {
 
 function generateCollabId() {
     const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no confusable 0/O/1/I/L
+    const { randomInt } = require('crypto');
     let suffix = '';
     for (let i = 0; i < 6; i++) {
-        suffix += chars[Math.floor(Math.random() * chars.length)];
+        suffix += chars[randomInt(chars.length)];
     }
     return `WRD-${suffix}`;
 }
@@ -249,6 +250,20 @@ userSchema.statics.ensureCollabId = async function(userId) {
             return updated ? updated.collabId : (await this.findById(userId).select('collabId')).collabId;
         } catch (err) {
             if (err.code !== 11000) throw err; // duplicate collabId — retry
+        }
+    }
+    throw new Error('Could not assign collab ID');
+};
+
+// A fresh collab ID, when the old one has spread further than wanted.
+userSchema.statics.rotateCollabId = async function(userId) {
+    for (let attempt = 0; attempt < 5; attempt++) {
+        const candidate = generateCollabId();
+        try {
+            const updated = await this.findOneAndUpdate({ _id: userId }, { $set: { collabId: candidate } }, { new: true }).select('collabId');
+            return updated ? updated.collabId : null;
+        } catch (err) {
+            if (err.code !== 11000) throw err;
         }
     }
     throw new Error('Could not assign collab ID');

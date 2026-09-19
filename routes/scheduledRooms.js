@@ -3,6 +3,7 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const crypto = require('crypto');
 const auth = require('../middleware/auth');
+const limits = require('../middleware/limits');
 const optionalAuth = require('../middleware/optionalAuth');
 const User = require('../models/User');
 const ScheduledRoom = require('../models/ScheduledRoom');
@@ -198,9 +199,9 @@ async function getBusyMap(userIds) {
 // ---------------------------------------------------------------------------
 // COLLABORATOR SEARCH — by name or collab ID (WRD-XXXXXX), with busy flags
 // ---------------------------------------------------------------------------
-router.get('/collaborator-search', auth, async (req, res) => {
+router.get('/collaborator-search', auth, limits.search, async (req, res) => {
     try {
-        const q = (req.query.q || '').trim();
+        const q = String(req.query.q || '').trim();
         if (q.length < 2) return res.json([]);
         let users;
         if (/^WRD-/i.test(q)) {
@@ -231,6 +232,19 @@ router.get('/my-collab-id', auth, async (req, res) => {
         const collabId = await User.ensureCollabId(req.user._id);
         res.json({ collabId });
     } catch (err) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// A new collab ID. The old one stops working at once; pending invites
+// already sent by user id are unaffected.
+router.post('/my-collab-id/rotate', auth, limits.rotateCollab, async (req, res) => {
+    try {
+        const collabId = await User.rotateCollabId(req.user._id);
+        if (!collabId) return res.status(404).json({ message: 'User not found' });
+        res.json({ collabId });
+    } catch (error) {
+        console.error('Rotate collab ID error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

@@ -31,15 +31,16 @@ router.get('/balance', auth, async (req, res) => {
     }
 });
 
-router.post('/grant', auth, async (req, res) => {
+router.post('/grant', auth, require('../middleware/limits').grant, async (req, res) => {
     try {
         if (req.user.role !== 'ADMIN') {
             return res.status(403).json({ message: 'Admin access required' });
         }
 
-        const { userId, amount, reason } = req.body;
-        if (!userId || !amount || amount <= 0) {
-            return res.status(400).json({ message: 'userId and positive amount are required' });
+        const { userId, reason } = req.body;
+        const amount = Number(req.body.amount);
+        if (!userId || !Number.isInteger(amount) || amount <= 0 || amount > 100000) {
+            return res.status(400).json({ message: 'userId and a whole amount between 1 and 100000 are required' });
         }
 
         const targetUser = await User.findById(userId);
@@ -59,6 +60,7 @@ router.post('/grant', auth, async (req, res) => {
             balanceAfter: targetUser.tokenBalance,
             metadata: { reason: reason || 'monthly_grant', grantedBy: req.user._id }
         });
+        require('../services/realtime').emitToUser(targetUser._id, 'token-balance', { balance: targetUser.tokenBalance, delta: amount, reason: 'grant' });
 
         await EventsLedger.create({
             actorId: req.user._id,

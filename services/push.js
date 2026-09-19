@@ -36,10 +36,13 @@ function describe(n) {
 async function sendToTokens(tokens, message) {
     const valid = tokens.filter(isExpoToken);
     if (valid.length === 0) return [];
+    const headers = { 'content-type': 'application/json', accept: 'application/json' };
+    if (process.env.EXPO_ACCESS_TOKEN) headers.authorization = `Bearer ${process.env.EXPO_ACCESS_TOKEN}`;
     const res = await fetch(EXPO_PUSH_URL, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', accept: 'application/json' },
-        body: JSON.stringify(valid.map(to => ({ to, sound: 'default', ...message }))),
+        headers,
+        body: JSON.stringify(valid.slice(0, 100).map(to => ({ to, sound: 'default', ...message }))),
+        signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) throw new Error(`Expo push responded ${res.status}`);
     const { data } = await res.json();

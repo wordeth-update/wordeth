@@ -170,7 +170,18 @@ async function initRooms() {
     }
 }
 
+// The hallway list goes to every socket; a burst of joins, leaves and
+// toggles is coalesced to one broadcast per half second. Module scope, so
+// the teardown timer and the HTTP join path can call it too.
+let ioRef = null;
+let roomsTimer = null;
+function broadcastRooms() {
+    if (!ioRef || roomsTimer) return;
+    roomsTimer = setTimeout(() => { roomsTimer = null; ioRef.emit('rooms-updated', getActiveRooms()); }, 500);
+}
+
 function setupSignaling(io) {
+    ioRef = io;
     _io = io;
     global._io = io;
     global._connectedUsers = connectedUsers;
@@ -179,7 +190,7 @@ function setupSignaling(io) {
         .then(() => {
             roomsReady = true;
             if (rooms.size > 0) {
-                io.emit('rooms-updated', getActiveRooms());
+                broadcastRooms();
                 console.log('[Signaling] Broadcasted restored rooms to connected clients');
             }
         })
@@ -217,8 +228,49 @@ function setupSignaling(io) {
         next();
     });
 
+    const CLIENT_ROOM_EVENTS = new Set([
+        'annotate', 'poll', 'poll-close', 'poll-vote', 'battle', 'battle-vote',
+        'karaoke-queue', 'karaoke-queue-request', 'karaoke-start', 'karaoke-stop', 'karaoke-song', 'youtube-embed',
+        'permission-request', 'permission-approved', 'permission-denied', 'hand-raise', 'mute-status', 'topic-change'
+    ]);
+
     io.on('connection', (socket) => {
         console.log(`Socket connected: ${socket.id}`);
+
+        /**
+         * No event handler may take the process down. A payload that is
+         * missing, malformed or hostile used to throw out of the handler
+         * and reach uncaughtException, which restarts the server and drops
+         * every room. Every handler is wrapped; a bad payload is logged and
+         * ignored. A small per-event rate bucket sits in the same wrapper.
+         */
+        const buckets = new Map();
+        const allow = (event, perSecond) => {
+            const now = Date.now();
+            const b = buckets.get(event) || { t: now, n: 0 };
+            if (now - b.t >= 1000) { b.t = now; b.n = 0; }
+            b.n += 1;
+            buckets.set(event, b);
+            return b.n <= perSecond;
+        };
+        const RATES = { 'room-event': 20, 'chat-message': 5, 'room-image': 1, 'annotate': 20, 'join-room': 2, 'room-invite': 1, 'agora-uid-map': 5 };
+        const rawOn = socket.on.bind(socket);
+        socket.on = (event, fn) => rawOn(event, (...args) => {
+            const limit = RATES[event] || 50;
+            if (!allow(event, limit)) return;
+            try {
+                const r = fn(...args);
+                if (r && typeof r.catch === 'function') r.catch((e) => console.error(`[Socket] ${event}:`, e.message));
+            } catch (e) {
+                console.error(`[Socket] ${event}:`, e.message);
+            }
+        });
+
+        /** Membership: the socket is in this room, and the room knows it. */
+        const inRoom = (roomId) => {
+            const room = roomId && rooms.get(roomId);
+            return room && socket.roomId === roomId && room.participants.has(socket.id) ? room : null;
+        };
 
         /**
          * Ties this socket to a verified account: invites, notifications and
@@ -392,7 +444,7 @@ function setupSignaling(io) {
                 console.log('[join-room] Waiting for rooms to restore from Redis...');
                 await roomsReadyPromise;
             }
-            const verifiedUser = await authenticatedSocketUser(authToken);
+            const verifiedUser = authToken ? await authenticatedSocketUser(authToken) : (socket.handshakeUser || null);
             if (verifiedUser) {
                 userId = String(verifiedUser._id);
                 userName = verifiedUser.name;
@@ -440,7 +492,7 @@ function setupSignaling(io) {
                     saveRoom(socket.roomId, prevRoom);
                 }
 
-                io.emit('rooms-updated', getActiveRooms());
+                broadcastRooms();
             }
 
             socket.join(roomId);
@@ -467,6 +519,7 @@ function setupSignaling(io) {
                     let matchedRoom = null;
                     for (const [rid, r] of rooms.entries()) {
                         if (rid === roomId) continue;
+                        if (!r.participants || r.participants.size === 0) continue;
                         if (r.name && roomId && r.name.toLowerCase().trim() === roomId.toLowerCase().trim()) {
                             matchedRoom = { id: rid, room: r };
                             break;
@@ -694,7 +747,7 @@ function setupSignaling(io) {
                         participants: Array.from(activeRoom.participants.values())
                     });
                     saveRoom(roomId, activeRoom);
-                    io.emit('rooms-updated', getActiveRooms());
+                    broadcastRooms();
                 }, remainingMs);
                 socket.wildcardTimer.unref?.();
             }
@@ -785,6 +838,9 @@ function setupSignaling(io) {
                         roomName: room.name || ''
                     }));
                     Notification.insertMany(bulkNotifs).then(docs => {
+                        // insertMany skips the post-save hook; push by hand.
+                        const { pushNotification } = require('../services/push');
+                        for (const doc of docs) pushNotification(doc).catch(() => {});
                         for (const doc of docs) {
                             const followerSockets = connectedUsers.get(doc.userId.toString());
                             if (followerSockets && followerSockets.size > 0) {
@@ -806,7 +862,7 @@ function setupSignaling(io) {
             }
 
             saveRoom(roomId, room);
-            io.emit('rooms-updated', getActiveRooms());
+            broadcastRooms();
           } catch (err) {
             console.error('[join-room] Unhandled error:', err);
             socket.emit('room-error', { message: 'Server error while joining room. Please try again.' });
@@ -814,7 +870,7 @@ function setupSignaling(io) {
           }
         });
 
-        socket.on('agora-uid-map', ({ roomId, agoraUid }) => {
+        socket.on('agora-uid-map', ({ roomId, agoraUid } = {}) => {
             const room = rooms.get(roomId);
             if (room && room.participants.has(socket.id)) {
                 const participant = room.participants.get(socket.id);
@@ -831,7 +887,7 @@ function setupSignaling(io) {
         });
 
 
-        socket.on('leave-room', ({ roomId }) => {
+        socket.on('leave-room', ({ roomId } = {}) => {
             if (socket.wildcardTimer) {
                 clearTimeout(socket.wildcardTimer);
                 socket.wildcardTimer = null;
@@ -873,7 +929,7 @@ function setupSignaling(io) {
             socket.roomId = null;
             socket.userId = null;
             socket.userName = null;
-            io.emit('rooms-updated', getActiveRooms());
+            broadcastRooms();
             console.log(`${participant.userName} left room ${roomId} (${room.participants.size} remaining)`);
         });
 
@@ -888,7 +944,7 @@ function setupSignaling(io) {
             });
         });
 
-        socket.on('request-participants', ({ roomId }) => {
+        socket.on('request-participants', ({ roomId } = {}) => {
             const room = rooms.get(roomId);
             if (!room) return;
             const participantList = Array.from(room.participants.values());
@@ -904,7 +960,7 @@ function setupSignaling(io) {
             });
         });
 
-        socket.on('kick-participant', ({ roomId, targetSocketId, action }) => {
+        socket.on('kick-participant', ({ roomId, targetSocketId, action } = {}) => {
             const room = rooms.get(roomId);
             if (!room) return;
             if (socket.id !== room.hostId) return;
@@ -937,7 +993,7 @@ function setupSignaling(io) {
                     data: { userName: targetParticipant.userName, action: 'remove' }
                 });
                 saveRoom(roomId, room);
-                io.emit('rooms-updated', getActiveRooms());
+                broadcastRooms();
             } else if (action === 'move-to-crowd') {
                 targetParticipant.isSpeaker = false;
                 targetParticipant.isMuted = true;
@@ -969,7 +1025,7 @@ function setupSignaling(io) {
             }
         });
 
-        socket.on('promote-to-speaker', ({ roomId, targetSocketId }) => {
+        socket.on('promote-to-speaker', ({ roomId, targetSocketId } = {}) => {
             const room = rooms.get(roomId);
             if (!room) return;
             if (socket.id !== room.hostId) return;
@@ -1012,7 +1068,7 @@ function setupSignaling(io) {
             saveRoom(roomId, room);
         });
 
-        socket.on('request-stage', ({ roomId }) => {
+        socket.on('request-stage', ({ roomId } = {}) => {
             const room = rooms.get(roomId);
             if (!room) return;
             const participant = room.participants.get(socket.id);
@@ -1031,7 +1087,7 @@ function setupSignaling(io) {
             });
         });
 
-        socket.on('self-promote-to-stage', ({ roomId }) => {
+        socket.on('self-promote-to-stage', ({ roomId } = {}) => {
             const room = rooms.get(roomId);
             if (!room) return;
             if (room.stageAccess !== 'open') return;
@@ -1070,7 +1126,7 @@ function setupSignaling(io) {
             saveRoom(roomId, room);
         });
 
-        socket.on('set-stage-access', ({ roomId, mode }) => {
+        socket.on('set-stage-access', ({ roomId, mode } = {}) => {
             const room = rooms.get(roomId);
             if (!room) return;
             if (socket.id !== room.hostId) return;
@@ -1085,9 +1141,12 @@ function setupSignaling(io) {
             });
         });
 
-        socket.on('room-event', ({ roomId, event, data }) => {
-            const room = rooms.get(roomId);
-            if (!room) return;
+        socket.on('room-event', ({ roomId, event, data } = {}) => {
+            const room = inRoom(roomId);
+            if (!room || typeof event !== 'string') return;
+            data = data && typeof data === 'object' ? data : {};
+            // What a room may carry: a poll, a stroke, a sign. Not a file.
+            if (JSON.stringify(data).length > 16 * 1024) return;
             touchRoom(roomId);
 
             switch (event) {
@@ -1106,7 +1165,7 @@ function setupSignaling(io) {
                         room.recording = !!data.on;
                         socket.to(roomId).emit('room-event', { event, data: { on: room.recording, hostName: socket.userName } });
                         saveRoom(roomId, room);
-                        io.emit('rooms-updated', getActiveRooms());
+                        broadcastRooms();
                     }
                     break;
 
@@ -1196,7 +1255,7 @@ function setupSignaling(io) {
                         room.participants.clear();
                         rooms.delete(roomId);
                         deleteRoom(roomId);
-                        io.emit('rooms-updated', getActiveRooms());
+                        broadcastRooms();
                         console.log(`Room ${roomId} closed by host ${socket.userName}`);
                     }
                     break;
@@ -1237,23 +1296,27 @@ function setupSignaling(io) {
                     break;
 
                 default:
-                    socket.to(roomId).emit('room-event', { event, data });
+                    // Only what a client is meant to say. The server's own
+                    // announcements (host-changed, participant-kicked…) cannot be
+                    // forged by relaying them through here.
+                    if (CLIENT_ROOM_EVENTS.has(event)) socket.to(roomId).emit('room-event', { event, data });
             }
         });
 
-        socket.on('room-image', ({ roomId, imageData }) => {
-            if (!roomId || !imageData) return;
-            if (imageData.length > 14 * 1024 * 1024) return;
-            const room = rooms.get(roomId);
-            if (!room || !room.participants.has(socket.id)) return;
+        socket.on('room-image', ({ roomId, imageData } = {}) => {
+            if (!roomId || typeof imageData !== 'string') return;
+            // A photo, not a file: two megabytes as a data URL, and only a data URL.
+            if (imageData.length > 2 * 1024 * 1024 || !/^data:image\/(jpeg|png|webp);base64,/.test(imageData)) return;
+            const room = inRoom(roomId);
+            if (!room) return;
             socket.to(roomId).emit('room-image', {
                 sender: socket.userName || 'Someone',
                 imageData
             });
         });
 
-        socket.on('music-stream-status', ({ roomId, songTitle, artistName, playing }) => {
-            if (!roomId) return;
+        socket.on('music-stream-status', ({ roomId, songTitle, artistName, playing } = {}) => {
+            if (!inRoom(roomId)) return;
             const room = rooms.get(roomId);
             if (!room || !room.participants.has(socket.id)) return;
             socket.to(roomId).emit('music-stream-status', {
@@ -1265,7 +1328,8 @@ function setupSignaling(io) {
             });
         });
 
-        socket.on('audio-mix-status', ({ roomId, mixing, videoId }) => {
+        socket.on('audio-mix-status', ({ roomId, mixing, videoId } = {}) => {
+            if (!inRoom(roomId)) return;
             socket.to(roomId).emit('audio-mix-status', {
                 userId: socket.userId,
                 userName: socket.userName,
@@ -1319,7 +1383,7 @@ function setupSignaling(io) {
                     saveRoom(socket.roomId, room);
                 }
 
-                io.emit('rooms-updated', getActiveRooms());
+                broadcastRooms();
 
                 console.log(`${socket.userName} left room ${socket.roomId} (${room.participants.size} remaining)`);
             }
@@ -1424,6 +1488,7 @@ async function joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar
                 peakParticipants: 0
             });
             console.log(`[HTTP Join] Room created: ${roomId} "${roomName}" by ${userName}`);
+            scheduleRoomDeletion(roomId, 'http-created');
         } else {
             return { success: false, message: 'This room is no longer live.' };
         }
@@ -1466,4 +1531,4 @@ function getRoomById(roomId) {
     return rooms.get(roomId) || null;
 }
 
-module.exports = { setupSignaling, getActiveRooms, setShuttingDown, joinRoomHTTP, getRoomsMap, waitForRoomsReady, getRoomById };
+module.exports = { setupSignaling, getActiveRooms, setShuttingDown, joinRoomHTTP, getRoomsMap, waitForRoomsReady, getRoomById, scheduleRoomDeletion };

@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const jwt = require('jsonwebtoken');
 const auth = require('../middleware/auth');
+const limits = require('../middleware/limits');
 const User = require('../models/User');
 const UsageEvent = require('../models/UsageEvent');
 const Notification = require('../models/Notification');
@@ -35,7 +36,7 @@ const audioUpload = multer({
     }
 });
 
-router.get('/search', async (req, res) => {
+router.get('/search', limits.search, async (req, res) => {
     try {
         const { q } = req.query;
         if (!q || q.trim().length < 2) {
@@ -166,7 +167,7 @@ router.put('/profile', auth, async (req, res) => {
     }
 });
 
-router.post('/avatar', auth, (req, res) => {
+router.post('/avatar', auth, limits.upload, (req, res) => {
     upload.single('avatar')(req, res, async (err) => {
         if (err) {
             if (err.code === 'LIMIT_FILE_SIZE') {
@@ -431,7 +432,7 @@ router.put('/profile-customize', auth, async (req, res) => {
     }
 });
 
-router.post('/profile-photo', auth, upload.single('photo'), async (req, res) => {
+router.post('/profile-photo', auth, limits.upload, upload.single('photo'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ message: 'No photo provided' });
         if (req.user.profilePhotos && req.user.profilePhotos.length >= 6) {
@@ -468,7 +469,7 @@ router.delete('/profile-photo/:index', auth, async (req, res) => {
     }
 });
 
-router.post('/music-snippet', auth, audioUpload.single('audio'), async (req, res) => {
+router.post('/music-snippet', auth, limits.upload, audioUpload.single('audio'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ message: 'No audio file provided' });
         const fileStorage = require('../services/fileStorage');
@@ -648,7 +649,7 @@ router.delete('/account', auth, async (req, res) => {
 const { isExpoToken } = require('../services/push');
 
 // Register this device for push. Idempotent: the same token updates in place.
-router.post('/push-token', auth, async (req, res) => {
+router.post('/push-token', auth, limits.pushToken, async (req, res) => {
     try {
         const { token, platform } = req.body || {};
         if (!isExpoToken(token)) return res.status(400).json({ message: 'A valid Expo push token is required' });
@@ -666,7 +667,7 @@ router.post('/push-token', auth, async (req, res) => {
 });
 
 // Forget this device (sign-out on the phone).
-router.delete('/push-token', auth, async (req, res) => {
+router.delete('/push-token', auth, limits.pushToken, async (req, res) => {
     try {
         const { token } = req.body || {};
         if (!isExpoToken(token)) return res.status(400).json({ message: 'A valid Expo push token is required' });

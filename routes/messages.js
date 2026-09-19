@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const auth = require('../middleware/auth');
+const limits = require('../middleware/limits');
 const Message = require('../models/Message');
 const User = require('../models/User');
 
@@ -109,7 +110,7 @@ router.get('/:userId', auth, async (req, res) => {
     }
 });
 
-router.post('/:userId', auth, upload.single('audio'), async (req, res) => {
+router.post('/:userId', auth, limits.messages, limits.messagesDaily, upload.single('audio'), async (req, res) => {
     try {
         const myId = req.user._id;
         const otherId = req.params.userId;
