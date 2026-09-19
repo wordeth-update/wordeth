@@ -47,7 +47,7 @@ describe('share card snapshot', () => {
         expect(session.shareCard.headline).toMatch(/\d+\/10 · \d+ pts/);
         expect(session.shareCard.lyricIq).toBe(results.lyricIq.after);
         // Links point at the public page + card, both as paths (for the client) and absolute URLs.
-        expect(results.share).toMatchObject({ pagePath: `/s/${sid}`, cardPath: `/s/${sid}/card.png`, storyPath: `/s/${sid}/card.png?format=story`, version: 2 });
+        expect(results.share).toMatchObject({ pagePath: `/s/${sid}`, cardPath: `/s/${sid}/card.png`, storyPath: `/s/${sid}/story.png`, version: 2 });
         expect(results.share.pageUrl).toMatch(/^https?:\/\/.+\/s\//);
         expect(results.share.short).toMatch(/Lyric IQ/);
         expect(user.name).toBe('Cory Jackson');
@@ -101,7 +101,7 @@ describe('share pages', () => {
         expect(og.body.slice(1, 4).toString()).toBe('PNG');
         // PNG IHDR: width at bytes 16-19, height 20-23.
         expect(og.body.readUInt32BE(16)).toBe(1200); expect(og.body.readUInt32BE(20)).toBe(630);
-        const story = await request(app).get(`/s/${sid}/card.png?format=story`).buffer(true).parse((res, cb) => { const chunks = []; res.on('data', (c) => chunks.push(c)); res.on('end', () => cb(null, Buffer.concat(chunks))); }).expect(200);
+        const story = await request(app).get(`/s/${sid}/story.png`).buffer(true).parse((res, cb) => { const chunks = []; res.on('data', (c) => chunks.push(c)); res.on('end', () => cb(null, Buffer.concat(chunks))); }).expect(200);
         expect(story.body.readUInt32BE(16)).toBe(1080); expect(story.body.readUInt32BE(20)).toBe(1920);
         expect(cardRenderer._pngCache.has(`${sid}:og`)).toBe(true);
     }, 60000);

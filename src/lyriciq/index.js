@@ -51,6 +51,7 @@ async function bootstrap({ exitOnFailure = process.env.NODE_ENV !== 'test' } = {
     }
     await ensureTemplates();
     const catalog = await catalogService.ensureCatalog();
+    await catalogService.normalizeArtistKeys().catch((err) => logger.warn('artist_keys_normalize_failed', { message: err.message }));
     logger.info('lyriciq_ready', { provider: config.provider.name, catalog });
     if (!sweepTimer && process.env.NODE_ENV !== 'test') {
         sweepTimer = setInterval(() => sessionService.expireStaleSessions().catch((err) => logger.error('sweep_failed', { message: err.message })), 5 * 60 * 1000);

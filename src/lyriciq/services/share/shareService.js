@@ -75,7 +75,7 @@ function cardForSession(session) {
 /** Where a result lives publicly: page, link-preview card and story cut. */
 function shareLinks(sessionId) {
     const id = String(sessionId);
-    const paths = { pagePath: `/s/${id}`, cardPath: `/s/${id}/card.png`, storyPath: `/s/${id}/card.png?format=story` };
+    const paths = { pagePath: `/s/${id}`, cardPath: `/s/${id}/card.png`, storyPath: `/s/${id}/story.png` };
     return { ...paths, pageUrl: `${config.publicUrl}${paths.pagePath}`, cardUrl: `${config.publicUrl}${paths.cardPath}`, storyUrl: `${config.publicUrl}${paths.storyPath}` };
 }
 

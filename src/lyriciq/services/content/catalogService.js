@@ -9,7 +9,7 @@ const { cache } = require('./providerCache');
 const { getLyricProvider, getSyntheticProvider } = require('../../providers/lyrics');
 const { isTrackEligibleForGame } = require('./eligibility');
 const restrictionService = require('./restrictionService');
-const { slugify } = require('../../providers/lyrics/normalizeTrack');
+const { slugify, leadArtistKey } = require('../../providers/lyrics/normalizeTrack');
 const { ProviderError } = require('../../utilities/errors');
 const syntheticCatalog = require('../../fixtures/syntheticCatalog');
 
@@ -231,6 +231,21 @@ async function getLyricAsset(track, { bypassMemory = false } = {}) {
  * from the provider on demand and kept, so the first request for a new
  * artist costs a few seconds and the next costs nothing.
  */
+/**
+ * Rows written before artist keys followed the lead credit still carry keys like
+ * "lil-wayne-feat-drake". Re-key them once; cheap, idempotent, runs at boot.
+ */
+async function normalizeArtistKeys() {
+    const rows = await Track.find({ artist: /\b(feat|ft)\.?\s|\bfeaturing\b/i }).select('artist artistKey').lean();
+    let changed = 0;
+    for (const r of rows) {
+        const key = leadArtistKey(r.artist);
+        if (key && key !== r.artistKey) { await Track.updateOne({ _id: r._id }, { $set: { artistKey: key } }); changed++; }
+    }
+    if (changed) { cache.clear('trackMetadata'); logger.info('artist_keys_normalized', { changed }); }
+    return changed;
+}
+
 async function searchArtists({ query = '', limit = 10 } = {}) {
     const q = String(query || '').trim();
     if (q.length < 2) return [];
@@ -244,7 +259,9 @@ async function searchArtists({ query = '', limit = 10 } = {}) {
         { $sort: { count: -1 } },
         { $limit: limit }
     ]);
-    const out = local.map((r) => ({ artistKey: r._id, name: r.name, providerArtistId: r.providerArtistId || null, tracks: r.count, seeded: true }));
+    const out = local
+        .filter((r) => r._id === leadArtistKey(r.name))          // a stray feature key is not an artist
+        .map((r) => ({ artistKey: r._id, name: r.name.split(/\s+(?:feat\.?|ft\.?|featuring)\s+/i)[0], providerArtistId: r.providerArtistId || null, tracks: r.count, seeded: true }));
     if (typeof provider.searchArtists === 'function') {
         try {
             const remote = await provider.searchArtists({ query: q, pageSize: limit });
@@ -274,6 +291,7 @@ async function seedArtistTracks({ providerArtistId = null, artistKey = null, nam
     const key = artistKey || (name ? slugify(name) : null);
     const min = config.catalog.minArtistTracks;
     let inserted = 0;
+    const report = { id: null, name: null, errors: [] };
     const own = (t) => {
         if (!t.hasLyrics || t.instrumental) return false;
         if (!key) return true;
@@ -283,9 +301,11 @@ async function seedArtistTracks({ providerArtistId = null, artistKey = null, nam
     };
 
     async function pull(label, fetchPage) {
+        report[label] = 0;
         try {
             for (let page = 1; page <= pages; page++) {
                 const tracks = await fetchPage(page);
+                report[label] += tracks.length;
                 if (!tracks.length) break;
                 for (const t of tracks) {
                     if (!own(t)) continue;
@@ -296,6 +316,7 @@ async function seedArtistTracks({ providerArtistId = null, artistKey = null, nam
             }
         } catch (err) {
             logger.error('provider_error', { provider: provider.name, code: err.code, message: err.message, phase: `artist_seed_${label}`, providerArtistId, name });
+            report.errors.push(`${label}:${err.code || 'ERROR'}`);
             if (!(err instanceof ProviderError)) throw err;
         }
     }
@@ -312,8 +333,8 @@ async function seedArtistTracks({ providerArtistId = null, artistKey = null, nam
     cache.clear('trackMetadata');
     const resolvedKey = key || (providerArtistId ? (await Track.findOne({ provider: provider.name, providerArtistId: String(providerArtistId) }).select('artistKey').lean())?.artistKey : null) || null;
     if (!key && resolvedKey) playable = await Track.countDocuments({ status: 'ACTIVE', hasLyrics: true, instrumental: false, artistKey: resolvedKey });
-    logger.info('artist_seeded', { provider: provider.name, providerArtistId, name, artistKey: resolvedKey, inserted, playable });
-    return { artistKey: resolvedKey, inserted, playable };
+    logger.info('artist_seeded', { provider: provider.name, providerArtistId, name, artistKey: resolvedKey, inserted, playable, report });
+    return { artistKey: resolvedKey, inserted, playable, report };
 }
 
 /**
@@ -323,16 +344,19 @@ async function seedArtistTracks({ providerArtistId = null, artistKey = null, nam
 async function ensureArtist({ providerArtistId = null, artistKey = null, name = null } = {}) {
     const min = config.catalog.minArtistTracks;
     const provider = getLyricProvider();
-    let key = artistKey || (name ? slugify(name) : null);
+    let key = artistKey || (name ? leadArtistKey(name) : null);
     let count = key ? await Track.countDocuments({ status: 'ACTIVE', hasLyrics: true, instrumental: false, artistKey: key }) : 0;
+    let report = null;
     if (count < min && (providerArtistId || name)) {
         const seeded = await seedArtistTracks({ providerArtistId, artistKey: key, name });
         key = seeded.artistKey || key;
         count = seeded.playable;
+        report = seeded.report;
     }
     if (!key) return null;
-    const sample = await Track.findOne({ artistKey: key, status: 'ACTIVE' }).select('artist providerArtistId').lean();
-    return { artistKey: key, name: sample?.artist || name || key, providerArtistId: sample?.providerArtistId || (providerArtistId ? String(providerArtistId) : null), playable: count, provider: provider.name };
+    const sample = await Track.findOne({ artistKey: key, status: 'ACTIVE' }).sort({ artist: 1 }).select('artist providerArtistId').lean();
+    const display = (sample?.artist || name || key).split(/\s+(?:feat\.?|ft\.?|featuring)\s+/i)[0];
+    return { artistKey: key, name: display, providerArtistId: sample?.providerArtistId || (providerArtistId ? String(providerArtistId) : null), playable: count, provider: provider.name, report };
 }
 
 /**
@@ -390,4 +414,4 @@ module.exports = {
     getEligibleTracks,
     invalidateTracks,
     setTrackStatus,
-    listCategories, searchArtists, seedArtistTracks, ensureArtist };
+    listCategories, searchArtists, seedArtistTracks, ensureArtist, normalizeArtistKeys };

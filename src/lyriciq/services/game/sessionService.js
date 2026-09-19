@@ -54,7 +54,9 @@ async function createSession(player, { gameMode = 'QUICK_PLAY', category = null,
         if (flags.artistChallenges === false) throw forbidden('FEATURE_DISABLED', 'Artist rounds are not available right now.');
         const resolved = await catalogService.ensureArtist({ providerArtistId: artist.providerArtistId || null, artistKey: artist.key || null, name: artist.name || null });
         if (!resolved || resolved.playable < config.catalog.minArtistTracks) {
-            throw unavailable('ARTIST_TOO_THIN', `Not enough songs with lyrics for ${resolved?.name || artist.name || 'that artist'} yet. Try another artist.`);
+            const rep = resolved?.report;
+            const why = rep ? ` (${resolved.playable} usable; provider gave ${rep.id ?? '–'} by id, ${rep.name ?? '–'} by name${rep.errors.length ? '; ' + rep.errors.join(', ') : ''})` : '';
+            throw unavailable('ARTIST_TOO_THIN', `Not enough songs with lyrics for ${resolved?.name || artist.name || 'that artist'} yet${why}. Try another artist.`);
         }
         artistScope = { key: resolved.artistKey, name: resolved.name, providerArtistId: resolved.providerArtistId };
     }

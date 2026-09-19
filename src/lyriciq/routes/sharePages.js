@@ -41,11 +41,11 @@ function baseUrl(req) {
     return `${req.protocol}://${req.get('host')}`;
 }
 
-router.get('/s/:id/card.png', async (req, res) => {
+async function sendCard(req, res, formatHint) {
     try {
         const session = await loadCompleted(req.params.id);
         if (!session) return res.status(404).type('text/plain').send('Not found');
-        const format = req.query.format === 'story' ? 'story' : 'og';
+        const format = formatHint === 'story' || req.query.format === 'story' ? 'story' : 'og';
         const png = await cardRenderer.renderCardPng(cardForSession(session), { format, cacheKey: String(session._id) });
         relaxHeaders(res);
         res.setHeader('Content-Type', 'image/png');
@@ -56,7 +56,11 @@ router.get('/s/:id/card.png', async (req, res) => {
         logger.error('share_card_failed', { sessionId: req.params.id, message: err.message });
         res.status(503).type('text/plain').send('Card unavailable');
     }
-});
+}
+
+/** The wide card (1200×630, link previews) and the tall one (1080×1920, stories). */
+router.get('/s/:id/card.png', (req, res) => sendCard(req, res, null));
+router.get('/s/:id/story.png', (req, res) => sendCard(req, res, 'story'));
 
 router.get('/s/:id', async (req, res) => {
     const session = await loadCompleted(req.params.id);

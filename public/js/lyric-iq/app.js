@@ -750,8 +750,9 @@
             (r.share && r.share.cardPath ? '<div class="liq-card liq-enter">' +
                 '<img class="liq-card__img" src="' + esc(r.share.cardPath) + '" alt="Share card: Lyric IQ ' + esc(value === null ? 'unscored' : value) + '" width="1200" height="630" loading="eager" decoding="async">' +
                 '<div class="liq-card__actions">' +
-                '<button class="liq-btn liq-btn--primary" data-action="share">Share</button>' +
-                '<a class="liq-btn" href="' + esc(r.share.storyPath) + '" download="lyric-iq-' + esc(value === null ? 'card' : value) + '-story.png" data-action="save-story">Save for Stories</a>' +
+                '<button class="liq-btn liq-btn--primary" data-action="share">Share link</button>' +
+                '<button class="liq-btn" data-action="share-image" data-format="story">Stories (tall)</button>' +
+                '<button class="liq-btn" data-action="share-image" data-format="card">Card (wide)</button>' +
                 '<button class="liq-btn liq-btn--ghost" data-action="copy-link">Copy link</button>' +
                 '</div></div>' : '') +
             '<div class="liq-result__actions">' +
@@ -807,8 +808,8 @@
             '<a class="liq-btn liq-btn--sm" href="https://wa.me/?text=' + enc(text + ' ' + url) + '" target="_blank" rel="noopener" data-action="share-to" data-to="whatsapp">WhatsApp</a>' +
             '<a class="liq-btn liq-btn--sm" href="https://twitter.com/intent/tweet?text=' + enc(text) + '&url=' + enc(url) + '" target="_blank" rel="noopener" data-action="share-to" data-to="x">X</a>' +
             '<a class="liq-btn liq-btn--sm" href="https://www.facebook.com/sharer/sharer.php?u=' + enc(url) + '" target="_blank" rel="noopener" data-action="share-to" data-to="facebook">Facebook</a>' +
-            (r.share.cardPath ? '<a class="liq-btn liq-btn--sm" href="' + esc(r.share.cardPath) + '" download="lyric-iq-' + esc(value) + '.png" data-action="share-to" data-to="download">Save card</a>' : '') +
-            (r.share.storyPath ? '<a class="liq-btn liq-btn--sm" href="' + esc(r.share.storyPath) + '" download="lyric-iq-' + esc(value) + '-story.png" data-action="share-to" data-to="story">Save for Stories</a>' : '') +
+            (r.share.storyPath ? '<button class="liq-btn liq-btn--sm" data-action="share-image" data-format="story">Stories (tall)</button>' : '') +
+            (r.share.cardPath ? '<button class="liq-btn liq-btn--sm" data-action="share-image" data-format="card">Card (wide)</button>' : '') +
             '</div>' +
             '<p class="liq-sheet__hint">On your phone over https the Share button opens the system share sheet with the card attached.</p>' +
             '</div>';
@@ -831,6 +832,29 @@
         // line as well only repeats it. The card file stays available in the sheet.
         if (navigator.share) return navigator.share({ url: url }).catch(function (err) { if (err && err.name !== 'AbortError') openShareSheet(r); });
         openShareSheet(r);
+    }
+
+    /**
+     * Hand a card image to the phone's share sheet (Instagram, Snapchat, Messages
+     * all take it as a picture). Elsewhere, open it so it can be saved.
+     */
+    function shareImage(format) {
+        var r = state.results;
+        if (!r || !r.share) return;
+        var story = format === 'story';
+        var path = story ? r.share.storyPath : r.share.cardPath;
+        if (!path) return;
+        var value = r.lyricIq && r.lyricIq.after !== null && r.lyricIq.after !== undefined ? r.lyricIq.after : 'card';
+        var name = 'lyric-iq-' + value + (story ? '-story' : '') + '.png';
+        api.track(story ? 'share_story_save' : 'share_card', { game_mode: r.session.gameMode });
+        var open = function () { window.open(path, '_blank', 'noopener'); };
+        if (!navigator.share || !navigator.canShare || typeof File === 'undefined') return open();
+        toast(story ? 'Preparing the tall card…' : 'Preparing the card…', 1500);
+        fetch(path).then(function (res) { if (!res.ok) throw new Error('card'); return res.blob(); }).then(function (blob) {
+            var file = new File([blob], name, { type: 'image/png' });
+            if (!navigator.canShare({ files: [file] })) return open();
+            return navigator.share({ files: [file], title: 'Wordeth Lyric IQ' }).catch(function (err) { if (err && err.name !== 'AbortError') open(); });
+        }).catch(open);
     }
 
     /* ------------------------------------------------------------------ */
@@ -1046,7 +1070,7 @@
             case 'copy-link': { e.preventDefault(); if (state.results) { api.track('share_link_copy', { game_mode: state.results.session.gameMode }); copyText(shareUrlFor(state.results), 'Link copied.'); } break; }
             case 'sheet-close': e.preventDefault(); closeShareSheet(); break;
             case 'share-to': if (state.results) api.track('share_to', { game_mode: state.results.session.gameMode, target: el.getAttribute('data-to') }); break;
-            case 'save-story': if (state.results) api.track('share_story_save', { game_mode: state.results.session.gameMode }); break;
+            case 'share-image': e.preventDefault(); shareImage(el.getAttribute('data-format')); break;
             case 'share-profile': {
                 var sp = state.profileShare;
                 if (!sp) break;
