@@ -14,7 +14,7 @@ const usageEventSchema = new mongoose.Schema({
     },
     segment: {
         type: String,
-        enum: ['lyrics', 'community', 'merch', 'auth', 'general', 'verses', 'tournament'],
+        enum: ['lyrics', 'community', 'merch', 'auth', 'general', 'verses', 'tournament', 'lyriciq'],
         required: true,
         index: true
     },

@@ -45,6 +45,12 @@ Wordeth is a social music experience platform that creates an interactive commun
 - **Analytics**: Event tracking with admin dashboard, AWS S3 archival for historical data
 - **Privacy**: Cookie consent, GDPR/CCPA compliance tools, user account deletion
 
+### Lyric IQ (game subsystem)
+- **Location**: `src/lyriciq/` mounted at `/api/game`, `/api/daily`, `/api/profile`, `/api/leaderboards`, `/api/internal`; page at `public/lyric-iq.html`
+- **Docs**: `README.md`, `docs/lyric-iq/`, `BUILD_LOG.md`, `DECISIONS.md`
+- **Provider**: Musixmatch through `providers/lyrics/` (synthetic test catalog when no key)
+- **Tests**: `npm run test:lyriciq`
+
 ## Environment Variables Required
 
 ### Required

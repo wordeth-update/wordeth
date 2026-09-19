@@ -10,7 +10,10 @@
     "validate-env": "node scripts/validate-env.js",
     "build:mobile": "node scripts/build-mobile.js",
     "cap:sync": "npx cap sync",
-    "mobile:build": "node scripts/build-mobile.js && npx cap sync"
+    "mobile:build": "node scripts/build-mobile.js && npx cap sync",
+    "test:lyriciq": "jest tests/lyriciq --coverage=false",
+    "dev:db": "node scripts/dev-mongo.js",
+    "lyriciq:seed": "node scripts/lyriciq-seed-catalog.js"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.2",
@@ -62,6 +65,7 @@
       "models/**/*.js",
       "middleware/**/*.js",
       "services/**/*.js",
+      "src/**/*.js",
       "!**/node_modules/**"
     ]
   }
