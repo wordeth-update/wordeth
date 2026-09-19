@@ -356,31 +356,35 @@ async function seedArtistTracks({ providerArtistId = null, artistKey = null, nam
             }
         }
     }
-    // Still short: the provider keeps several entries under the same name and the
-    // picker cannot tell which one holds the songs. Try each, one page, keep the richest.
+    // Still short. The provider files every collaboration as its own artist entity
+    // ("Lil Wayne feat. Drake" has an id of its own) and keeps duplicates of the plain
+    // name too. Gather from every entity the artist leads, best rated first, until the
+    // pool is comfortable; the richest entity is read to the end.
     if (playable < min && name && typeof provider.listArtistIds === 'function' && typeof provider.getArtistTracks === 'function') {
         try {
-            const entries = (await provider.listArtistIds({ query: name }))
+            const target = Math.max(min * 3, 18);
+            const entries = (await provider.listArtistIds({ query: name, pageSize: 100 }))
                 .filter((a) => leadArtistKey(a.name) === key && !acceptedIds.has(String(a.providerArtistId)))
-                .slice(0, 6);
+                .slice(0, 12);
             let best = null;
-            const firstPages = new Map();
             for (const a of entries) {
                 const id = String(a.providerArtistId);
                 let page1 = [];
                 try { page1 = await provider.getArtistTracks({ providerArtistId: id, page: 1 }); } catch (err) { report.errors.push(`probe:${err.code || 'ERROR'}`); if (!(err instanceof ProviderError)) throw err; continue; }
-                const usable = page1.filter((t) => t.hasLyrics && !t.instrumental).length;
+                acceptedIds.add(id);
+                let usable = 0;
+                for (const t of page1) { if (own(t)) { await upsertTrack(t); inserted++; usable++; } }
                 report.probes.push(`${id}:${usable}`);
-                firstPages.set(id, page1);
-                if (!best || usable > best.usable) best = { id, usable };
-                if (usable >= config.provider.musixmatch.seedPageSize) break;   // a full page: this is the one
+                if (!best || usable > best.usable) best = { id, usable, full: page1.length >= config.provider.musixmatch.seedPageSize };
+                playable = await count();
+                if (playable >= target) break;
             }
             if (best && best.usable > 0) {
-                acceptedIds.add(best.id);
                 report.learnedId = best.id;
-                for (const t of firstPages.get(best.id)) { if (own(t)) { await upsertTrack(t); inserted++; } }
-                if (pages > 1) await pull('id', async (page) => (page === 1 ? [] : provider.getArtistTracks({ providerArtistId: best.id, page })));
-                playable = await count();
+                if (best.full && pages > 1 && playable < target) {
+                    await pull('id', async (page) => (page === 1 ? [] : provider.getArtistTracks({ providerArtistId: best.id, page })));
+                    playable = await count();
+                }
             }
         } catch (err) {
             logger.error('provider_error', { provider: provider.name, code: err.code, message: err.message, phase: 'artist_seed_probe', name });

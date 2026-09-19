@@ -21,18 +21,24 @@ class FakeMusixmatch extends providers.SyntheticProvider {
     async listArtistIds() {
         return [
             { providerArtistId: '1', name: 'Lil Wayne', rating: 90 }, { providerArtistId: '2', name: 'Lil Wayne', rating: 80 },
-            { providerArtistId: '1039', name: 'Lil Wayne', rating: 70 }, { providerArtistId: '5', name: 'Lil Tecca', rating: 60 }
+            { providerArtistId: '1039', name: 'Lil Wayne', rating: 70 }, { providerArtistId: '5', name: 'Lil Tecca', rating: 60 },
+            { providerArtistId: '301', name: 'Lil Wayne feat. Drake', rating: 65 }, { providerArtistId: '302', name: 'Lil Wayne feat. Bruno Mars', rating: 64 },
+            { providerArtistId: '303', name: 'Drake feat. Lil Wayne', rating: 63 }
         ];
     }
     async getArtistTracks({ providerArtistId, page }) {
         this.calls.push(['id', providerArtistId, page]);
-        if (providerArtistId === '1') return page === 1 ? [track(1, 'Lil Wayne', 'A Milli', '1'), track(2, 'Lil Wayne', 'Go DJ', '1')] : [];
+        if (page > 1 && providerArtistId !== '1039') return [];
+        if (providerArtistId === '1') return [track(1, 'Lil Wayne', 'A Milli', '1'), track(2, 'Lil Wayne', 'Go DJ', '1')];
         if (providerArtistId === '2') return [];
         if (providerArtistId === '1039') {
             if (page === 1) return Array.from({ length: 25 }, (_, i) => track(100 + i, i % 4 === 0 ? 'Lil Wayne feat. Drake' : 'Lil Wayne', 'Song ' + i, '1039'));
             if (page === 2) return [track(200, 'Lil Wayne', 'Fireman', '1039')];
             return [];
         }
+        if (providerArtistId === '301') return [track(301, 'Lil Wayne feat. Drake', 'She Will', '301'), track(311, 'Lil Wayne feat. Drake', 'Believe Me', '301')];
+        if (providerArtistId === '302') return [track(302, 'Lil Wayne feat. Bruno Mars', 'Mirror', '302')];
+        if (providerArtistId === '303') return [track(303, 'Drake feat. Lil Wayne', 'HYFR', '303')];
         return [];
     }
     async getArtistTracksByName({ name, page }) {
@@ -52,21 +58,33 @@ beforeAll(async () => {
 });
 afterAll(async () => { providers.setLyricProvider(previous); await db.disconnect(); });
 
-test('probes the provider\'s sibling entries for the one that holds the songs; other "Lil" artists stay out', async () => {
+test('gathers from every entity the artist leads, reads the richest to the end, keeps guest verses out', async () => {
     const fake = providers.getLyricProvider();
     const r = await catalogService.ensureArtist({ providerArtistId: '1', name: 'Lil Wayne' });
     expect(r.artistKey).toBe('lil-wayne');
-    // 2 from the picked id + nothing usable from the loose name search + 26 from the richest entry
-    expect(r.playable).toBe(28);
+    // 2 (picked id) + 0 (loose name search) + 0 (id 2) + 25 (id 1039, page 1) → target reached before the feat. entities
+    expect(r.playable).toBe(27);
     expect(r.report.learnedId).toBe('1039');
     expect(r.report.probes).toEqual(['2:0', '1039:25']);
-    expect(fake.calls.some((c) => c[0] === 'id' && c[1] === '1039' && c[2] === 2)).toBe(true);
-    for (const title of ['Ransom', 'Drip Too Hard', 'X']) expect(await Track.findOne({ title }).lean()).toBeNull();
-    const feat = await Track.findOne({ title: 'Song 4' }).lean();
-    expect(feat.artistKey).toBe('lil-wayne');
-    // Second time round nothing is fetched: the catalogue already holds enough.
+    for (const title of ['Ransom', 'Drip Too Hard', 'X', 'HYFR']) expect(await Track.findOne({ title }).lean()).toBeNull();
+    expect((await Track.findOne({ title: 'Song 4' }).lean()).artistKey).toBe('lil-wayne');
     fake.calls.length = 0;
     const again = await catalogService.ensureArtist({ providerArtistId: '1', name: 'Lil Wayne' });
-    expect(again.playable).toBe(28);
+    expect(again.playable).toBe(27);
     expect(fake.calls).toHaveLength(0);
+});
+
+test('when the plain entries are thin, the collaboration entities add up', async () => {
+    await Track.deleteMany({ artistKey: 'lil-wayne' });
+    const fake = providers.getLyricProvider();
+    const rich = fake.getArtistTracks.bind(fake);
+    fake.getArtistTracks = async ({ providerArtistId, page }) => (providerArtistId === '1039' ? [] : rich({ providerArtistId, page }));
+    config.catalog.minArtistTracks = 4;
+    const r = await catalogService.ensureArtist({ providerArtistId: '1', name: 'Lil Wayne' });
+    fake.getArtistTracks = rich;
+    // 2 solo + 2 with Drake + 1 with Bruno Mars; Drake's own song with him as guest stays out
+    expect(r.playable).toBe(5);
+    expect(r.report.probes).toEqual(['2:0', '1039:0', '301:2', '302:1']);
+    expect(await Track.findOne({ title: 'HYFR' }).lean()).toBeNull();
+    expect((await Track.findOne({ title: 'Mirror' }).lean()).artistKey).toBe('lil-wayne');
 });
