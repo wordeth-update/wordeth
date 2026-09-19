@@ -363,9 +363,13 @@ async function seedArtistTracks({ providerArtistId = null, artistKey = null, nam
     if (playable < min && name && typeof provider.listArtistIds === 'function' && typeof provider.getArtistTracks === 'function') {
         try {
             const target = Math.max(min * 3, 18);
+            // Oldest entity first: the canonical entry for a big name was created long
+            // before its duplicates, and the provider's own ratings do not tell them apart.
+            const idNum = (a) => (/^\d+$/.test(String(a.providerArtistId)) ? Number(a.providerArtistId) : Number.MAX_SAFE_INTEGER);
             const entries = (await provider.listArtistIds({ query: name, pageSize: 100 }))
                 .filter((a) => leadArtistKey(a.name) === key && !acceptedIds.has(String(a.providerArtistId)))
-                .slice(0, 12);
+                .sort((a, b) => idNum(a) - idNum(b) || b.rating - a.rating)
+                .slice(0, 16);
             let best = null;
             for (const a of entries) {
                 const id = String(a.providerArtistId);

@@ -62,15 +62,15 @@ test('gathers from every entity the artist leads, reads the richest to the end, 
     const fake = providers.getLyricProvider();
     const r = await catalogService.ensureArtist({ providerArtistId: '1', name: 'Lil Wayne' });
     expect(r.artistKey).toBe('lil-wayne');
-    // 2 (picked id) + 0 (loose name search) + 0 (id 2) + 25 (id 1039, page 1) → target reached before the feat. entities
-    expect(r.playable).toBe(27);
+    // oldest entities first: 2 (picked id) + 0 (id 2) + 2 (301) + 1 (302) + 25 (1039, page 1) → target reached
+    expect(r.playable).toBe(30);
     expect(r.report.learnedId).toBe('1039');
-    expect(r.report.probes).toEqual(['2:0', '1039:25']);
+    expect(r.report.probes).toEqual(['2:0', '301:2', '302:1', '1039:25']);
     for (const title of ['Ransom', 'Drip Too Hard', 'X', 'HYFR']) expect(await Track.findOne({ title }).lean()).toBeNull();
     expect((await Track.findOne({ title: 'Song 4' }).lean()).artistKey).toBe('lil-wayne');
     fake.calls.length = 0;
     const again = await catalogService.ensureArtist({ providerArtistId: '1', name: 'Lil Wayne' });
-    expect(again.playable).toBe(27);
+    expect(again.playable).toBe(30);
     expect(fake.calls).toHaveLength(0);
 });
 
@@ -84,7 +84,7 @@ test('when the plain entries are thin, the collaboration entities add up', async
     fake.getArtistTracks = rich;
     // 2 solo + 2 with Drake + 1 with Bruno Mars; Drake's own song with him as guest stays out
     expect(r.playable).toBe(5);
-    expect(r.report.probes).toEqual(['2:0', '1039:0', '301:2', '302:1']);
+    expect(r.report.probes).toEqual(['2:0', '301:2', '302:1', '1039:0']);
     expect(await Track.findOne({ title: 'HYFR' }).lean()).toBeNull();
     expect((await Track.findOne({ title: 'Mirror' }).lean()).artistKey).toBe('lil-wayne');
 });
