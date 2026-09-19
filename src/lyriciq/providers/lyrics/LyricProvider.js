@@ -45,6 +45,11 @@ class LyricProvider {
         return [];
     }
 
+    /** Every provider entry for a name, for probing which one holds the songs. */
+    async listArtistIds(/* { query, pageSize } */) {
+        return [];
+    }
+
     /** Same, by artist name, for providers whose ids are unreliable. @returns {Promise<NormalizedTrack[]>} */
     async getArtistTracksByName(/* { name, page, pageSize } */) {
         return [];

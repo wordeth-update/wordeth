@@ -291,7 +291,7 @@ async function seedArtistTracks({ providerArtistId = null, artistKey = null, nam
     const key = artistKey || (name ? leadArtistKey(name) : null);
     const min = config.catalog.minArtistTracks;
     let inserted = 0;
-    const report = { id: null, name: null, learnedId: null, errors: [], rejected: [] };
+    const report = { id: null, name: null, learnedId: null, probes: [], errors: [], rejected: [] };
     const acceptedIds = new Set(providerArtistId ? [String(providerArtistId)] : []);
     // "Lil Wayne", "Lil Wayne feat. Drake", "Lil Wayne & Drake", "Lil Wayne, Future": the
     // artist leads the credit. "Drake feat. Lil Wayne" does not.
@@ -317,7 +317,7 @@ async function seedArtistTracks({ providerArtistId = null, artistKey = null, nam
             for (let page = 1; page <= pages; page++) {
                 const tracks = await fetchPage(page);
                 report[label] += tracks.length;
-                if (!tracks.length) break;
+                if (!tracks.length) { if (page === 1) continue; break; }
                 for (const t of tracks) {
                     seen.push(t);
                     if (!own(t)) continue;
@@ -354,6 +354,38 @@ async function seedArtistTracks({ providerArtistId = null, artistKey = null, nam
                 await pull('id', (page) => provider.getArtistTracks({ providerArtistId: learned[0], page }));
                 playable = await count();
             }
+        }
+    }
+    // Still short: the provider keeps several entries under the same name and the
+    // picker cannot tell which one holds the songs. Try each, one page, keep the richest.
+    if (playable < min && name && typeof provider.listArtistIds === 'function' && typeof provider.getArtistTracks === 'function') {
+        try {
+            const entries = (await provider.listArtistIds({ query: name }))
+                .filter((a) => leadArtistKey(a.name) === key && !acceptedIds.has(String(a.providerArtistId)))
+                .slice(0, 6);
+            let best = null;
+            const firstPages = new Map();
+            for (const a of entries) {
+                const id = String(a.providerArtistId);
+                let page1 = [];
+                try { page1 = await provider.getArtistTracks({ providerArtistId: id, page: 1 }); } catch (err) { report.errors.push(`probe:${err.code || 'ERROR'}`); if (!(err instanceof ProviderError)) throw err; continue; }
+                const usable = page1.filter((t) => t.hasLyrics && !t.instrumental).length;
+                report.probes.push(`${id}:${usable}`);
+                firstPages.set(id, page1);
+                if (!best || usable > best.usable) best = { id, usable };
+                if (usable >= config.provider.musixmatch.seedPageSize) break;   // a full page: this is the one
+            }
+            if (best && best.usable > 0) {
+                acceptedIds.add(best.id);
+                report.learnedId = best.id;
+                for (const t of firstPages.get(best.id)) { if (own(t)) { await upsertTrack(t); inserted++; } }
+                if (pages > 1) await pull('id', async (page) => (page === 1 ? [] : provider.getArtistTracks({ providerArtistId: best.id, page })));
+                playable = await count();
+            }
+        } catch (err) {
+            logger.error('provider_error', { provider: provider.name, code: err.code, message: err.message, phase: 'artist_seed_probe', name });
+            report.errors.push(`probe:${err.code || 'ERROR'}`);
+            if (!(err instanceof ProviderError)) throw err;
         }
     }
     cache.clear('trackMetadata');

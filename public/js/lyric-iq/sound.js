@@ -20,6 +20,7 @@
     var beds = [];                        // one element per bed, reused for the whole visit
     var logoEl = null;
     var bed = null;                       // the element playing now
+    var bedHeldForLogo = null;            // the bed paused while the sound logo plays
     var bedIndex = -1;
     var unlocked = false;                 // a real tap has happened and the elements are primed
     var wantBed = true;                   // music is the page's ambience: on from the first moment we are allowed
@@ -119,6 +120,7 @@
 
     function stopBed(quick) {
         wantBed = wantBed && quick === 'keep';
+        if (bedHeldForLogo) { try { bedHeldForLogo.pause(); } catch (e) {} bedHeldForLogo = null; }
         var el = bed; bed = null;
         ownerRelease();
         if (!el) return;
@@ -137,18 +139,29 @@
         try { bed.volume = on ? BED_VOLUME * 0.35 : BED_VOLUME; } catch (e) {}
     }
 
+    /* The sound logo owns the room: the bed steps out while it plays and comes back after. */
     function logo() {
         if (muted || !unlocked) return;
         var el = elements()[BEDS.length];
+        var resume = function () {
+            var held = bedHeldForLogo; bedHeldForLogo = null;
+            if (!held || muted || !wantBed) return;
+            if (bed && bed !== held) return;               // something else took over meanwhile
+            bed = held;
+            try { held.volume = BED_VOLUME; } catch (e) {}
+            var p = held.play();
+            if (p && p.then) p.then(ownerClaim, function () { if (bed === held) bed = null; }); else ownerClaim();
+        };
         try {
+            if (bed && !bed.paused) { bedHeldForLogo = bed; try { bed.pause(); } catch (e) {} }
             el.muted = false;
             el.volume = LOGO_VOLUME;
             el.currentTime = 0;
-            duck(true);
-            el.onended = function () { duck(false); };
+            el.onended = resume;
+            el.onerror = resume;
             var p = el.play();
-            if (p && p.catch) p.catch(function () { duck(false); });
-        } catch (e) { duck(false); }
+            if (p && p.catch) p.catch(resume);
+        } catch (e) { resume(); }
     }
 
     function setMuted(next) {
@@ -222,6 +235,6 @@
         setMuted: setMuted,
         toggle: function () { return setMuted(!muted); },
         wantsBed: null,                   // set by the app: () => true while a round is on screen
-        state: function () { return { unlocked: unlocked, muted: muted, bedIndex: bedIndex, bedPlaying: !!(bed && !bed.paused), logoPlaying: !!(logoEl && !logoEl.paused && !logoEl.ended), wantBed: wantBed }; }
+        state: function () { return { unlocked: unlocked, muted: muted, bedIndex: bedIndex, bedPlaying: !!(bed && !bed.paused), bedHeld: !!bedHeldForLogo, logoPlaying: !!(logoEl && !logoEl.paused && !logoEl.ended), wantBed: wantBed }; }
     };
 })();

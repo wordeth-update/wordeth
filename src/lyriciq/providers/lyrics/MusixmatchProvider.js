@@ -188,6 +188,18 @@ class MusixmatchProvider extends LyricProvider {
             .slice(0, pageSize);
     }
 
+    /** Every entry the provider keeps for a name (it keeps several per big artist), best rated first. */
+    async listArtistIds({ query = '', pageSize = 30 } = {}) {
+        const q = String(query || '').trim();
+        if (!q) return [];
+        const body = await this._call('artist.search', { q_artist: q, page: 1, page_size: pageSize });
+        const list = body?.artist_list;
+        if (!Array.isArray(list)) throw new ProviderError('BAD_PAYLOAD', 'Musixmatch artist search payload missing artist_list', { provider: this.name });
+        return list.map((item) => item && item.artist).filter((a) => a && a.artist_id !== undefined && a.artist_name)
+            .map((a) => ({ providerArtistId: String(a.artist_id), name: String(a.artist_name).trim(), rating: Number(a.artist_rating) || 0 }))
+            .sort((a, b) => b.rating - a.rating);
+    }
+
     /** track.search by artist name: the fallback when an artist id turns up nothing. */
     async getArtistTracksByName({ name, page = 1, pageSize = config.provider.musixmatch.seedPageSize } = {}) {
         const q = String(name || '').trim();

@@ -48,6 +48,10 @@ class SyntheticProvider extends LyricProvider {
         return Array.from(seen.values()).slice(0, pageSize);
     }
 
+    async listArtistIds({ query = '', pageSize = 30 } = {}) {
+        return this.searchArtists({ query, pageSize });
+    }
+
     async getArtistTracksByName({ name, pageSize = 50 } = {}) {
         return this.getArtistTracks({ providerArtistId: slugify(name), pageSize });
     }
