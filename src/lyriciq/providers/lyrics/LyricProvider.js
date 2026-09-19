@@ -44,6 +44,11 @@ class LyricProvider {
     async getArtistTracks(/* { providerArtistId, page, pageSize } */) {
         return [];
     }
+
+    /** Same, by artist name, for providers whose ids are unreliable. @returns {Promise<NormalizedTrack[]>} */
+    async getArtistTracksByName(/* { name, page, pageSize } */) {
+        return [];
+    }
 }
 
 module.exports = LyricProvider;

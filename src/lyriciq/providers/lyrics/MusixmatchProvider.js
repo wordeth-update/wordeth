@@ -3,6 +3,7 @@
 const axios = require('axios');
 const LyricProvider = require('./LyricProvider');
 const { finalizeTrack, finalizeLyricAsset } = require('./normalizeTrack');
+const { slugify } = require('./normalizeTrack');
 const { ProviderError } = require('../../utilities/errors');
 const config = require('../../config');
 const logger = require('../../utilities/logger');
@@ -164,15 +165,38 @@ class MusixmatchProvider extends LyricProvider {
     async searchArtists({ query = '', pageSize = 10 } = {}) {
         const q = String(query || '').trim();
         if (!q) return [];
-        const body = await this._call('artist.search', { q_artist: q, page: 1, page_size: pageSize });
+        // Musixmatch returns every credit that matches, including features and empty
+        // duplicates, in no useful order. Keep one entry per name, the best rated,
+        // and never a "feat." credit: those are not artists a player would pick.
+        const body = await this._call('artist.search', { q_artist: q, page: 1, page_size: Math.max(pageSize * 3, 20) });
         const list = body?.artist_list;
         if (!Array.isArray(list)) throw new ProviderError('BAD_PAYLOAD', 'Musixmatch artist search payload missing artist_list', { provider: this.name });
-        return list.map((item) => item.artist).filter((a) => a && a.artist_id !== undefined).map((a) => ({
-            providerArtistId: String(a.artist_id),
-            name: a.artist_name,
-            country: a.artist_country || null,
-            rating: a.artist_rating || 0
-        }));
+        const byKey = new Map();
+        for (const item of list) {
+            const a = item && item.artist;
+            if (!a || a.artist_id === undefined || !a.artist_name) continue;
+            const name = String(a.artist_name).trim();
+            if (/\b(feat|ft)\.?\s|\bfeaturing\b/i.test(name)) continue;
+            const key = slugify(name);
+            const entry = { providerArtistId: String(a.artist_id), name, country: a.artist_country || null, rating: Number(a.artist_rating) || 0 };
+            const seen = byKey.get(key);
+            if (!seen || entry.rating > seen.rating) byKey.set(key, entry);
+        }
+        const exact = slugify(q);
+        return Array.from(byKey.values())
+            .sort((a, b) => (Number(slugify(b.name) === exact) - Number(slugify(a.name) === exact)) || b.rating - a.rating)
+            .slice(0, pageSize);
+    }
+
+    /** track.search by artist name: the fallback when an artist id turns up nothing. */
+    async getArtistTracksByName({ name, page = 1, pageSize = config.provider.musixmatch.seedPageSize } = {}) {
+        const q = String(name || '').trim();
+        if (!q) throw new ProviderError('BAD_REQUEST', 'name is required', { provider: this.name });
+        const params = { q_artist: q, f_has_lyrics: 1, s_track_rating: 'desc', page, page_size: pageSize };
+        const body = await this._call('track.search', params);
+        const list = body?.track_list;
+        if (!Array.isArray(list)) throw new ProviderError('BAD_PAYLOAD', 'Musixmatch artist name search payload missing track_list', { provider: this.name });
+        return list.map((item) => this._normalizeTrack(item.track));
     }
 
     /** track.search + f_artist_id: everything with lyrics by one artist, best rated first. */

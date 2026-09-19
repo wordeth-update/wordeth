@@ -81,3 +81,28 @@ describe('MusixmatchProvider genre seeding', () => {
         expect((await p.getLyrics(1)).language).toBe('es');
     });
 });
+
+describe('MusixmatchProvider artist picker', () => {
+    const artists = (list) => mm({ artist_list: list.map((a) => ({ artist: a })) });
+    test('one entry per name, best rated, exact match first, never a feat. credit', async () => {
+        const p = provider(async (url) => (/artist\.search/.test(url) ? artists([
+            { artist_id: 1, artist_name: 'Jay Z', artist_rating: 20 },
+            { artist_id: 2, artist_name: 'JAY-Z feat. Jay Z', artist_rating: 90 },
+            { artist_id: 3, artist_name: 'Z jay', artist_rating: 5 },
+            { artist_id: 4, artist_name: 'JAY-Z', artist_rating: 95 },
+            { artist_id: 5, artist_name: 'Jay-Z ft. Beyonce', artist_rating: 80 },
+            { artist_id: 6, artist_name: 'Jay Zed', artist_rating: 50 }
+        ]) : mm({})));
+        const list = await p.searchArtists({ query: 'jay z', pageSize: 10 });
+        expect(list.map((a) => a.name)).toEqual(['JAY-Z', 'Jay Zed', 'Z jay']);
+        expect(list[0].providerArtistId).toBe('4');
+    });
+    test('name search asks track.search by artist name with lyrics only', async () => {
+        const calls = [];
+        const p = provider(async (url, opts) => { calls.push({ url, params: opts.params }); return mm({ track_list: [{ track: rawTrack }] }); });
+        const list = await p.getArtistTracksByName({ name: 'Test Artist', page: 2 });
+        expect(list).toHaveLength(1);
+        expect(calls[0].url).toMatch(/track\.search/);
+        expect(calls[0].params).toMatchObject({ q_artist: 'Test Artist', f_has_lyrics: 1, page: 2 });
+    });
+});

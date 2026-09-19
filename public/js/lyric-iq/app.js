@@ -397,7 +397,6 @@
             state.results = null;
             setRoute('#game');
             document.body.setAttribute('data-screen', 'game');
-            sound.bed(true);
             api.track('game_start', { game_mode: mode, category: state.category, artist: scoped ? state.artist.key : null, resumed: !!data.resumed });
             if (!data.question) return finishAndShowResults();
             renderGame();
@@ -681,7 +680,6 @@
             if (r.lyricIq && r.lyricIq.after !== null) state.lyricIq = r.lyricIq.after;
             api.track('game_complete', { game_mode: r.session.gameMode, score: r.session.score, streak: r.session.bestStreak, correct: r.session.correctCount });
             setRoute('#results/' + r.session.id);
-            sound.bed(false);
             sound.logo();
             renderResults(r, { daily: r.session.gameMode === 'DAILY_10' });
         }).catch(function (err) { renderError(err, 'home'); });
@@ -694,7 +692,6 @@
         if (s.answered > 0) return finishAndShowResults();
         api.abandon(s.id).catch(function () {});
         state.session = null; state.question = null;
-        sound.bed(false);
         setRoute('#play');
         renderEntry();
     }
@@ -993,7 +990,6 @@
     /* ------------------------------------------------------------------ */
     function route() {
         var hash = location.hash || '#play';
-        if (hash !== '#game') sound.bed(false);
         document.body.setAttribute('data-screen', hash.slice(1).split('/')[0] || 'play');
         if (hash.indexOf('#results/') === 0) {
             var id = hash.slice(9);
@@ -1138,7 +1134,6 @@
             toast(m ? 'Sound off.' : 'Sound on.', 1400);
         });
     })();
-    if (window.LiqSound) window.LiqSound.wantsBed = function () { return location.hash === '#game' && !!state.session && state.session.status === 'ACTIVE'; };
 
     window.addEventListener('popstate', function () { route(); });
     window.addEventListener('hashchange', function () { route(); });

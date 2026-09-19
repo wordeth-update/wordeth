@@ -259,30 +259,54 @@ async function searchArtists({ query = '', limit = 10 } = {}) {
     return out.slice(0, limit);
 }
 
-/** Pull one artist's tracks into the catalogue. Returns how many are now playable. */
-async function seedArtistTracks({ providerArtistId, artistKey = null, pages = config.catalog.artistPages } = {}) {
+/**
+ * Pull one artist's tracks into the catalogue. Returns how many are now playable.
+ *
+ * Two passes: by provider id first, then by name when the id came up short
+ * (Musixmatch holds several ids per big name and the picker cannot tell which
+ * one carries the songs). Only the artist's own credits count: a track whose
+ * artist slug is not the requested artist is skipped, so a "feat." credit can
+ * never pad the pool.
+ */
+async function seedArtistTracks({ providerArtistId = null, artistKey = null, name = null, pages = config.catalog.artistPages } = {}) {
     const provider = getLyricProvider();
+    const key = artistKey || (name ? slugify(name) : null);
+    const min = config.catalog.minArtistTracks;
     let inserted = 0;
-    try {
-        for (let page = 1; page <= pages; page++) {
-            const tracks = await provider.getArtistTracks({ providerArtistId, page });
-            if (!tracks.length) break;
-            for (const t of tracks) {
-                if (!t.hasLyrics || t.instrumental) continue;
-                await upsertTrack(t);
-                inserted++;
+    const own = (t) => t.hasLyrics && !t.instrumental && (!key || t.artistKey === key);
+
+    async function pull(label, fetchPage) {
+        try {
+            for (let page = 1; page <= pages; page++) {
+                const tracks = await fetchPage(page);
+                if (!tracks.length) break;
+                for (const t of tracks) {
+                    if (!own(t)) continue;
+                    await upsertTrack(t);
+                    inserted++;
+                }
+                if (tracks.length < config.provider.musixmatch.seedPageSize) break;
             }
-            if (tracks.length < config.provider.musixmatch.seedPageSize) break;
+        } catch (err) {
+            logger.error('provider_error', { provider: provider.name, code: err.code, message: err.message, phase: `artist_seed_${label}`, providerArtistId, name });
+            if (!(err instanceof ProviderError)) throw err;
         }
-    } catch (err) {
-        logger.error('provider_error', { provider: provider.name, code: err.code, message: err.message, phase: 'artist_seed', providerArtistId });
-        if (!(err instanceof ProviderError)) throw err;
+    }
+    const count = async () => (key ? Track.countDocuments({ status: 'ACTIVE', hasLyrics: true, instrumental: false, artistKey: key }) : 0);
+
+    if (providerArtistId && typeof provider.getArtistTracks === 'function') {
+        await pull('id', (page) => provider.getArtistTracks({ providerArtistId, page }));
+    }
+    let playable = await count();
+    if (playable < min && name && typeof provider.getArtistTracksByName === 'function') {
+        await pull('name', (page) => provider.getArtistTracksByName({ name, page }));
+        playable = await count();
     }
     cache.clear('trackMetadata');
-    const key = artistKey || (await Track.findOne({ provider: provider.name, providerArtistId: String(providerArtistId) }).select('artistKey').lean())?.artistKey || null;
-    const playable = key ? await Track.countDocuments({ status: 'ACTIVE', hasLyrics: true, instrumental: false, artistKey: key }) : 0;
-    logger.info('artist_seeded', { provider: provider.name, providerArtistId, artistKey: key, inserted, playable });
-    return { artistKey: key, inserted, playable };
+    const resolvedKey = key || (providerArtistId ? (await Track.findOne({ provider: provider.name, providerArtistId: String(providerArtistId) }).select('artistKey').lean())?.artistKey : null) || null;
+    if (!key && resolvedKey) playable = await Track.countDocuments({ status: 'ACTIVE', hasLyrics: true, instrumental: false, artistKey: resolvedKey });
+    logger.info('artist_seeded', { provider: provider.name, providerArtistId, name, artistKey: resolvedKey, inserted, playable });
+    return { artistKey: resolvedKey, inserted, playable };
 }
 
 /**
@@ -294,8 +318,8 @@ async function ensureArtist({ providerArtistId = null, artistKey = null, name = 
     const provider = getLyricProvider();
     let key = artistKey || (name ? slugify(name) : null);
     let count = key ? await Track.countDocuments({ status: 'ACTIVE', hasLyrics: true, instrumental: false, artistKey: key }) : 0;
-    if (count < min && providerArtistId) {
-        const seeded = await seedArtistTracks({ providerArtistId, artistKey: key });
+    if (count < min && (providerArtistId || name)) {
+        const seeded = await seedArtistTracks({ providerArtistId, artistKey: key, name });
         key = seeded.artistKey || key;
         count = seeded.playable;
     }

@@ -1,21 +1,47 @@
 /* Wordeth Lyric IQ — sound. Taps, right/wrong, the Wordeth sound logo, and a lo-fi bed behind play.
-   Everything is optional: no AudioContext, no permission, or the player's mute → silence, never an error. */
+   Everything is optional: no AudioContext, no permission, or the player's mute → silence, never an error.
+
+   Phones only play audio that was started inside a tap. So the first tap on the
+   page starts (and instantly pauses) every media element we will ever use; from
+   then on those same elements may be played from timers and network callbacks.
+   iOS ignores element volume, so the files themselves are mixed at the right level. */
 (function () {
     'use strict';
 
     var KEY = 'liq_sound';               // 'off' when the player muted us
     var BEDS = ['audio/lyric-iq/bed-1.m4a', 'audio/lyric-iq/bed-2.m4a'];
     var LOGO = 'audio/lyric-iq/logo.m4a';
-    var BED_VOLUME = 0.55;                // the files are already quiet and band-limited
+    var BED_VOLUME = 0.55;                // honoured where volume is adjustable; the files are already quiet
     var LOGO_VOLUME = 0.8;
 
     var ctx = null;
     var muted = false;
     try { muted = localStorage.getItem(KEY) === 'off'; } catch (e) { /* storage blocked */ }
-    var bed = null;                       // the <audio> playing now
-    var bedIndex = -1;
-    var unlocked = false;                 // a user gesture has happened
+    var beds = [];                        // one element per bed, reused for the whole visit
     var logoEl = null;
+    var bed = null;                       // the element playing now
+    var bedIndex = -1;
+    var unlocked = false;                 // a real tap has happened and the elements are primed
+    var wantBed = true;                   // music is the page's ambience: on from the first moment we are allowed
+
+    function make(src, vol) {
+        var el = new Audio(src);
+        el.preload = 'auto';
+        el.setAttribute('playsinline', '');
+        try { el.volume = vol; } catch (e) { /* iOS */ }
+        return el;
+    }
+    function elements() {
+        if (!beds.length) {
+            beds = BEDS.map(function (src, i) {
+                var el = make(src, BED_VOLUME);
+                el.addEventListener('ended', function () { if (bed === el) startBed((i + 1) % BEDS.length); });
+                return el;
+            });
+        }
+        if (!logoEl) logoEl = make(LOGO, LOGO_VOLUME);
+        return beds.concat([logoEl]);
+    }
 
     function context() {
         if (ctx) return ctx;
@@ -26,7 +52,7 @@
         return ctx;
     }
 
-    /* Short synthesized tones: no files, no latency. */
+    /* Short synthesized tones: no files, no latency. (Follows the phone's silent switch, as games do.) */
     function tone(spec) {
         if (muted) return;
         var c = context();
@@ -35,7 +61,7 @@
             if (c.state === 'suspended') c.resume();
             var now = c.currentTime;
             var notes = spec.notes || [spec];
-            notes.forEach(function (n, i) {
+            notes.forEach(function (n) {
                 var start = now + (n.at || 0);
                 var osc = c.createOscillator();
                 var gain = c.createGain();
@@ -60,29 +86,27 @@
         tick:    { freq: 1000, dur: 0.03, type: 'square', vol: 0.025 }
     };
 
-    function makeBed(i) {
-        var el = new Audio(BEDS[i]);
-        el.preload = 'auto';
-        el.volume = BED_VOLUME;
-        el.addEventListener('ended', function () { if (bed === el) startBed((i + 1) % BEDS.length); });
-        return el;
-    }
-
     function startBed(i) {
+        wantBed = true;
         if (muted || !unlocked) return;
-        if (bed && bedIndex === i && !bed.paused) return;
+        if (i === undefined) i = bedIndex < 0 ? 0 : bedIndex;
+        var el = elements()[i];
+        if (bed === el && !el.paused) return;
         stopBed(true);
-        bedIndex = i === undefined ? (bedIndex + 1) % BEDS.length : i;
-        bed = makeBed(bedIndex);
-        var p = bed.play();
-        if (p && p.catch) p.catch(function () { bed = null; });
+        bedIndex = i;
+        bed = el;
+        try { el.currentTime = 0; } catch (e) {}
+        try { el.volume = BED_VOLUME; } catch (e) {}
+        var p = el.play();
+        if (p && p.catch) p.catch(function () { if (bed === el) bed = null; });
     }
 
     function stopBed(quick) {
+        wantBed = wantBed && quick === 'keep';
         var el = bed; bed = null;
         if (!el) return;
-        if (quick) { try { el.pause(); } catch (e) {} return; }
-        // Fade out over ~600ms, then release.
+        if (quick === true) { try { el.pause(); } catch (e) {} return; }
+        // Fade over ~600ms where volume is adjustable, then pause.
         var steps = 12, n = 0, v = el.volume;
         var t = setInterval(function () {
             n++;
@@ -98,13 +122,14 @@
 
     function logo() {
         if (muted || !unlocked) return;
+        var el = elements()[BEDS.length];
         try {
-            if (!logoEl) { logoEl = new Audio(LOGO); logoEl.preload = 'auto'; }
-            logoEl.volume = LOGO_VOLUME;
-            logoEl.currentTime = 0;
+            el.muted = false;
+            el.volume = LOGO_VOLUME;
+            el.currentTime = 0;
             duck(true);
-            logoEl.onended = function () { duck(false); };
-            var p = logoEl.play();
+            el.onended = function () { duck(false); };
+            var p = el.play();
             if (p && p.catch) p.catch(function () { duck(false); });
         } catch (e) { duck(false); }
     }
@@ -112,31 +137,63 @@
     function setMuted(next) {
         muted = !!next;
         try { localStorage.setItem(KEY, muted ? 'off' : 'on'); } catch (e) {}
-        if (muted) { stopBed(true); if (logoEl) { try { logoEl.pause(); } catch (e) {} } }
-        else if (unlocked && window.LiqSound.wantsBed && window.LiqSound.wantsBed()) startBed(bedIndex < 0 ? 0 : bedIndex);
+        if (muted) {
+            stopBed('keep');
+            if (logoEl) { try { logoEl.pause(); } catch (e) {} }
+        } else if (unlocked && wantBed) {
+            startBed();
+        }
         return muted;
     }
 
-    /* Browsers only play after a gesture: the first tap anywhere unlocks, and warms the files. */
+    /* The priming tap: start and pause every element, muted, inside the gesture. */
     function unlock() {
         if (unlocked) return;
         unlocked = true;
         var c = context();
         if (c && c.state === 'suspended') { try { c.resume(); } catch (e) {} }
-        try { new Audio(LOGO).preload = 'auto'; new Audio(BEDS[0]).preload = 'auto'; } catch (e) {}
+        elements().forEach(function (el) {
+            try {
+                el.muted = true;
+                var p = el.play();
+                var settle = function () { try { el.pause(); el.currentTime = 0; } catch (e) {} el.muted = false; };
+                if (p && p.then) p.then(settle, function () { el.muted = false; }); else settle();
+            } catch (e) { el.muted = false; }
+        });
+        // Music picks up on this very tap.
+        if (wantBed && !muted) setTimeout(function () { startBed(); }, 150);
     }
-    document.addEventListener('pointerdown', unlock, { capture: true, passive: true });
-    document.addEventListener('keydown', unlock, { capture: true, passive: true });
+    ['touchend', 'click', 'keydown'].forEach(function (ev) {
+        document.addEventListener(ev, unlock, { capture: true, passive: true });
+    });
+
+    /* From the load, where the browser lets us (it does for a site the visitor has
+       played before); everywhere else the first tap picks it up. */
+    function tryAmbient() {
+        if (muted || !wantBed) return;
+        var el = elements()[0];
+        try { el.currentTime = 0; } catch (e) {}
+        var p = el.play();
+        if (p && p.then) {
+            p.then(function () { unlocked = true; bed = el; bedIndex = 0; }, function () { /* waits for the tap */ });
+        }
+    }
+    if (document.readyState === 'complete') tryAmbient();
+    else window.addEventListener('load', tryAmbient);
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) return;
+        if (unlocked && wantBed && !muted && !(bed && !bed.paused)) startBed();
+    });
 
     window.LiqSound = {
         play: function (name) { var s = SFX[name]; if (s) tone(s); },
-        bed: function (on) { if (on) startBed(bedIndex < 0 ? 0 : bedIndex); else stopBed(false); },
+        bed: function (on) { if (on) startBed(); else stopBed(false); },
         logo: logo,
         duck: duck,
         isMuted: function () { return muted; },
         setMuted: setMuted,
         toggle: function () { return setMuted(!muted); },
         wantsBed: null,                   // set by the app: () => true while a round is on screen
-        state: function () { return { unlocked: unlocked, muted: muted, bedIndex: bedIndex, bedPlaying: !!(bed && !bed.paused), logoPlaying: !!(logoEl && !logoEl.paused && !logoEl.ended) }; }
+        state: function () { return { unlocked: unlocked, muted: muted, bedIndex: bedIndex, bedPlaying: !!(bed && !bed.paused), logoPlaying: !!(logoEl && !logoEl.paused && !logoEl.ended), wantBed: wantBed }; }
     };
 })();
