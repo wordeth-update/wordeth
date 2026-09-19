@@ -521,3 +521,8 @@ body[data-world="block"] .liq-world--block, body[data-world="court"] .liq-world-
 .liq-stat--artist { background: var(--liq-ink); color: var(--liq-mint); }
 .liq-stat--artist .liq-stat__k { color: rgba(244, 235, 221, 0.94); }
 .liq-entry__sub { margin: 8px 0 0; font-weight: 700; color: var(--liq-paper); text-shadow: 0 2px 0 var(--liq-ink), 0 0 12px rgba(0, 0, 0, 0.55); }
+
+/* Sound toggle in the top bar */
+.liq-top__sound { font: inherit; font-weight: 900; line-height: 1; width: 38px; height: 38px; border-radius: 999px; border: var(--liq-border) solid var(--liq-ink); background: var(--liq-paper); color: var(--liq-ink); box-shadow: 0 3px 0 var(--liq-ink); cursor: pointer; padding: 0; }
+.liq-top__sound:hover { background: #fff; transform: translateY(-1px); }
+.liq-top__sound--off { background: var(--liq-ink); color: var(--liq-cream); text-decoration: line-through; }

@@ -21,6 +21,7 @@
     var sceneCache = {};
     var TYPED_EXTRA_DELAY = 700;
 
+    var sound = window.LiqSound || { play: function () {}, bed: function () {}, logo: function () {}, duck: function () {}, isMuted: function () { return true; }, toggle: function () { return true; } };
     var state = {
         config: null,
         daily: null,
@@ -383,6 +384,7 @@
     /* ------------------------------------------------------------------ */
     function startGame(mode) {
         clearTimers();
+        sound.play('select');
         state.lastMode = mode;
         setWorld(worldForMode(mode));
         var scoped = mode !== 'DAILY_10' && state.artist;
@@ -395,6 +397,7 @@
             state.results = null;
             setRoute('#game');
             document.body.setAttribute('data-screen', 'game');
+            sound.bed(true);
             api.track('game_start', { game_mode: mode, category: state.category, artist: scoped ? state.artist.key : null, resumed: !!data.resumed });
             if (!data.question) return finishAndShowResults();
             renderGame();
@@ -637,6 +640,7 @@
             // On phones the card can land below the fold (behind Safari's toolbar): bring it into view.
             try { fb.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' }); } catch (e) { /* older engines */ }
         }
+        sound.play(res.correct ? (res.streak >= 3 && res.streak % 3 === 0 ? 'streak' : 'correct') : 'wrong');
         announce((res.correct ? 'Correct. ' : 'Not quite. The answer was ' + res.canonicalAnswer + '. ') + line);
         var bar = document.getElementById('liq-bar'); if (bar) bar.outerHTML = barHtml();
         var dots = main.querySelector('.liq-progress');
@@ -677,6 +681,8 @@
             if (r.lyricIq && r.lyricIq.after !== null) state.lyricIq = r.lyricIq.after;
             api.track('game_complete', { game_mode: r.session.gameMode, score: r.session.score, streak: r.session.bestStreak, correct: r.session.correctCount });
             setRoute('#results/' + r.session.id);
+            sound.bed(false);
+            sound.logo();
             renderResults(r, { daily: r.session.gameMode === 'DAILY_10' });
         }).catch(function (err) { renderError(err, 'home'); });
     }
@@ -688,6 +694,7 @@
         if (s.answered > 0) return finishAndShowResults();
         api.abandon(s.id).catch(function () {});
         state.session = null; state.question = null;
+        sound.bed(false);
         setRoute('#play');
         renderEntry();
     }
@@ -986,6 +993,7 @@
     /* ------------------------------------------------------------------ */
     function route() {
         var hash = location.hash || '#play';
+        if (hash !== '#game') sound.bed(false);
         document.body.setAttribute('data-screen', hash.slice(1).split('/')[0] || 'play');
         if (hash.indexOf('#results/') === 0) {
             var id = hash.slice(9);
@@ -1019,6 +1027,7 @@
         var el = e.target.closest('[data-action]');
         if (!el) return;
         var action = el.getAttribute('data-action');
+        sound.play(action === 'choice' ? 'tick' : 'tap');
         switch (action) {
             case 'play': e.preventDefault(); startGame(el.getAttribute('data-mode') || 'QUICK_PLAY'); break;
             case 'go': { e.preventDefault(); var step = el.getAttribute('data-step'); api.track('setup_step', { step: step }); setRoute('#' + step); route(); break; }
@@ -1110,6 +1119,26 @@
             });
         }, { passive: true });
     })();
+
+    (function initSoundButton() {
+        var btn = document.getElementById('liq-sound');
+        if (!btn) return;
+        function paint() {
+            var m = sound.isMuted();
+            btn.textContent = '♪';
+            btn.setAttribute('aria-pressed', String(!m));
+            btn.setAttribute('aria-label', m ? 'Sound off' : 'Sound on');
+            btn.classList.toggle('liq-top__sound--off', m);
+        }
+        paint();
+        btn.addEventListener('click', function () {
+            var m = sound.toggle();
+            paint();
+            if (!m) sound.play('select');
+            toast(m ? 'Sound off.' : 'Sound on.', 1400);
+        });
+    })();
+    if (window.LiqSound) window.LiqSound.wantsBed = function () { return location.hash === '#game' && !!state.session && state.session.status === 'ACTIVE'; };
 
     window.addEventListener('popstate', function () { route(); });
     window.addEventListener('hashchange', function () { route(); });
