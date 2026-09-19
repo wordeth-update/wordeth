@@ -24,7 +24,7 @@ process.on('exit', (code) => {
 ['SIGHUP', 'SIGUSR1', 'SIGUSR2', 'SIGPIPE'].forEach(sig => {
     process.on(sig, () => console.error('[SIGNAL]', sig, 'received'));
 });
-const { setupSignaling, getActiveRooms, setShuttingDown, joinRoomHTTP, waitForRoomsReady } = require('./routes/signaling');
+const { setupSignaling, getActiveRooms, setShuttingDown, joinRoomHTTP, waitForRoomsReady, scheduleRoomDeletion } = require('./routes/signaling');
 
 const BUILD_ID = Date.now().toString(36);
 console.log(`Build ID: ${BUILD_ID}`);
@@ -145,9 +145,9 @@ const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 300,
     message: 'Too many requests from this IP, please try again later.',
-    keyGenerator: (req) => {
-        return req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
-    },
+    // req.ip is what the trusted proxy says; headers a client can set are not.
+    keyGenerator: (req) => req.ip,
+    // Lyric IQ has its own per-player limiters and is exempt from this coarse cap.
     skip: (req) => LYRICIQ_PATH_PREFIXES.some((prefix) => req.originalUrl.startsWith(prefix))
 });
 app.use('/api/', limiter);
@@ -159,9 +159,8 @@ const authLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     skipSuccessfulRequests: true,
-    keyGenerator: (req) => {
-        return req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
-    }
+    // req.ip is what the trusted proxy says; headers a client can set are not.
+    keyGenerator: (req) => req.ip
 });
 app.use('/api/auth/signin', authLimiter);
 app.use('/api/auth/signup', authLimiter);
@@ -179,6 +178,7 @@ if (process.env.MONGODB_USERNAME && process.env.MONGODB_PASSWORD) {
 }
 
 if (mongoUri && mongoUri !== 'mongodb://localhost:27017/wordeth') {
+    mongoose.set('sanitizeFilter', true);
     mongoose.connect(mongoUri, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
@@ -238,8 +238,11 @@ app.use(
 );
 
 // Middleware
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// Big bodies only where a design or a preview image legitimately arrives;
+// everything else is a form's worth.
+app.use(['/api/merch', '/api/templates', '/api/user/merch'], express.json({ limit: '25mb' }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: false, limit: '2mb' }));
 
 // Prevent Cloudflare from caching any API responses
 app.use('/api', (req, res, next) => {
@@ -625,7 +628,7 @@ function generateRoomId() {
     return id.slice(0, 8) + '_' + id.slice(8);
 }
 
-app.post('/api/rooms/create', auth, async (req, res) => {
+app.post('/api/rooms/create', auth, require('./middleware/limits').createRoom, async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     await waitForRoomsReady();
     const roomId = generateRoomId();
@@ -656,11 +659,13 @@ app.post('/api/rooms/create', auth, async (req, res) => {
     };
     roomsMap.set(roomId, room);
     saveRoom(roomId, room);
+    // If nobody ever socket-joins, the room must not live forever.
+    scheduleRoomDeletion(roomId, 'pre-registered');
     console.log(`[Rooms API] Room pre-registered: ${roomId}`);
     res.json({ id: roomId });
 });
 
-app.post('/api/rooms/create-and-join', auth, async (req, res) => {
+app.post('/api/rooms/create-and-join', auth, require('./middleware/limits').createRoom, async (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     res.setHeader('CDN-Cache-Control', 'no-store');
     res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
@@ -715,7 +720,11 @@ app.post('/api/rooms/create-and-join', auth, async (req, res) => {
     }
 });
 
-app.post('/api/rooms/join', optionalAuth, async (req, res) => {
+app.post('/api/rooms/join', optionalAuth, require('./middleware/limits').joinRoom, async (req, res) => {
+    // Creating a room by joining one that does not exist is for signed-in hosts only.
+    if (req.body && req.body.isHost && !req.user) {
+        return res.status(401).json({ success: false, message: 'Sign in to create a room.' });
+    }
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     res.setHeader('CDN-Cache-Control', 'no-store');
     res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
@@ -750,7 +759,7 @@ app.get('/api/rooms/active', async (req, res) => {
     res.json(rooms);
 });
 
-app.get('/api/rooms/debug/:roomId', async (req, res) => {
+app.get('/api/rooms/debug/:roomId', auth, requireRole('ADMIN'), async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     const activeRooms = getActiveRooms();
     const room = activeRooms.find(r => r.id === req.params.roomId);

@@ -24,7 +24,7 @@ function allocateAgoraUid(channelName, participant) {
   return participant.agoraUid;
 }
 
-router.post('/token', auth, async (req, res) => {
+router.post('/token', auth, require('../middleware/limits').agoraToken, async (req, res) => {
   try {
     const { channelName, uid, role } = req.body;
 

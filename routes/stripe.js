@@ -270,6 +270,8 @@ async function handleCheckoutComplete(session) {
 
         const balanceAfter = user.tokenBalance;
         const balanceBefore = balanceAfter - tokens;
+        // The phone, if open: the purse updates where they are standing.
+        require('../services/realtime').emitToUser(user._id, 'token-balance', { balance: balanceAfter, delta: tokens, reason: 'pack_purchase' });
 
         await TokenLedger.create({
             userId: user._id,
