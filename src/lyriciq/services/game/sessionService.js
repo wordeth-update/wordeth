@@ -55,7 +55,7 @@ async function createSession(player, { gameMode = 'QUICK_PLAY', category = null,
         const resolved = await catalogService.ensureArtist({ providerArtistId: artist.providerArtistId || null, artistKey: artist.key || null, name: artist.name || null });
         if (!resolved || resolved.playable < config.catalog.minArtistTracks) {
             const rep = resolved?.report;
-            const why = rep ? ` (${resolved.playable} usable; provider gave ${rep.id ?? '–'} by id, ${rep.name ?? '–'} by name${rep.errors.length ? '; ' + rep.errors.join(', ') : ''})` : '';
+            const why = rep ? ` (${resolved.playable} usable; provider gave ${rep.id ?? '–'} by id, ${rep.name ?? '–'} by name${rep.learnedId ? ', real id ' + rep.learnedId : ''}${rep.errors.length ? '; ' + rep.errors.join(', ') : ''}${rep.rejected && rep.rejected.length ? '; skipped e.g. ' + rep.rejected.map((r) => '“' + r + '”').join(', ') : ''})` : '';
             throw unavailable('ARTIST_TOO_THIN', `Not enough songs with lyrics for ${resolved?.name || artist.name || 'that artist'} yet${why}. Try another artist.`);
         }
         artistScope = { key: resolved.artistKey, name: resolved.name, providerArtistId: resolved.providerArtistId };

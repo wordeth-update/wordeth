@@ -288,26 +288,38 @@ async function searchArtists({ query = '', limit = 10 } = {}) {
  */
 async function seedArtistTracks({ providerArtistId = null, artistKey = null, name = null, pages = config.catalog.artistPages } = {}) {
     const provider = getLyricProvider();
-    const key = artistKey || (name ? slugify(name) : null);
+    const key = artistKey || (name ? leadArtistKey(name) : null);
     const min = config.catalog.minArtistTracks;
     let inserted = 0;
-    const report = { id: null, name: null, errors: [] };
+    const report = { id: null, name: null, learnedId: null, errors: [], rejected: [] };
+    const acceptedIds = new Set(providerArtistId ? [String(providerArtistId)] : []);
+    // "Lil Wayne", "Lil Wayne feat. Drake", "Lil Wayne & Drake", "Lil Wayne, Future": the
+    // artist leads the credit. "Drake feat. Lil Wayne" does not.
+    const leads = (t) => {
+        if (!name) return false;
+        const a = String(t.artist || '').toLowerCase().trim();
+        const n = String(name).toLowerCase().trim();
+        return a === n || (a.startsWith(n) && /^[\s,&x+/]|^\s*(feat|ft|featuring|and|with)\b/i.test(a.slice(n.length)));
+    };
     const own = (t) => {
         if (!t.hasLyrics || t.instrumental) return false;
         if (!key) return true;
         if (t.artistKey === key) return true;
-        if (providerArtistId && String(t.providerArtistId) === String(providerArtistId)) { t.artistKey = key; return true; }
+        if (leads(t) || acceptedIds.has(String(t.providerArtistId))) { t.artistKey = key; return true; }
+        if (report.rejected.length < 4) report.rejected.push(t.artist);
         return false;
     };
 
     async function pull(label, fetchPage) {
         report[label] = 0;
+        const seen = [];
         try {
             for (let page = 1; page <= pages; page++) {
                 const tracks = await fetchPage(page);
                 report[label] += tracks.length;
                 if (!tracks.length) break;
                 for (const t of tracks) {
+                    seen.push(t);
                     if (!own(t)) continue;
                     await upsertTrack(t);
                     inserted++;
@@ -319,6 +331,7 @@ async function seedArtistTracks({ providerArtistId = null, artistKey = null, nam
             report.errors.push(`${label}:${err.code || 'ERROR'}`);
             if (!(err instanceof ProviderError)) throw err;
         }
+        return seen;
     }
     const count = async () => (key ? Track.countDocuments({ status: 'ACTIVE', hasLyrics: true, instrumental: false, artistKey: key }) : 0);
 
@@ -327,8 +340,21 @@ async function seedArtistTracks({ providerArtistId = null, artistKey = null, nam
     }
     let playable = await count();
     if (playable < min && name && typeof provider.getArtistTracksByName === 'function') {
-        await pull('name', (page) => provider.getArtistTracksByName({ name, page }));
+        const seen = await pull('name', (page) => provider.getArtistTracksByName({ name, page }));
         playable = await count();
+        // The provider files the artist under several ids; the one their own credits
+        // carry most often is the real one. Pull by it for depth when still short.
+        const tally = new Map();
+        for (const t of seen) if (leads(t) && t.providerArtistId) tally.set(String(t.providerArtistId), (tally.get(String(t.providerArtistId)) || 0) + 1);
+        const learned = Array.from(tally.entries()).sort((a, b) => b[1] - a[1])[0];
+        if (learned && !acceptedIds.has(learned[0])) {
+            report.learnedId = learned[0];
+            acceptedIds.add(learned[0]);
+            if (playable < min && typeof provider.getArtistTracks === 'function') {
+                await pull('id', (page) => provider.getArtistTracks({ providerArtistId: learned[0], page }));
+                playable = await count();
+            }
+        }
     }
     cache.clear('trackMetadata');
     const resolvedKey = key || (providerArtistId ? (await Track.findOne({ provider: provider.name, providerArtistId: String(providerArtistId) }).select('artistKey').lean())?.artistKey : null) || null;
