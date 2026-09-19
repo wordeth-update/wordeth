@@ -3,7 +3,7 @@
 const mongoose = require('mongoose');
 
 const leaderboardRecordSchema = new mongoose.Schema({
-    board: { type: String, enum: ['DAILY', 'WEEKLY', 'ALL_TIME'], required: true },
+    board: { type: String, enum: ['DAILY', 'WEEKLY', 'ALL_TIME', 'ARTIST'], required: true },
     periodKey: { type: String, required: true },
     playerKey: { type: String, required: true },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },

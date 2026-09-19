@@ -24,7 +24,7 @@ Weights: `config.blank.weights`. Stopwords (`utilities/text.js`) are never chose
 
 ## Distractors
 
-Heuristic candidates scored on length similarity, rhyme key, crude part of speech, same-track and same-genre bonuses (`config.distractors.weights`). Candidates that are stopwords, visible in the prompt, within one edit of the answer, or prefixes of it are excluded. Word and phrase choices are re-cased to match the answer so capitalisation cannot hint. Title/artist distractors always draw from the full eligible catalog (same genre preferred) so a narrow category never starves. The engine is a class with one method per distractor kind; a semantic or phonetic model can replace the scoring without touching the question engine.
+Heuristic candidates scored on length similarity, rhyme key, crude part of speech, same-track and same-genre bonuses (`config.distractors.weights`). Candidates that are stopwords, visible in the prompt, within one edit of the answer, or prefixes of it are excluded. Word and phrase choices are re-cased to match the answer so capitalisation cannot hint. Title/artist distractors always draw from the full eligible catalog (same genre preferred) so a narrow category never starves. In an artist-scoped round they stay inside the artist's own songs when there are at least eight (that is the test), and widen to the genre only below that; `GUESS_THE_ARTIST` is never asked in an artist round, and once every song has been used the round repeats a song with a fresh line instead of ending early. The engine is a class with one method per distractor kind; a semantic or phonetic model can replace the scoring without touching the question engine.
 
 ## Difficulty
 

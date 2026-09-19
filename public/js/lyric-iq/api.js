@@ -80,9 +80,13 @@
         hasGuest: function () { return !!guestToken(); },
         clearGuest: function () { safeRemove(GUEST_KEY); },
         config: function () { return request('GET', '/api/game/config'); },
-        startSession: function (gameMode, category, challengeCode) {
-            return request('POST', '/api/game/sessions', { gameMode: gameMode, category: category || undefined, challengeCode: challengeCode || undefined });
+        startSession: function (gameMode, category, challengeCode, artist) {
+            var body = { gameMode: gameMode, category: category || undefined, challengeCode: challengeCode || undefined };
+            if (artist && (artist.key || artist.providerArtistId)) body.artist = { key: artist.key || undefined, name: artist.name || undefined, providerArtistId: artist.providerArtistId || undefined };
+            return request('POST', '/api/game/sessions', body, { timeoutMs: 25000 });
         },
+        artists: function (q) { return request('GET', '/api/game/artists?q=' + encodeURIComponent(q), null, { timeoutMs: 10000 }); },
+        artistBoard: function (key) { return request('GET', '/api/leaderboards/artist/' + encodeURIComponent(key)); },
         question: function (sessionId) { return request('GET', '/api/game/sessions/' + sessionId + '/question'); },
         shown: function (sessionId, questionId) { return request('POST', '/api/game/sessions/' + sessionId + '/questions/' + questionId + '/shown', {}, { timeoutMs: 6000 }); },
         answer: function (sessionId, payload) { return request('POST', '/api/game/sessions/' + sessionId + '/answer', payload, { timeoutMs: 15000 }); },

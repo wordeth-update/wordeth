@@ -35,8 +35,19 @@ function createLyricIqRouter() {
         keyGenerator: (req) => req.header('X-Guest-Token') || req.header('Authorization') || req.ip
     });
 
+    // Artist search can reach the lyric provider; keep it well under their quota.
+    const artistSearchLimiter = rateLimit({
+        windowMs: 60 * 1000,
+        max: 40,
+        standardHeaders: true,
+        legacyHeaders: false,
+        message: { error: { code: 'RATE_LIMITED', message: 'Too many searches. Give it a minute.' } },
+        keyGenerator: (req) => req.header('X-Guest-Token') || req.header('Authorization') || req.ip
+    });
+
     router.use(requireDatabase);
     router.use('/game/sessions/:id/answer', answerLimiter);
+    router.get('/game/artists', artistSearchLimiter);
     router.post('/game/sessions', sessionLimiter);
     router.post('/daily/start', sessionLimiter);
 

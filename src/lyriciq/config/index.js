@@ -74,7 +74,11 @@ const config = {
         warmLyricsPerRun: intEnv('LYRICIQ_CATALOG_WARM_LYRICS', 150),
         warmDelayMs: intEnv('LYRICIQ_CATALOG_WARM_DELAY_MS', 250),
         // Below this many playable licensed tracks the catalog is refreshed at boot.
-        minLicensedTracks: intEnv('LYRICIQ_CATALOG_MIN_TRACKS', 60)
+        minLicensedTracks: intEnv('LYRICIQ_CATALOG_MIN_TRACKS', 60),
+        // Artist scope: provider pages pulled the first time an artist is asked for,
+        // and how many playable tracks an artist needs before a round can be scoped to them.
+        artistPages: intEnv('LYRICIQ_CATALOG_ARTIST_PAGES', 2),
+        minArtistTracks: intEnv('LYRICIQ_CATALOG_MIN_ARTIST_TRACKS', 6)
     },
 
     /** Session lifecycle. */
@@ -212,7 +216,7 @@ const config = {
             lyricIQ: true,
             leaderboards: true,
             guestPlay: true,
-            artistChallenges: false,
+            artistChallenges: true,
             shareCards: true
         }
     },

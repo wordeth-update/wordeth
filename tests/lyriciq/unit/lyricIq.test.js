@@ -22,6 +22,13 @@ describe('Lyric IQ model v1', () => {
         expect(computeLyricIq(harder).value).toBeGreaterThan(computeLyricIq(base).value);
         expect(computeLyricIq(broader).value).toBeGreaterThan(computeLyricIq(base).value);
     });
+    test('Artist IQ appears per artist past the sample threshold, with a readable label', () => {
+        const r = computeLyricIq({ totals: { attempts: 30, correct: 20, sumDifficultyCorrect: 800 }, byArtist: { 'the-hollow-kings': { attempts: 16, correct: 12, sumDifficultyCorrect: 500 }, 'vera-solace': { attempts: 4, correct: 4, sumDifficultyCorrect: 100 }, unknown: { attempts: 20, correct: 20, sumDifficultyCorrect: 900 } } });
+        expect(r.subScores.artists['the-hollow-kings'].value).toBeGreaterThan(0);
+        expect(r.subScores.artists['the-hollow-kings'].label).toBe('The Hollow Kings IQ');
+        expect(r.subScores.artists['vera-solace']).toBeUndefined();
+        expect(r.subScores.artists.unknown).toBeUndefined();
+    });
     test('category sub-scores appear only past the sample threshold', () => {
         const r = computeLyricIq({ totals: { attempts: 30, correct: 20, recognitionAttempts: 16, recognitionCorrect: 12, sumDifficultyCorrect: 800 }, byGenre: { pop: { attempts: 15, correct: 12, sumDifficultyCorrect: 500 }, rock: { attempts: 5, correct: 5, sumDifficultyCorrect: 200 } }, byDecade: { '1990s': { attempts: 15, correct: 10, sumDifficultyCorrect: 400 } } });
         expect(r.subScores.genres.pop.value).toBeGreaterThan(0);

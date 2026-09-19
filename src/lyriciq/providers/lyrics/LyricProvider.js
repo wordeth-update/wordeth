@@ -31,6 +31,19 @@ class LyricProvider {
     async getPopularTracks(/* { country, page, pageSize } */) {
         return [];
     }
+
+    /**
+     * Artists matching a name, for the artist step of setup.
+     * @returns {Promise<Array<{ providerArtistId: string, name: string, country?: string, rating?: number }>>}
+     */
+    async searchArtists(/* { query, pageSize } */) {
+        return [];
+    }
+
+    /** One artist's tracks with lyrics, for scoping a round. @returns {Promise<NormalizedTrack[]>} */
+    async getArtistTracks(/* { providerArtistId, page, pageSize } */) {
+        return [];
+    }
 }
 
 module.exports = LyricProvider;

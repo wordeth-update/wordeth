@@ -1,7 +1,7 @@
 'use strict';
 
 const LyricProvider = require('./LyricProvider');
-const { finalizeTrack, finalizeLyricAsset } = require('./normalizeTrack');
+const { finalizeTrack, finalizeLyricAsset, slugify } = require('./normalizeTrack');
 const { ProviderError } = require('../../utilities/errors');
 const catalog = require('../../fixtures/syntheticCatalog');
 
@@ -34,6 +34,26 @@ class SyntheticProvider extends LyricProvider {
 
     async getLyrics(providerTrackId) {
         return finalizeLyricAsset(catalog.buildSyntheticLyric(this._find(providerTrackId)));
+    }
+
+    /** Artists in the fixture catalog; the synthetic artist id is the slug of the name. */
+    async searchArtists({ query = '', pageSize = 10 } = {}) {
+        const q = String(query || '').toLowerCase().trim();
+        const seen = new Map();
+        for (const e of this.entries) {
+            const id = slugify(e.artist);
+            if (seen.has(id) || (q && !e.artist.toLowerCase().includes(q))) continue;
+            seen.set(id, { providerArtistId: id, name: e.artist, country: null, rating: e.popularity || 0 });
+        }
+        return Array.from(seen.values()).slice(0, pageSize);
+    }
+
+    async getArtistTracks({ providerArtistId, pageSize = 50 } = {}) {
+        const id = String(providerArtistId || '');
+        return this.entries
+            .filter((e) => slugify(e.artist) === id)
+            .slice(0, pageSize)
+            .map((e) => finalizeTrack(catalog.buildSyntheticTrack(e)));
     }
 
     async getPopularTracks({ pageSize = 50 } = {}) {

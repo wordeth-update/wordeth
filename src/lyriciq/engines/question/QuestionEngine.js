@@ -1,5 +1,8 @@
 'use strict';
 
+/** Fewer artist tracks than this and distractors come from the wider catalogue. */
+const MIN_ARTIST_POOL = 8;
+
 const config = require('../../config');
 const logger = require('../../utilities/logger');
 const { shuffle, secureRandom } = require('../../utilities/random');
@@ -41,17 +44,24 @@ class QuestionEngine {
      */
     async generate(opts = {}) {
         const rng = opts.rng || secureRandom;
-        const context = { gameMode: opts.gameMode, genre: opts.genre, territory: opts.territory, allowSynthetic: opts.allowSynthetic };
+        const context = { gameMode: opts.gameMode, genre: opts.genre, artistKey: opts.artistKey || null, territory: opts.territory, allowSynthetic: opts.allowSynthetic };
         const tracks = await this.catalog.getEligibleTracks(context);
         if (!tracks.length) {
-            logger.warn('no_eligible_tracks', { gameMode: opts.gameMode, genre: opts.genre });
+            logger.warn('no_eligible_tracks', { gameMode: opts.gameMode, genre: opts.genre, artistKey: opts.artistKey || null });
             return null;
         }
         // Title/artist distractors draw from the whole eligible catalog (same genre
         // is preferred by scoring) so a narrow category never starves a question.
-        const distractorPool = opts.genre && opts.genre !== 'all'
-            ? await this.catalog.getEligibleTracks({ ...context, genre: null })
-            : tracks;
+        // An artist round keeps its distractors inside the artist's own songs when it
+        // can (that is the whole test), and widens to the genre only when too thin.
+        let distractorPool;
+        if (context.artistKey) {
+            distractorPool = tracks.length >= MIN_ARTIST_POOL ? tracks : await this.catalog.getEligibleTracks({ ...context, artistKey: null });
+        } else if (opts.genre && opts.genre !== 'all') {
+            distractorPool = await this.catalog.getEligibleTracks({ ...context, genre: null });
+        } else {
+            distractorPool = tracks;
+        }
         const rejected = [];
         const exclude = new Set((opts.excludeTrackIds || []).map(String));
         const relaxAfter = Math.ceil(this.maxAttempts / 2);

@@ -39,6 +39,7 @@ const trackSchema = new mongoose.Schema({
 
 trackSchema.index({ provider: 1, providerTrackId: 1 }, { unique: true });
 trackSchema.index({ status: 1, hasLyrics: 1, primaryGenre: 1 });
+trackSchema.index({ status: 1, hasLyrics: 1, artistKey: 1 });
 
 /** Public metadata that may be sent to the client (before or after an answer). */
 trackSchema.methods.toPublicMetadata = function toPublicMetadata() {

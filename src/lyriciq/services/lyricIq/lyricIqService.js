@@ -55,6 +55,11 @@ function categoryScore(bucket) {
     return Math.round(100 * (0.6 * acc + 0.4 * diff));
 }
 
+/** "the-hollow-kings" → "The Hollow Kings"; the metrics graph only keeps the key. */
+function artistLabel(artistKey) {
+    return String(artistKey || '').split('-').filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Artist';
+}
+
 /** Pure computation from a plain metrics object. */
 function computeLyricIq(metricsDoc) {
     const m = metricsDoc && metricsDoc.toObject ? metricsDoc.toObject({ flattenMaps: true }) : (metricsDoc || {});
@@ -85,6 +90,13 @@ function computeLyricIq(metricsDoc) {
     const recallIq = categoryScore({ attempts: totals.recallAttempts, correct: totals.recallCorrect, sumDifficultyCorrect: totals.sumDifficultyCorrect * ((totals.recallCorrect || 0) / Math.max(1, totals.correct || 1)) });
     const recognitionIq = categoryScore({ attempts: totals.recognitionAttempts, correct: totals.recognitionCorrect, sumDifficultyCorrect: totals.sumDifficultyCorrect * ((totals.recognitionCorrect || 0) / Math.max(1, totals.correct || 1)) });
     const artistsKnown = Object.values(m.byArtist || {}).filter((b) => b.attempts >= 3 && b.correct / b.attempts >= 0.75).length;
+    // Artist IQ: the same category score, per artist, once the player has faced enough of their songs.
+    const artists = {};
+    for (const [artistKey, bucket] of Object.entries(m.byArtist || {})) {
+        if (artistKey === 'unknown') continue;
+        const s = categoryScore(bucket);
+        if (s !== null) artists[artistKey] = { label: `${artistLabel(artistKey)} IQ`, value: s, attempts: bucket.attempts };
+    }
 
     return {
         value,
@@ -98,6 +110,7 @@ function computeLyricIq(metricsDoc) {
             eras,
             recall: recallIq !== null ? { label: 'Recall IQ', value: recallIq, attempts: totals.recallAttempts } : null,
             recognition: recognitionIq !== null ? { label: 'Recognition IQ', value: recognitionIq, attempts: totals.recognitionAttempts } : null,
+            artists,
             artistsKnown
         },
         thresholds: { minQuestionsForScore: config.lyricIq.minQuestionsForScore, minQuestionsForCategoryScore: config.lyricIq.minQuestionsForCategoryScore }
@@ -139,4 +152,4 @@ async function refreshLyricIq(playerKey) {
     return result;
 }
 
-module.exports = { computeLyricIq, explainLyricIq, refreshLyricIq, categoryScore, GENRE_LABELS };
+module.exports = { computeLyricIq, explainLyricIq, refreshLyricIq, categoryScore, artistLabel, GENRE_LABELS };

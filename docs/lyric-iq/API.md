@@ -23,7 +23,12 @@ Stack traces and provider internals are never returned.
 Modes currently enabled (feature flags applied), catalog categories, public flags, and the caller's identity if any.
 
 ### `POST /api/game/sessions`
-Body: `{ "gameMode": "QUICK_PLAY" | "RAPID_FIRE" | "STREAK" | "DAILY_10", "category": "pop", "challengeCode": "<session id>" }` (all optional).
+Body: `{ "gameMode": "QUICK_PLAY" | "RAPID_FIRE" | "STREAK" | "DAILY_10", "category": "pop", "challengeCode": "<session id>", "artist": { "key": "the-hollow-kings", "name": "The Hollow Kings", "providerArtistId": "12345" } }` (all optional).
+
+`artist` scopes every question to one artist's songs, inside `category` when both are given. Pass whatever `GET /api/game/artists` returned for the pick. An artist the catalogue does not hold yet is pulled from the lyric provider on the spot (a few seconds, once). Fewer than `LYRICIQ_CATALOG_MIN_ARTIST_TRACKS` (6) playable songs → `503 ARTIST_TOO_THIN`. Guess-the-artist questions are swapped for guess-the-song in an artist round. The session carries `artist: { key, name }` in every response. Behind the `artistChallenges` flag (on by default).
+
+### `GET /api/game/artists?q=<name>`
+Artist picker. Returns `{ artists: [{ key, name, providerArtistId, tracks, ready }] }`: what the catalogue already holds (instant, `ready` when it has enough songs) followed by provider matches. Two characters minimum, ten results, `search` rate limit.
 
 Returns `201` with `{ session, question, player, guestToken? }`. The first question is included so play begins with one round-trip. Starting a new non-daily session abandons any other active session for the player. `DAILY_10` delegates to the daily service (see below) and may return `200` with `resumed: true`.
 
@@ -97,6 +102,8 @@ Body: `{ "guestToken": "..." }`, authenticated as a user. Migrates the guest's s
 ## Leaderboards
 
 `GET /api/leaderboards/daily`, `/weekly`, `/all-time` with optional `?period=YYYY-MM-DD|YYYY-Www&limit=25`. Only registered users are listed; guests receive their own unranked row in `me`. Daily = best daily score, weekly = cumulative session score, all-time = Lyric IQ.
+
+`GET /api/leaderboards/artist/:artistKey` is the **Artist IQ** board: one board per artist, value = the player's Artist IQ for that artist (see LYRIC_IQ_MODEL.md), written after every round scoped to them, `secondary` = total score across those rounds. Adds `artist: { key, name }` to the response.
 
 ## Internal (protected)
 

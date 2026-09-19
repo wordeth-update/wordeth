@@ -32,7 +32,7 @@ function setEngine(e) { engine = e; }
 /* Session creation                                                    */
 /* ------------------------------------------------------------------ */
 
-async function createSession(player, { gameMode = 'QUICK_PLAY', category = null, challengeCode = null } = {}) {
+async function createSession(player, { gameMode = 'QUICK_PLAY', category = null, challengeCode = null, artist = null } = {}) {
     if (!isValidMode(gameMode)) throw badRequest('INVALID_GAME_MODE', `Unknown game mode "${gameMode}"`);
     const flags = await featureFlags.getFlags();
     if (player.isGuest && flags.guestPlay === false) throw forbidden('GUEST_PLAY_DISABLED', 'Sign in to play.');
@@ -47,6 +47,18 @@ async function createSession(player, { gameMode = 'QUICK_PLAY', category = null,
         return dailyService.startDaily(player);
     }
 
+    // Artist scope: resolve (and seed, first time) before anything is written, so a
+    // thin artist fails cleanly with nothing abandoned.
+    let artistScope = null;
+    if (artist && (artist.providerArtistId || artist.key || artist.name)) {
+        if (flags.artistChallenges === false) throw forbidden('FEATURE_DISABLED', 'Artist rounds are not available right now.');
+        const resolved = await catalogService.ensureArtist({ providerArtistId: artist.providerArtistId || null, artistKey: artist.key || null, name: artist.name || null });
+        if (!resolved || resolved.playable < config.catalog.minArtistTracks) {
+            throw unavailable('ARTIST_TOO_THIN', `Not enough songs with lyrics for ${resolved?.name || artist.name || 'that artist'} yet. Try another artist.`);
+        }
+        artistScope = { key: resolved.artistKey, name: resolved.name, providerArtistId: resolved.providerArtistId };
+    }
+
     const mode = getModeDefinition(gameMode);
     const now = new Date();
     // Any other in-flight session for this player is abandoned; one active game at a time.
@@ -59,13 +71,14 @@ async function createSession(player, { gameMode = 'QUICK_PLAY', category = null,
         guestId: player.guestId || null,
         gameMode,
         category: category && category !== 'all' ? category : null,
+        artist: artistScope,
         questionCount: mode.questionCount,
         deadlineAt: mode.timeLimitMs ? new Date(now.getTime() + mode.timeLimitMs) : null,
         scoreModelVersion: config.scoring.modelVersion,
         lyricIqBefore: before,
         referral: { challengeCode: challengeCode || null }
     });
-    logger.event('session_started', { sessionId: String(session._id), playerKey: player.key, gameMode, category: session.category, guest: player.isGuest });
+    logger.event('session_started', { sessionId: String(session._id), playerKey: player.key, gameMode, category: session.category, artistKey: artistScope?.key || null, guest: player.isGuest });
     const question = await serveNextQuestion(session, player, flags);
     return { session, question };
 }
@@ -130,14 +143,23 @@ async function serveNextQuestion(session, player, flags = null) {
     } else {
         const f = flags || await featureFlags.getFlags();
         const plan = planNextQuestion({ gameMode: session.gameMode, questionIndex: index, currentStreak: session.currentStreak, typedAnswersEnabled: f.typedAnswers !== false, rng: secureRandom });
+        const artistKey = session.artist?.key || null;
+        // Every song in an artist round is by the same artist, so "who sang this" is no question at all.
+        if (artistKey && plan.template === 'GUESS_THE_ARTIST') plan.template = 'GUESS_THE_SONG';
         spec = await getEngine().generate({
             gameMode: session.gameMode,
+            artistKey,
             template: plan.template,
             answerType: plan.answerType,
             targetDifficulty: plan.targetDifficulty,
             genre: session.category,
             excludeTrackIds: session.usedTrackIds
         });
+        if (!spec && artistKey) {
+            // A short catalogue runs out of fresh songs before the round ends: a song
+            // comes back with a different line rather than the round dying early.
+            spec = await getEngine().generate({ gameMode: session.gameMode, artistKey, template: plan.template, answerType: plan.answerType, targetDifficulty: plan.targetDifficulty, genre: session.category, excludeTrackIds: session.usedTrackIds.slice(-1) });
+        }
         if (!spec) throw unavailable('NO_ELIGIBLE_QUESTIONS', 'No playable questions are available right now. Please try again shortly.');
     }
 
@@ -306,7 +328,7 @@ async function completeSession(session, player, endReason = 'COMPLETED') {
         const metricsNow = await metricsService.getMetrics(player.key);
         session.shareCard = buildShareCard({ lyricIq, session, displayName: player.displayName, isGuest: !!player.isGuest, dailyStreak: metricsNow?.daily?.streak || 0 });
         await session.save();
-        await leaderboardService.recordSessionResult(player, session, lyricIq.value);
+        await leaderboardService.recordSessionResult(player, session, lyricIq.value, lyricIq);
         logger.event('session_completed', { sessionId: String(session._id), playerKey: player.key, gameMode: session.gameMode, score: session.score, correct: session.correctCount, wrong: session.wrongCount, bestStreak: session.bestStreak, endReason, lyricIq: lyricIq.value });
     }
     return buildResults(session, player);

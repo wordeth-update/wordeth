@@ -51,7 +51,8 @@ function renderCardHtml(card, { format = 'og' } = {}) {
     const iq = card.lyricIq === null || card.lyricIq === undefined ? '—' : String(card.lyricIq);
     const chips = [];
     if (card.headline) chips.push({ text: card.headline, tone: 'amber' });
-    if (card.topGenre && card.topGenre.value !== null) chips.push({ text: `${card.topGenre.label} ${card.topGenre.value}`, tone: 'ink' });
+    if (card.artist) chips.push({ text: card.artist.value !== null && card.artist.value !== undefined ? `${card.artist.name} IQ ${card.artist.value}` : `${card.artist.name} round`, tone: 'ink' });
+    else if (card.topGenre && card.topGenre.value !== null) chips.push({ text: `${card.topGenre.label} ${card.topGenre.value}`, tone: 'ink' });
     if (card.dailyStreak > 1) chips.push({ text: `${card.dailyStreak}-day streak`, tone: 'cream' });
     const host = config.publicUrl.replace(/^https?:\/\//, '');
 

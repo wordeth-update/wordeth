@@ -8,6 +8,8 @@ const gameSessionSchema = new mongoose.Schema({
     guestId: { type: String, default: null },
     gameMode: { type: String, required: true, index: true },
     category: { type: String, default: null },
+    /** Artist scope: a round limited to one artist's songs (within `category` when set). */
+    artist: { key: { type: String, default: null }, name: { type: String, default: null }, providerArtistId: { type: String, default: null } },
     status: { type: String, enum: ['ACTIVE', 'COMPLETED', 'ABANDONED', 'EXPIRED'], default: 'ACTIVE', index: true },
     startedAt: { type: Date, default: Date.now },
     endedAt: { type: Date, default: null },
@@ -53,6 +55,7 @@ gameSessionSchema.methods.toPublic = function toPublic() {
         id: String(this._id),
         gameMode: this.gameMode,
         category: this.category,
+        artist: this.artist && this.artist.key ? { key: this.artist.key, name: this.artist.name } : null,
         status: this.status,
         startedAt: this.startedAt,
         endedAt: this.endedAt,

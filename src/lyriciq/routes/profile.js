@@ -33,6 +33,7 @@ function summarizeMetrics(metrics) {
         byDecade: flat(m.byDecade),
         byMode: flat(m.byMode),
         byTemplate: flat(m.byTemplate),
+        byArtist: flat(m.byArtist),
         artistsPlayed: Object.keys(m.byArtist || {}).length,
         sessionsCompleted: m.sessionsCompleted,
         bestStreak: m.bestStreak,

@@ -9,6 +9,7 @@ const { cache } = require('./providerCache');
 const { getLyricProvider, getSyntheticProvider } = require('../../providers/lyrics');
 const { isTrackEligibleForGame } = require('./eligibility');
 const restrictionService = require('./restrictionService');
+const { slugify } = require('../../providers/lyrics/normalizeTrack');
 const { ProviderError } = require('../../utilities/errors');
 const syntheticCatalog = require('../../fixtures/syntheticCatalog');
 
@@ -223,18 +224,101 @@ async function getLyricAsset(track, { bypassMemory = false } = {}) {
 }
 
 /**
+ * Artist scope.
+ *
+ * A round can be limited to one artist. The catalogue holds whatever the
+ * charts and genre lists brought in; an artist somebody asks for is pulled
+ * from the provider on demand and kept, so the first request for a new
+ * artist costs a few seconds and the next costs nothing.
+ */
+async function searchArtists({ query = '', limit = 10 } = {}) {
+    const q = String(query || '').trim();
+    if (q.length < 2) return [];
+    const provider = getLyricProvider();
+    // What we already hold, first: it is instant and it is what can be played now.
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const local = await Track.aggregate([
+        { $match: { status: 'ACTIVE', hasLyrics: true, artist: { $regex: escaped, $options: 'i' } } },
+        { $group: { _id: '$artistKey', name: { $first: '$artist' }, providerArtistId: { $first: '$providerArtistId' }, count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: limit }
+    ]);
+    const out = local.map((r) => ({ artistKey: r._id, name: r.name, providerArtistId: r.providerArtistId || null, tracks: r.count, seeded: true }));
+    if (typeof provider.searchArtists === 'function') {
+        try {
+            const remote = await provider.searchArtists({ query: q, pageSize: limit });
+            for (const a of remote) {
+                const key = slugify(a.name);
+                if (out.some((o) => o.artistKey === key)) continue;
+                out.push({ artistKey: key, name: a.name, providerArtistId: a.providerArtistId, tracks: 0, seeded: false });
+            }
+        } catch (err) {
+            logger.warn('provider_error', { provider: provider.name, code: err.code, message: err.message, phase: 'artist_search' });
+        }
+    }
+    return out.slice(0, limit);
+}
+
+/** Pull one artist's tracks into the catalogue. Returns how many are now playable. */
+async function seedArtistTracks({ providerArtistId, artistKey = null, pages = config.catalog.artistPages } = {}) {
+    const provider = getLyricProvider();
+    let inserted = 0;
+    try {
+        for (let page = 1; page <= pages; page++) {
+            const tracks = await provider.getArtistTracks({ providerArtistId, page });
+            if (!tracks.length) break;
+            for (const t of tracks) {
+                if (!t.hasLyrics || t.instrumental) continue;
+                await upsertTrack(t);
+                inserted++;
+            }
+            if (tracks.length < config.provider.musixmatch.seedPageSize) break;
+        }
+    } catch (err) {
+        logger.error('provider_error', { provider: provider.name, code: err.code, message: err.message, phase: 'artist_seed', providerArtistId });
+        if (!(err instanceof ProviderError)) throw err;
+    }
+    cache.clear('trackMetadata');
+    const key = artistKey || (await Track.findOne({ provider: provider.name, providerArtistId: String(providerArtistId) }).select('artistKey').lean())?.artistKey || null;
+    const playable = key ? await Track.countDocuments({ status: 'ACTIVE', hasLyrics: true, instrumental: false, artistKey: key }) : 0;
+    logger.info('artist_seeded', { provider: provider.name, providerArtistId, artistKey: key, inserted, playable });
+    return { artistKey: key, inserted, playable };
+}
+
+/**
+ * Make sure an artist has enough playable tracks for a round; seed if not.
+ * Resolves the canonical artistKey and display name from the catalogue.
+ */
+async function ensureArtist({ providerArtistId = null, artistKey = null, name = null } = {}) {
+    const min = config.catalog.minArtistTracks;
+    const provider = getLyricProvider();
+    let key = artistKey || (name ? slugify(name) : null);
+    let count = key ? await Track.countDocuments({ status: 'ACTIVE', hasLyrics: true, instrumental: false, artistKey: key }) : 0;
+    if (count < min && providerArtistId) {
+        const seeded = await seedArtistTracks({ providerArtistId, artistKey: key });
+        key = seeded.artistKey || key;
+        count = seeded.playable;
+    }
+    if (!key) return null;
+    const sample = await Track.findOne({ artistKey: key, status: 'ACTIVE' }).select('artist providerArtistId').lean();
+    return { artistKey: key, name: sample?.artist || name || key, providerArtistId: sample?.providerArtistId || (providerArtistId ? String(providerArtistId) : null), playable: count, provider: provider.name };
+}
+
+/**
  * Eligible tracks for a gameplay context. Cached briefly per context so the
  * question engine never queries Mongo per question.
  */
 async function getEligibleTracks(context = {}) {
     const genre = context.genre && context.genre !== 'all' ? context.genre : 'all';
+    const artistKey = context.artistKey || null;
     const includeSynthetic = context.allowSynthetic !== false && (config.provider.includeSynthetic || config.provider.name === 'synthetic');
-    const key = `eligible:${genre}:${context.gameMode || '*'}:${context.territory || '*'}:${includeSynthetic ? 's' : 'ns'}`;
+    const key = `eligible:${genre}:${artistKey || '*'}:${context.gameMode || '*'}:${context.territory || '*'}:${includeSynthetic ? 's' : 'ns'}`;
     const cached = cache.get('trackMetadata', key);
     if (cached) return cached;
 
     const query = { status: 'ACTIVE', hasLyrics: true, instrumental: false };
     if (genre !== 'all') query.primaryGenre = genre;
+    if (artistKey) query.artistKey = artistKey;
     if (!includeSynthetic) query.synthetic = false;
     const [docs, restrictions] = await Promise.all([
         Track.find(query).lean(),
@@ -275,5 +359,4 @@ module.exports = {
     getEligibleTracks,
     invalidateTracks,
     setTrackStatus,
-    listCategories
-};
+    listCategories, searchArtists, seedArtistTracks, ensureArtist };

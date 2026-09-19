@@ -49,6 +49,8 @@ function buildShareCard({ lyricIq, session, displayName = null, isGuest = false,
     const value = lyricIq && lyricIq.value !== null && lyricIq.value !== undefined ? lyricIq.value : null;
     const genres = lyricIq?.subScores?.genres || {};
     const top = Object.entries(genres).sort((a, b) => b[1].value - a[1].value)[0];
+    const artistKey = session?.artist?.key || null;
+    const artistIq = artistKey ? lyricIq?.subScores?.artists?.[artistKey] : null;
     return {
         version: 1,
         displayName: publicName(displayName, isGuest),
@@ -57,6 +59,7 @@ function buildShareCard({ lyricIq, session, displayName = null, isGuest = false,
         line: iqLine(value),
         headline: sessionHeadline(session),
         topGenre: top ? { key: top[0], label: (GENRE_LABELS[top[0]] || top[0]).replace(' IQ', ' IQ'), value: top[1].value } : null,
+        artist: artistKey ? { key: artistKey, name: session.artist.name || artistKey, value: artistIq ? artistIq.value : null, sessionAccuracy: session.toPublic ? session.toPublic().accuracy : null } : null,
         dailyStreak: dailyStreak || 0,
         world: worldForIq(value)
     };
@@ -66,7 +69,7 @@ function buildShareCard({ lyricIq, session, displayName = null, isGuest = false,
 function cardForSession(session) {
     if (session.shareCard && session.shareCard.version) return session.shareCard;
     const value = session.lyricIqAfter ?? null;
-    return { version: 0, displayName: 'Someone on Wordeth', lyricIq: value, provisional: false, line: iqLine(value), headline: sessionHeadline(session), topGenre: null, dailyStreak: 0, world: worldForIq(value) };
+    return { version: 0, displayName: 'Someone on Wordeth', lyricIq: value, provisional: false, line: iqLine(value), headline: sessionHeadline(session), topGenre: null, artist: null, dailyStreak: 0, world: worldForIq(value) };
 }
 
 /** Where a result lives publicly: page, link-preview card and story cut. */

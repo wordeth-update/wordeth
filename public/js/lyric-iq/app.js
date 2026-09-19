@@ -29,6 +29,9 @@
         pending: false,      // an answer request is in flight
         answered: false,     // current question resolved on screen
         category: 'all',
+        artist: null,        // { key, name, providerArtistId } when the round is scoped to one artist
+        artistQuery: '',
+        artistResults: [],
         challengeCode: null,
         results: null,
         timer: null,
@@ -200,7 +203,7 @@
     }
 
     function stepsHtml(current) {
-        var steps = ['Play', 'Mode', 'Genre'];
+        var steps = ['Play', 'Mode', 'Genre', 'Artist'];
         return '<ol class="liq-steps" aria-label="Setup steps">' + steps.map(function (s, i) {
             var n = i + 1;
             var cls = n < current ? ' liq-steps__item--done' : (n === current ? ' liq-steps__item--current' : '');
@@ -281,6 +284,7 @@
             var cats = (cfg.categories || []).filter(function (c) { return c.genre !== 'other'; });
             if (cats.length < 2) return startGame(state.lastMode);
             var m = MODE_META[state.lastMode] || MODE_META.QUICK_PLAY;
+            var artistStep = !!(cfg.flags && cfg.flags.artistChallenges);
             var options = [{ genre: 'all', label: 'Everything', meta: CAT_META.all }].concat(cats.map(function (c) {
                 return { genre: c.genre, label: CAT_LABELS[c.genre] || c.genre, meta: CAT_META[c.genre] || (c.count ? c.count + ' tracks' : '') };
             }));
@@ -297,12 +301,81 @@
                 }).join('') +
                 '</div>' +
                 '<div class="liq-entry__primary">' +
-                '<button class="liq-btn liq-btn--primary liq-btn--block" data-action="begin">Begin</button>' +
+                (artistStep
+                    ? '<button class="liq-btn liq-btn--primary liq-btn--block" data-action="to-artist">Next</button>'
+                    : '<button class="liq-btn liq-btn--primary liq-btn--block" data-action="begin">Begin</button>') +
                 '<div class="liq-entry__nav"><button class="liq-btn liq-btn--ghost liq-btn--sm" data-action="go" data-step="mode">Back</button></div>' +
                 '</div>' +
                 '</section>'
             );
         }).catch(function (err) { renderError(err, 'home'); });
+    }
+
+    /** Step 4: narrow the genre to one artist, or play the whole thing. */
+    var artistSearchTimer = null;
+    function artistResultsHtml(list) {
+        var picked = state.artist ? state.artist.key : null;
+        var html = list.map(function (a) {
+            var meta = a.ready ? esc(a.tracks) + ' songs ready' : (a.tracks ? esc(a.tracks) + ' songs · more load on start' : 'Loads on start');
+            return '<button class="liq-mode liq-artist__item" data-action="pick-artist" data-key="' + esc(a.key) + '" data-name="' + esc(a.name) + '" data-pid="' + esc(a.providerArtistId || '') + '" aria-pressed="' + (picked === a.key) + '"><span class="liq-mode__name">' + esc(a.name) + '</span><span class="liq-mode__meta">' + meta + '</span></button>';
+        }).join('');
+        if (!html && state.artistQuery.length >= 2) html = '<p class="liq-faint">No artist by that name yet. Try the full name.</p>';
+        return html;
+    }
+    function artistPickedHtml() {
+        var catLabel = state.category === 'all' ? 'every genre' : (CAT_LABELS[state.category] || state.category);
+        return state.artist
+            ? 'Playing <strong>' + esc(state.artist.name) + '</strong> only. <button class="liq-link" data-action="clear-artist">Any artist instead</button>'
+            : 'Any artist in ' + esc(catLabel) + '.';
+    }
+    function renderArtist() {
+        updateHeader('play');
+        clearTimers();
+        if (state.lastMode === 'DAILY_10') return startGame('DAILY_10');
+        var m = MODE_META[state.lastMode] || MODE_META.QUICK_PLAY;
+        var catLabel = state.category === 'all' ? 'Everything' : (CAT_LABELS[state.category] || state.category);
+        render(
+            '<section class="liq-entry liq-entry--step liq-enter">' +
+            stepsHtml(4) +
+            '<div class="liq-entry__head">' +
+            '<div class="liq-kicker">' + esc(m.name) + ' · ' + esc(catLabel) + '</div>' +
+            '<h1 class="liq-h1 liq-h1--step">Pick an <span class="liq-h1__wonder">artist</span></h1>' +
+            '<p class="liq-entry__sub">Every question from one catalogue. Or skip it and play the whole genre.</p>' +
+            '</div>' +
+            '<div class="liq-artist">' +
+            '<input class="liq-input liq-artist__input" id="liq-artist-q" type="search" placeholder="Search an artist" autocomplete="off" maxlength="60" value="' + esc(state.artistQuery) + '" aria-label="Search an artist">' +
+            '<div class="liq-artist__results" id="liq-artist-results" aria-live="polite">' + artistResultsHtml(state.artistResults) + '</div>' +
+            '<p class="liq-artist__picked" id="liq-artist-picked">' + artistPickedHtml() + '</p>' +
+            '</div>' +
+            '<div class="liq-entry__primary">' +
+            '<button class="liq-btn liq-btn--primary liq-btn--block" data-action="begin">Begin</button>' +
+            '<div class="liq-entry__nav"><button class="liq-btn liq-btn--ghost liq-btn--sm" data-action="go" data-step="genre">Back</button></div>' +
+            '</div>' +
+            '</section>'
+        );
+        var input = document.getElementById('liq-artist-q');
+        if (!input) return;
+        input.addEventListener('input', function () {
+            var q = input.value.trim();
+            state.artistQuery = q;
+            clearTimeout(artistSearchTimer);
+            if (q.length < 2) { state.artistResults = []; refreshArtistResults(); return; }
+            artistSearchTimer = setTimeout(function () {
+                api.artists(q).then(function (d) {
+                    if (state.artistQuery !== q) return;
+                    state.artistResults = d.artists || [];
+                    refreshArtistResults();
+                }).catch(function () { /* the picker stays as it was */ });
+            }, 280);
+        });
+        input.addEventListener('keydown', function (e) { if (e.key === 'Enter') e.preventDefault(); });
+        if (!state.artistResults.length) input.focus();
+    }
+    function refreshArtistResults() {
+        var box = document.getElementById('liq-artist-results');
+        var picked = document.getElementById('liq-artist-picked');
+        if (box) box.innerHTML = artistResultsHtml(state.artistResults);
+        if (picked) picked.innerHTML = artistPickedHtml();
     }
 
     /* ------------------------------------------------------------------ */
@@ -312,8 +385,9 @@
         clearTimers();
         state.lastMode = mode;
         setWorld(worldForMode(mode));
-        renderLoading(mode === 'DAILY_10' ? 'Setting today’s ten' : 'Finding the line');
-        var req = mode === 'DAILY_10' ? api.startDaily() : api.startSession(mode, state.category !== 'all' ? state.category : null, state.challengeCode);
+        var scoped = mode !== 'DAILY_10' && state.artist;
+        renderLoading(mode === 'DAILY_10' ? 'Setting today’s ten' : (scoped ? 'Pulling ' + state.artist.name + '’s catalogue' : 'Finding the line'));
+        var req = mode === 'DAILY_10' ? api.startDaily() : api.startSession(mode, state.category !== 'all' ? state.category : null, state.challengeCode, scoped ? state.artist : null);
         req.then(function (data) {
             state.challengeCode = null;
             state.session = data.session;
@@ -321,7 +395,7 @@
             state.results = null;
             setRoute('#game');
             document.body.setAttribute('data-screen', 'game');
-            api.track('game_start', { game_mode: mode, category: state.category, resumed: !!data.resumed });
+            api.track('game_start', { game_mode: mode, category: state.category, artist: scoped ? state.artist.key : null, resumed: !!data.resumed });
             if (!data.question) return finishAndShowResults();
             renderGame();
         }).catch(function (err) {
@@ -330,6 +404,7 @@
                 state.session = err.details.results.session;
                 return renderResults(state.results, { daily: true });
             }
+            if (err.code === 'ARTIST_TOO_THIN') { setRoute('#artist'); return renderError(err, 'to-artist-step'); }
             renderError(err, 'retry-start');
         });
     }
@@ -631,12 +706,17 @@
         if (delta !== null && delta !== undefined && delta !== 0) deltaHtml = '<span class="liq-iq__delta ' + (delta > 0 ? 'liq-iq__delta--up' : 'liq-iq__delta--down') + '">' + (delta > 0 ? '+' : '') + esc(delta) + '</span>';
         else if (iq.before === null && value !== null) deltaHtml = '<span class="liq-iq__delta">new</span>';
         var answered = s.correctCount + s.wrongCount;
-        var kicker = opts.daily ? 'Daily 10 · ' + esc(s.dailyDateKey || '') : esc(copy.MODE_LABELS[s.gameMode] || 'Session') + (s.endReason === 'TIME_UP' ? ' · time' : (s.endReason === 'ENDED_EARLY' ? ' · ended early' : ''));
+        var kicker = opts.daily ? 'Daily 10 · ' + esc(s.dailyDateKey || '') : esc(copy.MODE_LABELS[s.gameMode] || 'Session') + (s.artist ? ' · ' + esc(s.artist.name) : '') + (s.endReason === 'TIME_UP' ? ' · time' : (s.endReason === 'ENDED_EARLY' ? ' · ended early' : ''));
         var headline = opts.daily ? esc(s.correctCount) + '/' + esc(s.questionCount) : (s.gameMode === 'STREAK' ? 'Streak of ' + esc(s.bestStreak) : (s.gameMode === 'RAPID_FIRE' ? esc(s.correctCount) + ' in 60 seconds' : esc(s.correctCount) + '/' + esc(answered)));
         var genres = iq.subScores && iq.subScores.genres ? Object.keys(iq.subScores.genres) : [];
         var subHtml = '';
-        if (genres.length) {
-            subHtml = '<div class="liq-subscores">' + genres.map(function (g) { var sc = iq.subScores.genres[g]; return '<div class="liq-stat"><div class="liq-stat__v">' + esc(sc.value) + '</div><div class="liq-stat__k">' + esc(sc.label) + '</div></div>'; }).join('') + '</div>';
+        var artistIq = s.artist && iq.subScores && iq.subScores.artists ? iq.subScores.artists[s.artist.key] : null;
+        if (genres.length || artistIq) {
+            subHtml = '<div class="liq-subscores">' +
+                (artistIq ? '<div class="liq-stat liq-stat--artist"><div class="liq-stat__v">' + esc(artistIq.value) + '</div><div class="liq-stat__k">' + esc(s.artist.name) + ' IQ</div></div>' : '') +
+                genres.map(function (g) { var sc = iq.subScores.genres[g]; return '<div class="liq-stat"><div class="liq-stat__v">' + esc(sc.value) + '</div><div class="liq-stat__k">' + esc(sc.label) + '</div></div>'; }).join('') + '</div>';
+        } else if (s.artist) {
+            subHtml = '<p class="liq-faint">' + esc(s.artist.name) + ' IQ appears after ' + esc(iq.thresholds.minQuestionsForCategoryScore) + ' of their questions.</p>';
         }
         var breakdown = (r.breakdown || []).map(function (b) {
             return '<li class="liq-breakdown__row ' + (b.correct ? 'liq-breakdown__row--correct' : 'liq-breakdown__row--wrong') + '"><span class="liq-breakdown__mark" aria-label="' + (b.correct ? 'correct' : 'wrong') + '">' + (b.correct ? '✓' : '✕') + '</span><span class="liq-breakdown__track">' + esc(b.track ? b.track.title : '') + '<small>' + esc(b.track ? b.track.artist : '') + ' · ' + esc(copy.INSTRUCTIONS[b.template] || b.template) + ' · ' + esc(copy.BAND_LABELS[b.difficultyBand] || '') + '</small></span><span class="liq-breakdown__pts">' + (b.correct ? '+' + esc(b.points) : '0') + ' · ' + esc(fmtMs(b.responseTimeMs)) + '</span></li>';
@@ -673,6 +753,7 @@
             '<div class="liq-result__actions">' +
             '<button class="liq-btn liq-btn--primary" data-action="replay" data-mode="' + esc(s.gameMode === 'DAILY_10' ? 'QUICK_PLAY' : s.gameMode) + '">' + (s.gameMode === 'DAILY_10' ? 'Play more' : 'Play again') + '</button>' +
             (r.share && r.share.cardPath ? '' : '<button class="liq-btn" data-action="share">Share result</button>') +
+            (s.artist ? '<button class="liq-btn liq-btn--ghost" data-action="artist-board" data-key="' + esc(s.artist.key) + '" data-name="' + esc(s.artist.name) + '">' + esc(s.artist.name) + ' board</button>' : '') +
             (s.gameMode !== 'DAILY_10' && state.daily && state.daily.status !== 'COMPLETED' ? '<button class="liq-btn liq-btn--ghost" data-action="play" data-mode="DAILY_10">Daily 10</button>' : '') +
             '<a class="liq-btn liq-btn--ghost" href="#profile">Your profile</a>' +
             '</div>' +
@@ -778,7 +859,14 @@
                 Object.keys(iq.subScores.eras || {}).forEach(function (e) { subs.push(iq.subScores.eras[e]); });
                 if (iq.subScores.recall) subs.push(iq.subScores.recall);
                 if (iq.subScores.recognition) subs.push(iq.subScores.recognition);
+                Object.keys(iq.subScores.artists || {}).forEach(function (k) { subs.push(iq.subScores.artists[k]); });
             }
+            var artistRows = m && m.byArtist ? Object.keys(m.byArtist).filter(function (k) { return k !== 'unknown' && m.byArtist[k].attempts >= 3; }).sort(function (a, b) { return m.byArtist[b].attempts - m.byArtist[a].attempts; }).slice(0, 12).map(function (k) {
+                var b = m.byArtist[k];
+                var sc = iq.subScores && iq.subScores.artists ? iq.subScores.artists[k] : null;
+                var name = sc ? sc.label.replace(/ IQ$/, '') : k.split('-').map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join(' ');
+                return '<tr><td><button class="liq-link" data-action="artist-board" data-key="' + esc(k) + '" data-name="' + esc(name) + '">' + esc(name) + '</button></td><td class="num">' + esc(b.attempts) + '</td><td class="num">' + esc(pct(b.accuracy)) + '</td><td class="num">' + (sc ? esc(sc.value) : '—') + '</td></tr>';
+            }).join('') : '';
             var genreRows = m ? Object.keys(m.byGenre).sort(function (a, b) { return m.byGenre[b].attempts - m.byGenre[a].attempts; }).map(function (g) {
                 var b = m.byGenre[g];
                 return '<tr><td>' + esc(cats[g] || g) + '</td><td class="num">' + esc(b.attempts) + '</td><td class="num">' + esc(pct(b.accuracy)) + '</td><td class="num">' + esc(b.avgDifficulty) + '</td></tr>';
@@ -808,6 +896,7 @@
                     '<p class="liq-faint">Genre, era and recall sub-scores unlock after ' + esc(iq.thresholds.minQuestionsForCategoryScore) + ' questions in a category.</p>') +
                 '<div class="liq-section"><div class="liq-kicker">What the number means</div><ul class="liq-explain">' + (p.explanation || []).map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') + '</ul></div>' +
                 (genreRows ? '<div class="liq-section"><div class="liq-kicker">By genre</div><table class="liq-table"><thead><tr><th>Genre</th><th class="num">Qs</th><th class="num">Acc.</th><th class="num">Diff.</th></tr></thead><tbody>' + genreRows + '</tbody></table></div>' : '') +
+                (artistRows ? '<div class="liq-section"><div class="liq-kicker">By artist</div><table class="liq-table"><thead><tr><th>Artist</th><th class="num">Qs</th><th class="num">Acc.</th><th class="num">Artist IQ</th></tr></thead><tbody>' + artistRows + '</tbody></table></div>' : '') +
                 (decadeRows ? '<div class="liq-section"><div class="liq-kicker">By era</div><table class="liq-table"><thead><tr><th>Era</th><th class="num">Qs</th><th class="num">Acc.</th><th class="num">Diff.</th></tr></thead><tbody>' + decadeRows + '</tbody></table></div>' : '') +
                 (recent ? '<div class="liq-section"><div class="liq-kicker">Recent</div><table class="liq-table"><thead><tr><th>Mode</th><th class="num">Right</th><th class="num">Score</th><th class="num">Streak</th></tr></thead><tbody>' + recent + '</tbody></table></div>' : '') +
                 '<div class="liq-result__actions"><button class="liq-btn liq-btn--primary" data-action="play" data-mode="QUICK_PLAY">Play</button><button class="liq-btn" data-action="share-profile">Share Lyric IQ</button></div>' +
@@ -825,26 +914,68 @@
     /* Leaderboard                                                         */
     /* ------------------------------------------------------------------ */
     var boardTab = 'daily';
+    var boardArtist = null;   // { key, name } for the Artist IQ board
+    var BOARD_TABS = ['daily', 'weekly', 'all-time', 'artist'];
+    function boardTabsHtml(labels) {
+        return '<div class="liq-tabs" role="tablist">' + BOARD_TABS.map(function (t) { return '<button class="liq-chip" role="tab" aria-selected="' + (t === boardTab) + '" aria-pressed="' + (t === boardTab) + '" data-action="board" data-board="' + t + '">' + esc(labels[t]) + '</button>'; }).join('') + '</div>';
+    }
     function renderLeaderboard() {
         updateHeader('leaderboard');
         clearTimers();
+        var labels = { daily: 'Daily', weekly: 'Weekly', 'all-time': 'All time', artist: 'Artist IQ' };
+        if (boardTab === 'artist' && !boardArtist && state.artist) boardArtist = { key: state.artist.key, name: state.artist.name };
+        if (boardTab === 'artist' && !boardArtist) {
+            // No artist chosen yet: the same picker as the setup step, feeding the board instead.
+            render(
+                '<section class="liq-section">' +
+                '<div class="liq-kicker">Leaderboard</div>' +
+                '<h1 class="liq-h2">Artist IQ</h1>' +
+                boardTabsHtml(labels) +
+                '<p class="liq-muted">Who knows one artist’s words best. Pick the artist.</p>' +
+                '<div class="liq-artist"><input class="liq-input liq-artist__input" id="liq-board-q" type="search" placeholder="Search an artist" autocomplete="off" maxlength="60" aria-label="Search an artist">' +
+                '<div class="liq-artist__results" id="liq-board-results" aria-live="polite"></div></div>' +
+                '</section>'
+            );
+            var input = document.getElementById('liq-board-q');
+            if (!input) return;
+            input.focus();
+            input.addEventListener('input', function () {
+                var q = input.value.trim();
+                clearTimeout(artistSearchTimer);
+                var box = document.getElementById('liq-board-results');
+                if (q.length < 2) { if (box) box.innerHTML = ''; return; }
+                artistSearchTimer = setTimeout(function () {
+                    api.artists(q).then(function (d) {
+                        if (input.value.trim() !== q || !box) return;
+                        box.innerHTML = (d.artists || []).map(function (a) {
+                            return '<button class="liq-mode liq-artist__item" data-action="artist-board" data-key="' + esc(a.key) + '" data-name="' + esc(a.name) + '"><span class="liq-mode__name">' + esc(a.name) + '</span><span class="liq-mode__meta">' + (a.tracks ? esc(a.tracks) + ' songs' : 'Not played yet') + '</span></button>';
+                        }).join('') || '<p class="liq-faint">No artist by that name yet.</p>';
+                    }).catch(function () {});
+                }, 280);
+            });
+            return;
+        }
         renderLoading('Checking the board');
-        api.leaderboard(boardTab).then(function (b) {
-            var labels = { daily: 'Daily', weekly: 'Weekly', 'all-time': 'All time' };
-            var valueLabel = boardTab === 'all-time' ? 'Lyric IQ' : 'Score';
+        (boardTab === 'artist' ? api.artistBoard(boardArtist.key) : api.leaderboard(boardTab)).then(function (b) {
+            var valueLabel = boardTab === 'all-time' ? 'Lyric IQ' : (boardTab === 'artist' ? 'Artist IQ' : 'Score');
+            var artistName = boardTab === 'artist' ? ((b.artist && b.artist.name) || boardArtist.name || boardArtist.key) : null;
             var rows = b.entries.map(function (e) {
                 return '<tr' + (e.isYou ? ' class="liq-me"' : '') + '><td class="num">' + esc(e.rank) + '</td><td>' + esc(e.displayName) + '</td><td class="num">' + esc(e.value) + '</td></tr>';
             }).join('');
             var me = '';
-            if (b.me) me = '<p class="liq-muted">' + (b.me.ranked ? 'You are #' + esc(b.me.rank) + ' with ' + esc(b.me.value) + '.' : 'Your ' + valueLabel.toLowerCase() + ' of ' + esc(b.me.value) + ' is not ranked. <a href="/signup.html?return=' + encodeURIComponent('/lyric-iq.html#leaderboard') + '">Create an account</a> to get on the board.') + '</p>';
+            if (b.me && artistName && !b.me.value) me = '<p class="liq-muted">Your ' + esc(artistName) + ' IQ unlocks after 15 of their questions.' + (b.me.ranked ? '' : ' <a href="/signup.html?return=' + encodeURIComponent('/lyric-iq.html#leaderboard') + '">Create an account</a> to be ranked when it does.') + '</p>';
+            else if (b.me) me = '<p class="liq-muted">' + (b.me.ranked ? 'You are #' + esc(b.me.rank) + ' with ' + esc(b.me.value) + '.' : 'Your ' + esc(artistName ? artistName + ' IQ' : valueLabel) + ' of ' + esc(b.me.value) + ' is not ranked. <a href="/signup.html?return=' + encodeURIComponent('/lyric-iq.html#leaderboard') + '">Create an account</a> to get on the board.') + '</p>';
             render(
                 '<section class="liq-section">' +
-                '<div class="liq-kicker">Leaderboard · ' + esc(b.periodKey) + '</div>' +
-                '<h1 class="liq-h2">' + esc(labels[boardTab]) + '</h1>' +
-                '<div class="liq-tabs" role="tablist">' + ['daily', 'weekly', 'all-time'].map(function (t) { return '<button class="liq-chip" role="tab" aria-selected="' + (t === boardTab) + '" aria-pressed="' + (t === boardTab) + '" data-action="board" data-board="' + t + '">' + esc(labels[t]) + '</button>'; }).join('') + '</div>' +
+                '<div class="liq-kicker">Leaderboard · ' + esc(artistName || b.periodKey) + '</div>' +
+                '<h1 class="liq-h2">' + esc(artistName ? artistName + ' IQ' : labels[boardTab]) + '</h1>' +
+                boardTabsHtml(labels) +
+                (artistName ? '<p class="liq-muted">Everyone’s Artist IQ for ' + esc(artistName) + ' from rounds scoped to their songs. <button class="liq-link" data-action="board-artist-change">Another artist</button></p>' : '') +
                 (rows ? '<table class="liq-table"><thead><tr><th class="num">#</th><th>Player</th><th class="num">' + valueLabel + '</th></tr></thead><tbody>' + rows + '</tbody></table>' : '<p class="liq-empty">Nobody on the board yet. Be first.</p>') +
                 me +
-                '<div><button class="liq-btn liq-btn--primary" data-action="play" data-mode="' + (boardTab === 'daily' ? 'DAILY_10' : 'QUICK_PLAY') + '">' + (boardTab === 'daily' ? 'Play Daily 10' : 'Play') + '</button></div>' +
+                (artistName
+                    ? '<div><button class="liq-btn liq-btn--primary" data-action="play-artist" data-key="' + esc(boardArtist.key) + '" data-name="' + esc(artistName) + '">Play ' + esc(artistName) + '</button></div>'
+                    : '<div><button class="liq-btn liq-btn--primary" data-action="play" data-mode="' + (boardTab === 'daily' ? 'DAILY_10' : 'QUICK_PLAY') + '">' + (boardTab === 'daily' ? 'Play Daily 10' : 'Play') + '</button></div>') +
                 '</section>'
             );
         }).catch(function (err) { renderError(err, 'leaderboard'); });
@@ -868,6 +999,7 @@
         }
         if (hash === '#mode') return renderModes();
         if (hash === '#genre') return renderGenre();
+        if (hash === '#artist') return renderArtist();
         if (hash === '#daily') return startGame('DAILY_10');
         if (hash === '#profile') return renderProfile();
         if (hash === '#leaderboard') return renderLeaderboard();
@@ -891,7 +1023,19 @@
             case 'play': e.preventDefault(); startGame(el.getAttribute('data-mode') || 'QUICK_PLAY'); break;
             case 'go': { e.preventDefault(); var step = el.getAttribute('data-step'); api.track('setup_step', { step: step }); setRoute('#' + step); route(); break; }
             case 'select-mode': { e.preventDefault(); var picked = el.getAttribute('data-mode') || 'QUICK_PLAY'; state.lastMode = picked; state.modePicked = true; api.track('mode_select', { game_mode: picked }); if (picked === 'DAILY_10') return startGame(picked); setRoute('#genre'); route(); break; }
-            case 'begin': e.preventDefault(); api.track('genre_select', { game_mode: state.lastMode, category: state.category }); startGame(state.lastMode || 'QUICK_PLAY'); break;
+            case 'begin': e.preventDefault(); api.track('genre_select', { game_mode: state.lastMode, category: state.category, artist: state.artist ? state.artist.key : null }); startGame(state.lastMode || 'QUICK_PLAY'); break;
+            case 'to-artist': e.preventDefault(); api.track('genre_select', { game_mode: state.lastMode, category: state.category }); setRoute('#artist'); route(); break;
+            case 'to-artist-step': e.preventDefault(); setRoute('#artist'); route(); break;
+            case 'pick-artist': {
+                e.preventDefault();
+                var key = el.getAttribute('data-key');
+                state.artist = state.artist && state.artist.key === key ? null : { key: key, name: el.getAttribute('data-name'), providerArtistId: el.getAttribute('data-pid') || null };
+                api.track('artist_select', { artist: state.artist ? key : null });
+                refreshArtistResults();
+                break;
+            }
+            case 'clear-artist': e.preventDefault(); state.artist = null; refreshArtistResults(); break;
+            case 'artist-board': e.preventDefault(); boardTab = 'artist'; boardArtist = { key: el.getAttribute('data-key'), name: el.getAttribute('data-name') }; setRoute('#leaderboard'); renderLeaderboard(); break;
             case 'replay': e.preventDefault(); api.track('replay_click', { game_mode: el.getAttribute('data-mode') }); startGame(el.getAttribute('data-mode') || 'QUICK_PLAY'); break;
             case 'retry-start': e.preventDefault(); startGame(state.lastMode); break;
             case 'category': {
@@ -918,6 +1062,8 @@
                 break;
             }
             case 'board': boardTab = el.getAttribute('data-board'); renderLeaderboard(); break;
+            case 'board-artist-change': e.preventDefault(); boardArtist = null; renderLeaderboard(); break;
+            case 'play-artist': e.preventDefault(); state.artist = { key: el.getAttribute('data-key'), name: el.getAttribute('data-name'), providerArtistId: null }; state.category = 'all'; startGame(state.lastMode === 'DAILY_10' ? 'QUICK_PLAY' : (state.lastMode || 'QUICK_PLAY')); break;
             case 'home': e.preventDefault(); setRoute('#play'); renderEntry(); break;
             case 'profile': e.preventDefault(); renderProfile(); break;
             case 'leaderboard': e.preventDefault(); renderLeaderboard(); break;

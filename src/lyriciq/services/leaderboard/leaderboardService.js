@@ -31,9 +31,19 @@ async function upsert(board, periodKey, player, update) {
 }
 
 /** Called once per completed session. */
-async function recordSessionResult(player, session, lyricIqValue) {
+async function recordSessionResult(player, session, lyricIqValue, lyricIq = null) {
     const now = session.endedAt || new Date();
     const displayName = player.displayName || 'Guest';
+    // Artist IQ: one board per artist, keyed by artistKey, holding the player's
+    // current Artist IQ (their score across every round with that artist's songs).
+    const artistKey = session.artist?.key || null;
+    const artistIq = artistKey ? lyricIq?.subScores?.artists?.[artistKey] : null;
+    if (artistKey) {
+        await upsert('ARTIST', artistKey, player, {
+            $set: { value: artistIq ? artistIq.value : 0, displayName, meta: { artistName: session.artist.name || artistKey, attempts: artistIq ? artistIq.attempts : 0, provisional: !artistIq } },
+            $inc: { secondary: session.score }
+        });
+    }
     if (session.dailyDateKey) {
         await upsert('DAILY', session.dailyDateKey, player, {
             $max: { value: session.score, secondary: session.correctCount },
@@ -60,6 +70,7 @@ function avgResponse(session) {
 /** Public board listing (registered players only) plus the caller's own row. */
 async function getBoard(board, { periodKey, limit = config.leaderboards.pageSize, playerKey = null } = {}) {
     const key = periodKey || (board === 'DAILY' ? dateKey() : board === 'WEEKLY' ? weekKey() : 'all');
+    if (board === 'ARTIST' && !periodKey) throw new Error('ARTIST board needs an artistKey');
     const rows = await LeaderboardRecord.find({ board, periodKey: key, userId: { $ne: null } })
         .sort({ value: -1, secondary: -1, updatedAt: 1 })
         .limit(limit)

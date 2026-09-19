@@ -160,6 +160,32 @@ class MusixmatchProvider extends LyricProvider {
         });
     }
 
+    /** artist.search: the artist step's picker. */
+    async searchArtists({ query = '', pageSize = 10 } = {}) {
+        const q = String(query || '').trim();
+        if (!q) return [];
+        const body = await this._call('artist.search', { q_artist: q, page: 1, page_size: pageSize });
+        const list = body?.artist_list;
+        if (!Array.isArray(list)) throw new ProviderError('BAD_PAYLOAD', 'Musixmatch artist search payload missing artist_list', { provider: this.name });
+        return list.map((item) => item.artist).filter((a) => a && a.artist_id !== undefined).map((a) => ({
+            providerArtistId: String(a.artist_id),
+            name: a.artist_name,
+            country: a.artist_country || null,
+            rating: a.artist_rating || 0
+        }));
+    }
+
+    /** track.search + f_artist_id: everything with lyrics by one artist, best rated first. */
+    async getArtistTracks({ providerArtistId, page = 1, pageSize = config.provider.musixmatch.seedPageSize } = {}) {
+        if (!providerArtistId) throw new ProviderError('BAD_REQUEST', 'providerArtistId is required', { provider: this.name });
+        const params = { f_artist_id: String(providerArtistId), f_has_lyrics: 1, s_track_rating: 'desc', page, page_size: pageSize };
+        const body = await this._call('track.search', params);
+        const list = body?.track_list;
+        if (!Array.isArray(list)) throw new ProviderError('BAD_PAYLOAD', 'Musixmatch artist tracks payload missing track_list', { provider: this.name });
+        logger.debug('provider_artist_fetched', { provider: this.name, count: list.length, providerArtistId, page });
+        return list.map((item) => this._normalizeTrack(item.track));
+    }
+
     async getPopularTracks({ country = 'us', page = 1, pageSize = config.provider.musixmatch.seedPageSize, chart = 'top' } = {}) {
         const body = await this._call('chart.tracks.get', { country, page, page_size: pageSize, chart_name: chart, f_has_lyrics: 1 });
         const list = body?.track_list;

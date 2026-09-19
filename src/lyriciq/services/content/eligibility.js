@@ -52,6 +52,7 @@ function isTrackEligibleForGame(track, context = {}, restrictions = emptyRestric
     }
 
     if (context.genre && context.genre !== 'all' && track.primaryGenre !== context.genre) return reject('GENRE_MISMATCH');
+    if (context.artistKey && track.artistKey !== context.artistKey) return reject('ARTIST_MISMATCH');
 
     return { eligible: true, reason: null };
 }

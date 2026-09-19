@@ -509,3 +509,15 @@ body[data-world="block"] .liq-world--block, body[data-world="court"] .liq-world-
     .liq-btn, .liq-choice, .liq-mode, .liq-chip, .liq-top__nav a { transition: none; }
     .liq-spinner { animation-duration: 2s; }
 }
+
+/* Artist step + Artist IQ board */
+.liq-artist { display: grid; gap: 10px; }
+.liq-artist__input { width: 100%; }
+.liq-artist__results { display: grid; gap: 8px; }
+.liq-artist__item { text-align: left; }
+.liq-artist__picked { margin: 0; font-weight: 700; color: var(--liq-paper); text-shadow: 0 2px 0 var(--liq-ink), 0 0 12px rgba(0, 0, 0, 0.55); }
+.liq-artist__picked .liq-link { color: var(--liq-gold); }
+.liq-link { background: none; border: 0; padding: 0; font: inherit; font-weight: 800; color: inherit; text-decoration: underline; cursor: pointer; }
+.liq-stat--artist { background: var(--liq-ink); color: var(--liq-mint); }
+.liq-stat--artist .liq-stat__k { color: rgba(244, 235, 221, 0.94); }
+.liq-entry__sub { margin: 8px 0 0; font-weight: 700; color: var(--liq-paper); text-shadow: 0 2px 0 var(--liq-ink), 0 0 12px rgba(0, 0, 0, 0.55); }

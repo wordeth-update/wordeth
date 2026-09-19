@@ -22,6 +22,7 @@ Weights live in `config.lyricIq.weights`. Every component is normalised to 0–1
 
 * Provisional until `minQuestionsForScore` (10) questions have been answered.
 * Category sub-scores (Hip-Hop IQ, R&B IQ, Pop IQ, Rock IQ, Country IQ, era IQs, Recall IQ, Recognition IQ) appear only after `minQuestionsForCategoryScore` (15) attempts in that bucket. Each is `100 × (0.6·shrunkAccuracy + 0.4·difficultyConquered)`.
+* **Artist IQ** (`subScores.artists[artistKey]`) is the same category score over the player's `byArtist` bucket, so it counts every question by that artist whether or not the round was scoped, and appears after the same 15 attempts. It feeds the per-artist leaderboard (`ARTIST` board, period key = `artistKey`) and the share card chip for scoped rounds.
 * The profile screen always ships a plain-language explanation of the five components.
 
 ## Recomputation
