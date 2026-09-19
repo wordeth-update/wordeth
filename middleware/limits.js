@@ -12,7 +12,7 @@ function userLimiter(windowMs, max, message) {
         max,
         standardHeaders: true,
         legacyHeaders: false,
-        keyGenerator: (req) => (req.user && req.user._id ? `u:${req.user._id}` : `ip:${req.ip}`),
+        keyGenerator: (req) => (req.user && req.user._id ? `u:${req.user._id}` : `ip:${req.headers['cf-connecting-ip'] || req.ip}`),
         message: { message: message || 'Too many requests. Please wait a little.' },
     });
 }

@@ -141,12 +141,22 @@ app.use(helmet({
 // Lyric IQ gameplay (one request per answer, ~1/sec in Rapid Fire) carries its own
 // per-player limiters in src/lyriciq/routes/index.js, so it is exempt from this coarse cap.
 const LYRICIQ_PATH_PREFIXES = ['/api/game/', '/api/daily', '/api/profile/', '/api/leaderboards/'];
+/**
+ * Who a request is from, for rate limiting.
+ *
+ * Cloudflare sits in front of Railway, so req.ip — the address the
+ * trusted proxy saw — is a Cloudflare edge, shared by everyone routed
+ * through it. Keying on that put whole regions in one bucket. Cloudflare
+ * sets cf-connecting-ip to the real client and strips any copy a client
+ * sent, so it is trusted when present; req.ip is the fallback.
+ */
+const clientKey = (req) => req.headers['cf-connecting-ip'] || req.ip;
+
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 300,
-    message: 'Too many requests from this IP, please try again later.',
-    // req.ip is what the trusted proxy says; headers a client can set are not.
-    keyGenerator: (req) => req.ip,
+    message: { message: 'Too many requests from this network. Please try again in a few minutes.' },
+    keyGenerator: clientKey,
     // Lyric IQ has its own per-player limiters and is exempt from this coarse cap.
     skip: (req) => LYRICIQ_PATH_PREFIXES.some((prefix) => req.originalUrl.startsWith(prefix))
 });
@@ -159,8 +169,7 @@ const authLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     skipSuccessfulRequests: true,
-    // req.ip is what the trusted proxy says; headers a client can set are not.
-    keyGenerator: (req) => req.ip
+    keyGenerator: clientKey
 });
 app.use('/api/auth/signin', authLimiter);
 app.use('/api/auth/signup', authLimiter);
@@ -178,7 +187,6 @@ if (process.env.MONGODB_USERNAME && process.env.MONGODB_PASSWORD) {
 }
 
 if (mongoUri && mongoUri !== 'mongodb://localhost:27017/wordeth') {
-    mongoose.set('sanitizeFilter', true);
     mongoose.connect(mongoUri, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
