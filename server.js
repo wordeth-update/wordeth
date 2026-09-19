@@ -759,7 +759,7 @@ app.get('/api/rooms/active', async (req, res) => {
     res.json(rooms);
 });
 
-app.get('/api/rooms/debug/:roomId', auth, requireRole('ADMIN'), async (req, res) => {
+app.get('/api/rooms/debug/:roomId', auth, _csRequireRole('ADMIN'), async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     const activeRooms = getActiveRooms();
     const room = activeRooms.find(r => r.id === req.params.roomId);
