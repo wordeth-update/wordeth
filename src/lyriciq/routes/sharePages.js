@@ -104,10 +104,12 @@ router.get('/s/:id', async (req, res) => {
   .card{display:block;width:100%;height:auto;border-radius:22px;border:3px solid var(--ink);box-shadow:0 8px 0 var(--ink),0 24px 60px rgba(0,0,0,.5);background:#151A3A;aspect-ratio:1200/630}
   h1{font-family:'Unbounded',sans-serif;font-weight:900;font-size:clamp(1.5rem,5vw,2.4rem);line-height:1.05;margin:0;text-transform:uppercase;text-shadow:-2px -2px 0 var(--ink),2px -2px 0 var(--ink),-2px 2px 0 var(--ink),2px 2px 0 var(--ink),0 6px 0 var(--ink)}
   p{margin:0;font-weight:600;font-size:1.05rem;color:var(--cream)}
-  .cta{display:flex;align-items:center;justify-content:center;min-height:72px;border-radius:26px;background:var(--amber);color:var(--ink);border:3px solid var(--ink);box-shadow:0 7px 0 var(--ink),0 14px 30px rgba(242,182,50,.35);font-family:'Unbounded',sans-serif;font-weight:900;font-size:1.3rem;letter-spacing:.06em;text-transform:uppercase;text-decoration:none}
+  .cta{display:flex;align-items:center;justify-content:center;min-height:72px;border-radius:26px;background:var(--mint);color:var(--ink);border:3px solid var(--ink);box-shadow:0 7px 0 var(--ink),0 14px 30px rgba(0,229,168,.4);font-family:'Unbounded',sans-serif;font-weight:900;font-size:1.3rem;letter-spacing:.06em;text-transform:uppercase;text-decoration:none}
+  .url{display:inline-flex;align-items:center;justify-content:center;gap:8px;align-self:center;padding:10px 18px;border-radius:999px;background:var(--ink);color:var(--mint);border:2px solid var(--mint);box-shadow:0 0 18px rgba(0,229,168,.45);font-family:'Unbounded',sans-serif;font-weight:800;font-size:.95rem;letter-spacing:.04em;text-decoration:none}
+  .url i{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--mint);box-shadow:0 0 12px var(--mint)}
   .cta:active{transform:translateY(3px);box-shadow:0 2px 0 var(--ink)}
   .foot{font-size:.9rem;color:rgba(244,235,221,.75);text-align:center}
-  .foot a{color:var(--cream)}
+  .foot a{color:var(--mint)}
 </style></head>
 <body>
 <header class="top"><a href="${esc(base)}/" aria-label="Wordeth Lyric IQ"><img src="/images/logo.png" alt="Wordeth"></a><a class="play" href="${esc(playUrl)}">Play</a></header>
@@ -116,6 +118,7 @@ router.get('/s/:id', async (req, res) => {
   <h1>${esc(title)}</h1>
   <p>${esc(card.line || '')}${card.headline ? ` ${esc(card.headline)}.` : ''} Finish the lyric, name the song, call the artist. Get your own number in ten questions.</p>
   <a class="cta" href="${esc(playUrl)}">Take the test</a>
+  <a class="url" href="${esc(playUrl)}"><i></i>${esc(base.replace(/^https?:\/\//, ''))}</a>
   <p class="foot">Lyric IQ is part of <a href="https://wordeth.com">Wordeth</a>. Lyrics licensed via Musixmatch.</p>
 </main>
 </body></html>`);

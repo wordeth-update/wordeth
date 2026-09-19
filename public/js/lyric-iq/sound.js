@@ -23,6 +23,21 @@
     var bedIndex = -1;
     var unlocked = false;                 // a real tap has happened and the elements are primed
     var wantBed = true;                   // music is the page's ambience: on from the first moment we are allowed
+    var OWNER_KEY = 'liq_bed_owner';      // which tab is playing the bed, so two tabs never play it together
+    var tabId = String(Date.now()) + Math.random().toString(36).slice(2, 8);
+    var ownerTimer = null;
+
+    function ownerRead() { try { return JSON.parse(localStorage.getItem(OWNER_KEY) || 'null'); } catch (e) { return null; } }
+    function ownerFresh(o) { return !!(o && o.id !== tabId && Date.now() - o.t < 3500); }
+    function ownerClaim() {
+        try { localStorage.setItem(OWNER_KEY, JSON.stringify({ id: tabId, t: Date.now() })); } catch (e) {}
+        if (!ownerTimer) ownerTimer = setInterval(function () { if (bed && !bed.paused) { try { localStorage.setItem(OWNER_KEY, JSON.stringify({ id: tabId, t: Date.now() })); } catch (e) {} } }, 1000);
+    }
+    function ownerRelease() {
+        if (ownerTimer) { clearInterval(ownerTimer); ownerTimer = null; }
+        var o = ownerRead();
+        if (o && o.id === tabId) { try { localStorage.removeItem(OWNER_KEY); } catch (e) {} }
+    }
 
     function make(src, vol) {
         var el = new Audio(src);
@@ -92,18 +107,20 @@
         if (i === undefined) i = bedIndex < 0 ? 0 : bedIndex;
         var el = elements()[i];
         if (bed === el && !el.paused) return;
+        if (ownerFresh(ownerRead())) return;          // another tab of ours has the music
         stopBed(true);
         bedIndex = i;
         bed = el;
         try { el.currentTime = 0; } catch (e) {}
         try { el.volume = BED_VOLUME; } catch (e) {}
         var p = el.play();
-        if (p && p.catch) p.catch(function () { if (bed === el) bed = null; });
+        if (p && p.then) p.then(ownerClaim, function () { if (bed === el) bed = null; }); else ownerClaim();
     }
 
     function stopBed(quick) {
         wantBed = wantBed && quick === 'keep';
         var el = bed; bed = null;
+        ownerRelease();
         if (!el) return;
         if (quick === true) { try { el.pause(); } catch (e) {} return; }
         // Fade over ~600ms where volume is adjustable, then pause.
@@ -153,6 +170,7 @@
         var c = context();
         if (c && c.state === 'suspended') { try { c.resume(); } catch (e) {} }
         elements().forEach(function (el) {
+            if (!el.paused) return;                    // already playing (the load got it): leave it be
             try {
                 el.muted = true;
                 var p = el.play();
@@ -170,14 +188,24 @@
     /* From the load, where the browser lets us (it does for a site the visitor has
        played before); everywhere else the first tap picks it up. */
     function tryAmbient() {
-        if (muted || !wantBed) return;
+        if (muted || !wantBed || unlocked || ownerFresh(ownerRead())) return;
         var el = elements()[0];
         try { el.currentTime = 0; } catch (e) {}
         var p = el.play();
         if (p && p.then) {
-            p.then(function () { unlocked = true; bed = el; bedIndex = 0; }, function () { /* waits for the tap */ });
+            p.then(function () { unlocked = true; bed = el; bedIndex = 0; ownerClaim(); }, function () { /* waits for the tap */ });
         }
     }
+    // Another tab took the music, or let it go.
+    window.addEventListener('storage', function (e) {
+        if (e.key !== OWNER_KEY) return;
+        var o = ownerRead();
+        if (ownerFresh(o) && bed && !bed.paused) { stopBed(true); return; }
+        if (ownerFresh(o)) return;
+        if (unlocked) { if (wantBed && !muted && !(bed && !bed.paused)) startBed(); }
+        else tryAmbient();                         // the other tab let go before we ever had a tap
+    });
+    window.addEventListener('pagehide', function () { if (bed && !bed.paused) ownerRelease(); });
     if (document.readyState === 'complete') tryAmbient();
     else window.addEventListener('load', tryAmbient);
     document.addEventListener('visibilitychange', function () {

@@ -1,6 +1,6 @@
 const { MusixmatchProvider } = require('../../../src/lyriciq/providers/lyrics');
 const { ProviderError } = require('../../../src/lyriciq/utilities/errors');
-const { extractUsableLines, normalizeGenre } = require('../../../src/lyriciq/providers/lyrics/normalizeTrack');
+const { extractUsableLines, normalizeGenre, leadArtistKey } = require('../../../src/lyriciq/providers/lyrics/normalizeTrack');
 
 function mm(body, status_code = 200) {
     return { data: { message: { header: { status_code }, body } } };
@@ -104,5 +104,23 @@ describe('MusixmatchProvider artist picker', () => {
         expect(list).toHaveLength(1);
         expect(calls[0].url).toMatch(/track\.search/);
         expect(calls[0].params).toMatchObject({ q_artist: 'Test Artist', f_has_lyrics: 1, page: 2 });
+    });
+});
+
+describe('lead artist key', () => {
+    test('features fold into the lead credit, duos and bands keep their name', () => {
+        expect(leadArtistKey('Lil Wayne feat. Drake')).toBe('lil-wayne');
+        expect(leadArtistKey('Lil Wayne ft. Cory Gunz')).toBe('lil-wayne');
+        expect(leadArtistKey('Lil Wayne Featuring Static Major')).toBe('lil-wayne');
+        expect(leadArtistKey('Lil Wayne')).toBe('lil-wayne');
+        expect(leadArtistKey('Simon & Garfunkel')).toBe('simon-and-garfunkel');
+        expect(leadArtistKey('Earth, Wind & Fire')).toBe('earth-wind-and-fire');
+        expect(leadArtistKey('JAY-Z')).toBe('jay-z');
+    });
+    test('a normalised track carries the lead artist key', async () => {
+        const p = provider(async () => mm({ track: { ...rawTrack, artist_name: 'Test Artist feat. Someone Else' } }));
+        const t = await p.getTrack(123);
+        expect(t.artist).toBe('Test Artist feat. Someone Else');
+        expect(t.artistKey).toBe('test-artist');
     });
 });

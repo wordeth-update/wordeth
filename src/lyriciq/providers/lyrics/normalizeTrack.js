@@ -24,6 +24,15 @@ function normalizeGenre(genres) {
     return 'other';
 }
 
+/**
+ * Key of the lead credit: "Lil Wayne feat. Drake" and "Lil Wayne ft. Drake" both
+ * belong to lil-wayne. Duos and bands keep their whole name (Simon & Garfunkel).
+ */
+function leadArtistKey(name) {
+    const lead = String(name || '').split(/\s+(?:feat\.?|ft\.?|featuring)\s+/i)[0];
+    return slugify(lead);
+}
+
 function slugify(value) {
     return String(value || '')
         .normalize('NFKD')
@@ -54,7 +63,7 @@ function finalizeTrack(partial) {
         isrc: partial.isrc || null,
         title: partial.title,
         artist: partial.artist,
-        artistKey: partial.artistKey || slugify(partial.artist),
+        artistKey: partial.artistKey || leadArtistKey(partial.artist),
         providerArtistId: partial.providerArtistId ? String(partial.providerArtistId) : null,
         album: partial.album || '',
         providerAlbumId: partial.providerAlbumId ? String(partial.providerAlbumId) : null,
@@ -122,4 +131,4 @@ function finalizeLyricAsset(partial) {
     };
 }
 
-module.exports = { normalizeGenre, slugify, decadeOf, yearFrom, finalizeTrack, finalizeLyricAsset, extractUsableLines };
+module.exports = { normalizeGenre, slugify, decadeOf, yearFrom, finalizeTrack, finalizeLyricAsset, extractUsableLines, leadArtistKey };

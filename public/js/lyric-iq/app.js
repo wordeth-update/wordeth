@@ -827,20 +827,10 @@
         if (!r || !r.share) return;
         api.track('share_click', { game_mode: r.session.gameMode });
         var url = shareUrlFor(r);
-        var text = r.share.short || r.share.text;
-        var fallback = function () {
-            if (navigator.share) return navigator.share({ title: 'Wordeth Lyric IQ', text: text, url: url }).catch(function (err) { if (err && err.name !== 'AbortError') openShareSheet(r); });
-            openShareSheet(r);
-        };
-        if (!navigator.share || !navigator.canShare || !r.share.cardPath || typeof File === 'undefined') return fallback();
-        fetch(r.share.cardPath).then(function (res) { if (!res.ok) throw new Error('card'); return res.blob(); }).then(function (blob) {
-            var file = new File([blob], 'lyric-iq-' + (r.lyricIq.after === null ? 'card' : r.lyricIq.after) + '.png', { type: 'image/png' });
-            if (navigator.canShare({ files: [file] })) {
-                api.track('share_card', { game_mode: r.session.gameMode });
-                return navigator.share({ files: [file], title: 'Wordeth Lyric IQ', text: text + ' ' + url }).catch(function () {});
-            }
-            return fallback();
-        }).catch(fallback);
+        // The link alone: its preview is the card, so sending the image or the
+        // line as well only repeats it. The card file stays available in the sheet.
+        if (navigator.share) return navigator.share({ url: url }).catch(function (err) { if (err && err.name !== 'AbortError') openShareSheet(r); });
+        openShareSheet(r);
     }
 
     /* ------------------------------------------------------------------ */

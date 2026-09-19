@@ -239,6 +239,7 @@ async function searchArtists({ query = '', limit = 10 } = {}) {
     const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const local = await Track.aggregate([
         { $match: { status: 'ACTIVE', hasLyrics: true, artist: { $regex: escaped, $options: 'i' } } },
+        { $sort: { artist: 1 } },
         { $group: { _id: '$artistKey', name: { $first: '$artist' }, providerArtistId: { $first: '$providerArtistId' }, count: { $sum: 1 } } },
         { $sort: { count: -1 } },
         { $limit: limit }
@@ -273,7 +274,13 @@ async function seedArtistTracks({ providerArtistId = null, artistKey = null, nam
     const key = artistKey || (name ? slugify(name) : null);
     const min = config.catalog.minArtistTracks;
     let inserted = 0;
-    const own = (t) => t.hasLyrics && !t.instrumental && (!key || t.artistKey === key);
+    const own = (t) => {
+        if (!t.hasLyrics || t.instrumental) return false;
+        if (!key) return true;
+        if (t.artistKey === key) return true;
+        if (providerArtistId && String(t.providerArtistId) === String(providerArtistId)) { t.artistKey = key; return true; }
+        return false;
+    };
 
     async function pull(label, fetchPage) {
         try {

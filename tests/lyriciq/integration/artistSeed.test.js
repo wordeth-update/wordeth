@@ -25,7 +25,7 @@ class FakeMusixmatch extends providers.SyntheticProvider {
         return [
             track(1, 'Lil Wayne', 'A Milli'), track(2, 'Lil Wayne', 'Lollipop'), track(3, 'Lil Wayne', 'Go DJ'),
             track(4, 'Lil Wayne', 'Fireman'), track(5, 'Lil Wayne', '6 Foot 7 Foot'), track(6, 'Lil Wayne', 'Mrs. Officer'),
-            track(7, 'Drake feat. Lil Wayne', 'HYFR'), track(8, 'Lil Wayne', 'Right Above It')
+            track(7, 'Drake feat. Lil Wayne', 'HYFR'), track(8, 'Lil Wayne feat. Drake', 'Right Above It')
         ];
     }
 }
@@ -43,7 +43,7 @@ test('falls back to the name search when the picked id is empty and keeps only t
     const fake = providers.getLyricProvider();
     const r = await catalogService.ensureArtist({ providerArtistId: '1', name: 'Lil Wayne' });
     expect(r.artistKey).toBe('lil-wayne');
-    expect(r.playable).toBe(7);
+    expect(r.playable).toBe(7); // six solo credits plus his own feature; Drake's song stays out
     expect(r.playable).toBeGreaterThanOrEqual(config.catalog.minArtistTracks);
     expect(fake.calls[0][0]).toBe('id');
     expect(fake.calls.some((c) => c[0] === 'name')).toBe(true);
