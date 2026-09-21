@@ -248,16 +248,23 @@ function setupSignaling(io) {
         const allow = (event, perSecond) => {
             const now = Date.now();
             const b = buckets.get(event) || { t: now, n: 0 };
-            if (now - b.t >= 1000) { b.t = now; b.n = 0; }
+            if (now - b.t >= (WINDOWS[event] || 1000)) { b.t = now; b.n = 0; }
             b.n += 1;
             buckets.set(event, b);
             return b.n <= perSecond;
         };
-        const RATES = { 'room-event': 20, 'chat-message': 5, 'room-image': 1, 'annotate': 20, 'join-room': 2, 'room-invite': 1, 'agora-uid-map': 5 };
+        // Per socket, per second. A photo is a 2MB payload, so it is capped hard, but two in
+        // a row is a person changing their mind, not abuse: the cap is on a 3 second window.
+        const RATES = { 'room-event': 20, 'chat-message': 5, 'room-image': 3, 'annotate': 20, 'join-room': 2, 'room-invite': 1, 'agora-uid-map': 5 };
+        const WINDOWS = { 'room-image': 3000 };
         const rawOn = socket.on.bind(socket);
         socket.on = (event, fn) => rawOn(event, (...args) => {
             const limit = RATES[event] || 50;
-            if (!allow(event, limit)) return;
+            if (!allow(event, limit)) {
+                const ack = typeof args[args.length - 1] === 'function' ? args[args.length - 1] : null;
+                if (ack) ack({ ok: false, error: 'Too fast. Give it a second and try again.' });
+                return;
+            }
             try {
                 const r = fn(...args);
                 if (r && typeof r.catch === 'function') r.catch((e) => console.error(`[Socket] ${event}:`, e.message));
@@ -1303,16 +1310,18 @@ function setupSignaling(io) {
             }
         });
 
-        socket.on('room-image', ({ roomId, imageData } = {}) => {
-            if (!roomId || typeof imageData !== 'string') return;
+        socket.on('room-image', ({ roomId, imageData } = {}, ack) => {
+            const reply = typeof ack === 'function' ? ack : () => {};
+            if (!roomId || typeof imageData !== 'string') return reply({ ok: false, error: 'No photo received.' });
             // A photo, not a file: two megabytes as a data URL, and only a data URL.
-            if (imageData.length > 2 * 1024 * 1024 || !/^data:image\/(jpeg|png|webp);base64,/.test(imageData)) return;
+            if (imageData.length > 2 * 1024 * 1024 || !/^data:image\/(jpeg|png|webp);base64,/.test(imageData)) return reply({ ok: false, error: 'That photo is too large to share here.' });
             const room = inRoom(roomId);
-            if (!room) return;
+            if (!room) return reply({ ok: false, error: 'You are not in this room any more.' });
             socket.to(roomId).emit('room-image', {
                 sender: socket.userName || 'Someone',
                 imageData
             });
+            reply({ ok: true });
         });
 
         socket.on('music-stream-status', ({ roomId, songTitle, artistName, playing } = {}) => {
