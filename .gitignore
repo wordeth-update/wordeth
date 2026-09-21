@@ -60,14 +60,6 @@ wordeth_test
 *.tar.gz
 *.zip
 
-# Mobile build output
-www/
-
-# Capacitor native build artifacts
-android/app/build/
-android/.gradle/
-ios/App/Pods/
-ios/DerivedData/
 
 # User uploads (if stored locally)
 uploads/

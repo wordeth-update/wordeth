@@ -6,7 +6,7 @@ Wordeth is a social music experience platform that creates an interactive commun
 ## System Architecture
 
 ### Frontend (Mobile + Web)
-- **Technology**: Static HTML pages with vanilla CSS and JavaScript, wrapped with Capacitor for iOS and Android
+- **Technology**: Static HTML pages with vanilla CSS and JavaScript. The native mobile app lives in its own project and talks to this server over the API and Socket.IO
 - **App ID**: `com.wordeth.app`
 - **API Config**: All API calls use `js/config.js` which provides `apiUrl()` function. Set `window.WORDETH_API_BASE` or use the build script to configure the backend URL.
 - **Pages**: index.html (home), verses.html (audio rooms), lyrics.html (lyric search), merch.html (merchandise), articles.html, signin.html, signup.html, profile.html, plus admin pages for ads and analytics
@@ -73,53 +73,12 @@ Wordeth is a social music experience platform that creates an interactive commun
 ### Runtime
 - express, mongoose, bcryptjs, jsonwebtoken, cors, helmet, express-rate-limit, express-validator, dotenv, axios, multer, @aws-sdk/client-s3
 
-### Mobile (Capacitor)
-- @capacitor/core, @capacitor/cli, @capacitor/ios, @capacitor/android, @capacitor/camera, @capacitor/status-bar, @capacitor/splash-screen, @capacitor/network, @capacitor/app
-
 ### Dev
 - nodemon, jest, supertest
 
-## Mobile App Build
+## Mobile App
 
-### Prerequisites
-- Node.js 18+
-- For iOS: Mac with Xcode 15+, CocoaPods
-- For Android: Android Studio with SDK 33+
-
-### Build Steps
-
-1. Set your backend URL:
-   ```bash
-   export WORDETH_API_URL=https://your-deployed-backend.com
-   ```
-
-2. Build the frontend and sync to native projects:
-   ```bash
-   npm run mobile:build
-   ```
-
-3. Open in IDE:
-   ```bash
-   npx cap open ios      # Opens Xcode
-   npx cap open android  # Opens Android Studio
-   ```
-
-4. Build and run from the IDE, or archive for store submission.
-
-### App Store Submission
-- **Bundle ID**: com.wordeth.app
-- **Permissions required**: Camera (profile photos), Microphone (Verses audio rooms), Photo Library (profile images)
-- **iOS**: Archive in Xcode → Upload to App Store Connect
-- **Android**: Generate signed APK/AAB in Android Studio → Upload to Google Play Console
-
-### Updating the App
-For backend/API changes: Deploy the backend — changes take effect immediately.
-For frontend/UI changes:
-```bash
-npm run mobile:build
-npx cap open ios      # or android
-```
-Then rebuild and submit an update through the app store.
+The native iOS/Android app is a separate project, not part of this repository. It uses this server as its backend: point it at the deployed API (or a LAN address of a local `npm run dev`) and it will use `/api/*`, `/socket.io/` and the Agora token route for Verses rooms.
 
 ## Standalone Backend Deployment
 
@@ -156,7 +115,6 @@ All options require a MongoDB Atlas database (already configured) and the enviro
 ```
 wordeth/
 ├── server.js              # Express server entry point
-├── capacitor.config.json  # Capacitor mobile config
 ├── package.json
 ├── wordeth.md             # This file
 │
@@ -198,13 +156,9 @@ wordeth/
 │   └── inksoft/           # InkSoft merch integration
 │
 ├── scripts/               # Build and utility scripts
-│   ├── build-mobile.js    # Builds www/ for Capacitor
 │   ├── deploy.sh          # Deployment script
 │   ├── setup-local-env.js # Local env setup
 │   └── validate-env.js    # Env var validation
 │
-├── ios/                   # Capacitor iOS project
-├── android/               # Capacitor Android project
-├── www/                   # Built frontend (generated, gitignored)
 └── tests/                 # Jest test files
 ```

@@ -95,8 +95,6 @@ To go live: add a CNAME `play` → your Railway service hostname, add `play.word
 
 Production builds run from the root `Dockerfile` on Railway (`npm ci --omit=dev`, `node server.js`). Set the environment variables from `.env.example` in the Railway dashboard; for Lyric IQ add `MUSIXMATCH_API_KEY`, `LYRICIQ_LYRIC_PROVIDER=musixmatch`, `LYRICIQ_INCLUDE_SYNTHETIC=false`, `LYRICIQ_INTERNAL_API_KEY` and `LYRICIQ_DAILY_SEED_SALT`. The catalog seeds itself from the Musixmatch charts on first boot when fewer than 20 licensed tracks exist; run `npm run lyriciq:seed` for more.
 
-Mobile builds (`npm run mobile:build`) include `lyric-iq.html` and its assets.
-
 ## Known limitations
 
 * Distractors are heuristic (length, rhyme, crude part of speech). Good enough to play; a semantic model slot exists in `DistractorEngine`.
