@@ -139,9 +139,14 @@
                         <div class="form-section">
                             <h3>Creative</h3>
                             <div class="form-group">
-                                <label>Image URL <span class="required">*</span></label>
-                                <input type="url" name="imageUrl" required placeholder="https://your-domain.com/ad-image.jpg" id="imageUrlInput">
-                                <small>Host your image on your website or use an image hosting service</small>
+                                <label>Artwork <span class="required">*</span></label>
+                                <input type="file" name="image" id="adImageFile" accept="image/png,image/jpeg,image/webp,image/gif">
+                                <small>Choose a file from your computer. PNG, JPEG, WebP or GIF, up to 3 MB, at the size you picked above.</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Or paste an image address</label>
+                                <input type="url" name="imageUrl" placeholder="https://your-domain.com/ad-image.jpg" id="imageUrlInput">
+                                <small>Only needed if your artwork already lives online.</small>
                             </div>
                             <div class="form-group">
                                 <label>Click-through URL <span class="required">*</span></label>
@@ -150,7 +155,7 @@
                             <div class="form-group preview-group">
                                 <label>Preview</label>
                                 <div id="adPreview" class="ad-preview">
-                                    <p>Enter image URL above to see preview</p>
+                                    <p>Choose your artwork above to see a preview</p>
                                 </div>
                             </div>
                         </div>

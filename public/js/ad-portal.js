@@ -62,6 +62,23 @@ class AdPortal {
             imageUrlInput.addEventListener('input', (e) => this.updatePreview(e.target.value));
         }
 
+        // A file chosen from the machine previews straight away, before any upload.
+        const imageFileInput = document.getElementById('adImageFile');
+        if (imageFileInput) {
+            imageFileInput.addEventListener('change', (e) => {
+                const f = e.target.files && e.target.files[0];
+                if (!f) return;
+                if (f.size > 3 * 1024 * 1024) {
+                    alert('That image is larger than 3 MB. Save it smaller and try again.');
+                    e.target.value = '';
+                    return;
+                }
+                if (this.previewObjectUrl) URL.revokeObjectURL(this.previewObjectUrl);
+                this.previewObjectUrl = URL.createObjectURL(f);
+                this.updatePreview(this.previewObjectUrl);
+            });
+        }
+
         const keywordsInput = document.getElementById('keywordsInput');
         if (keywordsInput) {
             keywordsInput.addEventListener('input', (e) => this.updateKeywordCount(e.target.value));
@@ -124,24 +141,30 @@ class AdPortal {
             return;
         }
 
-        const adData = {
-            title: form.title.value,
-            description: form.description.value,
-            imageUrl: form.imageUrl.value,
-            linkUrl: form.linkUrl.value,
-            placement: form.placement.value,
-            size: form.size.value,
-            keywords
-        };
+        const chosen = document.getElementById('adImageFile');
+        const file = chosen && chosen.files && chosen.files[0];
+        if (!file && !form.imageUrl.value) {
+            alert('Choose an artwork file, or paste the address of one already online.');
+            return;
+        }
+
+        // A multipart form so the artwork travels with the rest of the ad.
+        const adData = new FormData();
+        adData.append('title', form.title.value);
+        adData.append('description', form.description.value);
+        adData.append('linkUrl', form.linkUrl.value);
+        adData.append('placement', form.placement.value);
+        adData.append('size', form.size.value);
+        adData.append('keywords', keywords.join(','));
+        if (file) adData.append('image', file);
+        else adData.append('imageUrl', form.imageUrl.value);
 
         try {
             const response = await fetch(apiUrl('/api/ads/create'), {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.token}`
-                },
-                body: JSON.stringify(adData)
+                // No Content-Type: the browser sets the multipart boundary itself.
+                headers: { 'Authorization': `Bearer ${this.token}` },
+                body: adData
             });
 
             const data = await response.json();
@@ -149,7 +172,10 @@ class AdPortal {
             if (response.ok) {
                 alert('Ad submitted for review! You\'ll be notified when it\'s approved.');
                 form.reset();
-                document.getElementById('adPreview').innerHTML = '<p>Enter image URL above to see preview</p>';
+                if (this.previewObjectUrl) { URL.revokeObjectURL(this.previewObjectUrl); this.previewObjectUrl = null; }
+                const fileInput = document.getElementById('adImageFile');
+                if (fileInput) fileInput.value = '';
+                document.getElementById('adPreview').innerHTML = '<p>Choose your artwork above to see a preview</p>';
                 document.getElementById('keywordCount').textContent = '0';
                 this.switchTab('my-ads');
             } else {
@@ -277,7 +303,7 @@ class AdPortal {
         if (url) {
             preview.innerHTML = `<img src="${this.escapeHtml(url)}" alt="Ad Preview" onerror="this.parentElement.innerHTML='<p>Failed to load image</p>'">`;
         } else {
-            preview.innerHTML = '<p>Enter image URL above to see preview</p>';
+            preview.innerHTML = '<p>Choose your artwork above to see a preview</p>';
         }
     }
 

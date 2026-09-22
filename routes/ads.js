@@ -1,4 +1,6 @@
 const express = require('express');
+const crypto = require('crypto');
+const multer = require('multer');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const Ad = require('../models/Ad');
@@ -14,6 +16,46 @@ const AD_SIZES = {
 
 const MAX_KEYWORDS = 25;
 
+/**
+ * Artwork comes from the advertiser's own machine. Their browser sends the
+ * file; it is stored here and the ad points at our copy, so a client never
+ * has to host an image somewhere first and paste a link.
+ */
+const AD_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+const adImage = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 3 * 1024 * 1024, files: 1 },
+    fileFilter: (req, file, cb) => {
+        if (!AD_IMAGE_TYPES.has(file.mimetype)) return cb(new Error('UNSUPPORTED_IMAGE_TYPE'));
+        cb(null, true);
+    }
+}).single('image');
+
+/** Wrap multer so a rejected file answers in JSON rather than crashing the request. */
+function acceptAdImage(req, res, next) {
+    adImage(req, res, (err) => {
+        if (!err) return next();
+        if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'That image is larger than 3 MB. Save it smaller and try again.' });
+        if (err.message === 'UNSUPPORTED_IMAGE_TYPE') return res.status(415).json({ error: 'Use a PNG, JPEG, WebP or GIF image.' });
+        return res.status(400).json({ error: 'That image could not be read.' });
+    });
+}
+
+const EXT_FOR = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' };
+
+/**
+ * Store an uploaded ad image and return its address on our own domain.
+ * Returns null when no file was sent, so a pasted link still works.
+ */
+async function storeAdImage(file) {
+    if (!file || !file.buffer || !file.buffer.length) return null;
+    const fileStorage = require('../services/fileStorage');
+    const ext = EXT_FOR[file.mimetype] || 'png';
+    const key = `ads/${Date.now()}-${crypto.randomBytes(6).toString('hex')}.${ext}`;
+    const { url } = await fileStorage.uploadBytes(key, file.buffer, file.mimetype);
+    return url;
+}
+
 function isValidUrl(string) {
     try {
         const url = new URL(string);
@@ -21,6 +63,17 @@ function isValidUrl(string) {
     } catch {
         return false;
     }
+}
+
+/**
+ * Artwork is either a full address the advertiser pasted, or a path on our own
+ * domain that came from storing their upload. Both are acceptable; anything
+ * else is not.
+ */
+function isValidImageRef(value) {
+    if (typeof value !== 'string' || !value) return false;
+    if (value.startsWith('/api/files/')) return true;
+    return isValidUrl(value);
 }
 
 function authenticateAdvertiser(req, res, next) {
@@ -167,16 +220,22 @@ router.get('/sizes', (req, res) => {
     });
 });
 
-router.post('/create', authenticateAdvertiser, async (req, res) => {
+router.post('/create', authenticateAdvertiser, acceptAdImage, async (req, res) => {
     try {
-        const { title, description, imageUrl, linkUrl, placement, size, keywords } = req.body;
+        const { title, description, linkUrl, placement, size } = req.body;
+        let { imageUrl, keywords } = req.body;
+        // Sent as a multipart form, keywords arrive as text.
+        if (typeof keywords === 'string') keywords = keywords.split(',').map((k) => k.trim()).filter(Boolean);
+
+        const uploaded = await storeAdImage(req.file);
+        if (uploaded) imageUrl = uploaded;
 
         if (!title || !imageUrl || !linkUrl || !placement || !size) {
-            return res.status(400).json({ error: 'Title, image URL, link URL, placement, and size are required' });
+            return res.status(400).json({ error: 'Title, artwork, link, placement and size are all required.' });
         }
 
-        if (!isValidUrl(imageUrl) || !isValidUrl(linkUrl)) {
-            return res.status(400).json({ error: 'Image URL and Link URL must be valid HTTP/HTTPS URLs' });
+        if (!isValidImageRef(imageUrl) || !isValidUrl(linkUrl)) {
+            return res.status(400).json({ error: 'The artwork and link must be valid web addresses.' });
         }
 
         if (keywords && keywords.length > MAX_KEYWORDS) {
@@ -572,12 +631,20 @@ router.get('/admin/analytics', authenticateAdvertiser, requireAdmin, async (req,
     }
 });
 
-router.post('/admin/upload-for-client', authenticateAdvertiser, requireAdmin, async (req, res) => {
+router.post('/admin/upload-for-client', authenticateAdvertiser, requireAdmin, acceptAdImage, async (req, res) => {
     try {
-        const { clientEmail, title, description, imageUrl, linkUrl, placement, size, keywords } = req.body;
+        const { clientEmail, title, description, linkUrl, placement, size } = req.body;
+        let { imageUrl, keywords } = req.body;
+        if (typeof keywords === 'string') keywords = keywords.split(',').map((k) => k.trim()).filter(Boolean);
 
-        if (!isValidUrl(imageUrl) || !isValidUrl(linkUrl)) {
-            return res.status(400).json({ error: 'Image URL and Link URL must be valid HTTP/HTTPS URLs' });
+        const uploaded = await storeAdImage(req.file);
+        if (uploaded) imageUrl = uploaded;
+
+        if (!clientEmail || !title || !imageUrl || !linkUrl || !placement || !size) {
+            return res.status(400).json({ error: 'Client email, title, artwork, link, placement and size are all required.' });
+        }
+        if (!isValidImageRef(imageUrl) || !isValidUrl(linkUrl)) {
+            return res.status(400).json({ error: 'The artwork and link must be valid web addresses.' });
         }
 
         let advertiser = await Advertiser.findOne({ email: clientEmail });
