@@ -16,6 +16,7 @@
     "lyriciq:seed": "node scripts/lyriciq-seed-catalog.js"
   },
   "dependencies": {
+    "@apple/app-store-server-library": "^3.1.0",
     "@capacitor/android": "^8.0.2",
     "@capacitor/app": "^8.0.0",
     "@capacitor/camera": "^8.0.0",

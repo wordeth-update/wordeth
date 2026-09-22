@@ -23,6 +23,7 @@ const DAY = 24 * HOUR;
 
 module.exports = {
     userLimiter,
+    applePurchase: userLimiter(MIN, 20, 'Too many purchase checks. Give it a minute.'),
     messages: userLimiter(MIN, 30, 'Slow down: thirty messages a minute.'),
     messagesDaily: userLimiter(DAY, 500, 'That is enough messages for one day.'),
     pushToken: userLimiter(HOUR, 20),

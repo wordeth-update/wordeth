@@ -6,10 +6,13 @@ const TokenLedger = require('../models/TokenLedger');
 const EventsLedger = require('../models/EventsLedger');
 
 const TOKEN_PACKS = [
-    { id: 'pack_25', tokens: 25, price: 1.99 },
-    { id: 'pack_50', tokens: 50, price: 3.49 },
-    { id: 'pack_100', tokens: 100, price: 5.99 }
+    { id: 'pack_25', tokens: 25, price: 1.99, appleProductId: 'com.wordeth.app.tokens.25' },
+    { id: 'pack_50', tokens: 50, price: 3.49, appleProductId: 'com.wordeth.app.tokens.50' },
+    { id: 'pack_100', tokens: 100, price: 5.99, appleProductId: 'com.wordeth.app.tokens.100' }
 ];
+
+/** What the App Store sells, keyed by the product id the phone reports. */
+const APPLE_PRODUCTS = new Map(TOKEN_PACKS.map((p) => [p.appleProductId, p]));
 
 const TOKEN_CASHOUT_RATE = 0.03;
 
@@ -85,8 +88,103 @@ router.post('/grant', auth, require('../middleware/limits').grant, async (req, r
     }
 });
 
+/**
+ * The catalogue, so a client can show prices without hard-coding them.
+ */
+router.get('/packs', (req, res) => {
+    res.json({ packs: TOKEN_PACKS.map((p) => ({ id: p.id, tokens: p.tokens, price: p.price, appleProductId: p.appleProductId })) });
+});
+
+/**
+ * Credit a pack bought through Apple's in-app purchase.
+ *
+ * The phone sends the signed transaction StoreKit gave it. The signature is
+ * checked against Apple's root certificates before anything is credited, and
+ * the transaction id is written with a unique index, so replaying the same
+ * purchase credits nothing the second time.
+ */
+router.post('/apple-purchase', auth, require('../middleware/limits').applePurchase, async (req, res) => {
+    const { verifyTransaction } = require('../services/appleIap');
+    const ApplePurchase = require('../models/ApplePurchase');
+    try {
+        let verified;
+        try {
+            verified = await verifyTransaction(req.body && req.body.transaction);
+        } catch (e) {
+            console.warn('[iap] verification failed:', e.code || e.message);
+            return res.status(400).json({ message: e.message || 'That purchase could not be verified.', code: e.code || 'VERIFICATION_FAILED' });
+        }
+        const { payload, environment } = verified;
+        const pack = APPLE_PRODUCTS.get(payload.productId);
+        if (!pack) {
+            return res.status(400).json({ message: 'That product is not a token pack.', code: 'UNKNOWN_PRODUCT' });
+        }
+        const transactionId = String(payload.transactionId);
+        const quantity = Math.max(1, Math.min(10, Number(payload.quantity) || 1));
+        const tokens = pack.tokens * quantity;
+
+        // Claim the transaction first: the unique index makes a replay a no-op.
+        try {
+            await ApplePurchase.create({
+                transactionId,
+                originalTransactionId: payload.originalTransactionId ? String(payload.originalTransactionId) : null,
+                userId: req.user._id,
+                productId: payload.productId,
+                quantity,
+                tokens,
+                environment
+            });
+        } catch (e) {
+            if (e && e.code === 11000) {
+                const user = await User.findById(req.user._id).select('tokenBalance');
+                return res.json({ message: 'Already credited.', alreadyCredited: true, tokens: 0, newBalance: user ? user.tokenBalance || 0 : 0 });
+            }
+            throw e;
+        }
+
+        const user = await User.findById(req.user._id);
+        const balanceBefore = user.tokenBalance || 0;
+        user.tokenBalance = balanceBefore + tokens;
+        await user.save();
+
+        await TokenLedger.create({
+            userId: user._id,
+            type: 'pack_purchase',
+            amount: tokens,
+            balanceBefore,
+            balanceAfter: user.tokenBalance,
+            metadata: { packId: pack.id, price: pack.price * quantity, tokensReceived: tokens, source: 'apple', transactionId, environment }
+        });
+        await EventsLedger.create({
+            actorId: user._id,
+            actorType: 'user',
+            eventType: 'token_pack_purchase',
+            resourceType: 'token_pack',
+            amount: pack.price * quantity,
+            description: `Purchased ${tokens} tokens via Apple`,
+            metadata: { packId: pack.id, tokens, price: pack.price * quantity, source: 'apple', environment }
+        });
+
+        try {
+            require('../services/realtime').emitToUser(user._id, 'token-balance', { balance: user.tokenBalance, delta: tokens, reason: 'purchase' });
+        } catch { /* the balance still returns below */ }
+
+        res.json({ message: 'Tokens added.', tokens, newBalance: user.tokenBalance });
+    } catch (error) {
+        console.error('Error crediting Apple purchase:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+/**
+ * Legacy: credited a pack with no payment at all. Admin-only now; the web
+ * buys through Stripe and the app through Apple.
+ */
 router.post('/purchase-pack', auth, async (req, res) => {
     try {
+        if (req.user.role !== 'ADMIN') {
+            return res.status(403).json({ message: 'Token packs are bought in the app or on the website.', code: 'USE_STORE' });
+        }
         const { packId } = req.body;
         const pack = TOKEN_PACKS.find(p => p.id === packId);
         if (!pack) {
