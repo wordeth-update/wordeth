@@ -5,6 +5,10 @@ const adTickets = require('../services/adTickets');
 const adBilling = require('../services/adBilling');
 const AdEvent = require('../models/AdEvent');
 const limits = require('../middleware/limits');
+const adCredit = require('../services/adCredit');
+const adInvoicing = require('../services/adInvoicing');
+const AdLedger = require('../models/AdLedger');
+const AdInvoice = require('../models/AdInvoice');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const Ad = require('../models/Ad');
@@ -214,6 +218,172 @@ router.get('/advertisers/profile', authenticateAdvertiser, async (req, res) => {
     } catch (error) {
         console.error('Profile fetch error:', error);
         res.status(500).json({ error: 'Failed to fetch profile' });
+    }
+});
+
+/* ------------------------------------------------------------------ */
+/* Money: what an advertiser owes, adds, and is billed                  */
+/* ------------------------------------------------------------------ */
+
+const TOP_UPS = [25, 50, 100, 250, 500, 1000];
+const MIN_TOP_UP = 10;
+const MAX_TOP_UP = 10000;
+
+function siteUrl() {
+    return process.env.REPLIT_DOMAINS
+        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+        : process.env.CLIENT_URL || 'http://localhost:5000';
+}
+
+/** The account's standing: balance or terms, and whether ads can run. */
+router.get('/billing', authenticateAdvertiser, async (req, res) => {
+    try {
+        const a = await Advertiser.findById(req.advertiserId).select('billing companyName email').lean();
+        if (!a) return res.status(404).json({ error: 'Account not found' });
+        const b = a.billing || {};
+        const invoiced = b.mode === 'invoiced';
+        const creditLimit = Number(b.creditLimit) || 0;
+        const outstanding = Number(b.outstanding) || 0;
+        const balance = Number(b.balance) || 0;
+
+        res.json({
+            mode: invoiced ? 'invoiced' : 'prepaid',
+            balance,
+            totalSpent: Number(b.totalSpent) || 0,
+            topUps: TOP_UPS,
+            ...(invoiced ? {
+                creditLimit,
+                outstanding,
+                available: creditLimit > 0 ? Math.max(0, Math.round((creditLimit - outstanding) * 100) / 100) : null,
+                termsDays: Number(b.termsDays) || 30,
+                pastDue: !!b.pastDue
+            } : {}),
+            canServe: invoiced
+                ? !b.pastDue && (creditLimit <= 0 || outstanding < creditLimit)
+                : balance > 0,
+            reason: invoiced
+                ? (b.pastDue ? 'An invoice is past its due date.' : (creditLimit > 0 && outstanding >= creditLimit ? 'The credit limit has been reached.' : null))
+                : (balance > 0 ? null : 'Add funds to start running ads.')
+        });
+    } catch (error) {
+        console.error('Billing read error:', error);
+        res.status(500).json({ error: 'Failed to read billing' });
+    }
+});
+
+/** Every movement of money on this account, newest first. */
+router.get('/billing/statement', authenticateAdvertiser, async (req, res) => {
+    try {
+        const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50));
+        const rows = await AdLedger.find({ advertiserId: req.advertiserId })
+            .sort({ createdAt: -1 }).limit(limit)
+            .select('type amount balanceAfter description adId createdAt').lean();
+        res.json({ entries: rows });
+    } catch (error) {
+        console.error('Statement error:', error);
+        res.status(500).json({ error: 'Failed to read statement' });
+    }
+});
+
+/** Send an advertiser to Stripe to add funds. Prepaid accounts only. */
+router.post('/billing/top-up', authenticateAdvertiser, limits.adTopUp, async (req, res) => {
+    try {
+        const advertiser = await Advertiser.findById(req.advertiserId).select('billing email companyName stripeCustomerId');
+        if (!advertiser) return res.status(404).json({ error: 'Account not found' });
+        if (advertiser.billing?.mode === 'invoiced') {
+            return res.status(400).json({ error: 'This account is billed on terms, so there is nothing to top up.', code: 'ON_TERMS' });
+        }
+
+        const amount = Math.round(Number(req.body && req.body.amount) * 100) / 100;
+        if (!Number.isFinite(amount) || amount < MIN_TOP_UP || amount > MAX_TOP_UP) {
+            return res.status(400).json({ error: `Choose an amount between $${MIN_TOP_UP} and $${MAX_TOP_UP}.` });
+        }
+
+        const { getStripeClient } = require('../services/stripeClient');
+        const stripe = getStripeClient();
+        const domain = siteUrl();
+
+        const session = await stripe.checkout.sessions.create({
+            mode: 'payment',
+            payment_method_types: ['card'],
+            customer_email: advertiser.email,
+            line_items: [{
+                price_data: {
+                    currency: 'usd',
+                    unit_amount: Math.round(amount * 100),
+                    product_data: { name: 'Wordeth advertising credit', description: `Credit for ${advertiser.companyName || 'your account'}` }
+                },
+                quantity: 1
+            }],
+            success_url: `${domain}/ad-admin.html?funds=added`,
+            cancel_url: `${domain}/ad-admin.html?funds=cancelled`,
+            metadata: {
+                type: 'ad_credit',
+                advertiserId: String(advertiser._id),
+                amount: String(amount)
+            }
+        });
+
+        res.json({ url: session.url, sessionId: session.id });
+    } catch (error) {
+        console.error('Top-up error:', error);
+        res.status(500).json({ error: 'Could not start the payment. Try again shortly.' });
+    }
+});
+
+/** This account's invoices. */
+router.get('/billing/invoices', authenticateAdvertiser, async (req, res) => {
+    try {
+        const invoices = await AdInvoice.find({ advertiserId: req.advertiserId })
+            .sort({ issuedAt: -1 }).limit(50).lean();
+        res.json({ invoices: invoices.map((i) => ({ ...i, overdue: i.status === 'open' && new Date(i.dueAt) < new Date() })) });
+    } catch (error) {
+        console.error('Invoice list error:', error);
+        res.status(500).json({ error: 'Failed to read invoices' });
+    }
+});
+
+/** Pay an invoice by card. Bank transfer is recorded by an administrator instead. */
+router.post('/billing/invoices/:id/pay', authenticateAdvertiser, limits.adTopUp, async (req, res) => {
+    try {
+        const invoice = await AdInvoice.findOne({ _id: req.params.id, advertiserId: req.advertiserId });
+        if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+        if (invoice.status !== 'open') return res.status(400).json({ error: 'That invoice is already settled.' });
+
+        const due = Math.round((invoice.total - invoice.amountPaid) * 100) / 100;
+        if (!(due > 0)) return res.status(400).json({ error: 'Nothing is outstanding on that invoice.' });
+
+        const { getStripeClient } = require('../services/stripeClient');
+        const stripe = getStripeClient();
+        const domain = siteUrl();
+        const advertiser = await Advertiser.findById(req.advertiserId).select('email companyName');
+
+        const session = await stripe.checkout.sessions.create({
+            mode: 'payment',
+            payment_method_types: ['card'],
+            customer_email: advertiser?.email,
+            line_items: [{
+                price_data: {
+                    currency: 'usd',
+                    unit_amount: Math.round(due * 100),
+                    product_data: { name: `Wordeth invoice ${invoice.number}`, description: `Advertising for ${advertiser?.companyName || 'your account'}` }
+                },
+                quantity: 1
+            }],
+            success_url: `${domain}/ad-admin.html?invoice=paid`,
+            cancel_url: `${domain}/ad-admin.html?invoice=cancelled`,
+            metadata: {
+                type: 'ad_invoice',
+                invoiceId: String(invoice._id),
+                advertiserId: String(req.advertiserId),
+                amount: String(due)
+            }
+        });
+
+        res.json({ url: session.url, sessionId: session.id });
+    } catch (error) {
+        console.error('Invoice payment error:', error);
+        res.status(500).json({ error: 'Could not start the payment. Try again shortly.' });
     }
 });
 
@@ -626,6 +796,170 @@ router.post('/admin/create-admin', authenticateAdvertiser, requireAdmin, async (
     } catch (error) {
         console.error('Create admin error:', error);
         res.status(500).json({ error: 'Failed to create admin account' });
+    }
+});
+
+/* ------------------------------------------------------------------ */
+/* Admin: who is on terms, what they owe, and raising invoices          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Put an account on credit terms, or back on prepaid.
+ *
+ * Extending credit is a commercial decision, so it is made here and never
+ * by the advertiser. A limit of zero on terms means unlimited, which is
+ * only sensible for a client you would invoice regardless.
+ */
+router.put('/admin/advertisers/:id/terms', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        const { mode, creditLimit, termsDays, billingEmail } = req.body || {};
+        if (mode && !['prepaid', 'invoiced'].includes(mode)) {
+            return res.status(400).json({ error: 'Mode must be prepaid or invoiced.' });
+        }
+        const set = {};
+        if (mode) set['billing.mode'] = mode;
+        if (creditLimit !== undefined) {
+            const n = Number(creditLimit);
+            if (!Number.isFinite(n) || n < 0) return res.status(400).json({ error: 'The credit limit must be zero or more.' });
+            set['billing.creditLimit'] = Math.round(n * 100) / 100;
+        }
+        if (termsDays !== undefined) {
+            const n = parseInt(termsDays, 10);
+            if (!Number.isFinite(n) || n < 1 || n > 120) return res.status(400).json({ error: 'Terms must be between 1 and 120 days.' });
+            set['billing.termsDays'] = n;
+        }
+        if (billingEmail !== undefined) set['billing.billingEmail'] = billingEmail || null;
+
+        const advertiser = await Advertiser.findByIdAndUpdate(req.params.id, { $set: set }, { new: true })
+            .select('companyName email billing');
+        if (!advertiser) return res.status(404).json({ error: 'Advertiser not found' });
+        res.json({ success: true, advertiser });
+    } catch (error) {
+        console.error('Terms update error:', error);
+        res.status(500).json({ error: 'Failed to update terms' });
+    }
+});
+
+/** Everyone on terms, with what they owe and whether they are late. */
+router.get('/admin/receivables', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        await adCredit.refreshPastDue();
+        const accounts = await Advertiser.find({ 'billing.mode': 'invoiced' })
+            .select('companyName email billing').lean();
+        const open = await AdInvoice.find({ status: 'open' }).select('advertiserId number total amountPaid dueAt').lean();
+        const byAccount = new Map();
+        for (const i of open) {
+            const k = String(i.advertiserId);
+            if (!byAccount.has(k)) byAccount.set(k, []);
+            byAccount.get(k).push({ ...i, outstanding: Math.round((i.total - i.amountPaid) * 100) / 100, overdue: new Date(i.dueAt) < new Date() });
+        }
+        res.json({
+            accounts: accounts.map((a) => ({
+                id: a._id,
+                companyName: a.companyName,
+                email: a.email,
+                creditLimit: a.billing?.creditLimit || 0,
+                outstanding: a.billing?.outstanding || 0,
+                termsDays: a.billing?.termsDays || 30,
+                pastDue: !!a.billing?.pastDue,
+                openInvoices: byAccount.get(String(a._id)) || []
+            }))
+        });
+    } catch (error) {
+        console.error('Receivables error:', error);
+        res.status(500).json({ error: 'Failed to read receivables' });
+    }
+});
+
+/** Raise invoices for last month, or for a named period, across all terms accounts. */
+router.post('/admin/invoices/run', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        const { periodStart, periodEnd, advertiserId } = req.body || {};
+        const period = periodStart && periodEnd
+            ? { periodStart: new Date(periodStart), periodEnd: new Date(periodEnd) }
+            : adInvoicing.lastMonth();
+        if (Number.isNaN(period.periodStart.getTime()) || Number.isNaN(period.periodEnd.getTime()) || period.periodStart >= period.periodEnd) {
+            return res.status(400).json({ error: 'Give a period whose start is before its end.' });
+        }
+
+        if (advertiserId) {
+            const one = await adInvoicing.raiseInvoice(advertiserId, period);
+            return res.json({ success: true, raised: one ? 1 : 0, invoices: one ? [one] : [] });
+        }
+        const raised = await adInvoicing.raiseAllInvoices(period);
+        res.json({ success: true, raised: raised.length, invoices: raised });
+    } catch (error) {
+        console.error('Invoice run error:', error);
+        res.status(400).json({ error: error.message || 'Failed to raise invoices' });
+    }
+});
+
+/** Record a payment that arrived outside Stripe, such as a bank transfer. */
+router.post('/admin/invoices/:id/record-payment', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        const amount = req.body && req.body.amount !== undefined ? Number(req.body.amount) : null;
+        if (amount !== null && (!Number.isFinite(amount) || amount <= 0)) {
+            return res.status(400).json({ error: 'A payment must be a positive amount.' });
+        }
+        const invoice = await adInvoicing.recordPayment(req.params.id, { amount, note: (req.body && req.body.note) || '' });
+        res.json({ success: true, invoice });
+    } catch (error) {
+        console.error('Record payment error:', error);
+        res.status(400).json({ error: error.message || 'Failed to record payment' });
+    }
+});
+
+/** Every invoice, newest first, for the admin view. */
+router.get('/admin/invoices', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        const q = {};
+        if (req.query.status && ['open', 'paid', 'void'].includes(req.query.status)) q.status = req.query.status;
+        const invoices = await AdInvoice.find(q).sort({ issuedAt: -1 }).limit(200)
+            .populate('advertiserId', 'companyName email').lean();
+        res.json({ invoices });
+    } catch (error) {
+        console.error('Invoice list error:', error);
+        res.status(500).json({ error: 'Failed to read invoices' });
+    }
+});
+
+/** Void an invoice raised in error, returning what it claimed to the account. */
+router.put('/admin/invoices/:id/void', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        const invoice = await AdInvoice.findById(req.params.id);
+        if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+        if (invoice.status === 'paid') return res.status(400).json({ error: 'A paid invoice cannot be voided. Refund it instead.' });
+        if (invoice.status === 'void') return res.json({ success: true, invoice });
+
+        const unpaid = Math.round((invoice.total - invoice.amountPaid) * 100) / 100;
+        invoice.status = 'void';
+        await invoice.save();
+        if (unpaid > 0) {
+            await Advertiser.updateOne({ _id: invoice.advertiserId }, { $inc: { 'billing.outstanding': -unpaid } });
+        }
+        await adCredit.refreshPastDue();
+        res.json({ success: true, invoice });
+    } catch (error) {
+        console.error('Void invoice error:', error);
+        res.status(500).json({ error: 'Failed to void invoice' });
+    }
+});
+
+/** Add or remove credit by hand, for a goodwill gesture or a correction. */
+router.post('/admin/advertisers/:id/adjust', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        const amount = Number(req.body && req.body.amount);
+        if (!Number.isFinite(amount) || amount === 0) return res.status(400).json({ error: 'Give an amount to add or remove.' });
+        const description = (req.body && req.body.description) || 'Manual adjustment';
+        if (amount > 0) {
+            const r = await adCredit.credit({ advertiserId: req.params.id, amount, type: 'adjustment', description });
+            return res.json({ success: true, ...r });
+        }
+        const r = await adCredit.debit({ advertiserId: req.params.id, amount: Math.abs(amount), type: 'adjustment', description });
+        res.json({ success: true, ...r });
+    } catch (error) {
+        console.error('Adjustment error:', error);
+        res.status(400).json({ error: error.message || 'Failed to adjust' });
     }
 });
 

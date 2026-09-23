@@ -247,6 +247,30 @@ async function handleCheckoutComplete(session) {
         return;
     }
 
+    // Advertising credit: money added to a prepaid account.
+    if (metadata.type === 'ad_credit') {
+        const adCredit = require('../services/adCredit');
+        const amount = Number(metadata.amount) || (Number(session.amount_total) || 0) / 100;
+        const result = await adCredit.credit({
+            advertiserId: metadata.advertiserId,
+            amount,
+            stripeSessionId: session.id,
+            type: 'top_up',
+            description: 'Advertising credit added by card'
+        });
+        console.log(`[Stripe] Ad credit ${result.duplicate ? 'already applied' : 'added'}: $${amount} for advertiser ${metadata.advertiserId}`);
+        return;
+    }
+
+    // An invoice settled by card rather than bank transfer.
+    if (metadata.type === 'ad_invoice') {
+        const adInvoicing = require('../services/adInvoicing');
+        const amount = Number(metadata.amount) || (Number(session.amount_total) || 0) / 100;
+        await adInvoicing.recordPayment(metadata.invoiceId, { amount, stripeSessionId: session.id, note: 'Paid by card' });
+        console.log(`[Stripe] Invoice ${metadata.invoiceId} paid: $${amount}`);
+        return;
+    }
+
     const existing = await EventsLedger.findOne({ 'metadata.stripeSessionId': session.id });
     if (existing) {
         console.log(`[Stripe] Session ${session.id} already processed, skipping`);

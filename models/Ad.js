@@ -122,6 +122,11 @@ adSchema.statics.findMatchingAds = async function(searchTerm, placement = null) 
         query.placement = placement;
     }
 
+    // An empty account serves nothing. Checked here so it holds for every caller.
+    const funded = await require('../services/adCredit').fundedAdvertiserIds();
+    if (!funded.length) return [];
+    query.advertiserId = { $in: funded };
+
     const ads = await this.find(query).populate('advertiserId', 'companyName');
 
     const scoredAds = ads.map(ad => {

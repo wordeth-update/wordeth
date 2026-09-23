@@ -11,6 +11,7 @@
  */
 
 const Ad = require('../models/Ad');
+const adCredit = require('./adCredit');
 
 const DAY_KEY = () => new Date().toISOString().slice(0, 10);
 
@@ -29,7 +30,7 @@ function priceOf(ad, type) {
  * Returns { charged, exhausted } — exhausted when the total budget is now spent.
  */
 async function charge(adId, type) {
-    const ad = await Ad.findById(adId).select('pricing budget status');
+    const ad = await Ad.findById(adId).select('pricing budget status advertiserId title');
     if (!ad) return { charged: 0, exhausted: false };
 
     const amount = Math.round(priceOf(ad, type) * 10000) / 10000;
@@ -60,13 +61,27 @@ async function charge(adId, type) {
         }
     }
 
+    // The advertiser pays for what was delivered. Their balance is the real
+    // limit; the campaign budget is their own cap inside it.
+    let accountEmpty = false;
+    if (amount > 0 && ad.advertiserId) {
+        const taken = await adCredit.debit({
+            advertiserId: ad.advertiserId,
+            amount,
+            adId,
+            type: type === 'click' ? 'click' : 'impression',
+            description: `${type === 'click' ? 'Click' : 'Impression'} — ${ad.title || 'ad'}`
+        });
+        accountEmpty = taken.empty;
+    }
+
     const total = Number(after.budget?.total) || 0;
     const exhausted = total > 0 && Number(after.budget?.spent) >= total;
     if (exhausted && after.status === 'active') {
         // Out of money: stop serving and say so, rather than quietly under-delivering.
         await Ad.updateOne({ _id: adId, status: 'active' }, { $set: { status: 'paused' } });
     }
-    return { charged: amount, exhausted };
+    return { charged: amount, exhausted, accountEmpty };
 }
 
 module.exports = { charge, priceOf, DAY_KEY };
