@@ -24,6 +24,10 @@ const DAY = 24 * HOUR;
 module.exports = {
     userLimiter,
     applePurchase: userLimiter(MIN, 20, 'Too many purchase checks. Give it a minute.'),
+    // Ad counters are unauthenticated by nature, so these are keyed by address
+    // and sized for a person reading pages, not a script in a loop.
+    adImpression: userLimiter(MIN, 60, 'Too many ad events.'),
+    adClick: userLimiter(MIN, 20, 'Too many ad clicks.'),
     messages: userLimiter(MIN, 30, 'Slow down: thirty messages a minute.'),
     messagesDaily: userLimiter(DAY, 500, 'That is enough messages for one day.'),
     pushToken: userLimiter(HOUR, 20),

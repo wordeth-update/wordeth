@@ -357,21 +357,38 @@ function displayAd(container, ad) {
 
     const link = container.querySelector('a');
     if (link) {
-        link.addEventListener('click', () => trackAdClick(adId));
+        link.addEventListener('click', () => trackAdClick(adId, ad.ticket));
     }
 
     container.classList.remove('hidden');
-    trackAdImpression(adId);
+    trackAdImpression(adId, ad.ticket);
 }
 
-function trackAdImpression(adId) {
-    if (!adId) return;
-    fetch(apiUrl(`/api/ads/impression/${adId}`), { method: 'POST' }).catch(() => {});
+// The server hands out a signed ticket with each ad and counts nothing without
+// it, so both calls carry the ticket rather than a bare id.
+function trackAdImpression(adId, ticket) {
+    if (!adId || !ticket) return Promise.resolve();
+    return fetch(apiUrl(`/api/ads/impression/${adId}`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket })
+    }).catch(() => {});
 }
 
-function trackAdClick(adId) {
-    if (!adId) return;
-    fetch(apiUrl(`/api/ads/click/${adId}`), { method: 'POST' }).catch(() => {});
+function trackAdClick(adId, ticket) {
+    if (!adId || !ticket) return;
+    const body = JSON.stringify({ ticket });
+    // The page is about to go to the advertiser, so send it in a way that survives.
+    if (navigator.sendBeacon) {
+        navigator.sendBeacon(apiUrl(`/api/ads/click/${adId}`), new Blob([body], { type: 'application/json' }));
+        return;
+    }
+    fetch(apiUrl(`/api/ads/click/${adId}`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        keepalive: true
+    }).catch(() => {});
 }
 
 function hideAds() {
@@ -419,11 +436,11 @@ function displayModalAd(container, ad) {
 
     const link = container.querySelector('a');
     if (link) {
-        link.addEventListener('click', () => trackAdClick(adId));
+        link.addEventListener('click', () => trackAdClick(adId, ad.ticket));
     }
 
     container.classList.remove('hidden');
-    trackAdImpression(adId);
+    trackAdImpression(adId, ad.ticket);
 }
 
 var selectedLyricsText = '';

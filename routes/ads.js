@@ -1,6 +1,10 @@
 const express = require('express');
 const crypto = require('crypto');
 const multer = require('multer');
+const adTickets = require('../services/adTickets');
+const adBilling = require('../services/adBilling');
+const AdEvent = require('../models/AdEvent');
+const limits = require('../middleware/limits');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const Ad = require('../models/Ad');
@@ -351,6 +355,22 @@ router.delete('/delete/:adId', authenticateAdvertiser, async (req, res) => {
     }
 });
 
+/**
+ * What a page receives for one slot: the creative, and a ticket that lets it
+ * report back. Without the ticket nothing can be counted, which is the point.
+ */
+function served(ad, slot, req) {
+    if (!ad) return null;
+    return {
+        id: ad._id,
+        title: ad.title,
+        imageUrl: ad.imageUrl,
+        linkUrl: ad.linkUrl,
+        size: ad.size,
+        ticket: adTickets.issue(String(ad._id), slot, req)
+    };
+}
+
 router.get('/match', async (req, res) => {
     try {
         const { q, placement } = req.query;
@@ -367,20 +387,8 @@ router.get('/match', async (req, res) => {
 
         res.json({
             ads: {
-                header: headerAd ? {
-                    id: headerAd._id,
-                    title: headerAd.title,
-                    imageUrl: headerAd.imageUrl,
-                    linkUrl: headerAd.linkUrl,
-                    size: headerAd.size
-                } : null,
-                footer: footerAd ? {
-                    id: footerAd._id,
-                    title: footerAd.title,
-                    imageUrl: footerAd.imageUrl,
-                    linkUrl: footerAd.linkUrl,
-                    size: footerAd.size
-                } : null
+                header: served(headerAd, 'header', req),
+                footer: served(footerAd, 'footer', req)
             }
         });
     } catch (error) {
@@ -405,20 +413,8 @@ router.get('/match-modal', async (req, res) => {
 
         res.json({
             ads: {
-                sidebar: sidebarAd ? {
-                    id: sidebarAd._id,
-                    title: sidebarAd.title,
-                    imageUrl: sidebarAd.imageUrl,
-                    linkUrl: sidebarAd.linkUrl,
-                    size: sidebarAd.size
-                } : null,
-                bottom: bottomAd ? {
-                    id: bottomAd._id,
-                    title: bottomAd.title,
-                    imageUrl: bottomAd.imageUrl,
-                    linkUrl: bottomAd.linkUrl,
-                    size: bottomAd.size
-                } : null
+                sidebar: served(sidebarAd, 'sidebar', req),
+                bottom: served(bottomAd, 'lyrics-bottom', req)
             }
         });
     } catch (error) {
@@ -427,30 +423,71 @@ router.get('/match-modal', async (req, res) => {
     }
 });
 
-router.post('/impression/:adId', async (req, res) => {
+/**
+ * Record an event against a ticket. Shared by impressions and clicks.
+ *
+ * Order matters: the ticket is claimed first, by writing a row whose unique
+ * index rejects a second use, and only then is anything charged. A replay
+ * therefore costs the advertiser nothing and reports success, because from
+ * the page's point of view the event was already recorded.
+ */
+async function record(req, res, type) {
+    const ticket = (req.body && req.body.ticket) || req.query.ticket;
+    const check = adTickets.verify(ticket, req);
+    if (!check.ok) {
+        // Say little: a prober should not learn which part was wrong.
+        return res.status(400).json({ success: false, error: 'Invalid or expired ad ticket' });
+    }
+    // The ticket names the ad; a path parameter that disagrees is an attempt to move it.
+    if (req.params.adId && req.params.adId !== check.adId) {
+        return res.status(400).json({ success: false, error: 'Invalid or expired ad ticket' });
+    }
+
+    const ad = await Ad.findById(check.adId).select('advertiserId status');
+    if (!ad) return res.status(404).json({ success: false, error: 'Ad not found' });
+
+    const viewer = adTickets.viewerHash(req);
+
+    // A click is only real if this viewer was shown the ad on this ticket.
+    if (type === 'click') {
+        const seen = await AdEvent.findOne({ nonce: check.nonce, type: 'impression' }).select('_id').lean();
+        if (!seen) return res.status(409).json({ success: false, error: 'No impression recorded for this ad' });
+    }
+
     try {
-        const { adId } = req.params;
-
-        await Ad.findByIdAndUpdate(adId, {
-            $inc: { 'stats.impressions': 1 }
+        await AdEvent.create({
+            adId: ad._id,
+            advertiserId: ad.advertiserId,
+            type,
+            nonce: check.nonce,
+            slot: check.slot,
+            viewer
         });
+    } catch (e) {
+        // Already claimed: idempotent, not an error.
+        if (e && e.code === 11000) return res.json({ success: true, duplicate: true });
+        throw e;
+    }
 
-        res.json({ success: true });
+    const { charged, exhausted } = await adBilling.charge(ad._id, type);
+    if (charged > 0) {
+        await AdEvent.updateOne({ nonce: check.nonce, type }, { $set: { charged } }).catch(() => {});
+    }
+    res.json({ success: true, exhausted });
+}
+
+router.post('/impression/:adId', limits.adImpression, async (req, res) => {
+    try {
+        await record(req, res, 'impression');
     } catch (error) {
         console.error('Impression tracking error:', error);
         res.status(500).json({ error: 'Failed to track impression' });
     }
 });
 
-router.post('/click/:adId', async (req, res) => {
+router.post('/click/:adId', limits.adClick, async (req, res) => {
     try {
-        const { adId } = req.params;
-
-        await Ad.findByIdAndUpdate(adId, {
-            $inc: { 'stats.clicks': 1 }
-        });
-
-        res.json({ success: true });
+        await record(req, res, 'click');
     } catch (error) {
         console.error('Click tracking error:', error);
         res.status(500).json({ error: 'Failed to track click' });

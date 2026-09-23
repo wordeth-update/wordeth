@@ -49,9 +49,13 @@ const adSchema = new mongoose.Schema({
         default: 'self-serve'
     },
     budget: {
+        /** Dollars a day, and in total. Zero on either means no cap there. */
         daily: { type: Number, default: 0 },
         total: { type: Number, default: 0 },
-        spent: { type: Number, default: 0 }
+        spent: { type: Number, default: 0 },
+        /** Today's running total, and the day it belongs to, so a new day starts clean. */
+        spentToday: { type: Number, default: 0 },
+        spentDate: { type: String, default: null }
     },
     pricing: {
         cpm: { type: Number, default: 2.00 },
@@ -95,9 +99,24 @@ adSchema.statics.findMatchingAds = async function(searchTerm, placement = null) 
     const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(w => w.length > 1);
     if (!searchWords.length) return [];
 
+    const today = new Date().toISOString().slice(0, 10);
+    const now = new Date();
     const query = {
         status: 'active',
-        keywords: { $in: searchWords }
+        keywords: { $in: searchWords },
+        // Inside its run dates, if it has any.
+        $and: [
+            { $or: [{ 'schedule.startDate': { $exists: false } }, { 'schedule.startDate': null }, { 'schedule.startDate': { $lte: now } }] },
+            { $or: [{ 'schedule.endDate': { $exists: false } }, { 'schedule.endDate': null }, { 'schedule.endDate': { $gte: now } }] },
+            // Total budget not yet spent (zero means uncapped).
+            { $or: [{ 'budget.total': { $lte: 0 } }, { $expr: { $lt: ['$budget.spent', '$budget.total'] } }] },
+            // Today's budget not yet spent. A stale date means today has not started.
+            { $or: [
+                { 'budget.daily': { $lte: 0 } },
+                { 'budget.spentDate': { $ne: today } },
+                { $expr: { $lt: ['$budget.spentToday', '$budget.daily'] } }
+            ] }
+        ]
     };
     if (placement) {
         query.placement = placement;
