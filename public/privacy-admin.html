@@ -313,7 +313,7 @@
                 <h3>Step 1: Get an Admin Token</h3>
                 <p>Sign into the <a href="w-admin.html">Admin panel</a> with your admin credentials. The admin system uses the same authentication. You'll need the JWT token from that login.</p>
                 <p>To get your token programmatically:</p>
-                <pre><code>POST /api/ads/admin/login
+                <pre><code>POST /api/auth/signin
 Content-Type: application/json
 
 {
@@ -425,19 +425,24 @@ Authorization: Bearer USER_JWT_TOKEN</code></pre>
             }
 
             try {
-                const res = await fetch('/api/ads/admin/login', {
+                // The deletion route is guarded by the ordinary account
+                // sign-in and an ADMIN role, so that is what this asks for.
+                const res = await fetch('/api/auth/signin', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
                 });
                 const data = await res.json();
-                if (res.ok && data.token) {
+                if (res.ok && data.token && data.user && data.user.role === 'ADMIN') {
                     adminToken = data.token;
                     document.getElementById('flushLogin').style.display = 'none';
                     document.getElementById('flushActions').classList.add('visible');
                     status.textContent = '';
+                } else if (res.ok && data.token) {
+                    status.textContent = 'That account is not an administrator.';
+                    status.className = 'admin-status fail';
                 } else {
-                    status.textContent = data.error || 'Login failed. Check your credentials.';
+                    status.textContent = data.error || data.message || 'Sign in failed. Check your details.';
                     status.className = 'admin-status fail';
                 }
             } catch (err) {

@@ -76,7 +76,12 @@ async function handleLogin(e) {
     const errorEl = document.getElementById('loginError');
 
     try {
-        const res = await fetch(`${API_BASE}/api/ads/advertisers/login`, {
+        // These pages read the analytics routes, which are guarded by the
+        // ordinary account sign-in and an ADMIN role. The advertiser sign-in
+        // issues a different kind of token with no user on it, so it could
+        // never satisfy them: every call came back unauthorised and bounced
+        // straight back to this screen.
+        const res = await fetch(`${API_BASE}/api/auth/signin`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
@@ -84,13 +89,13 @@ async function handleLogin(e) {
         const data = await res.json();
 
         if (!res.ok || data.error) {
-            errorEl.textContent = data.error || 'Login failed';
+            errorEl.textContent = data.error || data.message || 'Sign in failed';
             errorEl.style.display = 'block';
             return;
         }
 
-        if (data.advertiser?.role !== 'admin') {
-            errorEl.textContent = 'Admin access required';
+        if (data.user?.role !== 'ADMIN') {
+            errorEl.textContent = 'That account is not an administrator.';
             errorEl.style.display = 'block';
             return;
         }

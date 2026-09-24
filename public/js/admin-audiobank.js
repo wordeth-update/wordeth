@@ -64,7 +64,7 @@ function doLogin() {
     var errEl = document.getElementById('auth-error');
     errEl.style.display = 'none';
 
-    fetch('/api/auth/login', {
+    fetch('/api/auth/signin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email, password: password })
