@@ -625,6 +625,7 @@ app.use('/api/scheduled-rooms', scheduledRoomsRoutes); // Scheduled rooms & coll
 app.use('/api/rooms', roomTipsRoutes); // Room tips (mounted before custom room APIs)
 app.use('/api/access', accessRoutes);
 app.use('/api/files', require('./routes/files')); // Files stored in MongoDB (GridFS)
+app.use('/api/feedback', require('./routes/feedback')); // Tester feedback
 lyricIq.mount(app, '/api'); // Lyric IQ: /api/game, /api/daily, /api/profile, /api/leaderboards, /api/internal
 function generateRoomId() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';

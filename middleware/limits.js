@@ -29,6 +29,7 @@ module.exports = {
     adImpression: userLimiter(MIN, 60, 'Too many ad events.'),
     adClick: userLimiter(MIN, 20, 'Too many ad clicks.'),
     adTopUp: userLimiter(HOUR, 20, 'Too many payment attempts. Try again shortly.'),
+    feedback: userLimiter(HOUR, 10, 'That is plenty of feedback for one hour. Thank you.'),
     messages: userLimiter(MIN, 30, 'Slow down: thirty messages a minute.'),
     messagesDaily: userLimiter(DAY, 500, 'That is enough messages for one day.'),
     pushToken: userLimiter(HOUR, 20),

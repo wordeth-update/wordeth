@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tell us how it went - Wordeth</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/enhanced.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="css/cookie-consent.css">
+    <style>
+        .fb-box { max-width: 640px; }
+        .fb-q { margin-bottom: 1.75rem; }
+        .fb-q > label, .fb-legend {
+            display: block; margin-bottom: 0.5rem; font-weight: 600; line-height: 1.4;
+        }
+        .fb-hint { display: block; margin-top: 0.35rem; font-size: 0.85rem; opacity: 0.7; font-weight: 400; }
+        .fb-choices { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.25rem; }
+        .fb-choice { position: relative; }
+        .fb-choice input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+        .fb-choice span {
+            display: inline-flex; align-items: center; min-height: 44px; padding: 0 1rem;
+            border: 2px solid rgba(255,255,255,0.25); border-radius: 999px;
+            cursor: pointer; transition: all 0.15s ease; font-size: 0.95rem;
+        }
+        .fb-choice input:checked + span { border-color: #00E5A8; background: rgba(0,229,168,0.15); }
+        .fb-choice input:focus-visible + span { outline: 3px solid #00E5A8; outline-offset: 2px; }
+        .fb-q textarea, .fb-q input[type="text"], .fb-q input[type="email"] {
+            width: 100%; min-height: 44px; padding: 0.75rem;
+            border-radius: 10px; border: 1px solid rgba(255,255,255,0.25);
+            background: rgba(255,255,255,0.06); color: inherit;
+            font-family: inherit; font-size: 1rem; resize: vertical;
+        }
+        .fb-q textarea { min-height: 88px; }
+        .fb-status { margin-top: 1rem; min-height: 1.5rem; font-weight: 600; }
+        .fb-status.bad { color: #FF6B6B; }
+        .fb-done { text-align: center; padding: 2rem 0; }
+        .fb-done h2 { margin-bottom: 0.75rem; }
+        .fb-who { font-size: 0.9rem; opacity: 0.75; margin-bottom: 1.5rem; }
+    </style>
+</head>
+<body>
+    <nav class="main-nav">
+        <div class="nav-logo">
+            <a href="/">
+                <img src="images/logo.png" alt="Wordeth Logo" class="logo">
+            </a>
+        </div>
+        <div class="nav-links">
+            <a href="verses.html">Verses</a>
+            <a href="verses-tournaments.html" class="nav-link-tournament tournament-nav-item" style="display:none;"><i class="fas fa-trophy trophy-icon"></i> Tournaments</a>
+            <a href="lyrics.html">Lyrics</a>
+            <a href="merch.html">Merch</a>
+            <a href="pricing.html">Pricing</a>
+        </div>
+        <button class="menu-toggle" id="menuToggle">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </nav>
+
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-content">
+            <div class="mobile-menu-header">
+                <img src="images/logo.png" alt="Wordeth Logo" class="mobile-logo">
+                <button class="mobile-menu-close" id="mobileMenuClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mobile-menu-links">
+                <a href="verses.html" class="mobile-menu-link">
+                    <i class="fas fa-headphones"></i>
+                    <span>Verses</span>
+                </a>
+                <a href="verses-tournaments.html" class="mobile-menu-link tournament-nav-item" style="display:none;"><i class="fas fa-trophy"></i><span>Tournaments</span></a>
+                <a href="lyrics.html" class="mobile-menu-link">
+                    <i class="fas fa-music"></i>
+                    <span>Lyrics</span>
+                </a>
+                <a href="merch.html" class="mobile-menu-link">
+                    <i class="fas fa-tshirt"></i>
+                    <span>Merch</span>
+                </a>
+                <a href="pricing.html" class="mobile-menu-link"><i class="fas fa-tags"></i><span>Pricing</span></a>
+            </div>
+            <div class="mobile-menu-search">
+                <input type="text" placeholder="Search..." class="mobile-search-input">
+                <button class="mobile-search-btn">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <div class="mobile-menu-auth">
+                <a href="/signin.html" class="mobile-signin-btn">
+                    <i class="fas fa-user"></i>
+                    <span>Sign In</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+
+    <main class="auth-container">
+        <div class="auth-box fb-box">
+            <div id="fb-form-wrap">
+                <h1>How did it go?</h1>
+                <p class="auth-subtitle">Six questions, about two minutes. Say what you actually think — blunt is useful.</p>
+                <p class="fb-who" id="fb-who"></p>
+
+                <form id="fb-form" class="auth-form" novalidate>
+                    <div class="fb-q" id="fb-identity" style="display:none;">
+                        <label for="fb-name">Your name</label>
+                        <input type="text" id="fb-name" maxlength="120" autocomplete="name">
+                        <label for="fb-email" style="margin-top:0.75rem;">Email</label>
+                        <input type="email" id="fb-email" maxlength="200" autocomplete="email">
+                        <span class="fb-hint">Only so we can ask you a follow-up question. Leave blank to stay anonymous.</span>
+                    </div>
+
+                    <div class="fb-q">
+                        <label for="fb-device">Which phone were you on?</label>
+                        <input type="text" id="fb-device" maxlength="120" placeholder="iPhone 14, iPhone 17 Pro Max…">
+                    </div>
+
+                    <div class="fb-q">
+                        <span class="fb-legend">Wi-Fi or cellular?</span>
+                        <div class="fb-choices" role="radiogroup" aria-label="Network">
+                            <label class="fb-choice"><input type="radio" name="network" value="wifi"><span>Wi-Fi</span></label>
+                            <label class="fb-choice"><input type="radio" name="network" value="cellular"><span>Cellular</span></label>
+                            <label class="fb-choice"><input type="radio" name="network" value="both"><span>Both</span></label>
+                            <label class="fb-choice"><input type="radio" name="network" value="unsure"><span>Not sure</span></label>
+                        </div>
+                    </div>
+
+                    <div class="fb-q">
+                        <span class="fb-legend">When people were on stage, could everyone hear them?</span>
+                        <div class="fb-choices" role="radiogroup" aria-label="Audio">
+                            <label class="fb-choice"><input type="radio" name="audioWorked" value="yes"><span>Yes, throughout</span></label>
+                            <label class="fb-choice"><input type="radio" name="audioWorked" value="mostly"><span>Mostly</span></label>
+                            <label class="fb-choice"><input type="radio" name="audioWorked" value="no"><span>No</span></label>
+                            <label class="fb-choice"><input type="radio" name="audioWorked" value="did-not-try"><span>Did not try</span></label>
+                        </div>
+                        <label for="fb-audio" style="margin-top:0.75rem;">If sound went wrong, roughly when, and what were you doing?</label>
+                        <textarea id="fb-audio" maxlength="4000"></textarea>
+                    </div>
+
+                    <div class="fb-q">
+                        <label for="fb-worst">What was the single most annoying moment?</label>
+                        <textarea id="fb-worst" maxlength="4000"></textarea>
+                    </div>
+
+                    <div class="fb-q">
+                        <label for="fb-best">What is the first thing you would show a friend?</label>
+                        <textarea id="fb-best" maxlength="4000"></textarea>
+                    </div>
+
+                    <div class="fb-q">
+                        <span class="fb-legend">Would you open this again next week without being asked?</span>
+                        <div class="fb-choices" role="radiogroup" aria-label="Would you return">
+                            <label class="fb-choice"><input type="radio" name="wouldReturn" value="yes"><span>Yes</span></label>
+                            <label class="fb-choice"><input type="radio" name="wouldReturn" value="maybe"><span>Maybe</span></label>
+                            <label class="fb-choice"><input type="radio" name="wouldReturn" value="no"><span>No</span></label>
+                        </div>
+                        <label for="fb-why" style="margin-top:0.75rem;">Why?</label>
+                        <textarea id="fb-why" maxlength="4000"></textarea>
+                        <span class="fb-hint">A plain no is more useful to us than a polite yes.</span>
+                    </div>
+
+                    <div class="fb-q">
+                        <label for="fb-else">Anything else?</label>
+                        <textarea id="fb-else" maxlength="4000"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="fb-submit">Send</button>
+                    <p class="fb-status" id="fb-status" role="status" aria-live="polite"></p>
+                </form>
+            </div>
+
+            <div id="fb-done" class="fb-done" style="display:none;">
+                <h2>Thank you.</h2>
+                <p class="auth-subtitle">That genuinely helps. If we need to ask you more, we will be in touch.</p>
+                <p style="margin-top:1.5rem;"><a href="/" class="btn-primary" style="display:inline-block;">Back to Wordeth</a></p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    (function () {
+        'use strict';
+        var API = (typeof apiUrl === 'function') ? apiUrl : function (p) { return p; };
+        // Which round of testing this belongs to, so one event reads on its own.
+        var EVENT = new URLSearchParams(location.search).get('event') || 'test-event';
+
+        var token = null;
+        try { token = localStorage.getItem('authToken'); } catch (e) { token = null; }
+
+        var who = document.getElementById('fb-who');
+        if (token) {
+            var name = '';
+            try { name = (JSON.parse(localStorage.getItem('user') || '{}') || {}).name || ''; } catch (e) { name = ''; }
+            who.textContent = name ? ('Sending as ' + name + '.') : 'Sending from your signed-in account.';
+        } else {
+            // Signed out: ask who they are, but never insist.
+            document.getElementById('fb-identity').style.display = '';
+            who.textContent = 'You are not signed in, which is fine.';
+        }
+
+        function picked(name) {
+            var el = document.querySelector('input[name="' + name + '"]:checked');
+            return el ? el.value : '';
+        }
+        function val(id) {
+            var el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        document.getElementById('fb-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            var status = document.getElementById('fb-status');
+            var button = document.getElementById('fb-submit');
+
+            var body = {
+                event: EVENT,
+                name: val('fb-name'),
+                email: val('fb-email'),
+                device: val('fb-device'),
+                network: picked('network'),
+                audioWorked: picked('audioWorked'),
+                audioDetail: val('fb-audio'),
+                worstMoment: val('fb-worst'),
+                bestMoment: val('fb-best'),
+                wouldReturn: picked('wouldReturn'),
+                wouldReturnWhy: val('fb-why'),
+                anythingElse: val('fb-else')
+            };
+
+            var answered = [body.network, body.audioWorked, body.wouldReturn].some(function (v) { return v; });
+            var said = [body.audioDetail, body.worstMoment, body.bestMoment, body.wouldReturnWhy, body.anythingElse]
+                .some(function (v) { return v; });
+            if (!answered && !said) {
+                status.textContent = 'Answer at least one question before sending.';
+                status.className = 'fb-status bad';
+                return;
+            }
+
+            button.disabled = true;
+            status.className = 'fb-status';
+            status.textContent = 'Sending…';
+
+            var headers = { 'Content-Type': 'application/json' };
+            if (token) headers.Authorization = 'Bearer ' + token;
+
+            fetch(API('/api/feedback'), { method: 'POST', headers: headers, body: JSON.stringify(body) })
+                .then(function (res) { return res.json().then(function (d) { return { ok: res.ok, d: d }; }); })
+                .then(function (r) {
+                    if (!r.ok) throw new Error((r.d && (r.d.error || r.d.message)) || 'That did not send.');
+                    document.getElementById('fb-form-wrap').style.display = 'none';
+                    document.getElementById('fb-done').style.display = '';
+                    window.scrollTo(0, 0);
+                })
+                .catch(function (err) {
+                    button.disabled = false;
+                    status.className = 'fb-status bad';
+                    status.textContent = err.message + ' Your answers are still here, so try again.';
+                });
+        });
+    })();
+    </script>
+
+
+    <script src="js/tournament-nav.js"></script>
+
+    <script src="js/utils.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/cookie-consent.js"></script>
+        <footer class="site-footer">
+          <div class="footer-inner">
+              <div class="footer-top-row">
+                  <a href="/" class="footer-logo-link"><img src="images/logo.png" alt="Wordeth"></a>
+                  <nav class="footer-nav">
+                      <div class="footer-group">
+                          <button class="footer-heading" aria-expanded="false">Explore <i class="fas fa-chevron-down"></i></button>
+                          <div class="footer-links">
+                              <a href="/verses.html">Verses</a>
+                              <a href="/lyrics.html">Lyrics</a>
+                              <a href="/merch.html">Merch</a>
+                              <a href="/pricing.html">Pricing</a>
+                          </div>
+                      </div>
+                      <div class="footer-group">
+                          <button class="footer-heading" aria-expanded="false">Account <i class="fas fa-chevron-down"></i></button>
+                          <div class="footer-links">
+                              <a href="/signin.html">Sign In</a>
+                              <a href="/signup.html">Sign Up</a>
+                              <a href="/profile.html">Profile</a>
+                              <a href="/creator-register.html">Creator Hub</a>
+                          </div>
+                      </div>
+                      <div class="footer-group">
+                          <button class="footer-heading" aria-expanded="false">Legal <i class="fas fa-chevron-down"></i></button>
+                          <div class="footer-links">
+                              <a href="/terms.html">Terms</a>
+                              <a href="/privacy.html">Privacy</a>
+                              <a href="/ad-admin.html">Advertise</a>
+                          </div>
+                      </div>
+                  </nav>
+                  <div class="footer-social">
+                      <a href="javascript:void(0)" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                      <a href="javascript:void(0)" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                      <a href="javascript:void(0)" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                      <a href="javascript:void(0)" aria-label="Spotify"><i class="fab fa-spotify"></i></a>
+                  </div>
+              </div>
+              <div class="footer-bottom-row">
+                  <span>&copy; 2025 Wordeth</span>
+                  <a href="#" onclick="window.WordethConsent && window.WordethConsent.revokeConsent(); return false;">Cookie Preferences</a>
+              </div>
+          </div>
+      </footer>
+    <script src="js/verse-mini-player.js"></script>
+    <script src="js/spa-router.js"></script>
+</body>
+</html> 

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback Review - Wordeth</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/enhanced.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .fr-wrap { max-width: 1000px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+        .fr-head { display:flex; flex-wrap:wrap; gap:1rem; align-items:center; justify-content:space-between; margin-bottom:1.5rem; }
+        .fr-tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1rem; margin-bottom:2rem; }
+        .fr-tile { border:1px solid rgba(255,255,255,0.18); border-radius:12px; padding:1rem; background:rgba(255,255,255,0.04); }
+        .fr-tile .n { font-size:2rem; font-weight:800; line-height:1; }
+        .fr-tile .k { font-size:0.8rem; opacity:0.7; text-transform:uppercase; letter-spacing:0.08em; margin-top:0.4rem; }
+        .fr-split { display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:0.5rem; font-size:0.85rem; opacity:0.85; }
+        .fr-entry { border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:1.1rem; margin-bottom:1rem; background:rgba(255,255,255,0.03); }
+        .fr-meta { display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; font-size:0.85rem; opacity:0.8; margin-bottom:0.75rem; }
+        .fr-pill { border:1px solid rgba(255,255,255,0.25); border-radius:999px; padding:0.15rem 0.6rem; font-size:0.78rem; }
+        .fr-pill.yes { border-color:#00E5A8; color:#00E5A8; }
+        .fr-pill.no { border-color:#FF6B6B; color:#FF6B6B; }
+        .fr-pill.maybe { border-color:#F2B632; color:#F2B632; }
+        .fr-a { margin:0.6rem 0; }
+        .fr-a .q { font-size:0.8rem; opacity:0.65; text-transform:uppercase; letter-spacing:0.06em; }
+        .fr-a .v { white-space:pre-wrap; line-height:1.5; }
+        .fr-controls { display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center; }
+        .fr-controls input, .fr-controls select {
+            min-height:42px; padding:0 0.75rem; border-radius:8px;
+            border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.06); color:inherit; font-family:inherit;
+        }
+        .fr-empty { text-align:center; padding:3rem 1rem; opacity:0.7; }
+        .fr-login { max-width:420px; margin:3rem auto; }
+        .fr-err { color:#FF6B6B; min-height:1.4rem; margin-top:0.75rem; font-weight:600; }
+    </style>
+</head>
+<body>
+    <nav class="main-nav">
+        <div class="nav-logo">
+            <a href="/">
+                <img src="images/logo.png" alt="Wordeth Logo" class="logo">
+            </a>
+        </div>
+        <div class="nav-links">
+            <a href="verses.html">Verses</a>
+            <a href="verses-tournaments.html" class="nav-link-tournament tournament-nav-item" style="display:none;"><i class="fas fa-trophy trophy-icon"></i> Tournaments</a>
+            <a href="lyrics.html">Lyrics</a>
+            <a href="merch.html">Merch</a>
+            <a href="pricing.html">Pricing</a>
+        </div>
+        <button class="menu-toggle" id="menuToggle">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </nav>
+
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-content">
+            <div class="mobile-menu-header">
+                <img src="images/logo.png" alt="Wordeth Logo" class="mobile-logo">
+                <button class="mobile-menu-close" id="mobileMenuClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mobile-menu-links">
+                <a href="verses.html" class="mobile-menu-link">
+                    <i class="fas fa-headphones"></i>
+                    <span>Verses</span>
+                </a>
+                <a href="verses-tournaments.html" class="mobile-menu-link tournament-nav-item" style="display:none;"><i class="fas fa-trophy"></i><span>Tournaments</span></a>
+                <a href="lyrics.html" class="mobile-menu-link">
+                    <i class="fas fa-music"></i>
+                    <span>Lyrics</span>
+                </a>
+                <a href="merch.html" class="mobile-menu-link">
+                    <i class="fas fa-tshirt"></i>
+                    <span>Merch</span>
+                </a>
+                <a href="pricing.html" class="mobile-menu-link"><i class="fas fa-tags"></i><span>Pricing</span></a>
+            </div>
+            <div class="mobile-menu-search">
+                <input type="text" placeholder="Search..." class="mobile-search-input">
+                <button class="mobile-search-btn">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <div class="mobile-menu-auth">
+                <a href="/signin.html" class="mobile-signin-btn">
+                    <i class="fas fa-user"></i>
+                    <span>Sign In</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+
+    <main>
+        <div class="fr-wrap">
+            <div id="fr-login" class="fr-login">
+                <div class="auth-box">
+                    <h1>Feedback</h1>
+                    <p class="auth-subtitle">Sign in with your administrator account.</p>
+                    <form id="fr-login-form" class="auth-form">
+                        <div class="form-group">
+                            <label for="fr-email">Email</label>
+                            <input type="email" id="fr-email" required autocomplete="username">
+                        </div>
+                        <div class="form-group">
+                            <label for="fr-password">Password</label>
+                            <input type="password" id="fr-password" required autocomplete="current-password">
+                        </div>
+                        <button type="submit" class="btn-primary">Sign in</button>
+                        <p class="fr-err" id="fr-login-err" role="status" aria-live="polite"></p>
+                    </form>
+                </div>
+            </div>
+
+            <div id="fr-main" style="display:none;">
+                <div class="fr-head">
+                    <h1 style="margin:0;">What testers said</h1>
+                    <div class="fr-controls">
+                        <input type="text" id="fr-event" placeholder="test-event" aria-label="Which round">
+                        <select id="fr-filter" aria-label="Filter">
+                            <option value="">Everyone</option>
+                            <option value="return-no">Would not return</option>
+                            <option value="return-maybe">Might return</option>
+                            <option value="audio-bad">Audio went wrong</option>
+                        </select>
+                        <button class="btn-primary" id="fr-refresh" type="button">Refresh</button>
+                        <button class="btn-primary" id="fr-export" type="button">Download CSV</button>
+                    </div>
+                </div>
+
+                <div class="fr-tiles" id="fr-tiles"></div>
+                <div id="fr-list"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    (function () {
+        'use strict';
+        var API = (typeof apiUrl === 'function') ? apiUrl : function (p) { return p; };
+        var token = null;
+        try { token = localStorage.getItem('authToken'); } catch (e) {}
+        var all = [];
+
+        function esc(s) {
+            return String(s === null || s === undefined ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        document.getElementById('fr-login-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            var err = document.getElementById('fr-login-err');
+            err.textContent = '';
+            fetch(API('/api/auth/signin'), {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: document.getElementById('fr-email').value,
+                    password: document.getElementById('fr-password').value
+                })
+            }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+              .then(function (r) {
+                  if (!r.ok || !r.d.token) throw new Error(r.d.error || r.d.message || 'Sign in failed.');
+                  if (!r.d.user || r.d.user.role !== 'ADMIN') throw new Error('That account is not an administrator.');
+                  token = r.d.token;
+                  try { localStorage.setItem('authToken', token); } catch (e) {}
+                  show();
+              })
+              .catch(function (e2) { err.textContent = e2.message; });
+        });
+
+        function show() {
+            document.getElementById('fr-login').style.display = 'none';
+            document.getElementById('fr-main').style.display = '';
+            load();
+        }
+
+        function load() {
+            var ev = document.getElementById('fr-event').value.trim();
+            var url = '/api/feedback/admin' + (ev ? ('?event=' + encodeURIComponent(ev)) : '');
+            fetch(API(url), { headers: { Authorization: 'Bearer ' + token } })
+                .then(function (r) {
+                    if (r.status === 401 || r.status === 403) throw new Error('signed-out');
+                    return r.json();
+                })
+                .then(function (d) { all = d.entries || []; paint(d.summary || {}, d.total || 0); })
+                .catch(function (e) {
+                    if (e.message === 'signed-out') {
+                        token = null;
+                        document.getElementById('fr-login').style.display = '';
+                        document.getElementById('fr-main').style.display = 'none';
+                    }
+                });
+        }
+
+        function tile(n, k, extra) {
+            return '<div class="fr-tile"><div class="n">' + esc(n) + '</div><div class="k">' + esc(k) + '</div>' +
+                   (extra ? '<div class="fr-split">' + extra + '</div>' : '') + '</div>';
+        }
+
+        function paint(summary, total) {
+            var r = summary.wouldReturn || {};
+            var a = summary.audioWorked || {};
+            var net = summary.network || {};
+            document.getElementById('fr-tiles').innerHTML =
+                tile(total, 'Replies', '<span>' + (summary.signedIn || 0) + ' signed in</span>') +
+                tile((r.yes || 0), 'Would return',
+                     '<span>' + (r.maybe || 0) + ' maybe</span><span>' + (r.no || 0) + ' no</span>') +
+                tile((a.no || 0) + (a.mostly || 0), 'Had audio trouble',
+                     '<span>' + (a.no || 0) + ' no</span><span>' + (a.mostly || 0) + ' partly</span>') +
+                tile((net.cellular || 0), 'On cellular',
+                     '<span>' + (net.wifi || 0) + ' Wi-Fi</span>');
+            render();
+        }
+
+        function render() {
+            var f = document.getElementById('fr-filter').value;
+            var rows = all.filter(function (e) {
+                if (f === 'return-no') return e.wouldReturn === 'no';
+                if (f === 'return-maybe') return e.wouldReturn === 'maybe';
+                if (f === 'audio-bad') return e.audioWorked === 'no' || e.audioWorked === 'mostly';
+                return true;
+            });
+
+            if (!rows.length) {
+                document.getElementById('fr-list').innerHTML =
+                    '<div class="fr-empty">Nothing here yet.</div>';
+                return;
+            }
+
+            document.getElementById('fr-list').innerHTML = rows.map(function (e) {
+                var name = (e.userId && e.userId.name) || e.name || 'Anonymous';
+                var mail = (e.userId && e.userId.email) || e.email || '';
+                var when = new Date(e.createdAt).toLocaleString();
+                var bits = '';
+                function answer(q, v) {
+                    if (!v) return '';
+                    return '<div class="fr-a"><div class="q">' + esc(q) + '</div><div class="v">' + esc(v) + '</div></div>';
+                }
+                bits += answer('If sound went wrong', e.audioDetail);
+                bits += answer('Most annoying moment', e.worstMoment);
+                bits += answer('Would show a friend', e.bestMoment);
+                bits += answer('Why', e.wouldReturnWhy);
+                bits += answer('Anything else', e.anythingElse);
+
+                var ret = e.wouldReturn
+                    ? '<span class="fr-pill ' + esc(e.wouldReturn) + '">' +
+                      (e.wouldReturn === 'yes' ? 'Would return' : e.wouldReturn === 'no' ? 'Would not return' : 'Might return') +
+                      '</span>' : '';
+                var aud = e.audioWorked
+                    ? '<span class="fr-pill' + (e.audioWorked === 'no' ? ' no' : '') + '">Audio: ' + esc(e.audioWorked.replace('-', ' ')) + '</span>' : '';
+
+                return '<div class="fr-entry">' +
+                    '<div class="fr-meta"><strong>' + esc(name) + '</strong>' +
+                    (mail ? '<span>' + esc(mail) + '</span>' : '') +
+                    '<span>' + esc(when) + '</span>' +
+                    (e.device ? '<span class="fr-pill">' + esc(e.device) + '</span>' : '') +
+                    (e.network ? '<span class="fr-pill">' + esc(e.network) + '</span>' : '') +
+                    aud + ret + '</div>' + (bits || '<div class="fr-a"><div class="v">No written answers.</div></div>') +
+                    '</div>';
+            }).join('');
+        }
+
+        document.getElementById('fr-refresh').addEventListener('click', load);
+        document.getElementById('fr-filter').addEventListener('change', render);
+        document.getElementById('fr-event').addEventListener('keydown', function (e) { if (e.key === 'Enter') load(); });
+        document.getElementById('fr-export').addEventListener('click', function () {
+            var ev = document.getElementById('fr-event').value.trim();
+            fetch(API('/api/feedback/admin/export' + (ev ? ('?event=' + encodeURIComponent(ev)) : '')),
+                  { headers: { Authorization: 'Bearer ' + token } })
+                .then(function (r) { return r.blob(); })
+                .then(function (b) {
+                    var u = URL.createObjectURL(b);
+                    var a = document.createElement('a');
+                    a.href = u; a.download = 'wordeth-feedback.csv';
+                    document.body.appendChild(a); a.click(); a.remove();
+                    URL.revokeObjectURL(u);
+                });
+        });
+
+        if (token) show();
+    })();
+    </script>
+
+
+    <script src="js/tournament-nav.js"></script>
+
+    <script src="js/utils.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/cookie-consent.js"></script>
+        <footer class="site-footer">
+          <div class="footer-inner">
+              <div class="footer-top-row">
+                  <a href="/" class="footer-logo-link"><img src="images/logo.png" alt="Wordeth"></a>
+                  <nav class="footer-nav">
+                      <div class="footer-group">
+                          <button class="footer-heading" aria-expanded="false">Explore <i class="fas fa-chevron-down"></i></button>
+                          <div class="footer-links">
+                              <a href="/verses.html">Verses</a>
+                              <a href="/lyrics.html">Lyrics</a>
+                              <a href="/merch.html">Merch</a>
+                              <a href="/pricing.html">Pricing</a>
+                          </div>
+                      </div>
+                      <div class="footer-group">
+                          <button class="footer-heading" aria-expanded="false">Account <i class="fas fa-chevron-down"></i></button>
+                          <div class="footer-links">
+                              <a href="/signin.html">Sign In</a>
+                              <a href="/signup.html">Sign Up</a>
+                              <a href="/profile.html">Profile</a>
+                              <a href="/creator-register.html">Creator Hub</a>
+                          </div>
+                      </div>
+                      <div class="footer-group">
+                          <button class="footer-heading" aria-expanded="false">Legal <i class="fas fa-chevron-down"></i></button>
+                          <div class="footer-links">
+                              <a href="/terms.html">Terms</a>
+                              <a href="/privacy.html">Privacy</a>
+                              <a href="/ad-admin.html">Advertise</a>
+                          </div>
+                      </div>
+                  </nav>
+                  <div class="footer-social">
+                      <a href="javascript:void(0)" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                      <a href="javascript:void(0)" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                      <a href="javascript:void(0)" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                      <a href="javascript:void(0)" aria-label="Spotify"><i class="fab fa-spotify"></i></a>
+                  </div>
+              </div>
+              <div class="footer-bottom-row">
+                  <span>&copy; 2025 Wordeth</span>
+                  <a href="#" onclick="window.WordethConsent && window.WordethConsent.revokeConsent(); return false;">Cookie Preferences</a>
+              </div>
+          </div>
+      </footer>
+    <script src="js/verse-mini-player.js"></script>
+    <script src="js/spa-router.js"></script>
+</body>
+</html> 
