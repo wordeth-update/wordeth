@@ -40,10 +40,17 @@ const EVENT_LABELS = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    // A stored token is a claim, not a fact. Tokens left over from an older
+    // sign-in are rejected by the routes this page reads, and trusting one
+    // meant the dashboard appeared for an instant and threw you back to the
+    // login screen with nothing said. Check it first, and say what is wrong.
     const saved = localStorage.getItem('wordeth_admin_token');
     if (saved) {
-        authToken = saved;
-        showDashboard();
+        verifyToken(saved).then((why) => {
+            if (!why) { authToken = saved; showDashboard(); return; }
+            localStorage.removeItem('wordeth_admin_token');
+            showLoginMessage(why);
+        });
     }
 
     document.getElementById('loginForm').addEventListener('submit', handleLogin);
@@ -102,6 +109,8 @@ async function handleLogin(e) {
 
         authToken = data.token;
         localStorage.setItem('wordeth_admin_token', authToken);
+        errorEl.textContent = '';
+        errorEl.style.display = 'none';
         showDashboard();
     } catch (err) {
         errorEl.textContent = 'Connection error. Please try again.';
@@ -109,9 +118,37 @@ async function handleLogin(e) {
     }
 }
 
-function logout() {
+/**
+ * Is this token usable here? Resolves to null when it is, or to a sentence
+ * explaining why not.
+ */
+async function verifyToken(token) {
+    try {
+        const res = await fetch(`${API_BASE}/api/auth/verify`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) return 'Your previous session has expired. Please sign in again.';
+        const data = await res.json();
+        if (!data.user) return 'Your previous session has expired. Please sign in again.';
+        if (data.user.role !== 'ADMIN') return 'That account is not an administrator.';
+        return null;
+    } catch (err) {
+        return 'Could not reach the server. Check your connection and try again.';
+    }
+}
+
+/** Put a sentence on the login screen so a failure is never silent. */
+function showLoginMessage(text) {
+    const el = document.getElementById('loginError');
+    if (!el) return;
+    el.textContent = text;
+    el.style.display = 'block';
+}
+
+function logout(reason) {
     authToken = null;
     localStorage.removeItem('wordeth_admin_token');
+    if (reason) showLoginMessage(reason);
     document.getElementById('login-screen').style.display = '';
     document.getElementById('dashboard-screen').style.display = 'none';
 }
@@ -131,7 +168,9 @@ async function apiFetch(endpoint) {
         headers: { 'Authorization': `Bearer ${authToken}` }
     });
     if (res.status === 401 || res.status === 403) {
-        logout();
+        logout(res.status === 403
+            ? 'That account is not an administrator.'
+            : 'Your session has expired. Please sign in again.');
         throw new Error('Session expired');
     }
     return res.json();
