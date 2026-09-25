@@ -28,6 +28,62 @@ async function authenticatedSocketUser(token) {
     }
 }
 
+const HOST_AWAY_GRACE_PERIOD = 60 * 1000;
+const hostHandoverTimers = new Map();
+
+/**
+ * A dropped connection is not the same as leaving.
+ *
+ * Phones disconnect constantly: the screen locks, the app goes to the
+ * background, Wi-Fi hands over to cellular, a call arrives. Handing the room
+ * to somebody else the instant that happens gave a visitor the host's
+ * controls over a room they did not open, and the real host came back to
+ * find they no longer ran it. So when a host drops, the room waits for them.
+ * The room keeps no active host meanwhile, rather than appointing one.
+ *
+ * Leaving on purpose still hands over at once; that is what leaving means.
+ */
+function scheduleHostHandover(io, roomId, awayUserId, awayName) {
+    cancelHostHandover(roomId);
+    const room = rooms.get(roomId);
+    if (!room) return;
+
+    room.hostAwayUserId = awayUserId ? String(awayUserId) : null;
+    room.hostId = null;
+    saveRoom(roomId, room);
+
+    io.to(roomId).emit('room-event', {
+        event: 'host-away',
+        data: { hostName: awayName || null, returnsWithinMs: HOST_AWAY_GRACE_PERIOD }
+    });
+
+    const timer = setTimeout(() => {
+        hostHandoverTimers.delete(roomId);
+        const r = rooms.get(roomId);
+        if (!r || r.hostId) return;               // room gone, or a host already returned
+        const next = r.participants.values().next().value;
+        if (!next) return;                        // empty room; deletion handles it
+        r.hostId = next.socketId;
+        r.hostAwayUserId = null;
+        next.isHost = true;
+        saveRoom(roomId, r);
+        io.to(roomId).emit('room-event', {
+            event: 'host-changed',
+            data: { newHostId: next.socketId, newHostName: next.userName }
+        });
+        console.log(`Room ${roomId}: host did not return, handed to ${next.userName}`);
+    }, HOST_AWAY_GRACE_PERIOD);
+
+    if (typeof timer.unref === 'function') timer.unref();
+    hostHandoverTimers.set(roomId, timer);
+    console.log(`Room ${roomId}: host dropped, holding the room for ${HOST_AWAY_GRACE_PERIOD / 1000}s`);
+}
+
+function cancelHostHandover(roomId) {
+    const t = hostHandoverTimers.get(roomId);
+    if (t) { clearTimeout(t); hostHandoverTimers.delete(roomId); }
+}
+
 function scheduleRoomDeletion(roomId, reason) {
     if (roomDeletionTimers.has(roomId)) return;
     const room = rooms.get(roomId);
@@ -709,7 +765,14 @@ function setupSignaling(io) {
             // Host authority is derived server-side: when the room has a known
             // creator, only that creator may claim host. Client-requested
             // isHost is honored only for legacy rooms without a creator.
-            const shouldBeHost = room.creatorUserId ? isOriginalCreator : (isHost || isOriginalCreator);
+            // A host whose connection dropped is being waited for; returning
+            // within the grace period gives them their room back, under
+            // whatever new socket id they arrived on.
+            const isAwayHostReturning = !!(room.hostAwayUserId && socket.userId &&
+                String(room.hostAwayUserId) === String(socket.userId));
+            const shouldBeHost = room.creatorUserId
+                ? (isOriginalCreator || isAwayHostReturning)
+                : (isHost || isOriginalCreator || isAwayHostReturning);
 
             if (shouldBeHost) {
                 const currentHostId = room.hostId;
@@ -718,6 +781,8 @@ function setupSignaling(io) {
                     prevHost.isHost = false;
                 }
                 room.hostId = socket.id;
+                room.hostAwayUserId = null;
+                cancelHostHandover(roomId);
             }
 
             room.participants.set(socket.id, {
@@ -822,7 +887,7 @@ function setupSignaling(io) {
                 participants: participantList
             });
 
-            if (isOriginalCreator && !isHost) {
+            if (shouldBeHost && !isHost) {
                 io.to(roomId).emit('room-event', {
                     event: 'host-changed',
                     data: { newHostId: socket.id, newHostName: socket.userName }
@@ -1378,16 +1443,8 @@ function setupSignaling(io) {
                         scheduleRoomDeletion(socket.roomId, 'disconnect');
                     }
                 } else if (socket.id === room.hostId) {
-                    const firstParticipant = room.participants.values().next().value;
-                    if (firstParticipant) {
-                        room.hostId = firstParticipant.socketId;
-                        firstParticipant.isHost = true;
-                        io.to(socket.roomId).emit('room-event', {
-                            event: 'host-changed',
-                            data: { newHostId: firstParticipant.socketId, newHostName: firstParticipant.userName }
-                        });
-                    }
-                    saveRoom(socket.roomId, room);
+                    // Dropped, not left. Hold the room open for them.
+                    scheduleHostHandover(io, socket.roomId, socket.userId, socket.userName);
                 } else {
                     saveRoom(socket.roomId, room);
                 }
