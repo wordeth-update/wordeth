@@ -384,6 +384,12 @@ Authorization: Bearer USER_JWT_TOKEN</code></pre>
                         <h3><i class="fas fa-trash-alt" style="color:#e74c3c"></i> Delete User Data</h3>
                         <p style="font-size:13px;color:#888;">Enter the email address of the user whose data should be permanently deleted.</p>
                         <div class="flush-email-row">
+                            <!-- Look before you delete: what the system knows about an email. Read-only. -->
+                            <div id="lookupBox" style="margin-bottom:1rem;">
+                                <input type="email" id="lookupEmail" placeholder="Look up an email first" style="margin-right:0.5rem;">
+                                <button class="btn-admin" type="button" onclick="lookupUser()">Look up</button>
+                                <p id="lookupResult" class="admin-status" style="margin-top:0.5rem;min-height:1.4rem;"></p>
+                            </div>
                             <input type="email" id="flushUserEmail" placeholder="User email to flush">
                             <button class="btn-admin btn-danger" onclick="confirmFlush()">Flush Data</button>
                         </div>
@@ -451,7 +457,25 @@ Authorization: Bearer USER_JWT_TOKEN</code></pre>
             }
         }
 
-        function confirmFlush() {
+        function lookupUser() {
+    const email = document.getElementById('lookupEmail').value.trim();
+    const out = document.getElementById('lookupResult');
+    if (!email) { out.textContent = 'Enter an email to look up.'; out.className = 'admin-status fail'; return; }
+    if (!adminToken) { out.textContent = 'Sign in above first.'; out.className = 'admin-status fail'; return; }
+    out.className = 'admin-status'; out.textContent = 'Looking…';
+    fetch('/api/user/admin/lookup?email=' + encodeURIComponent(email), { headers: { 'Authorization': 'Bearer ' + adminToken } })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (r) {
+            if (!r.ok) { out.textContent = r.d.error || 'Lookup failed.'; out.className = 'admin-status fail'; return; }
+            if (!r.d.exists) { out.textContent = 'No account for ' + r.d.email + '. They can sign up.'; out.className = 'admin-status'; return; }
+            var when = r.d.createdAt ? new Date(r.d.createdAt).toLocaleDateString() : 'unknown date';
+            out.textContent = 'Account exists: ' + (r.d.name || '(no name)') + ' · ' + r.d.role + ' · created ' + when + (r.d.creatorHandle ? ' · creator @' + r.d.creatorHandle : '') + '. They should sign in, or ask for a reset.';
+            out.className = 'admin-status';
+        })
+        .catch(function () { out.textContent = 'Connection error.'; out.className = 'admin-status fail'; });
+}
+
+function confirmFlush() {
             const email = document.getElementById('flushUserEmail').value.trim();
             if (!email) {
                 showResult('error', 'Please enter a user email address.');
