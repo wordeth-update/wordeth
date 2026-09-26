@@ -36,7 +36,10 @@ router.post('/signup', [
         
         const existingEmail = await User.findOne({ email });
         if (existingEmail) {
-            return res.status(400).json({ message: 'User already exists with this email' });
+            return res.status(400).json({
+                message: 'An account already exists for this email. Sign in instead — or, if you have forgotten the password, contact support@wordeth.com to reset it.',
+                code: 'EMAIL_TAKEN',
+            });
         }
 
         const existingName = await User.findOne({ name: { $regex: new RegExp(`^${name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } });

@@ -373,6 +373,34 @@ router.post('/merch', auth, upload.single('image'), async (req, res) => {
 
 const { requireRole } = require('../middleware/rbac');
 
+/**
+ * What the system knows about an email, before anyone deletes it.
+ *
+ * A tester was told their address already had an account and could not
+ * sign up. The only admin tool was flush, which removes the account without
+ * showing what it was. This answers the question first: does an account
+ * exist, since when, under what name and role. Nothing is changed.
+ */
+router.get('/admin/lookup', auth, requireRole('ADMIN'), async (req, res) => {
+    try {
+        const raw = typeof req.query.email === 'string' ? req.query.email.trim().toLowerCase() : '';
+        if (!raw) return res.status(400).json({ error: 'email is required' });
+        const user = await User.findOne({ email: raw }).select('name email role createdAt creatorProfile.handle');
+        if (!user) return res.json({ exists: false, email: raw });
+        res.json({
+            exists: true,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            createdAt: user.createdAt,
+            creatorHandle: user.creatorProfile && user.creatorProfile.handle ? user.creatorProfile.handle : null,
+        });
+    } catch (error) {
+        console.error('Admin lookup error:', error);
+        res.status(500).json({ error: 'Lookup failed' });
+    }
+});
+
 router.post('/admin/flush', auth, requireRole('ADMIN'), async (req, res) => {
     try {
         const { email } = req.body;
