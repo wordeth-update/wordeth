@@ -260,11 +260,25 @@ router.get('/history', auth, async (req, res) => {
 // Add to search history
 router.post('/history', auth, async (req, res) => {
     try {
-        const { songTitle, artist } = req.body;
+        const { songTitle, artist, trackId, image, album } = req.body;
         if (!songTitle || typeof songTitle !== 'string' || songTitle.length > 200) {
             return res.status(400).json({ message: 'Invalid songTitle' });
         }
-        req.user.searchHistory.unshift({ songTitle, artist });
+        const entry = {
+            songTitle,
+            artist: typeof artist === 'string' ? artist.slice(0, 200) : '',
+            trackId: Number.isInteger(trackId) && trackId > 0 ? trackId : null,
+            image: typeof image === 'string' && /^https:\/\//.test(image) ? image.slice(0, 500) : '',
+            album: typeof album === 'string' ? album.slice(0, 200) : '',
+            timestamp: new Date()
+        };
+        // One card per song: opening it again moves it to the front rather
+        // than filling the row with the same cover.
+        const same = (h) => (entry.trackId && h.trackId === entry.trackId)
+            || (String(h.songTitle).toLowerCase() === songTitle.toLowerCase()
+                && String(h.artist || '').toLowerCase() === entry.artist.toLowerCase());
+        req.user.searchHistory = req.user.searchHistory.filter((h) => !same(h));
+        req.user.searchHistory.unshift(entry);
         req.user.searchHistory = req.user.searchHistory.slice(0, 100);
         await req.user.save();
         res.json(req.user.searchHistory);

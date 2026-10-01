@@ -35,6 +35,7 @@ module.exports = {
     pushToken: userLimiter(HOUR, 20),
     replayMedia: userLimiter(HOUR, 5, 'Five recordings an hour.'),
     upload: userLimiter(HOUR, 10, 'Ten uploads an hour.'),
+    recognize: userLimiter(HOUR, 30, 'That is a lot of listening for one hour. Try the search box.'),
     heartbeat: userLimiter(MIN, 4),
     rotateCollab: userLimiter(DAY, 5, 'Five new ids a day.'),
     createRoom: userLimiter(HOUR, 10, 'Ten rooms an hour.'),

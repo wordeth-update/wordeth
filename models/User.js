@@ -116,6 +116,11 @@ const userSchema = new mongoose.Schema({
     searchHistory: [{
         songTitle: String,
         artist: String,
+        // What a card needs to be a card: the song's id to open it, and its
+        // art. Absent on entries made before the app kept them.
+        trackId: { type: Number, default: null },
+        image: { type: String, default: '' },
+        album: { type: String, default: '' },
         timestamp: {
             type: Date,
             default: Date.now

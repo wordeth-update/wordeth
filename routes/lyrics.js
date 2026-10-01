@@ -2,6 +2,14 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const auth = require('../middleware/auth');
+const multer = require('multer');
+const limits = require('../middleware/limits');
+
+// Song recognition ("what is playing?"). AudD names the recording from a
+// few seconds of audio; Musixmatch then finds its lyrics. Without a token
+// the app is told so and does not draw the microphone.
+const AUDD_API_TOKEN = process.env.AUDD_API_TOKEN;
+const listenUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 3 * 1024 * 1024 } });
 
 // Musixmatch API configuration
 const MUSIXMATCH_BASE_URL = 'https://api.musixmatch.com/ws/1.1';
@@ -509,6 +517,57 @@ router.get('/trending', async (req, res) => {
     } catch (error) {
         console.error('Error fetching trending:', error);
         res.status(500).json({ message: 'Error fetching trending songs' });
+    }
+});
+
+// Whether the app should offer listening at all.
+router.get('/recognize/status', (req, res) => {
+    res.json({ enabled: Boolean(AUDD_API_TOKEN && MUSIXMATCH_API_KEY) });
+});
+
+// A few seconds of what is playing in, the song (with lyrics) out.
+router.post('/recognize', auth, limits.recognize, listenUpload.single('audio'), async (req, res) => {
+    try {
+        if (!AUDD_API_TOKEN || !MUSIXMATCH_API_KEY) {
+            return res.status(503).json({ message: 'Listening is not switched on.' });
+        }
+        if (!req.file || !req.file.buffer || req.file.buffer.length < 2000) {
+            return res.status(400).json({ message: 'That recording was too short to tell.' });
+        }
+
+        const form = new FormData();
+        form.append('api_token', AUDD_API_TOKEN);
+        form.append('file', new Blob([req.file.buffer], { type: req.file.mimetype || 'audio/m4a' }), 'listen.m4a');
+        const heardRes = await fetch('https://api.audd.io/', { method: 'POST', body: form, signal: AbortSignal.timeout(20000) });
+        const heard = await heardRes.json().catch(() => null);
+        if (!heard || heard.status !== 'success') {
+            console.error('Recognize: AudD said', heard && heard.error ? heard.error.error_message : heardRes.status);
+            return res.status(502).json({ message: 'The listening service is not answering. Try the search box.' });
+        }
+        if (!heard.result || !heard.result.title) {
+            return res.json({ heard: null, hits: [] });
+        }
+
+        const { artist, title } = heard.result;
+        let hits = [];
+        try {
+            const response = await axios.get(`${MUSIXMATCH_BASE_URL}/track.search`, {
+                params: {
+                    apikey: MUSIXMATCH_API_KEY, q_artist: artist, q_track: title,
+                    f_has_lyrics: 1, page_size: 5, page: 1, s_track_rating: 'desc'
+                },
+                timeout: MUSIXMATCH_TIMEOUT
+            });
+            if (response.data.message.header.status_code === 200) {
+                hits = processTrackResults(response.data.message.body.track_list || []);
+            }
+        } catch (err) {
+            console.log('Recognize: lyric lookup failed', err.message);
+        }
+        res.json({ heard: { artist, title }, hits });
+    } catch (error) {
+        console.error('Recognize error:', error.message);
+        res.status(500).json({ message: 'Could not listen just now. Try the search box.' });
     }
 });
 
