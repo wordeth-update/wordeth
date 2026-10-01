@@ -86,7 +86,7 @@ router.get('/profile', auth, async (req, res) => {
 router.get('/profile/:id', async (req, res) => {
     try {
         const user = await User.findById(req.params.id)
-            .select('name bio avatar createdAt following followers searchHistory showRoomHistory roomHistory extendedBio profilePhotos musicSnippet');
+            .select('name bio avatar createdAt following followers searchHistory showRoomHistory roomHistory extendedBio profilePhotos musicSnippet favoriteLyric accountType');
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -105,6 +105,12 @@ router.get('/profile/:id', async (req, res) => {
             profile.roomHistory = user.roomHistory || [];
         }
         profile.extendedBio = user.extendedBio || '';
+        profile.accountType = user.accountType || 'fan';
+        profile.favoriteLyric = user.favoriteLyric && user.favoriteLyric.text ? {
+            text: user.favoriteLyric.text,
+            song: user.favoriteLyric.song || '',
+            artist: user.favoriteLyric.artist || ''
+        } : null;
         profile.profilePhotos = user.profilePhotos || [];
         if (user.musicSnippet && user.musicSnippet.url) {
             const snippet = user.musicSnippet;
@@ -445,15 +451,35 @@ router.post('/admin/flush', auth, requireRole('ADMIN'), async (req, res) => {
 
 router.put('/profile-customize', auth, async (req, res) => {
     try {
-        const { extendedBio } = req.body;
+        const { extendedBio, favoriteLyric } = req.body;
         if (extendedBio !== undefined) {
-            if (extendedBio.length > 2000) {
+            if (typeof extendedBio !== 'string' || extendedBio.length > 2000) {
                 return res.status(400).json({ message: 'Extended bio must be 2000 characters or fewer' });
             }
             req.user.extendedBio = extendedBio.trim();
         }
+        // The favourite lyric: a line, and where it is from. An empty line
+        // clears it. Lengths are checked here so the reply is a sentence
+        // rather than a Mongoose validation dump.
+        if (favoriteLyric !== undefined) {
+            const text = typeof favoriteLyric?.text === 'string' ? favoriteLyric.text.trim() : '';
+            const song = typeof favoriteLyric?.song === 'string' ? favoriteLyric.song.trim() : '';
+            const artist = typeof favoriteLyric?.artist === 'string' ? favoriteLyric.artist.trim() : '';
+            if (text.length > 280) {
+                return res.status(400).json({ message: 'A favorite lyric can be 280 characters.' });
+            }
+            if (song.length > 120 || artist.length > 120) {
+                return res.status(400).json({ message: 'The song and artist can be 120 characters each.' });
+            }
+            req.user.favoriteLyric = text
+                ? { text, song, artist, updatedAt: new Date() }
+                : { text: '', song: '', artist: '', updatedAt: null };
+        }
         await req.user.save();
-        res.json({ success: true, extendedBio: req.user.extendedBio });
+        const lyric = req.user.favoriteLyric && req.user.favoriteLyric.text
+            ? { text: req.user.favoriteLyric.text, song: req.user.favoriteLyric.song || '', artist: req.user.favoriteLyric.artist || '' }
+            : null;
+        res.json({ success: true, extendedBio: req.user.extendedBio, favoriteLyric: lyric });
     } catch (error) {
         console.error('Profile customize error:', error);
         res.status(500).json({ message: 'Server error' });

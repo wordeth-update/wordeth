@@ -155,6 +155,14 @@ const userSchema = new mongoose.Schema({
         default: '',
         maxlength: 2000
     },
+    // The one line somebody would put their name to. Wordeth is built on
+    // lyrics; this is the profile's centrepiece, not a detail of it.
+    favoriteLyric: {
+        text: { type: String, default: '', maxlength: 280, trim: true },
+        song: { type: String, default: '', maxlength: 120, trim: true },
+        artist: { type: String, default: '', maxlength: 120, trim: true },
+        updatedAt: { type: Date, default: null }
+    },
     profilePhotos: [{
         url: { type: String, required: true },
         caption: { type: String, default: '' },
@@ -287,6 +295,11 @@ userSchema.methods.getPublicProfile = function() {
         createdAt: this.createdAt,
         showRoomHistory: this.showRoomHistory || false,
         extendedBio: this.extendedBio || '',
+        favoriteLyric: this.favoriteLyric && this.favoriteLyric.text ? {
+            text: this.favoriteLyric.text,
+            song: this.favoriteLyric.song || '',
+            artist: this.favoriteLyric.artist || ''
+        } : null,
         profilePhotos: this.profilePhotos || [],
         musicSnippet: this.musicSnippet && this.musicSnippet.url ? {
             url: this.musicSnippet.url,
