@@ -527,6 +527,8 @@ class AdAdmin {
                 const data = await response.json();
                 const container = document.getElementById('allAdsList');
 
+                this.allAds = data.ads || [];
+                this.adFilter = status;
                 if (data.ads && data.ads.length > 0) {
                     container.innerHTML = data.ads.map(ad => this.renderAdItem(ad, ad.status === 'pending')).join('');
                 } else {
@@ -545,29 +547,153 @@ class AdAdmin {
         ).join('');
         const moreKeywords = ad.keywords.length > 5 ? `<span class="keyword-tag">+${ad.keywords.length - 5} more</span>` : '';
 
-        let actionsHtml = '';
+        // What can be done to an ad depends on where it stands. Every ad can be
+        // edited and deleted; a running one can be paused, a paused one resumed.
+        const id = ad._id;
+        const buttons = [];
         if (showApproveButtons) {
-            actionsHtml = `
-                <div class="ad-actions">
-                    <button class="btn-primary" onclick="adAdmin.approveAd('${ad._id}')">Approve</button>
-                    <button class="btn-danger" onclick="adAdmin.rejectAd('${ad._id}')">Reject</button>
-                </div>
-            `;
+            buttons.push(`<button class="btn-primary" onclick="adAdmin.approveAd('${id}')">Approve</button>`);
+            buttons.push(`<button class="btn-danger" onclick="adAdmin.rejectAd('${id}')">Reject</button>`);
         }
+        if (ad.status === 'active') buttons.push(`<button class="action-btn" onclick="adAdmin.setAdStatus('${id}', 'paused')">Pause</button>`);
+        if (ad.status === 'paused' || ad.status === 'rejected') buttons.push(`<button class="action-btn" onclick="adAdmin.setAdStatus('${id}', 'active')">${ad.status === 'paused' ? 'Resume' : 'Make active'}</button>`);
+        buttons.push(`<button class="action-btn" onclick="adAdmin.editAd('${id}')">Edit</button>`);
+        buttons.push(`<button class="action-btn" style="color:#f85149;" id="ad-delete-${id}" onclick="adAdmin.deleteAd('${id}')">Delete</button>`);
+        const actionsHtml = `<div class="ad-actions" style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.75rem;">${buttons.join('')}</div>`;
+
+        const rate = `Rate: $${Number(ad.pricing?.cpm ?? 0).toFixed(2)} per 1,000 impressions · $${Number(ad.pricing?.cpc ?? 0).toFixed(2)} per click`;
+        const takeover = ad.placement === 'app-takeover' && ad.takeover
+            ? ` | ${this.escapeHtml(ad.takeover.format || 'skyscraper')} · ${ad.takeover.durationSec || 30}s` : '';
 
         return `
-            <div class="ad-item">
+            <div class="ad-item" id="ad-item-${id}" style="flex-wrap:wrap;">
                 <img src="${this.escapeHtml(ad.imageUrl)}" alt="${this.escapeHtml(ad.title)}" class="ad-item-image" onerror="this.src='images/logo.png'">
                 <div class="ad-item-info">
                     <h4>${this.escapeHtml(ad.title)}</h4>
-                    <p>By: ${this.escapeHtml(advertiserName)} | ${ad.placement} | ${ad.size}</p>
+                    <p>By: ${this.escapeHtml(advertiserName)} | ${ad.placement} | ${ad.size}${takeover}</p>
                     <p>Impressions: ${this.formatNumber(ad.stats?.impressions || 0)} | Clicks: ${this.formatNumber(ad.stats?.clicks || 0)}</p>
-                    <div class="ad-keywords">${keywordsHtml}${moreKeywords}</div>
+                    <p>${rate}</p>
+                    <div class="ad-keywords">${keywordsHtml}${moreKeywords}${ad.keywords.length === 0 && String(ad.placement).startsWith('app-') ? '<span class="keyword-tag">run-of-app</span>' : ''}</div>
                     ${actionsHtml}
+                    <p id="ad-msg-${id}" role="status" style="display:none; margin-top:.5rem; font-weight:600;"></p>
                 </div>
                 <span class="ad-status ${ad.status}">${ad.status}</span>
+                <div id="ad-edit-${id}" style="flex-basis:100%; display:none;"></div>
             </div>
         `;
+    }
+
+    /** Said on the ad itself; a pop-up can be switched off by the browser. */
+    adMessage(adId, text, ok) {
+        const el = document.getElementById(`ad-msg-${adId}`);
+        if (!el) return;
+        el.textContent = text;
+        el.style.color = ok ? '#3EB489' : '#f85149';
+        el.style.display = text ? 'block' : 'none';
+    }
+
+    async updateAd(adId, changes) {
+        const response = await fetch(apiUrl(`/api/ads/update/${adId}`), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}` },
+            body: JSON.stringify(changes)
+        });
+        let data = {};
+        try { data = await response.json(); } catch (e) { data = {}; }
+        if (!response.ok) throw new Error(data.error || `The server refused that (${response.status}).`);
+        return data;
+    }
+
+    async setAdStatus(adId, status) {
+        try {
+            await this.updateAd(adId, { status });
+            await this.loadAllAds(this.adFilter || '');
+            this.loadOverview();
+        } catch (error) {
+            this.adMessage(adId, error.message, false);
+        }
+    }
+
+    /** Open the edit form under an ad, or close it if it is already open. */
+    editAd(adId) {
+        const box = document.getElementById(`ad-edit-${adId}`);
+        const ad = (this.allAds || []).find(a => a._id === adId);
+        if (!box || !ad) return;
+        if (box.style.display !== 'none') { box.style.display = 'none'; box.innerHTML = ''; return; }
+        const v = (x) => this.escapeHtml(x === undefined || x === null ? '' : String(x));
+        const inApp = String(ad.placement).startsWith('app-');
+        const takeover = ad.placement === 'app-takeover';
+        const end = ad.schedule?.endDate ? new Date(ad.schedule.endDate).toISOString().slice(0, 10) : '';
+        box.innerHTML = `
+            <form class="ad-form" onsubmit="adAdmin.saveAd(event, '${adId}')" style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--dark-border);">
+                <div class="form-group"><label>Ad Title</label><input type="text" name="title" required maxlength="100" value="${v(ad.title)}"></div>
+                <div class="form-group"><label>Description</label><textarea name="description" maxlength="200">${v(ad.description)}</textarea></div>
+                <div class="form-group"><label>Click URL</label><input type="url" name="linkUrl" required value="${v(ad.linkUrl)}"></div>
+                ${inApp ? `<div class="form-group"><label>Button text</label><input type="text" name="cta" maxlength="24" value="${v(ad.cta)}"></div>` : ''}
+                <div class="form-group"><label>Keywords (comma-separated)</label><textarea name="keywords">${v((ad.keywords || []).join(', '))}</textarea>
+                    <small>${inApp ? 'Empty means run-of-app: it can show anywhere, behind any targeted ad that fits.' : 'Up to 25.'}</small></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Rate per 1,000 impressions ($)</label><input type="number" name="cpm" min="0" max="1000" step="0.01" value="${v(ad.pricing?.cpm ?? 0)}"></div>
+                    <div class="form-group"><label>Rate per click ($)</label><input type="number" name="cpc" min="0" max="100" step="0.01" value="${v(ad.pricing?.cpc ?? 0)}"></div>
+                </div>
+                <div class="form-group"><label>Stop running after (optional)</label><input type="date" name="endDate" value="${v(end)}"></div>
+                ${takeover ? `
+                <div class="form-group"><label>Length (seconds)</label><input type="number" name="durationSec" min="5" max="90" value="${v(ad.takeover?.durationSec ?? 30)}"></div>
+                <div class="form-group"><label>Script for the host</label><textarea name="script" maxlength="1500">${v(ad.takeover?.script)}</textarea></div>` : ''}
+                <small style="display:block; margin-bottom:1rem; color:var(--text-secondary);">Artwork, a takeover clip and the placement are fixed once an ad is made. To change one, delete the ad and create it again.</small>
+                <div style="display:flex; gap:.5rem;">
+                    <button type="submit" class="btn-primary">Save changes</button>
+                    <button type="button" class="action-btn" onclick="adAdmin.editAd('${adId}')">Cancel</button>
+                </div>
+            </form>`;
+        box.style.display = 'block';
+    }
+
+    async saveAd(e, adId) {
+        e.preventDefault();
+        const form = e.target;
+        const button = form.querySelector('button[type="submit"]');
+        const field = (name) => (form[name] ? form[name].value : undefined);
+        const keywords = (field('keywords') || '').split(',').map(k => k.trim()).filter(k => k);
+        if (keywords.length > 25) { this.adMessage(adId, 'Maximum 25 keywords allowed.', false); return; }
+        const changes = {
+            title: field('title'), description: field('description'), linkUrl: field('linkUrl'),
+            keywords: keywords.join(','), cpm: field('cpm'), cpc: field('cpc'), endDate: field('endDate') || ''
+        };
+        for (const name of ['cta', 'durationSec', 'script']) if (form[name]) changes[name] = form[name].value;
+        if (button) { button.disabled = true; button.textContent = 'Saving…'; }
+        try {
+            await this.updateAd(adId, changes);
+            await this.loadAllAds(this.adFilter || '');
+            this.adMessage(adId, 'Saved.', true);
+        } catch (error) {
+            this.adMessage(adId, error.message, false);
+            if (button) { button.disabled = false; button.textContent = 'Save changes'; }
+        }
+    }
+
+    /** Two presses: the first asks, on the button itself; the second deletes. */
+    async deleteAd(adId) {
+        const button = document.getElementById(`ad-delete-${adId}`);
+        if (button && button.dataset.armed !== 'yes') {
+            button.dataset.armed = 'yes';
+            button.textContent = 'Delete for good? Press again';
+            setTimeout(() => { if (button.isConnected) { button.dataset.armed = ''; button.textContent = 'Delete'; } }, 5000);
+            return;
+        }
+        try {
+            const response = await fetch(apiUrl(`/api/ads/delete/${adId}`), {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${this.token}` }
+            });
+            let data = {};
+            try { data = await response.json(); } catch (e) { data = {}; }
+            if (!response.ok) throw new Error(data.error || `The server refused that (${response.status}).`);
+            await this.loadAllAds(this.adFilter || '');
+            this.loadOverview();
+        } catch (error) {
+            this.adMessage(adId, error.message, false);
+        }
     }
 
     async approveAd(adId) {

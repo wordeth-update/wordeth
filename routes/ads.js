@@ -506,7 +506,10 @@ router.get('/my-ads', authenticateAdvertiser, async (req, res) => {
 router.put('/update/:adId', authenticateAdvertiser, async (req, res) => {
     try {
         const { adId } = req.params;
-        const { title, description, imageUrl, linkUrl, keywords, status } = req.body;
+        const { title, description, imageUrl, linkUrl, status } = req.body;
+        let { keywords } = req.body;
+        // The admin's edit form sends keywords as typed; an empty box means "none", which is run-of-app.
+        if (typeof keywords === 'string') keywords = keywords.split(',').map((k) => k.trim()).filter(Boolean);
 
         const ad = await Ad.findById(adId);
         if (!ad) {
@@ -528,7 +531,38 @@ router.put('/update/:adId', authenticateAdvertiser, async (req, res) => {
         if (linkUrl) ad.linkUrl = linkUrl;
         if (keywords) ad.keywords = keywords;
 
+        // What only an administrator may change: the terms of the booking.
+        if (advertiser.role === 'admin') {
+            const b = req.body;
+            if (b.cta !== undefined) ad.cta = String(b.cta).trim().slice(0, 24);
+            for (const [field, max] of [['cpm', 1000], ['cpc', 100]]) {
+                if (b[field] === undefined || String(b[field]).trim() === '') continue;
+                const n = Number(b[field]);
+                if (!Number.isFinite(n) || n < 0 || n > max) {
+                    return res.status(400).json({ error: 'Rates must be numbers: zero or more, up to $1,000 per thousand impressions and $100 per click.' });
+                }
+                ad.set(`pricing.${field}`, Math.round(n * 10000) / 10000);
+            }
+            if (b.endDate !== undefined) {
+                if (!b.endDate) ad.set('schedule.endDate', undefined);
+                else {
+                    const end = new Date(b.endDate);
+                    if (Number.isNaN(end.getTime())) return res.status(400).json({ error: 'That end date could not be read.' });
+                    ad.set('schedule.endDate', end);
+                }
+            }
+            if (ad.placement === 'app-takeover') {
+                if (b.script !== undefined) ad.set('takeover.script', String(b.script).slice(0, 1500));
+                if (b.durationSec !== undefined && String(b.durationSec).trim() !== '') {
+                    ad.set('takeover.durationSec', Math.min(90, Math.max(5, parseInt(b.durationSec, 10) || 30)));
+                }
+            }
+        }
+
         if (advertiser.role === 'admin' && status) {
+            if (!['pending', 'approved', 'rejected', 'paused', 'active'].includes(status)) {
+                return res.status(400).json({ error: 'Unknown status.' });
+            }
             ad.status = status;
         } else if (status === 'paused' || status === 'active') {
             if (ad.status === 'approved' || ad.status === 'active' || ad.status === 'paused') {
