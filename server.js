@@ -121,7 +121,8 @@ app.use(helmet({
             styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://unpkg.com"],
             scriptSrc: ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'", "https://cdnjs.cloudflare.com", "https://www.youtube.com", "https://s.ytimg.com", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://storage.googleapis.com", "https://download.agora.io", "https://js.stripe.com"],
             scriptSrcElem: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://www.youtube.com", "https://s.ytimg.com", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://storage.googleapis.com", "https://download.agora.io", "https://js.stripe.com"],
-            imgSrc: ["'self'", "data:", "https:"],
+            // blob: is a picture the browser itself is holding: the admin's preview of a file before it is uploaded.
+            imgSrc: ["'self'", "data:", "blob:", "https:"],
             connectSrc: ["'self'", "wss:", "ws:", "https:", "https://api.stripe.com"],
             fontSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com"],
             objectSrc: ["'none'"],

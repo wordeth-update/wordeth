@@ -264,7 +264,7 @@
                     <div class="form-group">
                         <label>Artwork</label>
                         <input type="file" name="image" id="adImageFile" accept="image/png,image/jpeg,image/webp,image/gif">
-                        <small id="artworkHint">Choose a file (PNG, JPEG, WebP or GIF, up to 20 MB), or paste an address below.</small>
+                        <small id="artworkHint">Choose a file (PNG, JPEG, WebP or GIF), or paste an address below. A large image is made smaller automatically before it is sent.</small>
                     </div>
                     <div class="form-group">
                         <label>Or image URL</label>
@@ -336,6 +336,7 @@
                         </div>
                     </div>
                     <button type="submit" class="btn-primary">Create Ad</button>
+                    <p id="createAdStatus" role="status" aria-live="polite" style="display:none; margin-top:1rem; font-size:0.95rem; font-weight:600;"></p>
                 </form>
             </section>
 
@@ -402,7 +403,8 @@
 
     <script src="js/utils.js"></script>
     <script src="js/config.js"></script>
-    <script src="js/ad-admin.js"></script>
+    <!-- The number changes with the script, so a browser never pairs this page with an older copy it kept. -->
+    <script src="js/ad-admin.js?v=20261002c"></script>
     <script src="js/cookie-consent.js"></script>
 </body>
 </html>

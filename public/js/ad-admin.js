@@ -618,48 +618,77 @@ class AdAdmin {
     async handleCreateAd(e) {
         e.preventDefault();
         const form = e.target;
-        const keywords = form.keywords.value.split(',').map(k => k.trim()).filter(k => k);
+        // The page and this script are cached separately; a field one of them
+        // does not know about yet is read as empty rather than as an error.
+        const value = (name) => (form[name] && typeof form[name].value === 'string' ? form[name].value : '');
+        const button = form.querySelector('button[type="submit"]');
+        const say = (text, kind) => showCreateAdStatus(text, kind);
 
-        if (keywords.length > 25) {
-            alert('Maximum 25 keywords allowed');
+        // One upload at a time. A large file takes a while, and with nothing
+        // on screen to say so the natural thing is to press the button again.
+        if (this.creatingAd) return;
+
+        const keywords = value('keywords').split(',').map(k => k.trim()).filter(k => k);
+        if (keywords.length > 25) { say('Maximum 25 keywords allowed.', 'error'); return; }
+
+        const picked = form.image && form.image.files && form.image.files.length > 0 ? form.image.files[0] : null;
+        if (!picked && !value('imageUrl')) { say('Choose the artwork file, or paste its address.', 'error'); return; }
+
+        const placement = value('placement');
+        const clip = placement === 'app-takeover' && form.media && form.media.files && form.media.files.length > 0 ? form.media.files[0] : null;
+        if (clip && clip.size > AD_UPLOAD_LIMIT) {
+            say(`That clip is ${megabytes(clip.size)}. The limit is 20 MB: export it shorter or at a lower quality and choose it again.`, 'error');
             return;
         }
 
-        const hasFile = form.image && form.image.files && form.image.files.length > 0;
-        if (!hasFile && !form.imageUrl.value) {
-            alert('Choose the artwork file, or paste its address.');
-            return;
-        }
-
-        // Sent as a form so artwork and a takeover clip can ride along as files.
-        const adData = new FormData();
-        adData.append('clientEmail', form.clientEmail.value);
-        adData.append('title', form.title.value);
-        adData.append('description', form.description.value);
-        adData.append('imageUrl', form.imageUrl.value);
-        adData.append('linkUrl', form.linkUrl.value);
-        adData.append('placement', form.placement.value);
-        adData.append('size', form.size.value);
-        adData.append('keywords', keywords.join(','));
-        adData.append('billingMode', form.billingMode.value);
-        adData.append('cpm', form.cpm.value);
-        adData.append('cpc', form.cpc.value);
-        if (hasFile) adData.append('image', form.image.files[0]);
-        if (form.placement.value.startsWith('app-')) {
-            adData.append('cta', form.cta.value);
-            adData.append('chatEnabled', form.chatEnabled.checked ? 'true' : 'false');
-            adData.append('chatAccountEmail', form.chatAccountEmail.value);
-        }
-        if (form.placement.value === 'app-takeover') {
-            adData.append('takeoverFormat', form.takeoverFormat.value);
-            adData.append('durationSec', form.durationSec.value);
-            adData.append('mediaUrl', form.mediaUrl.value);
-            adData.append('script', form.script.value);
-            adData.append('hostEmails', form.hostEmails.value);
-            if (form.media.files && form.media.files.length > 0) adData.append('media', form.media.files[0]);
-        }
+        this.creatingAd = true;
+        const label = button ? button.textContent : '';
+        if (button) { button.disabled = true; button.textContent = 'Working…'; }
 
         try {
+            // Artwork straight out of a design tool can be tens of megabytes.
+            // It is made a sensible size here, on this computer, before it is sent.
+            let image = picked;
+            if (picked) {
+                say('Preparing the artwork…', 'busy');
+                image = await shrinkArtwork(picked);
+                if (image.size > AD_UPLOAD_LIMIT) {
+                    say(`That image is ${megabytes(picked.size)} and could not be made smaller here. Export it at 2000 pixels on its long side, or under 20 MB, and choose it again.`, 'error');
+                    return;
+                }
+            }
+
+            // Sent as a form so artwork and a takeover clip can ride along as files.
+            const adData = new FormData();
+            adData.append('clientEmail', value('clientEmail'));
+            adData.append('title', value('title'));
+            adData.append('description', value('description'));
+            adData.append('imageUrl', value('imageUrl'));
+            adData.append('linkUrl', value('linkUrl'));
+            adData.append('placement', placement);
+            adData.append('size', value('size'));
+            adData.append('keywords', keywords.join(','));
+            adData.append('billingMode', value('billingMode'));
+            adData.append('cpm', value('cpm'));
+            adData.append('cpc', value('cpc'));
+            if (image) adData.append('image', image, image.name || picked.name);
+            if (placement.startsWith('app-')) {
+                adData.append('cta', value('cta'));
+                adData.append('chatEnabled', form.chatEnabled && form.chatEnabled.checked ? 'true' : 'false');
+                adData.append('chatAccountEmail', value('chatAccountEmail'));
+            }
+            if (placement === 'app-takeover') {
+                adData.append('takeoverFormat', value('takeoverFormat'));
+                adData.append('durationSec', value('durationSec'));
+                adData.append('mediaUrl', value('mediaUrl'));
+                adData.append('script', value('script'));
+                adData.append('hostEmails', value('hostEmails'));
+                if (clip) adData.append('media', clip);
+            }
+
+            const sending = (image ? image.size : 0) + (clip ? clip.size : 0);
+            say(sending > 1024 * 1024 ? `Uploading ${megabytes(sending)}…` : 'Uploading…', 'busy');
+
             const response = await fetch(apiUrl('/api/ads/admin/upload-for-client'), {
                 method: 'POST',
                 // No content-type: the browser sets the multipart boundary itself.
@@ -667,21 +696,30 @@ class AdAdmin {
                 body: adData
             });
 
-            const data = await response.json();
+            // Not every refusal arrives as JSON (a proxy's own error page does not).
+            let data = {};
+            try { data = await response.json(); } catch (parseError) { data = {}; }
 
             if (response.ok) {
-                alert(data.message || 'Ad created successfully!');
+                const made = value('title');
                 form.reset();
                 // Back to the first placement: show the fields that one needs.
-                form.placement.dispatchEvent(new Event('change', { bubbles: true }));
-                document.getElementById('adPreview').innerHTML = '<p>Enter image URL to preview</p>';
+                if (form.placement) form.placement.dispatchEvent(new Event('change', { bubbles: true }));
+                document.getElementById('adPreview').innerHTML = '<p>Choose the artwork to preview it</p>';
+                say(`"${made}": ${data.message || 'Ad created.'}`, data.servingNow === false ? 'warn' : 'done');
                 this.loadAllAds();
+            } else if (response.status === 401) {
+                say('You have been signed out. Sign in again, then create the ad.', 'error');
+                this.showLoginModal();
             } else {
-                alert(data.error || 'Failed to create ad');
+                say(data.error || `The server refused that (${response.status}). Nothing was created.`, 'error');
             }
         } catch (error) {
             console.error('Create ad error:', error);
-            alert('Failed to create ad');
+            say('The upload did not get through. Check the connection and try again; nothing was created.', 'error');
+        } finally {
+            this.creatingAd = false;
+            if (button) { button.disabled = false; button.textContent = label || 'Create Ad'; }
         }
     }
 
@@ -780,3 +818,84 @@ function logout() {
     document.addEventListener('change', (e) => { if (e.target && e.target.id === 'adPlacement') sync(); });
     document.addEventListener('DOMContentLoaded', sync);
 })();
+
+
+/** The most the server takes for one file. */
+const AD_UPLOAD_LIMIT = 20 * 1024 * 1024;
+/** Artwork is drawn on a phone; nothing needs more pixels than this on its long side. */
+const ARTWORK_MAX_SIDE = 2000;
+
+function megabytes(bytes) {
+    return bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+/**
+ * What happened, said on the page next to the button. A pop-up can be
+ * switched off by the browser after a few of them, and then a failure and
+ * a success look the same: nothing.
+ */
+function showCreateAdStatus(text, kind) {
+    const el = document.getElementById('createAdStatus');
+    if (!el) { if (kind === 'error' || kind === 'done' || kind === 'warn') alert(text); return; }
+    const colours = { error: '#f85149', warn: '#D29922', done: '#3EB489', busy: 'inherit' };
+    el.textContent = text;
+    el.style.color = colours[kind] || 'inherit';
+    el.style.display = text ? 'block' : 'none';
+    if (kind !== 'busy') el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+/**
+ * Bring artwork down to a size worth sending. Small files and animations go
+ * as they are. Anything large is redrawn at no more than ARTWORK_MAX_SIDE:
+ * a PNG stays a PNG (it may have a transparent background), everything else
+ * becomes a JPEG. If this browser cannot do it, the original is returned
+ * and the caller decides whether it is still too big.
+ */
+async function shrinkArtwork(file) {
+    if (file.type === 'image/gif' || typeof createImageBitmap !== 'function') return file;
+    try {
+        const first = await createImageBitmap(file);
+        const long = Math.max(first.width, first.height);
+        if (long <= ARTWORK_MAX_SIDE && file.size <= 2 * 1024 * 1024) { first.close(); return file; }
+        const scale = Math.min(1, ARTWORK_MAX_SIDE / long);
+        const width = Math.max(1, Math.round(first.width * scale));
+        const height = Math.max(1, Math.round(first.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(first, 0, 0, width, height);
+        first.close();
+        const png = file.type === 'image/png';
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, png ? 'image/png' : 'image/jpeg', 0.9));
+        if (!blob || blob.size >= file.size) return file;
+        const base = file.name.replace(/\.[^.]+$/, '');
+        return new File([blob], `${base}.${png ? 'png' : 'jpg'}`, { type: blob.type });
+    } catch (error) {
+        console.warn('Could not resize artwork in the browser:', error);
+        return file;
+    }
+}
+
+/** Show what was picked, with its size, the moment it is picked: the wrong file is obvious before it is sent. */
+document.addEventListener('change', (e) => {
+    if (!e.target || e.target.id !== 'adImageFile') return;
+    const file = e.target.files && e.target.files[0];
+    const box = document.getElementById('adPreview');
+    if (!box) return;
+    if (!file) { box.innerHTML = '<p>Choose the artwork to preview it</p>'; return; }
+    const url = URL.createObjectURL(file);
+    box.innerHTML = '';
+    const img = new Image();
+    img.style.maxWidth = '100%'; img.style.maxHeight = '260px';
+    const note = document.createElement('p');
+    note.textContent = `${file.name} · ${megabytes(file.size)}`;
+    img.onload = () => {
+        const big = Math.max(img.naturalWidth, img.naturalHeight) > ARTWORK_MAX_SIDE || file.size > 2 * 1024 * 1024;
+        note.textContent = `${file.name} · ${img.naturalWidth} × ${img.naturalHeight} · ${megabytes(file.size)}` + (big ? ' · it will be made smaller before it is sent' : '');
+        URL.revokeObjectURL(url);
+    };
+    img.src = url;
+    box.appendChild(img); box.appendChild(note);
+    showCreateAdStatus('', 'busy');
+});
