@@ -23,7 +23,8 @@ function describe(n) {
         case 'room_live': return { title: `${who} is live`, body: room };
         case 'follower_created_room': return { title: `${who} opened a room`, body: room };
         case 'follower_joined_room': return { title: `${who} joined a room`, body: room };
-        case 'new_follower': return { title: 'New follower', body: `${who} followed you` };
+        // The type keeps its old name; the app calls this a dap up.
+        case 'new_follower': return { title: 'Dap up', body: `${who} dapped you up` };
         case 'collab_invite': return { title: `${who} wants to collab`, body: room };
         case 'collab_response': return { title: `${who} answered your collab`, body: room };
         case 'room_nudge_5min': return { title: 'Starting in 5 minutes', body: room };

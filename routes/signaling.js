@@ -12,6 +12,10 @@ const {
 
 let rooms = new Map();
 const connectedUsers = new Map();
+/** How long a dropped speaker's place on the stage is held for them. */
+const SPEAKER_RETURN_MS = 5 * 60 * 1000;
+/** A person joining the same room again inside this window is not announced to their connections twice. */
+const JOIN_ANNOUNCE_MS = 30 * 60 * 1000;
 let isShuttingDown = false;
 let _io = null;
 const roomDeletionTimers = new Map();
@@ -346,6 +350,7 @@ function setupSignaling(io) {
             const userName = verifiedUser.name || 'User';
             socket.registeredUserId = userId;
             socket.registeredUserName = userName;
+            User.updateOne({ _id: userId }, { $set: { lastSeenAt: new Date() } }).catch(() => {});
             if (!connectedUsers.has(userId)) {
                 connectedUsers.set(userId, new Set());
             }
@@ -455,10 +460,21 @@ function setupSignaling(io) {
                         timestamp: now
                     });
                     socket.emit('invite-sent', { targetUserId, success: true });
-                } else if (!allowPopup) {
-                    // Quiet path: store a bell notification (works online or
-                    // offline) — no screen takeover from strangers.
+                } else {
+                    // Quiet path: store a bell notification, which also goes
+                    // out as a push. Used for strangers (no screen takeover)
+                    // and for anyone who is not in the app right now — an
+                    // invite to somebody offline used to go nowhere at all.
                     try {
+                        // The same invite twice in ten minutes is one invite.
+                        const recent = await Notification.exists({
+                            userId: targetUserId, type: 'room_invite', fromUserId: socket.registeredUserId, roomId,
+                            createdAt: { $gt: new Date(now - 10 * 60 * 1000) }
+                        });
+                        if (recent) {
+                            socket.emit('invite-sent', { targetUserId, success: true, quiet: true });
+                            return;
+                        }
                         await Notification.create({
                             userId: targetUserId,
                             type: 'room_invite',
@@ -477,8 +493,6 @@ function setupSignaling(io) {
                         console.warn('[Invite] quiet notification error:', e.message);
                         socket.emit('invite-sent', { targetUserId, success: false, reason: 'error' });
                     }
-                } else {
-                    socket.emit('invite-sent', { targetUserId, success: false, reason: 'offline' });
                 }
             } catch (err) {
                 console.error('[Invite] error:', err);
@@ -740,9 +754,21 @@ function setupSignaling(io) {
                 }
             }
 
+            // Someone whose connection blinked comes back on a new socket. They
+            // return to the stage if that is where they were: demoting them to
+            // the crowd made every reconnect look like a stranger arriving.
+            let returningSpeaker = false;
+            let isReturn = false;
             if (socket.userId && socket.userId !== socket.id) {
+                const droppedAt = room.droppedSpeakers && room.droppedSpeakers.get(String(socket.userId));
+                if (droppedAt) {
+                    room.droppedSpeakers.delete(String(socket.userId));
+                    if (Date.now() - droppedAt < SPEAKER_RETURN_MS) returningSpeaker = true;
+                }
                 for (const [sid, p] of room.participants.entries()) {
                     if (p.userId === socket.userId && sid !== socket.id) {
+                        if (p.isSpeaker) returningSpeaker = true;
+                        isReturn = true;
                         const wasHost = (sid === room.hostId);
                         room.participants.delete(sid);
                         if (room.activeVideos) room.activeVideos.delete(sid);
@@ -791,8 +817,8 @@ function setupSignaling(io) {
                 userName: socket.userName,
                 avatar: socket.avatar || null,
                 isHost: shouldBeHost,
-                isSpeaker: shouldBeHost,
-                isMuted: !shouldBeHost,
+                isSpeaker: shouldBeHost || returningSpeaker,
+                isMuted: !(shouldBeHost || returningSpeaker),
                 joinedAt: Date.now(),
                 peekExpiresAt: paidEntryAccess?.wildcard ? paidEntryAccess.expiresAt : null
             });
@@ -883,7 +909,7 @@ function setupSignaling(io) {
                 userName: socket.userName,
                 avatar: socket.avatar || null,
                 isHost: shouldBeHost,
-                isSpeaker: shouldBeHost,
+                isSpeaker: shouldBeHost || returningSpeaker,
                 participants: participantList
             });
 
@@ -896,7 +922,13 @@ function setupSignaling(io) {
 
             console.log(`${socket.userName} joined room ${roomId} (${room.participants.size} participants)`);
 
-            if (socket.userId && socket.userId !== socket.id) {
+            // One announcement per person per room per stretch: a reconnect is
+            // not news, and telling every connection again each time was noise.
+            if (!room.announcedJoins) room.announcedJoins = new Map();
+            const announcedAt = socket.userId ? room.announcedJoins.get(String(socket.userId)) : null;
+            const alreadyAnnounced = isReturn || (announcedAt && Date.now() - announcedAt < JOIN_ANNOUNCE_MS);
+            if (socket.userId && socket.userId !== socket.id && !alreadyAnnounced) {
+                room.announcedJoins.set(String(socket.userId), Date.now());
                 const notifType = shouldBeHost ? 'follower_created_room' : 'follower_joined_room';
                 User.findById(socket.userId).select('followers name avatar').lean().then(joiner => {
                     if (!joiner || !joiner.followers || joiner.followers.length === 0) return;
@@ -1419,12 +1451,20 @@ function setupSignaling(io) {
                 userSockets.delete(socket.id);
                 if (userSockets.size === 0) {
                     connectedUsers.delete(socket.registeredUserId);
+                    User.updateOne({ _id: socket.registeredUserId }, { $set: { lastSeenAt: new Date() } }).catch(() => {});
                 }
             }
 
             if (socket.roomId && rooms.has(socket.roomId)) {
                 const room = rooms.get(socket.roomId);
                 if (room.activeVideos) room.activeVideos.delete(socket.id);
+                // Dropped, not left: if they were on the stage, remember it for
+                // a few minutes so coming back puts them where they were.
+                const dropped = room.participants.get(socket.id);
+                if (dropped && dropped.isSpeaker && !dropped.isHost && socket.userId && socket.userId !== socket.id) {
+                    if (!room.droppedSpeakers) room.droppedSpeakers = new Map();
+                    room.droppedSpeakers.set(String(socket.userId), Date.now());
+                }
                 room.participants.delete(socket.id);
 
                 const participantList = Array.from(room.participants.values());

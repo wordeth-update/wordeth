@@ -134,6 +134,9 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     }],
+    // When this account last had a live connection; sorts a person's
+    // connections by who was around most recently.
+    lastSeenAt: { type: Date, default: null },
     customMerch: [{
         name: String,
         type: String,

@@ -98,6 +98,8 @@ router.get('/profile/:id', async (req, res) => {
             createdAt: user.createdAt,
             followingCount: user.following?.length || 0,
             followersCount: user.followers?.length || 0,
+            // One number for the profile: everyone connected in either direction.
+            connectionsCount: new Set([...(user.following || []), ...(user.followers || [])].map(String)).size,
             searchCount: user.searchHistory?.length || 0,
             showRoomHistory: user.showRoomHistory || false
         };
@@ -325,13 +327,54 @@ router.get('/friends', auth, async (req, res) => {
     }
 });
 
+/**
+ * Connections: everyone you have dapped up and everyone who has dapped you,
+ * as one list. Whoever is online comes first, then whoever was around most
+ * recently — the order an invite sheet wants. `youDapped` / `theyDapped`
+ * say which way each one runs, so the app can offer "Dap back".
+ */
+router.get('/connections', auth, async (req, res) => {
+    try {
+        const mine = new Set((req.user.following || []).map(String));
+        const theirs = new Set((req.user.followers || []).map(String));
+        const ids = Array.from(new Set([...mine, ...theirs])).slice(0, 500);
+        if (ids.length === 0) return res.json([]);
+        const people = await User.find({ _id: { $in: ids } }).select('name bio avatar lastSeenAt').lean();
+        const online = global._connectedUsers;
+        const list = people.map(p => {
+            const id = String(p._id);
+            return {
+                _id: id,
+                name: p.name || '',
+                bio: p.bio || '',
+                avatar: p.avatar || '',
+                online: !!(online && online.has(id)),
+                lastSeenAt: p.lastSeenAt || null,
+                youDapped: mine.has(id),
+                theyDapped: theirs.has(id)
+            };
+        });
+        list.sort((a, b) => {
+            if (a.online !== b.online) return a.online ? -1 : 1;
+            const at = a.lastSeenAt ? new Date(a.lastSeenAt).getTime() : 0;
+            const bt = b.lastSeenAt ? new Date(b.lastSeenAt).getTime() : 0;
+            if (at !== bt) return bt - at;
+            return a.name.localeCompare(b.name);
+        });
+        res.json(list.slice(0, 200));
+    } catch (error) {
+        console.error('Connections error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 // Follow user
 router.post('/friends/:id', auth, async (req, res) => {
     try {
         const targetId = req.params.id;
 
         if (req.user._id.toString() === targetId) {
-            return res.status(400).json({ message: 'You cannot follow yourself' });
+            return res.status(400).json({ message: 'You cannot dap yourself up' });
         }
 
         const userToFollow = await User.findById(targetId);
@@ -344,7 +387,7 @@ router.post('/friends/:id', auth, async (req, res) => {
         );
 
         if (alreadyFollowing) {
-            return res.json({ message: 'Already following', following: req.user.following });
+            return res.json({ message: 'Already connected', following: req.user.following });
         }
 
         req.user.following.push(userToFollow._id);
@@ -359,10 +402,10 @@ router.post('/friends/:id', auth, async (req, res) => {
             fromUserAvatar: req.user.avatar || ''
         }).catch(err => console.error('[Notification] new_follower error:', err));
 
-        res.json({ message: 'Followed successfully', following: req.user.following });
+        res.json({ message: 'Dapped up', following: req.user.following });
     } catch (error) {
         console.error('Follow error:', error);
-        res.status(500).json({ message: 'Could not follow user. Please try again.' });
+        res.status(500).json({ message: 'Could not dap up. Please try again.' });
     }
 });
 
