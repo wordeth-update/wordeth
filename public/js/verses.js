@@ -1394,7 +1394,7 @@ class AudioRoomsManager {
                 const row = document.createElement('div');
                 row.className = 'collab-result' + (u.busy ? ' busy' : '');
                 row.innerHTML = `
-                    <img src="${esc(u.avatar)}" alt="" onerror="this.src='assets/default-avatar.png'">
+                    <img src="${esc(u.avatar)}" alt="" data-fallback-src="assets/default-avatar.png">
                     <span class="collab-result-name">${esc(u.name)}</span>
                     ${u.collabId ? `<span class="collab-result-id">${esc(u.collabId)}</span>` : ''}
                     ${u.busy ? '<span class="collab-busy-tag">busy</span>' : ''}`;
@@ -1444,7 +1444,7 @@ class AudioRoomsManager {
             const chip = document.createElement('div');
             chip.className = 'collab-chip';
             chip.innerHTML = `
-                <img src="${esc(c.avatar)}" alt="" onerror="this.src='assets/default-avatar.png'">
+                <img src="${esc(c.avatar)}" alt="" data-fallback-src="assets/default-avatar.png">
                 <span class="collab-chip-name">${esc(c.name)}</span>
                 <input type="number" class="collab-split-input" min="1" max="99" step="1" value="${Number(c.splitPercent) || 0}" aria-label="Split % for ${esc(c.name)}">%
                 <button type="button" class="collab-remove" aria-label="Remove ${esc(c.name)}">&times;</button>`;

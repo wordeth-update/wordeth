@@ -744,7 +744,7 @@
                 <button type="button" class="room-modal-tab" data-pane="access">Access</button>
                 <button type="button" class="room-modal-tab" data-pane="collaborate">Collaborate <span class="room-modal-tab-dot" id="collabTabDot" style="display:none;"></span></button>
             </div>
-            <form id="create-room-form" onsubmit="return false;" action="javascript:void(0)">
+            <form id="create-room-form">
                 <div class="room-modal-pane active" data-pane="details">
                     <div class="form-group">
                         <label for="room-name-input">Room Name</label>
@@ -1217,7 +1217,7 @@
               </div>
               <div class="footer-bottom-row">
                   <span>&copy; 2025 Wordeth</span>
-                  <a href="#" onclick="window.WordethConsent && window.WordethConsent.revokeConsent(); return false;">Cookie Preferences</a>
+                  <a href="#" data-consent-revoke>Cookie Preferences</a>
               </div>
           </div>
       </footer>

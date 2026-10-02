@@ -955,3 +955,7 @@ async function renderMonthlyTotals(months) {
         el.innerHTML = emptyState('Failed to load monthly data');
     }
 }
+
+
+// The page's buttons name these; see utils.js for why they are not onclick.
+WordethActions.register({ logout: function () { logout(); }, runArchive: runArchive, loadComparison: loadComparison });

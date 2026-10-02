@@ -61,7 +61,7 @@
                 var preview = c.lastMessage.isAudio ? '<i class="fas fa-microphone"></i> Audio' : esc(c.lastMessage.text).substring(0, 40);
                 var active = currentChatUserId === c.userId.toString() ? ' active' : '';
                 html += '<div class="msg-convo-item' + active + '" data-uid="' + c.userId + '">'
-                    + '<img class="msg-convo-avatar" src="' + esc(safeSrc) + '" onerror="this.src=\'assets/default-avatar.png\'">'
+                    + '<img class="msg-convo-avatar" src="' + esc(safeSrc) + '" data-fallback-src="assets/default-avatar.png">'
                     + '<div class="msg-convo-info">'
                     + '<div class="msg-convo-name">' + esc(c.userName) + badge + '</div>'
                     + '<div class="msg-convo-preview">' + (c.lastMessage.fromMe ? 'You: ' : '') + preview + '</div>'

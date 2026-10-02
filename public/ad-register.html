@@ -272,7 +272,7 @@
 
             <button type="submit" class="btn-primary btn-large" style="width:100%; margin-top: 1rem;">Submit Application</button>
             <p id="registerError" class="error-message"></p>
-            <p style="text-align:center; margin-top:1rem;"><a href="#" onclick="goBackToSelection(); return false;" style="color:var(--text-secondary); font-size:0.85rem;">Back to account type selection</a></p>
+            <p style="text-align:center; margin-top:1rem;"><a href="#" data-call="goBackToSelection" style="color:var(--text-secondary); font-size:0.85rem;">Back to account type selection</a></p>
         </form>
     </div>
 
@@ -344,6 +344,9 @@
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+
+        WordethActions.register({ goBackToSelection: function () { goBackToSelection(); } });
+
 
         function goBackToSelection() {
             document.getElementById('formScreen').classList.remove('visible');

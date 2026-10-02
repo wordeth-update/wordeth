@@ -107,3 +107,14 @@
     showBanner();
   }
 })();
+
+
+// "Cookie settings" in the footer. Wired here by attribute: the site's
+// security policy does not run an onclick written into the link, so the
+// link that lets somebody change their mind did nothing when pressed.
+document.addEventListener('click', function (e) {
+    var link = e.target && e.target.closest ? e.target.closest('[data-consent-revoke]') : null;
+    if (!link) return;
+    e.preventDefault();
+    if (window.WordethConsent && typeof window.WordethConsent.revokeConsent === 'function') window.WordethConsent.revokeConsent();
+});

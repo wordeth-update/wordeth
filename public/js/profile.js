@@ -498,7 +498,7 @@ function _initProfile() {
                         .map(u => `
                             <div class="search-result-card" data-user-id="${u._id}">
                                 <div class="search-result-avatar">
-                                    <img src="${escHtml(u.avatar)}" alt="${escHtml(u.name)}" onerror="this.src='assets/default-avatar.png'">
+                                    <img src="${escHtml(u.avatar)}" alt="${escHtml(u.name)}" data-fallback-src="assets/default-avatar.png">
                                 </div>
                                 <div class="search-result-info">
                                     <h4>${escHtml(u.name)}</h4>
@@ -882,7 +882,7 @@ function _abLoadTracks(base, token, bankModal) {
                 var rentals = t.totalRentals > 0 ? '<span class="ab-rentals"><i class="fas fa-users"></i> ' + t.totalRentals + '</span>' : '';
                 return '<div class="bank-track" data-id="' + t._id + '">'
                     + '<div class="bt-cover">'
-                    + '<img src="' + escHtml(coverSrc) + '" alt="' + escHtml(t.title) + '" onerror="this.src=\'assets/default-cover.svg\'">'
+                    + '<img src="' + escHtml(coverSrc) + '" alt="' + escHtml(t.title) + '" data-fallback-src="assets/default-cover.svg">'
                     + '<button class="bank-play-btn"><i class="fas fa-play"></i></button>'
                     + featuredBadge
                     + '</div>'
@@ -957,7 +957,7 @@ function renderPhotoGallery(photos) {
     }
     gallery.innerHTML = photos.map(function(p, i) {
         return '<div class="photo-gallery-item">'
-            + '<img src="' + escHtml(p.url) + '" alt="' + escHtml(p.caption || '') + '" onerror="this.style.display=\'none\'">'
+            + '<img src="' + escHtml(p.url) + '" alt="' + escHtml(p.caption || '') + '" data-fallback="hide">'
             + '<button class="photo-delete-btn" data-idx="' + i + '"><i class="fas fa-times"></i></button>'
             + '</div>';
     }).join('');

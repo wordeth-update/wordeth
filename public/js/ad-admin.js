@@ -567,7 +567,7 @@ class AdAdmin {
 
         return `
             <div class="ad-item" id="ad-item-${id}" style="flex-wrap:wrap;">
-                <img src="${this.escapeHtml(ad.imageUrl)}" alt="${this.escapeHtml(ad.title)}" class="ad-item-image" onerror="this.src='images/logo.png'">
+                <img src="${this.escapeHtml(ad.imageUrl)}" alt="${this.escapeHtml(ad.title)}" class="ad-item-image" data-fallback-src="images/logo.png">
                 <div class="ad-item-info">
                     <h4>${this.escapeHtml(ad.title)}</h4>
                     <p>By: ${this.escapeHtml(advertiserName)} | ${ad.placement} | ${ad.size}${takeover}</p>
@@ -885,7 +885,7 @@ class AdAdmin {
     updatePreview(url) {
         const preview = document.getElementById('adPreview');
         if (url) {
-            preview.innerHTML = `<img src="${this.escapeHtml(url)}" alt="Ad Preview" onerror="this.parentElement.innerHTML='<p>Failed to load image</p>'">`;
+            preview.innerHTML = `<img src="${this.escapeHtml(url)}" alt="Ad Preview" data-fallback="message">`;
         } else {
             preview.innerHTML = '<p>Enter image URL to preview</p>';
         }

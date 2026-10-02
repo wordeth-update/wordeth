@@ -802,7 +802,7 @@
             '<div class="liq-sheet__panel liq-enter">' +
             '<div class="liq-sheet__head"><div class="liq-kicker">Share it</div><button class="liq-sheet__close" data-action="sheet-close" aria-label="Close">✕</button></div>' +
             (r.share.cardPath ? '<img class="liq-card__img" src="' + esc(r.share.cardPath) + '" alt="Your Lyric IQ card" width="1200" height="630">' : '') +
-            '<div class="liq-sheet__link"><input class="liq-input liq-sheet__url" type="text" readonly value="' + esc(url) + '" aria-label="Share link" onfocus="this.select()"><button class="liq-btn liq-btn--sm" data-action="copy-link">Copy</button></div>' +
+            '<div class="liq-sheet__link"><input class="liq-input liq-sheet__url" type="text" readonly value="' + esc(url) + '" aria-label="Share link"><button class="liq-btn liq-btn--sm" data-action="copy-link">Copy</button></div>' +
             '<div class="liq-sheet__grid">' +
             '<a class="liq-btn liq-btn--sm" href="sms:?&body=' + enc(text + ' ' + url) + '" data-action="share-to" data-to="sms">Messages</a>' +
             '<a class="liq-btn liq-btn--sm" href="https://wa.me/?text=' + enc(text + ' ' + url) + '" target="_blank" rel="noopener" data-action="share-to" data-to="whatsapp">WhatsApp</a>' +
@@ -815,6 +815,9 @@
             '</div>';
         document.body.appendChild(sheet);
         document.body.classList.add('liq-body--sheet');
+        // Selecting the link when it is focused, wired here: the site does not run code written into an attribute.
+        var linkField = sheet.querySelector('.liq-sheet__url');
+        if (linkField) linkField.addEventListener('focus', function () { this.select(); });
         var close = sheet.querySelector('.liq-sheet__close'); if (close) close.focus();
     }
     function closeShareSheet() {

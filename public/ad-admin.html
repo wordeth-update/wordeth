@@ -22,7 +22,7 @@
             <a href="ad-docs.html" class="nav-link"><i class="fas fa-book"></i> Documentation</a>
             <span id="userInfo" style="display: none;">
                 <span id="companyName"></span>
-                <button onclick="logout()" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+                <button data-call="logout" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
             </span>
         </div>
     </nav>
@@ -81,11 +81,11 @@
                 <section id="my-ads-tab" class="tab-content active">
                     <div class="section-header">
                         <h2>My Ads</h2>
-                        <button onclick="showTab('create-ad')" class="btn-secondary"><i class="fas fa-plus"></i> Create New Ad</button>
+                        <button data-call="showTab" data-arg="create-ad" class="btn-secondary"><i class="fas fa-plus"></i> Create New Ad</button>
                     </div>
                     <div id="myAdsList" class="ads-list"></div>
                     <p id="noAds" class="empty-message" style="display: none;">
-                        You haven't created any ads yet. <a href="#" onclick="showTab('create-ad'); return false;">Create your first ad</a>
+                        You haven't created any ads yet. <a href="#" data-call="showTab" data-arg="create-ad">Create your first ad</a>
                     </p>
                 </section>
 

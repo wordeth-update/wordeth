@@ -243,7 +243,7 @@ class PartnerUpload {
 
                     card.innerHTML = `
                         <div class="artwork-preview">
-                            ${isImage ? `<img src="${escapeHtml(art.url)}" alt="${escapeHtml(art.filename)}" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-file-image\\'></i>'">` : `<i class="fas fa-file-${art.format === 'pdf' ? 'pdf' : 'alt'}"></i>`}
+                            ${isImage ? `<img src="${escapeHtml(art.url)}" alt="${escapeHtml(art.filename)}" data-fallback="file-icon">` : `<i class="fas fa-file-${art.format === 'pdf' ? 'pdf' : 'alt'}"></i>`}
                         </div>
                         <div class="artwork-info">
                             <span class="artwork-filename" title="${escapeHtml(art.filename)}">${escapeHtml(art.filename)}</span>

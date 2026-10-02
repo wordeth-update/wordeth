@@ -376,7 +376,7 @@ Authorization: Bearer USER_JWT_TOKEN</code></pre>
                         <h3><i class="fas fa-lock"></i> Admin Sign In</h3>
                         <input type="email" id="flushAdminEmail" placeholder="Admin email">
                         <input type="password" id="flushAdminPassword" placeholder="Admin password">
-                        <button class="btn-admin" onclick="flushAdminLogin()">Sign In</button>
+                        <button class="btn-admin" data-call="flushAdminLogin">Sign In</button>
                         <div id="flushLoginStatus" class="admin-status"></div>
                     </div>
 
@@ -387,11 +387,11 @@ Authorization: Bearer USER_JWT_TOKEN</code></pre>
                             <!-- Look before you delete: what the system knows about an email. Read-only. -->
                             <div id="lookupBox" style="margin-bottom:1rem;">
                                 <input type="email" id="lookupEmail" placeholder="Look up an email first" style="margin-right:0.5rem;">
-                                <button class="btn-admin" type="button" onclick="lookupUser()">Look up</button>
+                                <button class="btn-admin" type="button" data-call="lookupUser">Look up</button>
                                 <p id="lookupResult" class="admin-status" style="margin-top:0.5rem;min-height:1.4rem;"></p>
                             </div>
                             <input type="email" id="flushUserEmail" placeholder="User email to flush">
-                            <button class="btn-admin btn-danger" onclick="confirmFlush()">Flush Data</button>
+                            <button class="btn-admin btn-danger" data-call="confirmFlush">Flush Data</button>
                         </div>
                         <div id="flushResult" class="flush-result"></div>
                     </div>
@@ -405,8 +405,8 @@ Authorization: Bearer USER_JWT_TOKEN</code></pre>
                     <div class="email-confirm" id="confirmEmail"></div>
                     <p>This action cannot be undone.</p>
                     <div class="btn-row">
-                        <button class="btn-cancel" onclick="cancelFlush()">Cancel</button>
-                        <button class="btn-admin btn-danger" onclick="executeFlush()">Yes, Delete Everything</button>
+                        <button class="btn-cancel" data-call="cancelFlush">Cancel</button>
+                        <button class="btn-admin btn-danger" data-call="executeFlush">Yes, Delete Everything</button>
                     </div>
                 </div>
             </div>
@@ -418,6 +418,17 @@ Authorization: Bearer USER_JWT_TOKEN</code></pre>
     <script src="js/cookie-consent.js"></script>
     <script>
         let adminToken = null;
+
+        // The page's buttons name these; see utils.js for why they are not onclick.
+
+        WordethActions.register({
+
+            flushAdminLogin: function () { flushAdminLogin(); }, lookupUser: function () { lookupUser(); },
+
+            confirmFlush: function () { confirmFlush(); }, cancelFlush: function () { cancelFlush(); }, executeFlush: function () { executeFlush(); }
+
+        });
+
 
         async function flushAdminLogin() {
             const email = document.getElementById('flushAdminEmail').value.trim();

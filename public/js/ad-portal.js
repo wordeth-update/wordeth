@@ -255,14 +255,14 @@ class AdPortal {
             const toggleLabel = ad.status === 'active' ? 'Pause' : 'Resume';
             actionsHtml = `
                 <div class="ad-actions">
-                    <button class="btn-secondary" onclick="adPortal.toggleAd('${ad._id}', '${toggleAction}')">${toggleLabel}</button>
+                    <button class="btn-secondary" data-call="adPortal.toggleAd" data-args='${JSON.stringify([String(ad._id), toggleAction])}'>${toggleLabel}</button>
                 </div>
             `;
         }
 
         return `
             <div class="ad-item">
-                <img src="${this.escapeHtml(ad.imageUrl)}" alt="${this.escapeHtml(ad.title)}" class="ad-item-image" onerror="this.src='images/logo.png'">
+                <img src="${this.escapeHtml(ad.imageUrl)}" alt="${this.escapeHtml(ad.title)}" class="ad-item-image" data-fallback-src="images/logo.png">
                 <div class="ad-item-info">
                     <h4>${this.escapeHtml(ad.title)}</h4>
                     <p>${ad.placement} | ${ad.size}</p>
@@ -301,7 +301,7 @@ class AdPortal {
     updatePreview(url) {
         const preview = document.getElementById('adPreview');
         if (url) {
-            preview.innerHTML = `<img src="${this.escapeHtml(url)}" alt="Ad Preview" onerror="this.parentElement.innerHTML='<p>Failed to load image</p>'">`;
+            preview.innerHTML = `<img src="${this.escapeHtml(url)}" alt="Ad Preview" data-fallback="message">`;
         } else {
             preview.innerHTML = '<p>Choose your artwork above to see a preview</p>';
         }
@@ -344,3 +344,11 @@ function logout() {
 function showTab(tabId) {
     adPortal.switchTab(tabId);
 }
+
+
+// The page's buttons name these; see utils.js for why they are not onclick.
+WordethActions.register({
+    logout: logout,
+    showTab: showTab,
+    'adPortal.toggleAd': function (adId, action) { adPortal.toggleAd(adId, action); }
+});

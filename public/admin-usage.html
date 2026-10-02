@@ -46,7 +46,7 @@
                 <a href="w-admin.html" class="nav-link"><i class="fas fa-home"></i> Admin Hub</a>
                 <a href="privacy-admin.html" class="nav-link"><i class="fas fa-shield-alt"></i> Privacy</a>
                 <a href="tournament-admin.html" class="nav-link"><i class="fas fa-trophy"></i> Tournaments</a>
-                <button onclick="logout()" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+                <button data-call="logout" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
             </div>
         </nav>
 
@@ -254,10 +254,10 @@
                                     Compress current database events into daily summaries and store in S3
                                 </p>
                                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
-                                    <button onclick="runArchive('auto')" class="btn-primary" style="padding:8px 16px;font-size:0.85rem;">
+                                    <button data-call="runArchive" data-arg="auto" class="btn-primary" style="padding:8px 16px;font-size:0.85rem;">
                                         <i class="fas fa-magic"></i> Auto Archive (7+ days old)
                                     </button>
-                                    <button onclick="runArchive('today')" class="btn-primary" style="padding:8px 16px;font-size:0.85rem;background:#3EB489;">
+                                    <button data-call="runArchive" data-arg="today" class="btn-primary" style="padding:8px 16px;font-size:0.85rem;background:#3EB489;">
                                         <i class="fas fa-calendar-day"></i> Archive Today
                                     </button>
                                 </div>
@@ -277,7 +277,7 @@
                                     <select id="compareMonth2" style="background:#1e2a3a;color:#e6e6e6;border:1px solid #2d3748;border-radius:6px;padding:6px 10px;font-size:0.85rem;">
                                         <option value="">Select Month 2</option>
                                     </select>
-                                    <button onclick="loadComparison()" class="btn-primary" style="padding:6px 14px;font-size:0.85rem;">
+                                    <button data-call="loadComparison" class="btn-primary" style="padding:6px 14px;font-size:0.85rem;">
                                         <i class="fas fa-balance-scale"></i> Compare
                                     </button>
                                 </div>

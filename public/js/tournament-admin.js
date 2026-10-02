@@ -96,8 +96,8 @@ class TournamentAdmin {
                     <td><span class="round-status ${escapeHtml(s.status)}">${escapeHtml(s.status)}</span></td>
                     <td>${new Date(s.startAt).toLocaleDateString()} - ${new Date(s.endAt).toLocaleDateString()}</td>
                     <td>
-                        <button class="admin-action-btn" onclick="admin.editSeason('${s._id}')"><i class="fas fa-edit"></i></button>
-                        <button class="admin-action-btn" onclick="admin.loadOverview('${s._id}')"><i class="fas fa-chart-bar"></i></button>
+                        <button class="admin-action-btn" data-call="admin.editSeason" data-arg="${s._id}"><i class="fas fa-edit"></i></button>
+                        <button class="admin-action-btn" data-call="admin.loadOverview" data-arg="${s._id}"><i class="fas fa-chart-bar"></i></button>
                     </td>
                 </tr>
             `).join('');
@@ -219,10 +219,10 @@ class TournamentAdmin {
                     <td>${escapeHtml(r.theme)}</td>
                     <td><span class="round-status ${escapeHtml(r.status)}">${escapeHtml(r.status)}</span></td>
                     <td>
-                        <button class="admin-action-btn" onclick="admin.updateRoundStatus('${r._id}', 'submissions_open')" title="Open Submissions"><i class="fas fa-door-open"></i></button>
-                        <button class="admin-action-btn" onclick="admin.seedRound('${r._id}')" title="Seed Matches"><i class="fas fa-random"></i></button>
-                        <button class="admin-action-btn" onclick="admin.updateRoundStatus('${r._id}', 'voting')" title="Open Voting"><i class="fas fa-vote-yea"></i></button>
-                        <button class="admin-action-btn" onclick="admin.updateRoundStatus('${r._id}', 'completed')" title="Complete"><i class="fas fa-check-circle"></i></button>
+                        <button class="admin-action-btn" data-call="admin.updateRoundStatus" data-args='${JSON.stringify([String(r._id), 'submissions_open'])}' title="Open Submissions"><i class="fas fa-door-open"></i></button>
+                        <button class="admin-action-btn" data-call="admin.seedRound" data-arg="${r._id}" title="Seed Matches"><i class="fas fa-random"></i></button>
+                        <button class="admin-action-btn" data-call="admin.updateRoundStatus" data-args='${JSON.stringify([String(r._id), 'voting'])}' title="Open Voting"><i class="fas fa-vote-yea"></i></button>
+                        <button class="admin-action-btn" data-call="admin.updateRoundStatus" data-args='${JSON.stringify([String(r._id), 'completed'])}' title="Complete"><i class="fas fa-check-circle"></i></button>
                     </td>
                 </tr>
             `).join('');
@@ -288,10 +288,10 @@ class TournamentAdmin {
                     <td><span class="round-status ${escapeHtml(s.status)}">${escapeHtml(s.status)}</span></td>
                     <td>
                         ${s.status === 'pending' ? `
-                            <button class="admin-action-btn success" onclick="admin.moderateSubmission('${s._id}', 'approved')"><i class="fas fa-check"></i></button>
-                            <button class="admin-action-btn danger" onclick="admin.moderateSubmission('${s._id}', 'rejected')"><i class="fas fa-times"></i></button>
+                            <button class="admin-action-btn success" data-call="admin.moderateSubmission" data-args='${JSON.stringify([String(s._id), 'approved'])}'><i class="fas fa-check"></i></button>
+                            <button class="admin-action-btn danger" data-call="admin.moderateSubmission" data-args='${JSON.stringify([String(s._id), 'rejected'])}'><i class="fas fa-times"></i></button>
                         ` : ''}
-                        <button class="admin-action-btn" onclick="admin.viewLyrics('${s._id}')" title="View Lyrics"><i class="fas fa-eye"></i></button>
+                        <button class="admin-action-btn" data-call="admin.viewLyrics" data-arg="${s._id}" title="View Lyrics"><i class="fas fa-eye"></i></button>
                     </td>
                 </tr>
             `).join('');
@@ -374,7 +374,7 @@ class TournamentAdmin {
                     <td>${escapeHtml(s.category)}</td>
                     <td>${s.isActive ? '<span style="color:#2ecc71;">Active</span>' : '<span style="color:#e74c3c;">Inactive</span>'}</td>
                     <td>
-                        <button class="admin-action-btn" onclick="admin.toggleSponsor('${s._id}', ${!s.isActive})">${s.isActive ? 'Deactivate' : 'Activate'}</button>
+                        <button class="admin-action-btn" data-call="admin.toggleSponsor" data-args='${JSON.stringify([String(s._id), !s.isActive])}'>${s.isActive ? 'Deactivate' : 'Activate'}</button>
                     </td>
                 </tr>
             `).join('');
@@ -484,3 +484,15 @@ class TournamentAdmin {
 
 let admin;
 document.addEventListener('DOMContentLoaded', () => { admin = new TournamentAdmin(); });
+
+
+// The buttons this script draws name these; see utils.js for why they are not onclick.
+WordethActions.register({
+    'admin.editSeason': function (id) { admin.editSeason(id); },
+    'admin.loadOverview': function (id) { admin.loadOverview(id); },
+    'admin.updateRoundStatus': function (id, status) { admin.updateRoundStatus(id, status); },
+    'admin.seedRound': function (id) { admin.seedRound(id); },
+    'admin.moderateSubmission': function (id, verdict) { admin.moderateSubmission(id, verdict); },
+    'admin.viewLyrics': function (id) { admin.viewLyrics(id); },
+    'admin.toggleSponsor': function (id, active) { admin.toggleSponsor(id, active); }
+});

@@ -313,6 +313,7 @@
         </div>
     </div>
 
+    <script src="js/utils.js"></script>
     <script>
     (function() {
         var token = '';
@@ -478,15 +479,15 @@
 
                 var actions = '';
                 if (showApproveReject) {
-                    actions = '<button class="btn btn-sm btn-approve" onclick="TA.approve(\'' + t.templateId + '\')"><i class="fas fa-check"></i> Approve</button>'
-                        + '<button class="btn btn-sm btn-reject" onclick="TA.showReject(\'' + t.templateId + '\')"><i class="fas fa-times"></i> Reject</button>';
+                    actions = '<button class="btn btn-sm btn-approve" data-call="TA.approve" data-arg="' + t.templateId + '"><i class="fas fa-check"></i> Approve</button>'
+                        + '<button class="btn btn-sm btn-reject" data-call="TA.showReject" data-arg="' + t.templateId + '"><i class="fas fa-times"></i> Reject</button>';
                 } else if (t.status === 'approved') {
                     if (t.featured) {
-                        actions = '<button class="btn btn-sm btn-unfeature" onclick="TA.feature(\'' + t.templateId + '\', false)"><i class="fas fa-star"></i> Unfeature</button>';
+                        actions = '<button class="btn btn-sm btn-unfeature" data-call="TA.unfeature" data-arg="' + t.templateId + '"><i class="fas fa-star"></i> Unfeature</button>';
                     } else {
-                        actions = '<button class="btn btn-sm btn-feature" onclick="TA.feature(\'' + t.templateId + '\', true)"><i class="far fa-star"></i> Feature</button>';
+                        actions = '<button class="btn btn-sm btn-feature" data-call="TA.feature" data-arg="' + t.templateId + '"><i class="far fa-star"></i> Feature</button>';
                     }
-                    actions += '<button class="btn btn-sm btn-archive" onclick="TA.archive(\'' + t.templateId + '\')"><i class="fas fa-archive"></i></button>';
+                    actions += '<button class="btn btn-sm btn-archive" data-call="TA.archive" data-arg="' + t.templateId + '"><i class="fas fa-archive"></i></button>';
                 }
 
                 return '<div class="template-card">'
@@ -517,6 +518,31 @@
             document.getElementById(containerId + 'Prev').addEventListener('click', function() { onPage(pag.page - 1); });
             document.getElementById(containerId + 'Next').addEventListener('click', function() { onPage(pag.page + 1); });
         }
+
+        // The buttons this page draws name these; see js/utils.js for why they are not onclick.
+
+        WordethActions.register({
+
+            'TA.approve': function (id) { window.TA.approve(id); },
+
+            'TA.showReject': function (id) { window.TA.showReject(id); },
+
+            'TA.feature': function (id) { window.TA.feature(id, true); },
+
+            'TA.unfeature': function (id) { window.TA.feature(id, false); },
+
+            'TA.archive': function (id) { window.TA.archive(id); },
+
+            'TA.copyLink': function (link) {
+
+                var button = this;
+
+                navigator.clipboard.writeText(link).then(function () { button.innerHTML = '<i class="fas fa-check"></i>'; });
+
+            }
+
+        });
+
 
         window.TA = {
             approve: function(id) {
@@ -585,7 +611,7 @@
                     container.innerHTML = data.data.tokens.map(function(tk) {
                         return '<div class="gen-token">'
                             + '<code>' + tk + '</code>'
-                            + '<button class="copy-btn" onclick="navigator.clipboard.writeText(\'' + shareBase + tk + '\');this.innerHTML=\'<i class=&quot;fas fa-check&quot;></i>\'"><i class="fas fa-copy"></i></button>'
+                            + '<button class="copy-btn" data-call="TA.copyLink" data-arg="' + shareBase + tk + '"><i class="fas fa-copy"></i></button>'
                             + '<span class="share-link">' + shareBase + tk + '</span>'
                             + '</div>';
                     }).join('');

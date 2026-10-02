@@ -86,7 +86,7 @@
                 <div class="form-group">
                     <label for="password">Password</label>
                     <input type="password" id="password" name="password" required>
-                    <a href="javascript:void(0)" class="forgot-password" onclick="alert('Please contact support at support@wordeth.com to reset your password.')">Forgot Password?</a>
+                    <a href="mailto:support@wordeth.com?subject=Password%20reset" class="forgot-password" title="Email support@wordeth.com to reset your password">Forgot Password? Email support@wordeth.com</a>
                 </div>
                 <button type="submit" class="submit-btn">Sign In</button>
             </form>
@@ -145,7 +145,7 @@
               </div>
               <div class="footer-bottom-row">
                   <span>&copy; 2025 Wordeth</span>
-                  <a href="#" onclick="window.WordethConsent && window.WordethConsent.revokeConsent(); return false;">Cookie Preferences</a>
+                  <a href="#" data-consent-revoke>Cookie Preferences</a>
               </div>
           </div>
       </footer>

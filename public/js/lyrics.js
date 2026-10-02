@@ -101,7 +101,7 @@ function showResults(results, query) {
         return `
         <div class="result-card" data-song-id="${song.id}">
             <div class="result-image">
-                <img src="${imageUrl}" alt="${escapeHtml(song.title)} cover" class="${fallbackClass}" onerror="this.onerror=null; this.src='/images/logo.png'; this.classList.add('fallback-logo');">
+                <img src="${imageUrl}" alt="${escapeHtml(song.title)} cover" class="${fallbackClass}" data-fallback-src="/images/logo.png" data-fallback-class="fallback-logo">
             </div>`;
     }).map((cardStart, i) => {
         const song = results[i];
@@ -351,7 +351,7 @@ function displayAd(container, ad) {
     container.innerHTML = `
         <span class="lyrics-ad-label">Ad</span>
         <a href="${escapeHtml(ad.linkUrl)}" target="_blank" rel="noopener" data-ad-id="${escapeHtml(String(adId))}">
-            <img src="${escapeHtml(ad.imageUrl)}" alt="${escapeHtml(ad.title)}" onerror="this.parentElement.parentElement.classList.add('hidden')">
+            <img src="${escapeHtml(ad.imageUrl)}" alt="${escapeHtml(ad.title)}" data-fallback="hide-grandparent">
         </a>
     `;
 
@@ -430,7 +430,7 @@ function displayModalAd(container, ad) {
     container.innerHTML = `
         <span class="lyrics-ad-label">Ad</span>
         <a href="${escapeHtml(ad.linkUrl)}" target="_blank" rel="noopener" data-ad-id="${escapeHtml(String(adId))}">
-            <img src="${escapeHtml(ad.imageUrl)}" alt="${escapeHtml(ad.title)}" onerror="this.parentElement.parentElement.classList.add('hidden')">
+            <img src="${escapeHtml(ad.imageUrl)}" alt="${escapeHtml(ad.title)}" data-fallback="hide-grandparent">
         </a>
     `;
 

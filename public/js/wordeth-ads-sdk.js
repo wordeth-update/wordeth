@@ -205,7 +205,7 @@ class WordethAds {
             <div class="wordeth-ad-content">
                 <div class="wordeth-ad-header">
                     <span class="wordeth-ad-label">Sponsored by Wordeth</span>
-                    <button class="wordeth-ad-close" onclick="this.parentElement.parentElement.parentElement.remove()">×</button>
+                    <button class="wordeth-ad-close" type="button" aria-label="Close">×</button>
                 </div>
                 <div class="wordeth-ad-body">
                     <img src="${ad.image}" alt="${ad.title}" class="wordeth-ad-image">
@@ -221,6 +221,10 @@ class WordethAds {
         `;
         
         // Add click tracking
+        // The close button, wired here rather than with an onclick in the markup,
+        // which a site with a strict script policy (Wordeth's own included) never runs.
+        adDiv.querySelector('.wordeth-ad-close').addEventListener('click', () => adDiv.remove());
+
         adDiv.querySelector('.wordeth-ad-link').addEventListener('click', () => {
             this.trackClick(ad);
         });
