@@ -595,6 +595,15 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 
 // Health check endpoint
+/**
+ * Which build is running. A page asks this to find out it has been left
+ * open across a deploy and is now older than the server it talks to.
+ */
+app.get('/api/build', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ build: BUILD_ID });
+});
+
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });

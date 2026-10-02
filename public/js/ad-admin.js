@@ -50,6 +50,8 @@ class AdAdmin {
         document.getElementById('loginForm').addEventListener('submit', (e) => this.handleLogin(e));
         document.getElementById('createAdForm').addEventListener('submit', (e) => this.handleCreateAd(e));
         document.getElementById('createAdminForm').addEventListener('submit', (e) => this.handleCreateAdmin(e));
+        const userPlusForm = document.getElementById('userPlusForm');
+        if (userPlusForm) userPlusForm.addEventListener('submit', (e) => this.handleUserPlus(e));
 
         document.querySelectorAll('.sidebar-menu li').forEach(item => {
             item.addEventListener('click', () => this.switchTab(item.dataset.tab));
@@ -570,7 +572,7 @@ class AdAdmin {
                 <img src="${this.escapeHtml(ad.imageUrl)}" alt="${this.escapeHtml(ad.title)}" class="ad-item-image" data-fallback-src="images/logo.png">
                 <div class="ad-item-info">
                     <h4>${this.escapeHtml(ad.title)}</h4>
-                    <p>By: ${this.escapeHtml(advertiserName)} | ${ad.placement} | ${ad.size}${takeover}</p>
+                    <p>By: ${this.escapeHtml(advertiserName)} | ${this.escapeHtml(placementLabel(ad.placement))}${String(ad.placement).startsWith('app-') ? '' : ' | ' + this.escapeHtml(ad.size)}${takeover}</p>
                     <p>Impressions: ${this.formatNumber(ad.stats?.impressions || 0)} | Clicks: ${this.formatNumber(ad.stats?.clicks || 0)}</p>
                     <p>${rate}</p>
                     <div class="ad-keywords">${keywordsHtml}${moreKeywords}${ad.keywords.length === 0 && String(ad.placement).startsWith('app-') ? '<span class="keyword-tag">run-of-app</span>' : ''}</div>
@@ -629,6 +631,8 @@ class AdAdmin {
                 <div class="form-group"><label>Ad Title</label><input type="text" name="title" required maxlength="100" value="${v(ad.title)}"></div>
                 <div class="form-group"><label>Description</label><textarea name="description" maxlength="200">${v(ad.description)}</textarea></div>
                 <div class="form-group"><label>Click URL</label><input type="url" name="linkUrl" required value="${v(ad.linkUrl)}"></div>
+                ${takeover ? '' : `<div class="form-group"><label>Placement</label><select name="placement">${Object.keys(PLACEMENT_LABELS).filter(k => k !== 'app-takeover').map(k => `<option value="${k}"${k === ad.placement ? ' selected' : ''}>${v(PLACEMENT_LABELS[k])}</option>`).join('')}</select>
+                    <small>Moves this ad, with its artwork and its counts, to another slot.</small></div>`}
                 ${inApp ? `<div class="form-group"><label>Button text</label><input type="text" name="cta" maxlength="24" value="${v(ad.cta)}"></div>` : ''}
                 <div class="form-group"><label>Keywords (comma-separated)</label><textarea name="keywords">${v((ad.keywords || []).join(', '))}</textarea>
                     <small>${inApp ? 'Empty means run-of-app: it can show anywhere, behind any targeted ad that fits.' : 'Up to 25.'}</small></div>
@@ -660,7 +664,7 @@ class AdAdmin {
             title: field('title'), description: field('description'), linkUrl: field('linkUrl'),
             keywords: keywords.join(','), cpm: field('cpm'), cpc: field('cpc'), endDate: field('endDate') || ''
         };
-        for (const name of ['cta', 'durationSec', 'script']) if (form[name]) changes[name] = form[name].value;
+        for (const name of ['cta', 'durationSec', 'script', 'placement']) if (form[name]) changes[name] = form[name].value;
         if (button) { button.disabled = true; button.textContent = 'Saving…'; }
         try {
             await this.updateAd(adId, changes);
@@ -762,6 +766,7 @@ class AdAdmin {
         if (!picked && !value('imageUrl')) { say('Choose the artwork file, or paste its address.', 'error'); return; }
 
         const placement = value('placement');
+        if (!placement) { say('Choose where the ad runs.', 'error'); return; }
         const clip = placement === 'app-takeover' && form.media && form.media.files && form.media.files.length > 0 ? form.media.files[0] : null;
         if (clip && clip.size > AD_UPLOAD_LIMIT) {
             say(`That clip is ${megabytes(clip.size)}. The limit is 20 MB: export it shorter or at a lower quality and choose it again.`, 'error');
@@ -829,11 +834,17 @@ class AdAdmin {
 
             if (response.ok) {
                 const made = value('title');
+                // What is the same from one ad to the next in a batch stays;
+                // what is particular to this ad is cleared. The placement goes
+                // back to "choose…", so the next ad cannot be filed under
+                // whatever happened to be first in the list.
+                const keep = {};
+                for (const name of ['clientEmail', 'billingMode', 'cpm', 'cpc', 'linkUrl']) keep[name] = value(name);
                 form.reset();
-                // Back to the first placement: show the fields that one needs.
-                if (form.placement) form.placement.dispatchEvent(new Event('change', { bubbles: true }));
+                for (const name in keep) if (form[name]) form[name].value = keep[name];
+                if (form.placement) { form.placement.value = ''; form.placement.dispatchEvent(new Event('change', { bubbles: true })); }
                 document.getElementById('adPreview').innerHTML = '<p>Choose the artwork to preview it</p>';
-                say(`"${made}": ${data.message || 'Ad created.'}`, data.servingNow === false ? 'warn' : 'done');
+                say(`"${made}" in ${placementLabel(placement)}: ${data.message || 'Ad created.'}`, data.servingNow === false ? 'warn' : 'done');
                 this.loadAllAds();
             } else if (response.status === 401) {
                 say('You have been signed out. Sign in again, then create the ad.', 'error');
@@ -847,6 +858,29 @@ class AdAdmin {
         } finally {
             this.creatingAd = false;
             if (button) { button.disabled = false; button.textContent = label || 'Create Ad'; }
+        }
+    }
+
+    async handleUserPlus(e) {
+        e.preventDefault();
+        const form = e.target;
+        const status = document.getElementById('userPlusStatus');
+        const say = (text, ok) => { status.textContent = text; status.style.color = ok ? '#3EB489' : '#f85149'; status.style.display = 'block'; };
+        const button = form.querySelector('button[type="submit"]');
+        button.disabled = true;
+        try {
+            const response = await fetch(apiUrl('/api/ads/admin/user-plus'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}` },
+                body: JSON.stringify({ email: form.email.value, days: form.days.value })
+            });
+            let data = {};
+            try { data = await response.json(); } catch (parseError) { data = {}; }
+            say(response.ok ? data.message : (data.error || `The server refused that (${response.status}).`), response.ok);
+        } catch (error) {
+            say('That did not get through. Check the connection and try again.', false);
+        } finally {
+            button.disabled = false;
         }
     }
 
@@ -1043,6 +1077,7 @@ document.addEventListener('click', (e) => {
     switch (button.dataset.adminAction) {
         case 'tab': adAdmin.switchTab(button.dataset.tabName); break;
         case 'logout': adAdmin.logout(); break;
+        case 'reload': window.location.reload(); break;
         case 'approve-application': adAdmin.approveApplication(id); break;
         case 'reject-application': adAdmin.rejectApplication(id); break;
         case 'approve-ad': adAdmin.approveAd(id); break;
@@ -1058,3 +1093,53 @@ document.addEventListener('submit', (e) => {
     const form = e.target;
     if (form && form.dataset && form.dataset.adEditForm) adAdmin.saveAd(e, form.dataset.adEditForm);
 });
+
+
+/** Placements, as a person would say them. */
+const PLACEMENT_LABELS = {
+    'app-lyrics': 'App · Lyrics search row',
+    'app-messages': 'App · Messages row',
+    'app-room-strip': 'App · Room strip',
+    'app-photo-slide': 'App · Photo slide',
+    'app-merch': 'App · Merch, under the buy button',
+    'app-takeover': 'App · Sponsor takeover',
+    'header': 'Website · Header banner',
+    'footer': 'Website · Footer banner',
+    'sidebar': 'Website · Sidebar',
+    'lyrics-bottom': 'Website · Under the lyrics'
+};
+function placementLabel(key) { return PLACEMENT_LABELS[key] || String(key || ''); }
+
+/*
+ * A page left open across a deploy keeps running the script it loaded,
+ * however old. That is how Pause, Edit and Delete went on doing nothing
+ * after they had been fixed: the tab predated the fix. So the page asks
+ * the server which build is running when it loads, and again whenever it
+ * is returned to and once a minute; the moment the answer changes it says
+ * so across the top, with the one thing to do about it.
+ */
+(function () {
+    let loadedWith = null;
+    let told = false;
+    async function check() {
+        if (told) return;
+        try {
+            const response = await fetch(apiUrl('/api/build'), { cache: 'no-store' });
+            if (!response.ok) return;
+            const data = await response.json();
+            if (!data || !data.build) return;
+            if (loadedWith === null) { loadedWith = data.build; return; }
+            if (data.build === loadedWith) return;
+            told = true;
+            const bar = document.createElement('div');
+            bar.setAttribute('role', 'alert');
+            bar.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:10000; display:flex; gap:1rem; align-items:center; justify-content:center; padding:.75rem 1rem; background:#D29922; color:#111; font-weight:600;';
+            bar.innerHTML = '<span>This page has been updated since you opened it. Reload before doing anything else.</span><button data-admin-action="reload" style="padding:.4rem 1rem; border-radius:6px; border:none; background:#111; color:#fff; font-weight:700; cursor:pointer;">Reload now</button>';
+            document.body.appendChild(bar);
+        } catch (error) { /* offline or mid-deploy: ask again next time */ }
+    }
+    check();
+    setInterval(check, 60 * 1000);
+    window.addEventListener('focus', check);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+})();

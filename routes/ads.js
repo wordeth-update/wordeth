@@ -535,6 +535,19 @@ router.put('/update/:adId', authenticateAdvertiser, async (req, res) => {
         if (advertiser.role === 'admin') {
             const b = req.body;
             if (b.cta !== undefined) ad.cta = String(b.cta).trim().slice(0, 24);
+            // Moving an ad to another slot. A takeover is a different kind of
+            // thing (it has a clip and a script), so nothing moves into or out
+            // of that one; everything else is the same creative in a new place.
+            if (b.placement !== undefined && b.placement !== ad.placement) {
+                const WEB = { header: '728x90', footer: '728x90', sidebar: '300x250', 'lyrics-bottom': '728x90' };
+                const target = String(b.placement);
+                if (ad.placement === 'app-takeover' || target === 'app-takeover') {
+                    return res.status(400).json({ error: 'A takeover cannot be moved to another placement, or another ad into it. Create it again instead.' });
+                }
+                if (APP_PLACEMENTS[target]) { ad.placement = target; ad.size = APP_PLACEMENTS[target].size; }
+                else if (WEB[target]) { ad.placement = target; if (!['728x90', '320x50', '300x250'].includes(ad.size)) ad.size = WEB[target]; }
+                else return res.status(400).json({ error: 'Unknown placement.' });
+            }
             for (const [field, max] of [['cpm', 1000], ['cpc', 100]]) {
                 if (b[field] === undefined || String(b[field]).trim() === '') continue;
                 const n = Number(b[field]);
@@ -1241,6 +1254,51 @@ async function linkChatAccount(advertiser, email) {
     await advertiser.save();
     return { ok: true };
 }
+
+/**
+ * Give an account User+ without a payment: a host you want running paid
+ * rooms, a partner, yourself. It is a subscription like any other, to the
+ * Fan Plus plan, with an end date and a note of who granted it; zero days
+ * takes it away. Paid rooms, and the sponsor takeovers that run in them,
+ * are for User+ only, so this is also how a host is switched on for those.
+ */
+router.post('/admin/user-plus', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        const User = require('../models/User');
+        const Plan = require('../models/Plan');
+        const Subscription = require('../models/Subscription');
+        const email = String(req.body?.email || '').trim().toLowerCase();
+        const days = Math.min(3650, Math.max(0, parseInt(req.body?.days, 10) || 0));
+        if (!email) return res.status(400).json({ error: 'Enter the account email.' });
+        const user = await User.findOne({ email }).select('_id name email');
+        if (!user) return res.status(404).json({ error: `No Wordeth account for ${email}.` });
+
+        const granted = await Subscription.find({ userId: user._id, 'metadata.grantedBy': { $exists: true } });
+        if (days === 0) {
+            for (const sub of granted) { sub.status = 'expired'; sub.currentPeriodEnd = new Date(); await sub.save(); }
+            return res.json({ success: true, message: `User+ removed from ${user.name || email}.`, until: null });
+        }
+
+        const plan = await Plan.findOne({ slug: 'fan-plus' }).select('_id');
+        if (!plan) return res.status(500).json({ error: 'The Fan Plus plan is missing; User+ cannot be granted.' });
+        const until = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+        let sub = granted[0];
+        if (!sub) sub = new Subscription({ userId: user._id, planId: plan._id });
+        sub.planId = plan._id;
+        sub.status = 'active';
+        sub.billingCycle = 'monthly';
+        sub.currentPeriodStart = new Date();
+        sub.currentPeriodEnd = until;
+        sub.cancelAtPeriodEnd = true;
+        sub.set('metadata.grantedBy', String(req.advertiserId));
+        sub.set('metadata.grantedAt', new Date().toISOString());
+        await sub.save();
+        res.json({ success: true, message: `${user.name || email} has User+ until ${until.toISOString().slice(0, 10)}.`, until });
+    } catch (error) {
+        console.error('Grant User+ error:', error);
+        res.status(500).json({ error: 'Could not change User+ for that account.' });
+    }
+});
 
 router.put('/admin/advertisers/:id/chat-account', authenticateAdvertiser, requireAdmin, async (req, res) => {
     try {
