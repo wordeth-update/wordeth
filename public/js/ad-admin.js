@@ -642,6 +642,8 @@ class AdAdmin {
         adData.append('size', form.size.value);
         adData.append('keywords', keywords.join(','));
         adData.append('billingMode', form.billingMode.value);
+        adData.append('cpm', form.cpm.value);
+        adData.append('cpc', form.cpc.value);
         if (hasFile) adData.append('image', form.image.files[0]);
         if (form.placement.value.startsWith('app-')) {
             adData.append('cta', form.cta.value);

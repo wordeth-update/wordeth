@@ -215,6 +215,17 @@
                         </select>
                         <small>An ad only shows when its account can pay for it. A new client starts prepaid with nothing in it, so without this choice a new ad would be created and never seen.</small>
                     </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Rate per 1,000 impressions ($)</label>
+                            <input type="number" name="cpm" min="0" max="1000" step="0.01" value="2.00">
+                        </div>
+                        <div class="form-group">
+                            <label>Rate per click ($)</label>
+                            <input type="number" name="cpc" min="0" max="100" step="0.01" value="0.10">
+                        </div>
+                    </div>
+                    <small style="display:block; margin:-0.5rem 0 1rem; color:var(--text-secondary);">What this campaign is charged as it is delivered. Enter 0 and 0 for a house ad or a mock, so nothing is billed.</small>
                     <div class="form-group">
                         <label>Ad Title</label>
                         <input type="text" name="title" required maxlength="100" placeholder="Company Name or Campaign">

@@ -1070,6 +1070,24 @@ router.post('/admin/upload-for-client', authenticateAdvertiser, requireAdmin, ac
 
         const truthy = (v) => v === true || v === 'true' || v === 'on' || v === '1';
         const extra = {};
+
+        // The rate for this campaign. Left blank it is the standard rate; a
+        // house ad or a mock is booked at zero, so its delivery bills nothing.
+        const rate = (value, max) => {
+            if (value === undefined || value === null || String(value).trim() === '') return undefined;
+            const n = Number(value);
+            return Number.isFinite(n) && n >= 0 && n <= max ? Math.round(n * 10000) / 10000 : null;
+        };
+        const cpm = rate(req.body.cpm, 1000);
+        const cpc = rate(req.body.cpc, 100);
+        if (cpm === null || cpc === null) {
+            return res.status(400).json({ error: 'Rates must be numbers: zero or more, up to $1,000 per thousand impressions and $100 per click.' });
+        }
+        if (cpm !== undefined || cpc !== undefined) {
+            extra.pricing = {};
+            if (cpm !== undefined) extra.pricing.cpm = cpm;
+            if (cpc !== undefined) extra.pricing.cpc = cpc;
+        }
         if (appSlot) {
             extra.cta = String(req.body.cta || '').trim().slice(0, 24);
             extra.chatEnabled = truthy(req.body.chatEnabled);
