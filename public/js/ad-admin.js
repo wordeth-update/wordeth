@@ -303,7 +303,7 @@ class AdAdmin {
                                 <span class="ql-label">${this.escapeHtml(app.companyName)}</span>
                                 <div style="font-size:0.75rem; color:var(--text-secondary);">${this.escapeHtml(app.contactName)} &middot; ${app.accountType === 'partner' ? 'White Glove' : 'Self-Serve'}</div>
                             </div>
-                            <button class="action-btn" onclick="adAdmin.switchTab('applications')">Review</button>
+                            <button class="action-btn" data-admin-action="tab" data-tab-name="applications">Review</button>
                         </li>
                     `).join('')}</ul>`;
                 } else {
@@ -401,8 +401,8 @@ class AdAdmin {
                     ${app.website ? `<div><strong style="color:var(--text-primary);">Website:</strong> <a href="${this.escapeHtml(app.website)}" target="_blank" rel="noopener" style="color:var(--mint);">${this.escapeHtml(app.website)}</a></div>` : ''}
                 </div>
                 <div class="ad-actions" style="margin-top:0.5rem;">
-                    <button class="btn-primary" onclick="adAdmin.approveApplication('${app._id}')">Approve</button>
-                    <button class="btn-danger" onclick="adAdmin.rejectApplication('${app._id}')">Reject</button>
+                    <button class="btn-primary" data-admin-action="approve-application" data-id="${app._id}">Approve</button>
+                    <button class="btn-danger" data-admin-action="reject-application" data-id="${app._id}">Reject</button>
                 </div>
             </div>
         `;
@@ -552,13 +552,13 @@ class AdAdmin {
         const id = ad._id;
         const buttons = [];
         if (showApproveButtons) {
-            buttons.push(`<button class="btn-primary" onclick="adAdmin.approveAd('${id}')">Approve</button>`);
-            buttons.push(`<button class="btn-danger" onclick="adAdmin.rejectAd('${id}')">Reject</button>`);
+            buttons.push(`<button class="btn-primary" data-admin-action="approve-ad" data-id="${id}">Approve</button>`);
+            buttons.push(`<button class="btn-danger" data-admin-action="reject-ad" data-id="${id}">Reject</button>`);
         }
-        if (ad.status === 'active') buttons.push(`<button class="action-btn" onclick="adAdmin.setAdStatus('${id}', 'paused')">Pause</button>`);
-        if (ad.status === 'paused' || ad.status === 'rejected') buttons.push(`<button class="action-btn" onclick="adAdmin.setAdStatus('${id}', 'active')">${ad.status === 'paused' ? 'Resume' : 'Make active'}</button>`);
-        buttons.push(`<button class="action-btn" onclick="adAdmin.editAd('${id}')">Edit</button>`);
-        buttons.push(`<button class="action-btn" style="color:#f85149;" id="ad-delete-${id}" onclick="adAdmin.deleteAd('${id}')">Delete</button>`);
+        if (ad.status === 'active') buttons.push(`<button class="action-btn" data-admin-action="pause-ad" data-id="${id}">Pause</button>`);
+        if (ad.status === 'paused' || ad.status === 'rejected') buttons.push(`<button class="action-btn" data-admin-action="resume-ad" data-id="${id}">${ad.status === 'paused' ? 'Resume' : 'Make active'}</button>`);
+        buttons.push(`<button class="action-btn" data-admin-action="edit-ad" data-id="${id}">Edit</button>`);
+        buttons.push(`<button class="action-btn" style="color:#f85149;" id="ad-delete-${id}" data-admin-action="delete-ad" data-id="${id}">Delete</button>`);
         const actionsHtml = `<div class="ad-actions" style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.75rem;">${buttons.join('')}</div>`;
 
         const rate = `Rate: $${Number(ad.pricing?.cpm ?? 0).toFixed(2)} per 1,000 impressions · $${Number(ad.pricing?.cpc ?? 0).toFixed(2)} per click`;
@@ -625,7 +625,7 @@ class AdAdmin {
         const takeover = ad.placement === 'app-takeover';
         const end = ad.schedule?.endDate ? new Date(ad.schedule.endDate).toISOString().slice(0, 10) : '';
         box.innerHTML = `
-            <form class="ad-form" onsubmit="adAdmin.saveAd(event, '${adId}')" style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--dark-border);">
+            <form class="ad-form" data-ad-edit-form="${adId}" style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--dark-border);">
                 <div class="form-group"><label>Ad Title</label><input type="text" name="title" required maxlength="100" value="${v(ad.title)}"></div>
                 <div class="form-group"><label>Description</label><textarea name="description" maxlength="200">${v(ad.description)}</textarea></div>
                 <div class="form-group"><label>Click URL</label><input type="url" name="linkUrl" required value="${v(ad.linkUrl)}"></div>
@@ -643,7 +643,7 @@ class AdAdmin {
                 <small style="display:block; margin-bottom:1rem; color:var(--text-secondary);">Artwork, a takeover clip and the placement are fixed once an ad is made. To change one, delete the ad and create it again.</small>
                 <div style="display:flex; gap:.5rem;">
                     <button type="submit" class="btn-primary">Save changes</button>
-                    <button type="button" class="action-btn" onclick="adAdmin.editAd('${adId}')">Cancel</button>
+                    <button type="button" class="action-btn" data-admin-action="edit-ad" data-id="${adId}">Cancel</button>
                 </div>
             </form>`;
         box.style.display = 'block';
@@ -717,7 +717,8 @@ class AdAdmin {
     }
 
     async rejectAd(adId) {
-        const reason = prompt('Reason for rejection (optional):');
+        // No pop-up to ask why: a browser may have switched those off, and the reason was never stored.
+        const reason = '';
         try {
             const response = await fetch(apiUrl(`/api/ads/admin/reject/${adId}`), {
                 method: 'PUT',
@@ -1024,4 +1025,36 @@ document.addEventListener('change', (e) => {
     img.src = url;
     box.appendChild(img); box.appendChild(note);
     showCreateAdStatus('', 'busy');
+});
+
+
+/*
+ * Every button this script draws is wired here, by what it says it does
+ * (data-admin-action) rather than by an onclick written into the markup.
+ * The site's security policy does not run code written into attributes
+ * (script-src-attr 'none'), so a button drawn with onclick="…" looks right
+ * and does nothing at all when pressed. That is how Pause, Edit and Delete
+ * first shipped: present, and dead.
+ */
+document.addEventListener('click', (e) => {
+    const button = e.target && e.target.closest ? e.target.closest('[data-admin-action]') : null;
+    if (!button) return;
+    const id = button.dataset.id;
+    switch (button.dataset.adminAction) {
+        case 'tab': adAdmin.switchTab(button.dataset.tabName); break;
+        case 'logout': adAdmin.logout(); break;
+        case 'approve-application': adAdmin.approveApplication(id); break;
+        case 'reject-application': adAdmin.rejectApplication(id); break;
+        case 'approve-ad': adAdmin.approveAd(id); break;
+        case 'reject-ad': adAdmin.rejectAd(id); break;
+        case 'pause-ad': adAdmin.setAdStatus(id, 'paused'); break;
+        case 'resume-ad': adAdmin.setAdStatus(id, 'active'); break;
+        case 'edit-ad': adAdmin.editAd(id); break;
+        case 'delete-ad': adAdmin.deleteAd(id); break;
+        default: break;
+    }
+});
+document.addEventListener('submit', (e) => {
+    const form = e.target;
+    if (form && form.dataset && form.dataset.adEditForm) adAdmin.saveAd(e, form.dataset.adEditForm);
 });
