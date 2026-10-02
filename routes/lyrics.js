@@ -52,29 +52,8 @@ const artistVariations = {
     'post malone': ['Post Malone']
 };
 
-// Helper function to fetch album art from Deezer
-async function fetchDeezerArtwork(artist, track) {
-    try {
-        const searchQuery = `artist:"${artist}" track:"${track}"`;
-        const response = await axios.get(`${DEEZER_BASE_URL}/search`, {
-            params: { q: searchQuery, limit: 1 },
-            timeout: 5000
-        });
-        
-        if (response.data.data && response.data.data.length > 0) {
-            const result = response.data.data[0];
-            return {
-                cover_small: result.album?.cover_small,
-                cover_medium: result.album?.cover_medium,
-                cover_big: result.album?.cover_big,
-                cover_xl: result.album?.cover_xl
-            };
-        }
-    } catch (err) {
-        // Silently fail - Deezer is just a fallback
-    }
-    return null;
-}
+// Album art when Musixmatch has none: see services/artwork.js
+const { fetchDeezerArtwork } = require('../services/artwork');
 
 // Helper function to process track results
 function processTrackResults(tracks) {

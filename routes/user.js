@@ -1,5 +1,11 @@
 const express = require('express');
 const router = express.Router();
+
+const { artworkUrl } = require('../services/artwork');
+/** How many of the newest history entries are given a picture when they have none. */
+const HISTORY_ART_BACKFILL = 24;
+/** A real picture: https, and not Musixmatch's "nocover" placeholder. */
+const usableArt = (image) => typeof image === 'string' && /^https:\/\//.test(image) && !/nocover/i.test(image);
 const multer = require('multer');
 const jwt = require('jsonwebtoken');
 const auth = require('../middleware/auth');
@@ -253,7 +259,21 @@ router.get('/avatar/:userId', async (req, res) => {
 // Get search history
 router.get('/history', auth, async (req, res) => {
     try {
-        res.json(req.user.searchHistory.sort((a, b) => b.timestamp - a.timestamp));
+        const list = req.user.searchHistory.sort((a, b) => b.timestamp - a.timestamp);
+        // The cards at the front are the ones on screen. Any of them saved
+        // without a picture — every entry from before cards existed, and any
+        // song Musixmatch had no cover for — gets one now, and keeps it.
+        const bare = list.slice(0, HISTORY_ART_BACKFILL).filter((h) => !usableArt(h.image) && !h.artChecked);
+        if (bare.length > 0) {
+            await Promise.all(bare.map(async (h) => {
+                const found = await artworkUrl(h.artist, h.songTitle);
+                if (found) h.image = found;
+                // Asked once. A song with no picture anywhere is not asked about on every open.
+                h.artChecked = true;
+            }));
+            req.user.save().catch((e) => console.warn('[History] artwork save error:', e.message));
+        }
+        res.json(list);
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
     }
@@ -270,10 +290,14 @@ router.post('/history', auth, async (req, res) => {
             songTitle,
             artist: typeof artist === 'string' ? artist.slice(0, 200) : '',
             trackId: Number.isInteger(trackId) && trackId > 0 ? trackId : null,
-            image: typeof image === 'string' && /^https:\/\//.test(image) ? image.slice(0, 500) : '',
+            image: usableArt(image) ? image.slice(0, 500) : '',
             album: typeof album === 'string' ? album.slice(0, 200) : '',
             timestamp: new Date()
         };
+        if (!entry.image) {
+            entry.image = await artworkUrl(entry.artist, entry.songTitle);
+            entry.artChecked = true;
+        }
         // One card per song: opening it again moves it to the front rather
         // than filling the row with the same cover.
         const same = (h) => (entry.trackId && h.trackId === entry.trackId)

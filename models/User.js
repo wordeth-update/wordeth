@@ -120,6 +120,8 @@ const userSchema = new mongoose.Schema({
         // art. Absent on entries made before the app kept them.
         trackId: { type: Number, default: null },
         image: { type: String, default: '' },
+        // A picture has been looked for; do not look again on every open.
+        artChecked: { type: Boolean, default: false },
         album: { type: String, default: '' },
         timestamp: {
             type: Date,
