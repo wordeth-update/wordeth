@@ -1279,6 +1279,43 @@ function setupSignaling(io) {
                     }
                     break;
 
+                case 'sponsor-takeover': {
+                    // A sponsor break. The host starts it, in a paid room, with an
+                    // ad that is running and that they are allowed to run. The room
+                    // is told only which ad; each phone then fetches the creative
+                    // and its own ticket, so the count cannot be claimed by a
+                    // client and the host's script never leaves the server for
+                    // anyone but the host.
+                    if (socket.id !== room.hostId || !(room.tokenPrice > 0)) break;
+                    const adId = String(data.adId || '');
+                    if (!/^[a-f0-9]{24}$/i.test(adId)) break;
+                    const Ad = require('../models/Ad');
+                    Ad.findOne({ ...Ad.runningQuery(), _id: adId, placement: 'app-takeover' })
+                        .select('takeover title').lean()
+                        .then((ad) => {
+                            if (!ad) return;
+                            const allowed = (ad.takeover?.hostUserIds || []).map(String);
+                            if (allowed.length && !allowed.includes(String(socket.userId))) return;
+                            io.to(roomId).emit('room-event', {
+                                event: 'sponsor-takeover',
+                                data: {
+                                    adId,
+                                    format: ad.takeover?.format || 'skyscraper',
+                                    durationSec: ad.takeover?.durationSec || 30,
+                                    hostName: socket.userName
+                                }
+                            });
+                        })
+                        .catch((e) => console.warn('[Takeover] lookup error:', e.message));
+                    break;
+                }
+
+                case 'sponsor-takeover-end':
+                    if (socket.id === room.hostId) {
+                        io.to(roomId).emit('room-event', { event, data: {} });
+                    }
+                    break;
+
                 case 'karaoke-permission':
                     if (socket.id === room.hostId) {
                         room.karaokeEnabled = data.enabled;

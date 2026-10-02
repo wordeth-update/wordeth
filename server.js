@@ -606,6 +606,8 @@ app.use('/api/user', userRoutes);
 app.use('/api/lyrics', lyricsRoutes); // Re-enabled with Genius API key
 app.use('/api/merch', merchRoutes);
 app.use('/api/templates', templateRoutes);
+app.use('/api/ads/app', require('./routes/appAds')); // Ads in the phone app
+app.use('/api/pounds', require('./routes/pounds')); // Temporary person–retailer connections
 app.use('/api/ads', adsRoutes); // Advertising system
 app.use('/api/analytics', analyticsRoutes); // Usage metrics & admin dashboard
 app.use('/api/partner', partnerRoutes); // Label partner dashboards

@@ -4,6 +4,7 @@ const multer = require('multer');
 const auth = require('../middleware/auth');
 const limits = require('../middleware/limits');
 const Message = require('../models/Message');
+const Pound = require('../models/Pound');
 const User = require('../models/User');
 
 const upload = multer({
@@ -46,14 +47,31 @@ router.get('/conversations', auth, async (req, res) => {
 
         const otherUserIds = messages.map(m => m._id);
         const users = await User.find({ _id: { $in: otherUserIds } })
-            .select('name avatar bio')
+            .select('name avatar bio retailerFor')
             .lean();
         const userMap = {};
         users.forEach(u => { userMap[u._id.toString()] = u; });
 
-        const conversations = messages.map(m => {
+        // Pounds: which of these threads are with a retailer, and how long each has left.
+        const livePounds = await Pound.find({
+            status: 'active', expiresAt: { $gt: new Date() },
+            $or: [{ userId }, { retailerUserId: userId }]
+        }).select('userId retailerUserId expiresAt').lean();
+        const poundWith = {};
+        livePounds.forEach(p => {
+            const other = String(p.userId) === String(userId) ? p.retailerUserId : p.userId;
+            poundWith[String(other)] = p.expiresAt;
+        });
+        const iAmRetailer = !!req.user.retailerFor;
+
+        const conversations = messages
+          // A retailer keeps a thread only while its pound lasts.
+          .filter(m => !iAmRetailer || poundWith[m._id.toString()])
+          .map(m => {
             const otherUser = userMap[m._id.toString()] || {};
             return {
+                retailer: iAmRetailer ? false : !!otherUser.retailerFor,
+                poundExpiresAt: poundWith[m._id.toString()] || null,
                 userId: m._id,
                 userName: otherUser.name || 'Unknown',
                 avatar: otherUser.avatar || 'assets/default-avatar.png',
@@ -80,6 +98,11 @@ router.get('/:userId', auth, async (req, res) => {
         const otherId = req.params.userId;
         const page = parseInt(req.query.page) || 1;
         const limit = 50;
+
+        // A retailer may read a thread only while its pound lasts. The person keeps their copy.
+        if (req.user.retailerFor && !(await Pound.between(myId, otherId))) {
+            return res.status(403).json({ message: 'This pound has ended.', code: 'POUND_ENDED' });
+        }
 
         const messages = await Message.find({
             $or: [
@@ -119,9 +142,14 @@ router.post('/:userId', auth, limits.messages, limits.messagesDaily, upload.sing
             return res.status(400).json({ message: 'Cannot message yourself' });
         }
 
-        const otherUser = await User.findById(otherId).select('_id').lean();
+        const otherUser = await User.findById(otherId).select('_id retailerFor').lean();
         if (!otherUser) {
             return res.status(404).json({ message: 'User not found' });
+        }
+
+        // A thread with a retailer exists only inside a pound, in both directions.
+        if ((req.user.retailerFor || otherUser.retailerFor) && !(await Pound.between(myId, otherId))) {
+            return res.status(403).json({ message: 'This pound has ended. Pound them again from their ad to keep talking.', code: 'POUND_ENDED' });
         }
 
         const msgData = {

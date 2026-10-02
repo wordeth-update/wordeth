@@ -625,32 +625,53 @@ class AdAdmin {
             return;
         }
 
-        const adData = {
-            clientEmail: form.clientEmail.value,
-            title: form.title.value,
-            description: form.description.value,
-            imageUrl: form.imageUrl.value,
-            linkUrl: form.linkUrl.value,
-            placement: form.placement.value,
-            size: form.size.value,
-            keywords
-        };
+        const hasFile = form.image && form.image.files && form.image.files.length > 0;
+        if (!hasFile && !form.imageUrl.value) {
+            alert('Choose the artwork file, or paste its address.');
+            return;
+        }
+
+        // Sent as a form so artwork and a takeover clip can ride along as files.
+        const adData = new FormData();
+        adData.append('clientEmail', form.clientEmail.value);
+        adData.append('title', form.title.value);
+        adData.append('description', form.description.value);
+        adData.append('imageUrl', form.imageUrl.value);
+        adData.append('linkUrl', form.linkUrl.value);
+        adData.append('placement', form.placement.value);
+        adData.append('size', form.size.value);
+        adData.append('keywords', keywords.join(','));
+        adData.append('billingMode', form.billingMode.value);
+        if (hasFile) adData.append('image', form.image.files[0]);
+        if (form.placement.value.startsWith('app-')) {
+            adData.append('cta', form.cta.value);
+            adData.append('chatEnabled', form.chatEnabled.checked ? 'true' : 'false');
+            adData.append('chatAccountEmail', form.chatAccountEmail.value);
+        }
+        if (form.placement.value === 'app-takeover') {
+            adData.append('takeoverFormat', form.takeoverFormat.value);
+            adData.append('durationSec', form.durationSec.value);
+            adData.append('mediaUrl', form.mediaUrl.value);
+            adData.append('script', form.script.value);
+            adData.append('hostEmails', form.hostEmails.value);
+            if (form.media.files && form.media.files.length > 0) adData.append('media', form.media.files[0]);
+        }
 
         try {
             const response = await fetch(apiUrl('/api/ads/admin/upload-for-client'), {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.token}`
-                },
-                body: JSON.stringify(adData)
+                // No content-type: the browser sets the multipart boundary itself.
+                headers: { 'Authorization': `Bearer ${this.token}` },
+                body: adData
             });
 
             const data = await response.json();
 
             if (response.ok) {
-                alert('Ad created successfully!');
+                alert(data.message || 'Ad created successfully!');
                 form.reset();
+                // Back to the first placement: show the fields that one needs.
+                form.placement.dispatchEvent(new Event('change', { bubbles: true }));
                 document.getElementById('adPreview').innerHTML = '<p>Enter image URL to preview</p>';
                 this.loadAllAds();
             } else {
@@ -726,3 +747,34 @@ const adAdmin = new AdAdmin();
 function logout() {
     adAdmin.logout();
 }
+
+
+/**
+ * The create-ad form shows what the chosen placement needs and nothing
+ * else: a banner size for the website, button text and chat for the app,
+ * and the clip, length and host script for a sponsor takeover.
+ */
+(function () {
+    const HINTS = {
+        'app-lyrics': 'Looks like a song in the results: square artwork, the title as the song line, the description under it, and an AD sticker. Artwork: square, 600 × 600 or larger.',
+        'app-messages': 'A row in the conversation list, marked AD. Square logo, 600 × 600 or larger. Can offer a pound to chat.',
+        'app-room-strip': 'A slim strip along the bottom of a room: small square logo, one line of text. Matched to the room\'s name and topic.',
+        'app-photo-slide': 'Shown when somebody swipes past a photo shared in a room. Tall artwork, 1080 × 1350.',
+        'app-merch': 'A small unit under the Order button on a product. Square artwork, 600 × 600 or larger.',
+        'app-takeover': 'A sponsor break the host starts in a paid room. Skyscraper artwork: 600 × 1600 (tall). Video and audio also need a square logo here.'
+    };
+    function sync() {
+        const select = document.getElementById('adPlacement');
+        if (!select) return;
+        const value = select.value;
+        const inApp = value.indexOf('app-') === 0;
+        const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+        show('sizeGroup', !inApp);
+        show('appFields', inApp);
+        show('takeoverFields', value === 'app-takeover');
+        const hint = document.getElementById('placementHint');
+        if (hint) hint.textContent = HINTS[value] || '';
+    }
+    document.addEventListener('change', (e) => { if (e.target && e.target.id === 'adPlacement') sync(); });
+    document.addEventListener('DOMContentLoaded', sync);
+})();

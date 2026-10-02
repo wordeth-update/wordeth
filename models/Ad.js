@@ -25,13 +25,33 @@ const adSchema = new mongoose.Schema({
     },
     placement: {
         type: String,
-        enum: ['header', 'footer', 'sidebar', 'lyrics-bottom'],
+        // The first four are the website's. The app-* ones are slots in the
+        // phone app; what each looks like is in services/appAds.js.
+        enum: ['header', 'footer', 'sidebar', 'lyrics-bottom',
+               'app-lyrics', 'app-messages', 'app-room-strip', 'app-photo-slide', 'app-merch', 'app-takeover'],
         default: 'header'
     },
     size: {
         type: String,
-        enum: ['728x90', '320x50', '300x250'],
+        // Banners have pixel sizes. App placements are drawn by the app in
+        // its own shapes, so theirs name the shape rather than a size.
+        enum: ['728x90', '320x50', '300x250', 'native', 'slide', 'takeover'],
         required: true
+    },
+    /** The words on the button, in the app: "Shop now". Empty means "Learn more". */
+    cta: { type: String, maxlength: 24, default: '' },
+    /** People may pound this advertiser to chat, from the ad. Needs a chat account on the advertiser. */
+    chatEnabled: { type: Boolean, default: false },
+    /** A sponsor break in a paid room. Only meaningful for app-takeover. */
+    takeover: {
+        format: { type: String, enum: ['video', 'audio', 'skyscraper'], default: 'skyscraper' },
+        /** The video or audio file. A skyscraper uses imageUrl. */
+        mediaUrl: { type: String, default: '' },
+        durationSec: { type: Number, default: 30, min: 5, max: 90 },
+        /** What the host reads. Shown to the host only. */
+        script: { type: String, maxlength: 1500, default: '' },
+        /** Hosts who may run it. Empty means any host of a paid room. */
+        hostUserIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
     },
     keywords: [{
         type: String,
@@ -93,6 +113,29 @@ adSchema.methods.matchesKeywords = function(searchTerms) {
     });
     
     return matchScore;
+};
+
+/**
+ * Everything that makes an ad servable apart from relevance: active, inside
+ * its dates, inside both budgets. Shared by the website's matcher and the
+ * app's, so the two cannot drift apart on what "running" means.
+ */
+adSchema.statics.runningQuery = function() {
+    const today = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    return {
+        status: 'active',
+        $and: [
+            { $or: [{ 'schedule.startDate': { $exists: false } }, { 'schedule.startDate': null }, { 'schedule.startDate': { $lte: now } }] },
+            { $or: [{ 'schedule.endDate': { $exists: false } }, { 'schedule.endDate': null }, { 'schedule.endDate': { $gte: now } }] },
+            { $or: [{ 'budget.total': { $lte: 0 } }, { $expr: { $lt: ['$budget.spent', '$budget.total'] } }] },
+            { $or: [
+                { 'budget.daily': { $lte: 0 } },
+                { 'budget.spentDate': { $ne: today } },
+                { $expr: { $lt: ['$budget.spentToday', '$budget.daily'] } }
+            ] }
+        ]
+    };
 };
 
 adSchema.statics.findMatchingAds = async function(searchTerm, placement = null) {

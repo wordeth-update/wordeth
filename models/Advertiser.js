@@ -60,6 +60,11 @@ const advertiserSchema = new mongoose.Schema({
         additionalNotes: { type: String, trim: true },
         adminReferralCode: { type: String, trim: true }
     },
+    /**
+     * The Wordeth account that answers when somebody pounds this advertiser
+     * from an ad. Without one, their ads cannot offer a chat.
+     */
+    chatUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     reviewedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Advertiser'

@@ -207,6 +207,15 @@
                         <input type="email" name="clientEmail" required placeholder="client@company.com">
                     </div>
                     <div class="form-group">
+                        <label>Billing for this client</label>
+                        <select name="billingMode">
+                            <option value="invoiced">Invoiced on terms — ads run now, billed after</option>
+                            <option value="prepaid">Prepaid — ads run once the account has a balance</option>
+                            <option value="">Leave this client's billing as it is</option>
+                        </select>
+                        <small>An ad only shows when its account can pay for it. A new client starts prepaid with nothing in it, so without this choice a new ad would be created and never seen.</small>
+                    </div>
+                    <div class="form-group">
                         <label>Ad Title</label>
                         <input type="text" name="title" required maxlength="100" placeholder="Company Name or Campaign">
                     </div>
@@ -217,23 +226,38 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>Placement</label>
-                            <select name="placement" required>
-                                <option value="header">Header (728x90)</option>
-                                <option value="footer">Footer (728x90)</option>
+                            <select name="placement" id="adPlacement" required>
+                                <optgroup label="Website">
+                                    <option value="header">Header (728x90)</option>
+                                    <option value="footer">Footer (728x90)</option>
+                                </optgroup>
+                                <optgroup label="In the app">
+                                    <option value="app-lyrics">Lyrics search — native song row</option>
+                                    <option value="app-messages">Messages — native conversation row</option>
+                                    <option value="app-room-strip">Room — bottom strip</option>
+                                    <option value="app-photo-slide">Room — slide behind a shared photo</option>
+                                    <option value="app-merch">Merch — under the buy button</option>
+                                    <option value="app-takeover">Paid room — sponsor takeover</option>
+                                </optgroup>
                             </select>
+                            <small id="placementHint"></small>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" id="sizeGroup">
                             <label>Size</label>
-                            <select name="size" required>
+                            <select name="size">
                                 <option value="728x90">Leaderboard (728x90)</option>
                                 <option value="320x50">Mobile Banner (320x50)</option>
                             </select>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Image URL</label>
-                        <input type="url" name="imageUrl" required placeholder="https://example.com/ad-image.jpg">
-                        <small>Image must match selected size exactly</small>
+                        <label>Artwork</label>
+                        <input type="file" name="image" id="adImageFile" accept="image/png,image/jpeg,image/webp,image/gif">
+                        <small id="artworkHint">Choose a file (PNG, JPEG, WebP or GIF, up to 20 MB), or paste an address below.</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Or image URL</label>
+                        <input type="url" name="imageUrl" placeholder="https://example.com/ad-image.jpg">
                     </div>
                     <div class="form-group">
                         <label>Click URL</label>
@@ -241,8 +265,58 @@
                     </div>
                     <div class="form-group">
                         <label>Keywords (up to 25, comma-separated)</label>
-                        <textarea name="keywords" placeholder="ice cream, dessert, frozen treats, summer, cold"></textarea>
-                        <small>Keywords help match ads to relevant lyrics searches</small>
+                        <textarea name="keywords" placeholder="sneakers, lil baby, trap, atlanta"></textarea>
+                        <small>An ad with keywords only shows where one fits: the search, the song or artist, the room's name, the product, or what that person has been looking up. Leave empty for run-of-app, which fills a slot only when nothing targeted fits.</small>
+                    </div>
+                    <div id="appFields" style="display:none;">
+                        <div class="form-group">
+                            <label>Button text (optional)</label>
+                            <input type="text" name="cta" maxlength="24" placeholder="Shop now">
+                        </div>
+                        <div class="form-group">
+                            <label><input type="checkbox" name="chatEnabled"> Let people pound this advertiser to chat</label>
+                            <small>A pound is the person's opt-in. It opens a conversation for 72 hours, then ends on its own; either side can end it sooner.</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Wordeth account that answers (email)</label>
+                            <input type="email" name="chatAccountEmail" placeholder="chat@client-website.com">
+                            <small>Needed once per advertiser to offer a chat. Use an account made for the business: it can only message people who have pounded it.</small>
+                        </div>
+                    </div>
+                    <div id="takeoverFields" style="display:none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Takeover format</label>
+                                <select name="takeoverFormat">
+                                    <option value="skyscraper">Skyscraper (tall artwork while the host reads)</option>
+                                    <option value="video">Video interstitial</option>
+                                    <option value="audio">Audio spot</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Length (seconds)</label>
+                                <input type="number" name="durationSec" min="5" max="90" value="30">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Video or audio clip</label>
+                            <input type="file" name="media" accept="video/mp4,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac">
+                            <small>MP4 video, or MP3 / M4A audio, up to 20 MB. Not needed for a skyscraper.</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Or clip URL</label>
+                            <input type="url" name="mediaUrl" placeholder="https://…/spot.mp4">
+                        </div>
+                        <div class="form-group">
+                            <label>Script for the host to read (optional)</label>
+                            <textarea name="script" maxlength="1500" placeholder="This room is brought to you by…"></textarea>
+                            <small>Shown to the host only, on their screen, while the takeover runs.</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Hosts who may run it (emails, comma-separated; optional)</label>
+                            <input type="text" name="hostEmails" placeholder="host@example.com">
+                            <small>Leave empty to offer it to any host of a paid room it fits.</small>
+                        </div>
                     </div>
                     <div class="form-group preview-group">
                         <label>Preview</label>

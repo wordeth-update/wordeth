@@ -136,6 +136,12 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     }],
+    /**
+     * Set when this account is an advertiser's chat account. Such an account
+     * may only message people who currently have a pound with it, and they
+     * may only message it while that pound lasts.
+     */
+    retailerFor: { type: mongoose.Schema.Types.ObjectId, ref: 'Advertiser', default: null },
     // When this account last had a live connection; sorts a person's
     // connections by who was around most recently.
     lastSeenAt: { type: Date, default: null },

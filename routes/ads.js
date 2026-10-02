@@ -13,6 +13,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const Ad = require('../models/Ad');
 const Advertiser = require('../models/Advertiser');
+const { APP_PLACEMENTS } = require('../services/appAds');
 
 const AD_SIZES = {
     'header': { width: 728, height: 90, label: 'Leaderboard (728x90)' },
@@ -50,6 +51,45 @@ function acceptAdImage(req, res, next) {
 }
 
 const EXT_FOR = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' };
+
+/**
+ * A sponsor takeover is a video or a piece of audio, which is a bigger file
+ * than a banner. The admin's form sends artwork as `image` and the clip as
+ * `media`; only an administrator's route accepts the second.
+ */
+const AD_MEDIA_TYPES = { 'video/mp4': 'mp4', 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/aac': 'aac' };
+const adFiles = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 20 * 1024 * 1024, files: 2 },
+    fileFilter: (req, file, cb) => {
+        if (file.fieldname === 'image' && AD_IMAGE_TYPES.has(file.mimetype)) return cb(null, true);
+        if (file.fieldname === 'media' && AD_MEDIA_TYPES[file.mimetype]) return cb(null, true);
+        cb(new Error('UNSUPPORTED_AD_FILE'));
+    }
+}).fields([{ name: 'image', maxCount: 1 }, { name: 'media', maxCount: 1 }]);
+
+function acceptAdFiles(req, res, next) {
+    adFiles(req, res, (err) => {
+        if (!err) {
+            // Same shape the single-image routes use, so storeAdImage works unchanged.
+            req.file = req.files && req.files.image ? req.files.image[0] : undefined;
+            req.mediaFile = req.files && req.files.media ? req.files.media[0] : undefined;
+            return next();
+        }
+        if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'That file is larger than 20 MB. Export it smaller and try again.' });
+        if (err.message === 'UNSUPPORTED_AD_FILE') return res.status(415).json({ error: 'Artwork must be PNG, JPEG, WebP or GIF. A takeover clip must be MP4 video, or MP3 / M4A audio.' });
+        return res.status(400).json({ error: 'That upload could not be read.' });
+    });
+}
+
+async function storeAdMedia(file) {
+    if (!file || !file.buffer || !file.buffer.length) return null;
+    const fileStorage = require('../services/fileStorage');
+    const ext = AD_MEDIA_TYPES[file.mimetype] || 'bin';
+    const key = `ads/media/${Date.now()}-${crypto.randomBytes(6).toString('hex')}.${ext}`;
+    const { url } = await fileStorage.uploadBytes(key, file.buffer, file.mimetype);
+    return url;
+}
 
 /**
  * Store an uploaded ad image and return its address on our own domain.
@@ -406,6 +446,9 @@ router.post('/create', authenticateAdvertiser, acceptAdImage, async (req, res) =
 
         if (!title || !imageUrl || !linkUrl || !placement || !size) {
             return res.status(400).json({ error: 'Title, artwork, link, placement and size are all required.' });
+        }
+        if (APP_PLACEMENTS[placement]) {
+            return res.status(400).json({ error: 'Placements inside the app are booked through the Wordeth team.' });
         }
 
         if (!isValidImageRef(imageUrl) || !isValidUrl(linkUrl)) {
@@ -1002,20 +1045,59 @@ router.get('/admin/analytics', authenticateAdvertiser, requireAdmin, async (req,
     }
 });
 
-router.post('/admin/upload-for-client', authenticateAdvertiser, requireAdmin, acceptAdImage, async (req, res) => {
+router.post('/admin/upload-for-client', authenticateAdvertiser, requireAdmin, acceptAdFiles, async (req, res) => {
     try {
-        const { clientEmail, title, description, linkUrl, placement, size } = req.body;
-        let { imageUrl, keywords } = req.body;
+        const { clientEmail, title, description, linkUrl, placement } = req.body;
+        let { imageUrl, keywords, size } = req.body;
         if (typeof keywords === 'string') keywords = keywords.split(',').map((k) => k.trim()).filter(Boolean);
 
         const uploaded = await storeAdImage(req.file);
         if (uploaded) imageUrl = uploaded;
+
+        // An app placement is drawn by the app; its "size" is the shape, and is not the admin's to pick.
+        const appSlot = APP_PLACEMENTS[placement];
+        if (appSlot) size = appSlot.size;
 
         if (!clientEmail || !title || !imageUrl || !linkUrl || !placement || !size) {
             return res.status(400).json({ error: 'Client email, title, artwork, link, placement and size are all required.' });
         }
         if (!isValidImageRef(imageUrl) || !isValidUrl(linkUrl)) {
             return res.status(400).json({ error: 'The artwork and link must be valid web addresses.' });
+        }
+        if (keywords && keywords.length > MAX_KEYWORDS) {
+            return res.status(400).json({ error: `Maximum ${MAX_KEYWORDS} keywords allowed` });
+        }
+
+        const truthy = (v) => v === true || v === 'true' || v === 'on' || v === '1';
+        const extra = {};
+        if (appSlot) {
+            extra.cta = String(req.body.cta || '').trim().slice(0, 24);
+            extra.chatEnabled = truthy(req.body.chatEnabled);
+        }
+        if (placement === 'app-takeover') {
+            const format = ['video', 'audio', 'skyscraper'].includes(req.body.takeoverFormat) ? req.body.takeoverFormat : 'skyscraper';
+            let mediaUrl = String(req.body.mediaUrl || '').trim();
+            const storedMedia = await storeAdMedia(req.mediaFile);
+            if (storedMedia) mediaUrl = storedMedia;
+            if (format !== 'skyscraper' && !isValidImageRef(mediaUrl)) {
+                return res.status(400).json({ error: 'A video or audio takeover needs its clip: choose a file, or paste its address.' });
+            }
+            const hostIds = [];
+            const hostEmails = String(req.body.hostEmails || '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean).slice(0, 20);
+            if (hostEmails.length) {
+                const User = require('../models/User');
+                const hosts = await User.find({ email: { $in: hostEmails } }).select('_id email').lean();
+                const missing = hostEmails.filter((e) => !hosts.some((h) => String(h.email).toLowerCase() === e));
+                if (missing.length) return res.status(400).json({ error: `No Wordeth account for: ${missing.join(', ')}` });
+                hosts.forEach((h) => hostIds.push(h._id));
+            }
+            extra.takeover = {
+                format,
+                mediaUrl: format === 'skyscraper' ? '' : mediaUrl,
+                durationSec: Math.min(90, Math.max(5, parseInt(req.body.durationSec, 10) || 30)),
+                script: String(req.body.script || '').slice(0, 1500),
+                hostUserIds: hostIds
+            };
         }
 
         let advertiser = await Advertiser.findOne({ email: clientEmail });
@@ -1032,6 +1114,24 @@ router.post('/admin/upload-for-client', authenticateAdvertiser, requireAdmin, ac
             await advertiser.save();
         }
 
+        // How this client pays is the administrator's call, made here in the
+        // open: on terms (delivery starts now, billed after) or prepaid
+        // (nothing shows until there is a balance). Left blank, it stays as it was.
+        if (['prepaid', 'invoiced'].includes(req.body.billingMode) && advertiser.billing?.mode !== req.body.billingMode) {
+            advertiser.set('billing.mode', req.body.billingMode);
+            await advertiser.save();
+        }
+
+        // Chat needs somebody to answer: a Wordeth account that speaks for this advertiser.
+        const chatEmail = String(req.body.chatAccountEmail || '').trim().toLowerCase();
+        if (chatEmail) {
+            const linked = await linkChatAccount(advertiser, chatEmail);
+            if (!linked.ok) return res.status(400).json({ error: linked.error });
+        }
+        if (extra.chatEnabled && !advertiser.chatUserId) {
+            return res.status(400).json({ error: 'To offer a chat, give the Wordeth account email that will answer for this advertiser.' });
+        }
+
         const ad = new Ad({
             advertiserId: advertiser._id,
             title,
@@ -1042,19 +1142,75 @@ router.post('/admin/upload-for-client', authenticateAdvertiser, requireAdmin, ac
             size,
             keywords: keywords || [],
             status: 'active',
-            createdBy: 'admin'
+            createdBy: 'admin',
+            ...extra
         });
 
         await ad.save();
 
+        // Say whether it will actually be seen. An ad on an account with no
+        // money and no terms is created, active, and invisible, and that
+        // should not have to be discovered by its absence.
+        const funded = (await adCredit.fundedAdvertiserIds()).some((id) => String(id) === String(advertiser._id));
+
         res.status(201).json({
             success: true,
-            message: 'Ad created for client',
+            servingNow: funded,
+            message: funded
+                ? 'Ad created. It is live now wherever it fits.'
+                : 'Ad created, but it will not show yet: this account is prepaid and has no balance. Set billing to "Invoiced on terms" or add funds.',
             ad
         });
     } catch (error) {
         console.error('Upload for client error:', error);
         res.status(500).json({ error: 'Failed to create ad for client' });
+    }
+});
+
+/**
+ * Make a Wordeth account the one that answers for an advertiser.
+ *
+ * That account becomes a retailer account: it can only message people who
+ * have pounded it, and only for as long as the pound lasts. So it should be
+ * an account made for the business, not somebody's personal one.
+ */
+async function linkChatAccount(advertiser, email) {
+    const User = require('../models/User');
+    const user = await User.findOne({ email }).select('_id retailerFor');
+    if (!user) return { ok: false, error: `No Wordeth account for ${email}. Create one in the app first, then link it here.` };
+    if (user.retailerFor && String(user.retailerFor) !== String(advertiser._id)) {
+        return { ok: false, error: 'That Wordeth account already answers for a different advertiser.' };
+    }
+    if (advertiser.chatUserId && String(advertiser.chatUserId) !== String(user._id)) {
+        await User.updateOne({ _id: advertiser.chatUserId }, { $set: { retailerFor: null } });
+    }
+    await User.updateOne({ _id: user._id }, { $set: { retailerFor: advertiser._id } });
+    advertiser.chatUserId = user._id;
+    await advertiser.save();
+    return { ok: true };
+}
+
+router.put('/admin/advertisers/:id/chat-account', authenticateAdvertiser, requireAdmin, async (req, res) => {
+    try {
+        const advertiser = await Advertiser.findById(req.params.id);
+        if (!advertiser) return res.status(404).json({ error: 'Advertiser not found' });
+        const email = String(req.body?.email || '').trim().toLowerCase();
+        if (!email) {
+            // Unlinking: the account goes back to being an ordinary one.
+            if (advertiser.chatUserId) {
+                const User = require('../models/User');
+                await User.updateOne({ _id: advertiser.chatUserId }, { $set: { retailerFor: null } });
+            }
+            advertiser.chatUserId = null;
+            await advertiser.save();
+            return res.json({ success: true, chatUserId: null });
+        }
+        const linked = await linkChatAccount(advertiser, email);
+        if (!linked.ok) return res.status(400).json({ error: linked.error });
+        res.json({ success: true, chatUserId: advertiser.chatUserId });
+    } catch (error) {
+        console.error('Chat account error:', error);
+        res.status(500).json({ error: 'Could not link that account' });
     }
 });
 
