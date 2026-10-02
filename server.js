@@ -27,6 +27,7 @@ process.on('exit', (code) => {
 const { setupSignaling, getActiveRooms, setShuttingDown, joinRoomHTTP, waitForRoomsReady, scheduleRoomDeletion } = require('./routes/signaling');
 
 const BUILD_ID = Date.now().toString(36);
+const { stampAssets } = require('./services/assetStamp');
 console.log(`Build ID: ${BUILD_ID}`);
 
 let ogLogoBase64 = '';
@@ -567,7 +568,7 @@ app.use((req, res, next) => {
         if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
             fs.readFile(filePath, 'utf8', (err, raw) => {
                 if (err) return next();
-                const html = raw.replace(/(\.(js|css))\?v=\d+/g, `$1?v=${BUILD_ID}`);
+                const html = stampAssets(raw, BUILD_ID);
                 _htmlCache.set(reqPath, html);
                 res.setHeader('Content-Type', 'text/html');
                 res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
