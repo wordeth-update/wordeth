@@ -14,6 +14,7 @@ const jwt = require('jsonwebtoken');
 const Ad = require('../models/Ad');
 const Advertiser = require('../models/Advertiser');
 const { APP_PLACEMENTS } = require('../services/appAds');
+const adRamp = require('../services/adRamp');
 
 const AD_SIZES = {
     'header': { width: 728, height: 90, label: 'Leaderboard (728x90)' },
@@ -477,7 +478,9 @@ router.post('/create', authenticateAdvertiser, acceptAdImage, async (req, res) =
             size,
             keywords: keywords || [],
             status,
-            createdBy: advertiser.role === 'admin' ? 'admin' : 'self-serve'
+            createdBy: advertiser.role === 'admin' ? 'admin' : 'self-serve',
+            // Live from the start: the on-ramp begins now. A pending ad's begins when it is approved.
+            ...(status === 'active' ? { rampStartedAt: new Date() } : {})
         });
 
         await ad.save();
@@ -556,6 +559,12 @@ router.put('/update/:adId', authenticateAdvertiser, async (req, res) => {
                 }
                 ad.set(`pricing.${field}`, Math.round(n * 10000) / 10000);
             }
+            for (const [field, path] of [['dailyBudget', 'budget.daily'], ['totalBudget', 'budget.total']]) {
+                if (b[field] === undefined) continue;
+                const n = String(b[field]).trim() === '' ? 0 : Number(b[field]);
+                if (!Number.isFinite(n) || n < 0) return res.status(400).json({ error: 'Budgets must be numbers, zero or more.' });
+                ad.set(path, Math.round(n * 100) / 100);
+            }
             if (b.endDate !== undefined) {
                 if (!b.endDate) ad.set('schedule.endDate', undefined);
                 else {
@@ -572,6 +581,8 @@ router.put('/update/:adId', authenticateAdvertiser, async (req, res) => {
             }
         }
 
+        // Starting again starts the on-ramp again, whoever pressed the button.
+        const wasRunning = ad.status === 'active';
         if (advertiser.role === 'admin' && status) {
             if (!['pending', 'approved', 'rejected', 'paused', 'active'].includes(status)) {
                 return res.status(400).json({ error: 'Unknown status.' });
@@ -582,6 +593,8 @@ router.put('/update/:adId', authenticateAdvertiser, async (req, res) => {
                 ad.status = status;
             }
         }
+
+        if (!wasRunning && ad.status === 'active') ad.rampStartedAt = new Date();
 
         await ad.save();
 
@@ -770,7 +783,11 @@ router.get('/admin/all-ads', authenticateAdvertiser, requireAdmin, async (req, r
         const total = await Ad.countDocuments(query);
 
         res.json({
-            ads,
+            ads: ads.map((ad) => ({
+                ...ad.toObject(),
+                // Where it is on the on-ramp, so the page can say so beside the ad.
+                ramp: { strength: adRamp.strength(ad), fullAt: adRamp.fullAt(ad) }
+            })),
             pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit),
@@ -803,7 +820,7 @@ router.put('/admin/approve/:adId', authenticateAdvertiser, requireAdmin, async (
 
         const ad = await Ad.findByIdAndUpdate(
             adId,
-            { status: 'active' },
+            { status: 'active', rampStartedAt: new Date() },
             { new: true }
         );
 
@@ -1135,6 +1152,17 @@ router.post('/admin/upload-for-client', authenticateAdvertiser, requireAdmin, ac
             if (cpm !== undefined) extra.pricing.cpm = cpm;
             if (cpc !== undefined) extra.pricing.cpc = cpc;
         }
+        // The campaign's own caps, in dollars. Blank or zero means no cap.
+        const daily = rate(req.body.dailyBudget, 1000000);
+        const total = rate(req.body.totalBudget, 100000000);
+        if (daily === null || total === null) {
+            return res.status(400).json({ error: 'Budgets must be numbers, zero or more.' });
+        }
+        if (daily !== undefined || total !== undefined) {
+            extra.budget = {};
+            if (daily !== undefined) extra.budget.daily = daily;
+            if (total !== undefined) extra.budget.total = total;
+        }
         if (appSlot) {
             extra.cta = String(req.body.cta || '').trim().slice(0, 24);
             extra.chatEnabled = truthy(req.body.chatEnabled);
@@ -1208,6 +1236,7 @@ router.post('/admin/upload-for-client', authenticateAdvertiser, requireAdmin, ac
             keywords: keywords || [],
             status: 'active',
             createdBy: 'admin',
+            rampStartedAt: new Date(),
             ...extra
         });
 

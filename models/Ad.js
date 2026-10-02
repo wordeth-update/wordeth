@@ -88,7 +88,15 @@ const adSchema = new mongoose.Schema({
     schedule: {
         startDate: { type: Date, default: Date.now },
         endDate: { type: Date }
-    }
+    },
+    /**
+     * When this ad last started running: created live, approved, or resumed.
+     * The on-ramp is measured from here (services/adRamp.js). Ads from before
+     * on-ramps existed have none, and are at full strength. No default on
+     * purpose: a default is filled in every time an old ad is read, which
+     * would put every ad from before this field back at the start, forever.
+     */
+    rampStartedAt: { type: Date }
 }, {
     timestamps: true
 });
@@ -184,6 +192,18 @@ adSchema.statics.findMatchingAds = async function(searchTerm, placement = null) 
         if (b.score !== a.score) return b.score - a.score;
         return b.ad.pricing.cpm - a.ad.pricing.cpm;
     });
+
+    // The best-fitting ads share the slot by bid and on-ramp strength; the
+    // one drawn goes to the front, which is the one callers show.
+    if (scoredAds.length > 1) {
+        const best = scoredAds[0].score;
+        const tied = scoredAds.filter(item => item.score === best);
+        if (tied.length > 1) {
+            const winner = require('../services/adRamp').share(tied.map(item => item.ad));
+            const at = scoredAds.findIndex(item => item.ad === winner);
+            if (at > 0) scoredAds.unshift(scoredAds.splice(at, 1)[0]);
+        }
+    }
 
     return scoredAds.map(item => item.ad);
 };

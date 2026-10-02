@@ -564,6 +564,15 @@ class AdAdmin {
         const actionsHtml = `<div class="ad-actions" style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.75rem;">${buttons.join('')}</div>`;
 
         const rate = `Rate: $${Number(ad.pricing?.cpm ?? 0).toFixed(2)} per 1,000 impressions · $${Number(ad.pricing?.cpc ?? 0).toFixed(2)} per click`;
+        const money = (n) => `$${Number(n || 0).toFixed(2)}`;
+        const caps = [ad.budget?.daily > 0 ? `${money(ad.budget.daily)} a day` : '', ad.budget?.total > 0 ? `${money(ad.budget.total)} total` : ''].filter(Boolean);
+        const budget = `Budget: ${caps.length ? caps.join(' · ') : 'no cap'} · spent ${money(ad.budget?.spent)}`;
+        // A running ad that started or resumed within the last day is still on the on-ramp.
+        let onRamp = '';
+        if (ad.status === 'active' && ad.ramp && ad.ramp.fullAt) {
+            const until = new Date(ad.ramp.fullAt);
+            onRamp = `<p style="color:#D29922;">On-ramp: ${Math.round((ad.ramp.strength || 0) * 100)}% strength against competing ads · full by ${this.escapeHtml(until.toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }))}</p>`;
+        }
         const takeover = ad.placement === 'app-takeover' && ad.takeover
             ? ` | ${this.escapeHtml(ad.takeover.format || 'skyscraper')} · ${ad.takeover.durationSec || 30}s` : '';
 
@@ -575,6 +584,8 @@ class AdAdmin {
                     <p>By: ${this.escapeHtml(advertiserName)} | ${this.escapeHtml(placementLabel(ad.placement))}${String(ad.placement).startsWith('app-') ? '' : ' | ' + this.escapeHtml(ad.size)}${takeover}</p>
                     <p>Impressions: ${this.formatNumber(ad.stats?.impressions || 0)} | Clicks: ${this.formatNumber(ad.stats?.clicks || 0)}</p>
                     <p>${rate}</p>
+                    <p>${budget}</p>
+                    ${onRamp}
                     <div class="ad-keywords">${keywordsHtml}${moreKeywords}${ad.keywords.length === 0 && String(ad.placement).startsWith('app-') ? '<span class="keyword-tag">run-of-app</span>' : ''}</div>
                     ${actionsHtml}
                     <p id="ad-msg-${id}" role="status" style="display:none; margin-top:.5rem; font-weight:600;"></p>
@@ -640,6 +651,10 @@ class AdAdmin {
                     <div class="form-group"><label>Rate per 1,000 impressions ($)</label><input type="number" name="cpm" min="0" max="1000" step="0.01" value="${v(ad.pricing?.cpm ?? 0)}"></div>
                     <div class="form-group"><label>Rate per click ($)</label><input type="number" name="cpc" min="0" max="100" step="0.01" value="${v(ad.pricing?.cpc ?? 0)}"></div>
                 </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Daily budget ($)</label><input type="number" name="dailyBudget" min="0" step="0.01" placeholder="No cap" value="${ad.budget?.daily > 0 ? v(ad.budget.daily) : ''}"></div>
+                    <div class="form-group"><label>Total budget ($)</label><input type="number" name="totalBudget" min="0" step="0.01" placeholder="No cap" value="${ad.budget?.total > 0 ? v(ad.budget.total) : ''}"></div>
+                </div>
                 <div class="form-group"><label>Stop running after (optional)</label><input type="date" name="endDate" value="${v(end)}"></div>
                 ${takeover ? `
                 <div class="form-group"><label>Length (seconds)</label><input type="number" name="durationSec" min="5" max="90" value="${v(ad.takeover?.durationSec ?? 30)}"></div>
@@ -662,7 +677,8 @@ class AdAdmin {
         if (keywords.length > 25) { this.adMessage(adId, 'Maximum 25 keywords allowed.', false); return; }
         const changes = {
             title: field('title'), description: field('description'), linkUrl: field('linkUrl'),
-            keywords: keywords.join(','), cpm: field('cpm'), cpc: field('cpc'), endDate: field('endDate') || ''
+            keywords: keywords.join(','), cpm: field('cpm'), cpc: field('cpc'), endDate: field('endDate') || '',
+            dailyBudget: field('dailyBudget') || '', totalBudget: field('totalBudget') || ''
         };
         for (const name of ['cta', 'durationSec', 'script', 'placement']) if (form[name]) changes[name] = form[name].value;
         if (button) { button.disabled = true; button.textContent = 'Saving…'; }
@@ -803,6 +819,8 @@ class AdAdmin {
             adData.append('billingMode', value('billingMode'));
             adData.append('cpm', value('cpm'));
             adData.append('cpc', value('cpc'));
+            adData.append('dailyBudget', value('dailyBudget'));
+            adData.append('totalBudget', value('totalBudget'));
             if (image) adData.append('image', image, image.name || picked.name);
             if (placement.startsWith('app-')) {
                 adData.append('cta', value('cta'));

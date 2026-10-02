@@ -23,14 +23,17 @@
  *   here counts once, and is what makes a placement with no context of its
  *   own (the messages list) still land with the right people.
  *
- * Among ads that fit, the better fit wins, then the higher bid, then a
- * coin toss so equal ads share the slot. An ad with NO keywords is
- * run-of-app: it fits everywhere, scores nothing, and so only shows where
- * no targeted ad fits better.
+ * Among ads that fit, only the best fit is in the running. Ads that fit
+ * equally well share the slot in proportion to bid × on-ramp strength
+ * (services/adRamp.js): a higher bid is shown more often, and an ad that
+ * has just started or resumed is shown less often for its first day. An
+ * ad with NO keywords is run-of-app: it fits everywhere, scores nothing,
+ * and so only shows where no targeted ad fits better.
  */
 
 const Ad = require('../models/Ad');
 const adCredit = require('./adCredit');
+const adRamp = require('./adRamp');
 
 const APP_PLACEMENTS = {
     'app-lyrics': { size: 'native', label: 'Lyrics search — native song row' },
@@ -91,11 +94,12 @@ async function pick(placement, context, user, extra = {}) {
 
     const contextText = normalise(context);
     const interestText = normalise(interestsOf(user));
-    const ranked = ads
-        .map((ad) => ({ ad, s: score(ad, contextText, interestText), r: Math.random() }))
-        .filter((x) => x.s >= 0)
-        .sort((a, b) => (b.s - a.s) || ((b.ad.pricing?.cpm || 0) - (a.ad.pricing?.cpm || 0)) || (a.r - b.r));
-    return ranked.length ? ranked[0].ad : null;
+    const fitting = ads
+        .map((ad) => ({ ad, s: score(ad, contextText, interestText) }))
+        .filter((x) => x.s >= 0);
+    if (!fitting.length) return null;
+    const best = Math.max(...fitting.map((x) => x.s));
+    return adRamp.share(fitting.filter((x) => x.s === best).map((x) => x.ad));
 }
 
 module.exports = { APP_PLACEMENTS, pick, score, fits, normalise, interestsOf };
