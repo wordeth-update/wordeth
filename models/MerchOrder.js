@@ -76,7 +76,11 @@ const merchOrderSchema = new mongoose.Schema({
         lineItems: { type: [mongoose.Schema.Types.Mixed], default: [] },
         submissionStatus: {
             type: String,
-            enum: ['not_ready', 'pending', 'submitting', 'submitted', 'retry', 'failed', 'cancelled'],
+            // 'held': Apliiq has the order (HTTP 202) but has not put it into
+            // production — auto-processing is off there, or there is no card on
+            // file, or the address is incomplete. It is theirs to release; we
+            // do not send it again.
+            enum: ['not_ready', 'pending', 'submitting', 'submitted', 'held', 'retry', 'failed', 'cancelled'],
             default: 'not_ready',
             index: true
         },

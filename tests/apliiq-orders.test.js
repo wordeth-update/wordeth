@@ -122,6 +122,27 @@ test('does not automatically retry an ambiguous transport failure', async () => 
     expect(updated.apliiq.lastError).toMatch(/outcome is unknown/);
 });
 
+test('treats 202 as held at Apliiq: recorded once, never sent again', async () => {
+    await approvedProduct();
+    const order = await paidOrder();
+    axios.post.mockResolvedValue({ status: 202, data: { message: 'Auto processing is off' } });
+
+    const result = await submitApliiqOrder(order._id);
+    expect(result).toMatchObject({ submitted: true, held: true });
+    const updated = await MerchOrder.findById(order._id);
+    expect(updated.apliiq.submissionStatus).toBe('held');
+    expect(updated.apliiq.responseStatus).toBe(202);
+    expect(updated.apliiq.nextAttemptAt).toBeNull();
+    expect(updated.apliiq.lastError).toMatch(/holding this order as pending/);
+    expect(updated.apliiq.lastError).toMatch(/Auto processing is off/);
+    // Still awaiting production: not confirmed to the customer as underway.
+    expect(updated.status).toBe('pending');
+
+    // The recovery sweep leaves it alone.
+    await sweepApliiqOrders();
+    expect(axios.post).toHaveBeenCalledTimes(1);
+});
+
 test('schedules a retry after an explicit provider failure response', async () => {
     await approvedProduct();
     const order = await paidOrder();

@@ -170,6 +170,35 @@ async function submitApliiqOrder(orderId) {
                 validateStatus: () => true
             }
         );
+        // 202: Apliiq's own words — "no order created but we have received
+        // your order in the pending order list". It happens when their
+        // auto-processing is off (which is also how an order is tested without
+        // being produced), when the account has no default payment card, or
+        // when shipping details are missing; the reply says which. The order is
+        // with them and is released from their dashboard. Sending it again was
+        // what this code used to do, eight times over, before giving up.
+        if (response.status === 202) {
+            const reason = clean(response.data?.message || response.data?.Message || '', 600);
+            const held = await MerchOrder.findOneAndUpdate(
+                { _id: order._id, 'apliiq.leaseId': leaseId },
+                {
+                    $set: {
+                        'apliiq.orderId': clean(response.data?.id, 200),
+                        'apliiq.status': 'held',
+                        'apliiq.submissionStatus': 'held',
+                        'apliiq.submittedAt': new Date(),
+                        'apliiq.responseStatus': 202,
+                        'apliiq.leaseId': '',
+                        'apliiq.leaseUntil': null,
+                        'apliiq.nextAttemptAt': null,
+                        'apliiq.lastError': `Apliiq is holding this order as pending and has not started production.${reason ? ` They said: ${reason}` : ''} Release it in the Apliiq dashboard (check auto-processing, the default payment card and the shipping address).`
+                    }
+                },
+                { new: true }
+            );
+            console.warn(`[Apliiq] Order ${order._id} is held as pending at Apliiq (202)${reason ? `: ${reason}` : ''}`);
+            return { submitted: Boolean(held), held: true, reason };
+        }
         const providerOrderId = clean(response.data?.id, 200);
         if (response.status !== 200 || !providerOrderId) {
             const error = new Error(clean(response.data?.message || `Apliiq returned HTTP ${response.status}`, 1000));
