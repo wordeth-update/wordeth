@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const { artworkUrl } = require('../services/artwork');
+const { avatarRef } = require('../services/avatarRef');
 /** How many of the newest history entries are given a picture when they have none. */
 const HISTORY_ART_BACKFILL = 24;
 /** A real picture: https, and not Musixmatch's "nocover" placeholder. */
@@ -59,7 +60,7 @@ router.get('/search', limits.search, async (req, res) => {
             _id: u._id,
             name: u.name,
             bio: u.bio || '',
-            avatar: u.avatar || 'assets/default-avatar.png',
+            avatar: avatarRef(u._id, u.avatar, 'assets/default-avatar.png'),
             joinedAt: u.createdAt
         })));
     } catch (error) {
@@ -343,7 +344,7 @@ router.get('/friends', auth, async (req, res) => {
             _id: friend._id,
             name: friend.name,
             bio: friend.bio || '',
-            avatar: friend.avatar || ''
+            avatar: avatarRef(friend._id, friend.avatar)
         }));
         res.json(friends);
     } catch (error) {
@@ -371,7 +372,7 @@ router.get('/connections', auth, async (req, res) => {
                 _id: id,
                 name: p.name || '',
                 bio: p.bio || '',
-                avatar: p.avatar || '',
+                avatar: avatarRef(p._id, p.avatar),
                 online: !!(online && online.has(id)),
                 lastSeenAt: p.lastSeenAt || null,
                 youDapped: mine.has(id),
@@ -423,7 +424,7 @@ router.post('/friends/:id', auth, async (req, res) => {
             type: 'new_follower',
             fromUserId: req.user._id,
             fromUserName: req.user.name || '',
-            fromUserAvatar: req.user.avatar || ''
+            fromUserAvatar: avatarRef(req.user._id, req.user.avatar)
         }).catch(err => console.error('[Notification] new_follower error:', err));
 
         res.json({ message: 'Dapped up', following: req.user.following });

@@ -5,6 +5,7 @@ const auth = require('../middleware/auth');
 const limits = require('../middleware/limits');
 const Message = require('../models/Message');
 const Pound = require('../models/Pound');
+const { avatarRef } = require('../services/avatarRef');
 const User = require('../models/User');
 
 const upload = multer({
@@ -74,7 +75,7 @@ router.get('/conversations', auth, async (req, res) => {
                 poundExpiresAt: poundWith[m._id.toString()] || null,
                 userId: m._id,
                 userName: otherUser.name || 'Unknown',
-                avatar: otherUser.avatar || 'assets/default-avatar.png',
+                avatar: avatarRef(m._id, otherUser.avatar, 'assets/default-avatar.png'),
                 lastMessage: {
                     text: m.lastMessage.text || (m.lastMessage.audioUrl ? '🎤 Audio message' : ''),
                     createdAt: m.lastMessage.createdAt,
@@ -187,7 +188,7 @@ router.post('/:userId', auth, limits.messages, limits.messagesDaily, upload.sing
                             _id: message._id,
                             senderId: myId,
                             senderName: req.user.name,
-                            senderAvatar: req.user.avatar,
+                            senderAvatar: avatarRef(myId, req.user.avatar),
                             text: message.text,
                             audioUrl: message.audioUrl || null,
                             createdAt: message.createdAt

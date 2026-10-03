@@ -12,6 +12,7 @@ const {
 
 let rooms = new Map();
 const connectedUsers = new Map();
+const { avatarRef } = require('../services/avatarRef');
 /** How long a dropped speaker's place on the stage is held for them. */
 const SPEAKER_RETURN_MS = 5 * 60 * 1000;
 /** A person joining the same room again inside this window is not announced to their connections twice. */
@@ -576,7 +577,7 @@ function setupSignaling(io) {
             socket.roomId = roomId;
             socket.userId = userId || socket.id;
             socket.userName = userName || 'Anonymous';
-            socket.avatar = avatar || null;
+            socket.avatar = avatarRef(socket.userId, avatar, null) || null;
 
             cancelRoomDeletion(roomId);
             touchRoom(roomId);
@@ -937,7 +938,7 @@ function setupSignaling(io) {
                         type: notifType,
                         fromUserId: joiner._id,
                         fromUserName: joiner.name || '',
-                        fromUserAvatar: joiner.avatar || '',
+                        fromUserAvatar: avatarRef(joiner._id, joiner.avatar),
                         roomId,
                         roomName: room.name || ''
                     }));
@@ -1552,7 +1553,7 @@ function getActiveRooms() {
                 userId: p.userId,
                 userName: p.userName,
                 isHost: p.isHost,
-                avatar: p.avatar || null
+                avatar: avatarRef(p.userId, p.avatar, null) || null
             })),
             isLocked: room.isLocked,
             karaokeEnabled: room.karaokeEnabled,
@@ -1585,6 +1586,8 @@ async function waitForRoomsReady() {
 }
 
 async function joinRoomHTTP({ roomId, userId, userName, isHost, roomName, avatar }) {
+    // Whatever the caller holds, a room only ever carries the short form.
+    avatar = avatarRef(userId, avatar, null) || null;
     await waitForRoomsReady();
     if (!roomId) return { success: false, message: 'Missing roomId' };
 

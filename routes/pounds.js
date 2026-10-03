@@ -14,6 +14,7 @@ const Pound = require('../models/Pound');
 const Ad = require('../models/Ad');
 const Advertiser = require('../models/Advertiser');
 const User = require('../models/User');
+const { avatarRef } = require('../services/avatarRef');
 
 function tell(userId, event, payload) {
     const sockets = global._connectedUsers && global._connectedUsers.get(String(userId));
@@ -33,7 +34,7 @@ async function view(pound, meId) {
         role: iAmUser ? 'user' : 'retailer',
         withUserId: String(otherId),
         withName: other?.name || (iAmUser ? advertiser?.companyName : 'Someone') || 'Someone',
-        withAvatar: other?.avatar || '',
+        withAvatar: avatarRef(otherId, other?.avatar),
         company: advertiser?.companyName || '',
         startedAt: pound.startedAt,
         expiresAt: pound.expiresAt
