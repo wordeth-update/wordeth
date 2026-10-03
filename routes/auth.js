@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const { getUserAccess } = require('../services/userAccess');
+const auth = require('../middleware/auth');
+const emailVerification = require('../services/emailVerification');
 
 async function publicUserWithAccess(user) {
     const profile = user.getPublicProfile();
@@ -51,9 +53,14 @@ router.post('/signup', [
             name, email, password,
             agreedToTerms: true,
             termsAgreedAt: new Date(),
-            termsVersion: '1.0'
+            termsVersion: '1.0',
+            emailVerified: false
         });
         await user.save();
+
+        // The confirmation link. Not awaited: an account is made whether or
+        // not the mail provider answers, and the link can be asked for again.
+        emailVerification.start(user).catch((e) => console.warn('[Verify] send error:', e.message));
 
         const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { 
             expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
@@ -92,6 +99,47 @@ router.post('/signin', [
         res.json({ token, user: await publicUserWithAccess(user) });
     } catch (error) {
         console.error('Signin error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+/** The page somebody lands on from the link in their email. */
+function verifyPage(title, line) {
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${title} - Wordeth</title></head>
+<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0A0712;color:#fff;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;">
+<div style="max-width:420px;padding:32px;text-align:center;">
+<img src="/images/logo.png" alt="Wordeth" style="height:96px;margin-bottom:24px;">
+<h1 style="font-size:1.6rem;margin:0 0 12px;">${title}</h1>
+<p style="font-size:1rem;line-height:1.5;color:#c9c3d6;margin:0;">${line}</p>
+</div></body></html>`;
+}
+
+// The link in the confirmation email.
+router.get('/verify-email', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+        const outcome = await emailVerification.finish(User, req.query.id, req.query.token);
+        if (outcome === 'verified') return res.send(verifyPage('Email confirmed', 'Thank you. You can go back to the Wordeth app.'));
+        if (outcome === 'already') return res.send(verifyPage('Already confirmed', 'This email was confirmed earlier. Nothing more to do.'));
+        return res.status(400).send(verifyPage('This link has expired', 'Open Wordeth, go to Profile, and tap Resend to get a new one.'));
+    } catch (error) {
+        console.error('Verify email error:', error);
+        res.status(500).send(verifyPage('Something went wrong', 'Please try the link again in a moment.'));
+    }
+});
+
+// Ask for the confirmation email again.
+router.post('/resend-verification', auth, async (req, res) => {
+    try {
+        if (req.user.emailVerified === true) return res.json({ success: true, alreadyVerified: true, message: 'Your email is already confirmed.' });
+        const r = await emailVerification.start(req.user);
+        if (r.sent) return res.json({ success: true, message: `Sent to ${req.user.email}.` });
+        if (r.reason === 'too_soon') return res.status(429).json({ message: 'One was just sent. Give it a minute, and check spam.' });
+        if (r.reason === 'not_configured') return res.status(503).json({ message: 'Confirmation emails are not switched on yet.' });
+        return res.status(502).json({ message: 'The email could not be sent. Try again shortly.' });
+    } catch (error) {
+        console.error('Resend verification error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

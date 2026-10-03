@@ -142,6 +142,18 @@ const userSchema = new mongoose.Schema({
      * may only message it while that pound lasts.
      */
     retailerFor: { type: mongoose.Schema.Types.ObjectId, ref: 'Advertiser', default: null },
+    /**
+     * Whether the email on this account has been confirmed by its owner.
+     * False from sign-up until the emailed link is used. Accounts from before
+     * verification existed have no value, and are not asked.
+     */
+    emailVerified: { type: Boolean },
+    emailVerification: {
+        tokenHash: { type: String, default: null },
+        expiresAt: { type: Date, default: null },
+        sentAt: { type: Date, default: null },
+        verifiedAt: { type: Date, default: null }
+    },
     // When this account last had a live connection; sorts a person's
     // connections by who was around most recently.
     lastSeenAt: { type: Date, default: null },
@@ -303,6 +315,8 @@ userSchema.methods.getPublicProfile = function() {
         _id: this._id,
         name: this.name,
         email: this.email,
+        // true, false, or absent for an account older than verification.
+        emailVerified: this.emailVerified,
         bio: this.bio || '',
         avatar: this.avatar || '',
         accountType: this.accountType || 'fan',
