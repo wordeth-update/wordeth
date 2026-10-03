@@ -859,8 +859,14 @@ app.get('/room/:roomId', ogCrawlerHeaders, async (req, res) => {
     const queryName = req.query.name || '';
     const queryHost = req.query.host || '';
     const roomName = escapeHtml(room?.name || queryName || 'a Live Verse');
-    const participantCount = room?.participantCount || 0;
-    const hostName = room?.participants?.find(p => p.isHost)?.userName || queryHost || '';
+    // A live room comes as a summary with a list of people. One read back
+    // from Redis is the room itself, whose people are a Map; treating that
+    // as a list threw, and the invite page for such a room never answered.
+    const people = room?.participants instanceof Map
+        ? Array.from(room.participants.values())
+        : (Array.isArray(room?.participants) ? room.participants : []);
+    const participantCount = room?.participantCount || people.length || 0;
+    const hostName = people.find(p => p.isHost)?.userName || queryHost || '';
     const tokenPrice = room?.tokenPrice || 0;
 
     const priceLabel = tokenPrice > 0 ? `${tokenPrice} token${tokenPrice === 1 ? '' : 's'}` : '';

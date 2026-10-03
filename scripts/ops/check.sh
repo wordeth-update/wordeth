@@ -15,6 +15,27 @@ SERVICE="wordeth"
 cd "$(dirname "$0")/../.." || exit 1
 MODE="${1:-status}"
 
+# Without the Railway CLI every log section would come back empty, and empty
+# reads as "no errors". Say so instead.
+if [ "$MODE" != "secrets" ] && ! railway status >/dev/null 2>&1; then
+  echo "The Railway CLI is not logged in or not linked to the Wordeth project, so nothing here can be trusted."
+  echo "Fix: cd ~/wordeth-server && railway link -p striking-curiosity -e production"
+  exit 2
+fi
+TMP=$(mktemp -d 2>/dev/null || echo "${TMPDIR:-/tmp}/wordeth-ops-$$"); mkdir -p "$TMP"
+trap 'rm -rf "$TMP"' EXIT
+
+# Server log lines with their time (UTC), which plain `railway logs` leaves out.
+timed_log() {
+  railway logs --service $SERVICE "$@" --json 2>/dev/null | python3 -c "
+import sys,json
+for line in sys.stdin:
+    try: o=json.loads(line)
+    except Exception: continue
+    print(str(o.get('timestamp',''))[11:19], 'UTC', str(o.get('message','')).replace('\\n',' ')[:170])
+"
+}
+
 rooms() {
   # Avatars can be megabytes of base64; never print them.
   curl -s -m 15 "$SITE/api/rooms/active" | python3 -c "
@@ -41,7 +62,7 @@ m=d['memory']; h=d['http']; c=d['cpu']
 print('  memory MB now/avg/max: %d / %d / %d' % (m['current_mb'], m['average_mb'], m['max_mb']))
 print('  cpu max: %.3f vCPU' % c['max'])
 print('  requests: %d total | 2xx %d | 4xx %d | 5xx %d | p95 %sms' % (h['total'], h['2xx'], h['4xx'], h['5xx'], h.get('p95_ms')))
-print('  latest deploy:', d['deployments'][0]['created_at'][:19], d['deployments'][0]['status'], d['deployments'][0]['id'])
+print('  latest deploy:', d['deployments'][0]['created_at'][:19], 'UTC', d['deployments'][0]['status'], d['deployments'][0]['id'])
 "
 }
 
@@ -57,24 +78,26 @@ import sys,json
 d=json.load(sys.stdin)
 for k in ['REDIS_URL','RESEND_API_KEY','EMAIL_FROM','AUDD_API_TOKEN','STRIPE_WEBHOOK_SECRET','AGORA_APP_ID','MUSIXMATCH_API_KEY']:
     print('  %-22s %s' % (k, 'set' if k in d else 'MISSING'))"
-  echo "== server log: errors and restarts (last 300 lines)"
-  railway logs --service $SERVICE -n 300 2>/dev/null | grep -i -E "error|unhandled|uncaught|Starting Container|SIGTERM|out of memory|No REDIS_URL" | grep -v -i "idle timeout" | tail -8 | cut -c1-170
-  echo "== refused or failed requests, last 15 minutes (top paths)"
-  railway logs --service $SERVICE --http --since 15m -n 3000 2>/dev/null | awk '$4 ~ /^[45]/ {print $2, $3, $4}' | sed -E 's#/[0-9a-f]{24}#/:id#g' | sort | uniq -c | sort -rn | head -8
+  echo "== server log: errors and restarts, with times (last 400 lines)"
+  timed_log -n 400 | grep -i -E "error|unhandled|uncaught|fatal|Starting Container|SIGTERM|out of memory|No REDIS_URL" | grep -v -i "idle timeout" | tail -10
+  echo "== refused or failed requests, last 15 minutes"
+  railway logs --service $SERVICE --http --since 15m -n 3000 2>/dev/null > "$TMP/http.txt"
+  awk '$4 ~ /^[45]/ {print $4}' "$TMP/http.txt" | sort | uniq -c | awk '{printf "  %s x%s", $2, $1} END {print ""}'
+  echo "  server errors and refusals on real app paths (scanner 404s left out):"
+  awk '$4 ~ /^5/ || ($4 ~ /^4/ && $4 != "404") || ($4 == "404" && $3 ~ /^\/api\//) {print "   ", $2, $3, $4}' "$TMP/http.txt" | sed -E 's#/[0-9a-f]{24}#/:id#g' | sort | uniq -c | sort -rn | head -10
   ;;
 room)
   echo "== rooms"; rooms
-  railway logs --service $SERVICE --since 10m -n 800 2>/dev/null > /tmp/wordeth-ops-app.txt
+  railway logs --service $SERVICE --since 10m -n 800 2>/dev/null > "$TMP/app.txt"
   echo "== audio passes issued, last 10 minutes (role 1 = may speak, role 2 = listen only)"
-  grep "Agora token generated" /tmp/wordeth-ops-app.txt | sed -E 's/.*uid=([0-9]+), role=([0-9]).*/  uid \1 role \2/' | sort | uniq -c
+  grep "Agora token generated" "$TMP/app.txt" | sed -E 's/.*uid=([0-9]+), role=([0-9]).*/  uid \1 role \2/' | sort | uniq -c
   echo "== joins, leaves and stage changes, last 10 minutes"
-  grep -i -E "joined room|left room|Dedup|promot|speaker|stage" /tmp/wordeth-ops-app.txt | cut -c1-140 | tail -14
-  railway logs --service $SERVICE --http --since 10m -n 3000 2>/dev/null > /tmp/wordeth-ops-http.txt
+  grep -i -E "joined room|left room|Dedup|promot|speaker|stage" "$TMP/app.txt" | cut -c1-140 | tail -14
+  railway logs --service $SERVICE --http --since 10m -n 3000 2>/dev/null > "$TMP/http.txt"
   echo "== audio pass requests by result (anything but 200 is a refusal)"
-  awk '$3=="/api/agora/token" {print "  " $4}' /tmp/wordeth-ops-http.txt | sort | uniq -c
+  awk '$3=="/api/agora/token" {print "  " $4}' "$TMP/http.txt" | sort | uniq -c
   echo "== connections closed (short ones in a burst mean phones are reconnecting)"
-  awk '$3=="/socket.io/" {gsub("ms","",$5); if ($5+0<60000) s++; else l++} END {printf "  under a minute: %d   longer: %d\n", s, l}' /tmp/wordeth-ops-http.txt
-  rm -f /tmp/wordeth-ops-app.txt /tmp/wordeth-ops-http.txt
+  awk '$3=="/socket.io/" {gsub("ms","",$5); if ($5+0<60000) s++; else l++} END {printf "  under a minute: %d   longer: %d\n", s, l}' "$TMP/http.txt"
   ;;
 watch)
   MINUTES="${2:-15}"; DEPLOY0=$(railway metrics --service $SERVICE --since 5m --json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['deployments'][0]['id'])" 2>/dev/null)

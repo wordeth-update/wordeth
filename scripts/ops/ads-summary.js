@@ -43,4 +43,8 @@ const mongoose = require('mongoose');
         console.log(`  ${placement.padEnd(16)} -> ${pick ? pick.title : 'nothing (slot stays empty)'}`);
     }
     process.exit(0);
-})().catch((e) => { console.log('could not read ads:', String(e.message).slice(0, 200)); process.exit(1); });
+})().catch((e) => {
+    // A connection error can quote the address it tried; never let the part between :// and @ through.
+    console.log('could not read ads:', String(e.message).replace(/:\/\/[^@\s]*@/g, '://***@').slice(0, 200));
+    process.exit(1);
+});
