@@ -13,6 +13,9 @@ const {
 let rooms = new Map();
 const connectedUsers = new Map();
 const { avatarRef } = require('../services/avatarRef');
+const { agoraUidFor } = require('../services/agoraUid');
+
+const { runsRoom, nextHost, managersOf } = require('../services/roomHosts');
 /** How long a dropped speaker's place on the stage is held for them. */
 const SPEAKER_RETURN_MS = 5 * 60 * 1000;
 /** A person joining the same room again inside this window is not announced to their connections twice. */
@@ -66,11 +69,12 @@ function scheduleHostHandover(io, roomId, awayUserId, awayName) {
         hostHandoverTimers.delete(roomId);
         const r = rooms.get(roomId);
         if (!r || r.hostId) return;               // room gone, or a host already returned
-        const next = r.participants.values().next().value;
+        const next = nextHost(r);
         if (!next) return;                        // empty room; deletion handles it
         r.hostId = next.socketId;
         r.hostAwayUserId = null;
         next.isHost = true;
+        next.isCoHost = false;
         saveRoom(roomId, r);
         io.to(roomId).emit('room-event', {
             event: 'host-changed',
@@ -820,6 +824,9 @@ function setupSignaling(io) {
                 isHost: shouldBeHost,
                 isSpeaker: shouldBeHost || returningSpeaker,
                 isMuted: !(shouldBeHost || returningSpeaker),
+                // Shared controls follow the account, so a reconnect does not take them away.
+                isCoHost: !shouldBeHost && !!(room.coHostUserIds && socket.userId && room.coHostUserIds.includes(String(socket.userId))),
+                agoraUid: agoraUidFor(roomId, { userId: socket.userId, socketId: socket.id }),
                 joinedAt: Date.now(),
                 peekExpiresAt: paidEntryAccess?.wildcard ? paidEntryAccess.expiresAt : null
             });
@@ -979,11 +986,19 @@ function setupSignaling(io) {
             const room = rooms.get(roomId);
             if (room && room.participants.has(socket.id)) {
                 const participant = room.participants.get(socket.id);
-                if (participant.agoraUid && Number(participant.agoraUid) !== Number(agoraUid)) {
-                    console.warn(`[Agora] Rejected mismatched UID map from ${socket.id}`);
-                    return;
+                // The phone knows which number its audio is actually using. Take
+                // its word, unless that number already belongs to somebody else
+                // here — a phone still on a number from before a deploy is
+                // believed; one claiming another person's is not.
+                const claimed = Number(agoraUid);
+                if (!Number.isInteger(claimed) || claimed <= 0) return;
+                for (const [sid, other] of room.participants.entries()) {
+                    if (sid !== socket.id && Number(other.agoraUid) === claimed) {
+                        console.warn(`[Agora] Rejected UID map from ${socket.id}: number belongs to someone else`);
+                        return;
+                    }
                 }
-                participant.agoraUid = Number(agoraUid);
+                participant.agoraUid = claimed;
                 socket.to(roomId).emit('agora-uid-mapped', {
                     socketId: socket.id,
                     agoraUid: agoraUid
@@ -1017,10 +1032,11 @@ function setupSignaling(io) {
             if (room.participants.size === 0) {
                 scheduleRoomDeletion(roomId, 'explicit leave');
             } else if (socket.id === room.hostId) {
-                const firstParticipant = room.participants.values().next().value;
+                const firstParticipant = nextHost(room);
                 if (firstParticipant) {
                     room.hostId = firstParticipant.socketId;
                     firstParticipant.isHost = true;
+                    firstParticipant.isCoHost = false;
                     io.to(roomId).emit('room-event', {
                         event: 'host-changed',
                         data: { newHostId: firstParticipant.socketId, newHostName: firstParticipant.userName }
@@ -1068,10 +1084,13 @@ function setupSignaling(io) {
         socket.on('kick-participant', ({ roomId, targetSocketId, action } = {}) => {
             const room = rooms.get(roomId);
             if (!room) return;
-            if (socket.id !== room.hostId) return;
+            if (!runsRoom(room, socket)) return;
 
             const targetParticipant = room.participants.get(targetSocketId);
             if (!targetParticipant) return;
+            // Nobody moves the host; only the host moves a co-host.
+            if (targetSocketId === room.hostId) return;
+            if (targetParticipant.isCoHost && socket.id !== room.hostId) return;
 
             if (action === 'remove') {
                 io.to(targetSocketId).emit('kicked-from-room', {
@@ -1133,7 +1152,7 @@ function setupSignaling(io) {
         socket.on('promote-to-speaker', ({ roomId, targetSocketId } = {}) => {
             const room = rooms.get(roomId);
             if (!room) return;
-            if (socket.id !== room.hostId) return;
+            if (!runsRoom(room, socket)) return;
 
             const targetParticipant = room.participants.get(targetSocketId);
             if (!targetParticipant) return;
@@ -1179,12 +1198,14 @@ function setupSignaling(io) {
             const participant = room.participants.get(socket.id);
             if (!participant || participant.isSpeaker) return;
 
-            io.to(room.hostId).emit('stage-request', {
-                socketId: socket.id,
-                userId: participant.userId,
-                userName: participant.userName,
-                avatar: participant.avatar || null
-            });
+            for (const sid of managersOf(room)) {
+                io.to(sid).emit('stage-request', {
+                    socketId: socket.id,
+                    userId: participant.userId,
+                    userName: participant.userName,
+                    avatar: participant.avatar || null
+                });
+            }
 
             io.to(roomId).emit('room-event', {
                 event: 'hand-raise',
@@ -1234,7 +1255,7 @@ function setupSignaling(io) {
         socket.on('set-stage-access', ({ roomId, mode } = {}) => {
             const room = rooms.get(roomId);
             if (!room) return;
-            if (socket.id !== room.hostId) return;
+            if (!runsRoom(room, socket)) return;
             if (mode !== 'open' && mode !== 'invite-only') return;
 
             room.stageAccess = mode;
@@ -1256,7 +1277,7 @@ function setupSignaling(io) {
 
             switch (event) {
                 case 'room-lock':
-                    if (socket.id === room.hostId) {
+                    if (runsRoom(room, socket)) {
                         room.isLocked = data.locked;
                         socket.to(roomId).emit('room-event', { event, data });
                         saveRoom(roomId, room);
@@ -1275,7 +1296,7 @@ function setupSignaling(io) {
                     break;
 
                 case 'topic-change':
-                    if (socket.id === room.hostId) {
+                    if (runsRoom(room, socket)) {
                         socket.to(roomId).emit('room-event', { event, data });
                     }
                     break;
@@ -1318,7 +1339,7 @@ function setupSignaling(io) {
                     break;
 
                 case 'karaoke-permission':
-                    if (socket.id === room.hostId) {
+                    if (runsRoom(room, socket)) {
                         room.karaokeEnabled = data.enabled;
                         socket.to(roomId).emit('room-event', { event, data });
                         saveRoom(roomId, room);
@@ -1327,7 +1348,7 @@ function setupSignaling(io) {
 
 
                 case 'video-mode':
-                    if (socket.id === room.hostId) {
+                    if (runsRoom(room, socket)) {
                         room.videoMode = data.mode || 'off';
                         if (data.mode === 'off') {
                             room.activeVideos.clear();
@@ -1352,28 +1373,54 @@ function setupSignaling(io) {
                     break;
 
                 case 'video-request':
-                    if (room.hostId) {
-                        io.to(room.hostId).emit('room-event', {
+                    for (const sid of managersOf(room)) {
+                        io.to(sid).emit('room-event', {
                             event,
                             data: { ...data, requesterId: socket.id, userName: socket.userName }
                         });
                     }
                     break;
 
+                case 'cohost': {
+                    // The host shares the controls with someone on the stage, or takes them back.
+                    if (socket.id !== room.hostId) break;
+                    const target = room.participants.get(String(data.targetSocketId || ''));
+                    if (!target || target.isHost) break;
+                    const on = !!data.on;
+                    if (on && !target.isSpeaker) break;
+                    target.isCoHost = on;
+                    if (!Array.isArray(room.coHostUserIds)) room.coHostUserIds = [];
+                    const uid = target.userId && target.userId !== target.socketId ? String(target.userId) : null;
+                    if (uid) {
+                        room.coHostUserIds = room.coHostUserIds.filter((id) => id !== uid);
+                        if (on) room.coHostUserIds.push(uid);
+                    }
+                    io.to(roomId).emit('participants-list', {
+                        participants: Array.from(room.participants.values()),
+                        stageAccess: room.stageAccess || 'invite-only'
+                    });
+                    io.to(roomId).emit('room-event', {
+                        event: 'cohost-changed',
+                        data: { socketId: target.socketId, userName: target.userName, on }
+                    });
+                    saveRoom(roomId, room);
+                    break;
+                }
+
                 case 'video-approved':
-                    if (socket.id === room.hostId && data.targetSocketId) {
+                    if (runsRoom(room, socket) && data.targetSocketId) {
                         io.to(data.targetSocketId).emit('room-event', { event, data });
                     }
                     break;
 
                 case 'video-denied':
-                    if (socket.id === room.hostId && data.targetSocketId) {
+                    if (runsRoom(room, socket) && data.targetSocketId) {
                         io.to(data.targetSocketId).emit('room-event', { event, data });
                     }
                     break;
 
                 case 'mute-all':
-                    if (socket.id === room.hostId) {
+                    if (runsRoom(room, socket)) {
                         room.participants.forEach((p) => {
                             if (p.socketId !== socket.id) {
                                 p.isMuted = true;

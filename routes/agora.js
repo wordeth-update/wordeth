@@ -13,16 +13,8 @@ const TOKEN_EXPIRY_SECONDS = 86400;
 const PRIVILEGE_EXPIRY_SECONDS = 86400;
 const RENEWABLE_TOKEN_SECONDS = 60;
 
-function allocateAgoraUid(channelName, participant) {
-  if (Number.isInteger(participant.agoraUid) && participant.agoraUid > 0) {
-    return participant.agoraUid;
-  }
-  const digest = crypto.createHash('sha256')
-    .update(`${channelName}:${participant.userId}:${participant.socketId}`)
-    .digest();
-  participant.agoraUid = digest.readUInt32BE(0) || 1;
-  return participant.agoraUid;
-}
+// One number per person per room, stable across reconnects: see services/agoraUid.js
+const { agoraUidFor: allocateAgoraUid } = require('../services/agoraUid');
 
 router.post('/token', auth, require('../middleware/limits').agoraToken, async (req, res) => {
   try {
