@@ -8,6 +8,7 @@ const EventsLedger = require('../models/EventsLedger');
 const TokenLedger = require('../models/TokenLedger');
 const User = require('../models/User');
 const { getUserEntitlements, checkGraduation } = require('../services/entitlements');
+const { getStripeClient } = require('../services/stripeClient');
 
 const PLAN_TOKEN_GRANTS = {
     'fan-plus': 50,
@@ -149,6 +150,24 @@ router.post('/cancel', auth, async (req, res) => {
         const subscription = await Subscription.findById(req.user.subscriptionId);
         if (!subscription) {
             return res.status(404).json({ message: 'Subscription not found' });
+        }
+
+        // The pricing page promises that cancelling stops the next charge and
+        // keeps the plan until the period ends. Stripe is who charges, so
+        // Stripe has to be told: marking our own record alone left the card
+        // on file renewing a plan its owner believed they had cancelled.
+        if (subscription.stripeSubscriptionId) {
+            try {
+                // Throws when billing is not configured, which is also a reason not to claim it worked.
+                const stripe = getStripeClient();
+                await stripe.subscriptions.update(subscription.stripeSubscriptionId, { cancel_at_period_end: true });
+            } catch (stripeErr) {
+                // Already gone at Stripe is the outcome that was asked for.
+                if (stripeErr?.code !== 'resource_missing') {
+                    console.error('[Subscriptions] Stripe would not cancel:', stripeErr.message);
+                    return res.status(502).json({ message: 'Billing could not confirm the cancellation. Nothing was changed; please try again shortly.' });
+                }
+            }
         }
 
         subscription.cancelAtPeriodEnd = true;

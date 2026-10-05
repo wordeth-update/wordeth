@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plans & Pricing - Wordeth</title>
+    <title>Plans &amp; Pricing | Wordeth</title>
+    <meta name="description" content="Wordeth is free to join: live rooms, lyric search and custom lyric merch. See what User+ and the designer, artist and label plans add, and what each costs.">
     <link rel="icon" type="image/png" href="images/logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -63,29 +64,37 @@
 
     <main>
     <div class="pricing-page">
+        <div class="pay-note" id="payNote" role="status" hidden></div>
+
         <div class="pricing-hero">
-            <h1>Plans & Pricing</h1>
-            <p class="hero-subtitle">Browse every room as a User. Unlock paid-room access and paid-room creation with User+.</p>
-            <div class="billing-toggle">
-                <span class="toggle-label" id="monthlyLabel">Monthly</span>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="billingToggle">
-                    <span class="toggle-slider"></span>
-                </label>
-                <span class="toggle-label" id="yearlyLabel">Yearly</span>
-                <span class="save-badge" id="saveBadge">Save up to 20%</span>
-            </div>
+            <p class="hero-eyebrow">Plans &amp; pricing</p>
+            <h1>Walk in free. Pay only when a door is worth opening.</h1>
+            <p class="hero-subtitle">The rooms, the lyrics and the merch are yours the minute you join, and no card is asked for. A plan is for the day you want more: a room that charges at the door, a place to sell your designs, a home for your music.</p>
+            <p class="hero-ask">So, what did you come here to do?</p>
         </div>
 
-        <div class="category-tabs">
-            <button class="cat-tab active" data-category="fan"><i class="fas fa-headphones-alt"></i> Users</button>
-            <button class="cat-tab" data-category="designer"><i class="fas fa-palette"></i> Designers</button>
-            <button class="cat-tab" data-category="artist"><i class="fas fa-guitar"></i> Artists</button>
-            <button class="cat-tab" data-category="label"><i class="fas fa-building"></i> Labels</button>
+        <div class="category-tabs" role="tablist" aria-label="Who are you here as?">
+            <button class="cat-tab active" data-category="fan" role="tab" aria-selected="true"><i class="fas fa-headphones-alt"></i> I listen and host</button>
+            <button class="cat-tab" data-category="designer" role="tab" aria-selected="false"><i class="fas fa-palette"></i> I design</button>
+            <button class="cat-tab" data-category="artist" role="tab" aria-selected="false"><i class="fas fa-guitar"></i> I make music</button>
+            <button class="cat-tab" data-category="label" role="tab" aria-selected="false"><i class="fas fa-building"></i> I run a label</button>
         </div>
 
         <div class="category-description" id="categoryDescription">
-            <p>Choose User to browse every room, or User+ to enter and create paid rooms. Listed room token prices still apply.</p>
+            <h2 class="category-lead" id="categoryLead">Here to listen, or here to host?</h2>
+            <p>Listening is free. User+ is for the rooms that charge at the door: yours, or somebody else's.</p>
+        </div>
+
+        <div class="billing-toggle-row" id="billingRow">
+            <div class="billing-toggle">
+                <span class="toggle-label" id="monthlyLabel">Monthly</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="billingToggle" aria-label="Bill yearly instead of monthly">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-label" id="yearlyLabel">Yearly</span>
+                <span class="save-badge" id="saveBadge"></span>
+            </div>
         </div>
 
         <div class="plans-container" id="plansContainer">
@@ -95,35 +104,77 @@
             </div>
         </div>
 
+        <section class="pricing-steps" id="pricingSteps" aria-labelledby="stepsTitle" hidden>
+            <h2 id="stepsTitle"></h2>
+            <ol class="steps-list" id="stepsList"></ol>
+        </section>
+
+        <section class="pricing-promises" aria-labelledby="promisesTitle">
+            <h2 id="promisesTitle">What you are not signing up for</h2>
+            <div class="promise-grid">
+                <div class="promise">
+                    <h3><i class="fas fa-infinity"></i> Free is not a trial</h3>
+                    <p>The free plan has no clock on it and asks for no card. Stay on it for a week or for good.</p>
+                </div>
+                <div class="promise">
+                    <h3><i class="fas fa-door-open"></i> No trapdoor on the way out</h3>
+                    <p>Cancel from <a href="/subscription.html">your subscription page</a> whenever you like. You keep what you paid for until the period ends, and you are not charged again.</p>
+                </div>
+                <div class="promise">
+                    <h3><i class="fas fa-tag"></i> No surprise at the door</h3>
+                    <p>A paid room shows its price in tokens before you go in. Nothing leaves your balance until you say yes.</p>
+                </div>
+                <div class="promise">
+                    <h3><i class="fas fa-lock"></i> Your card stays with Stripe</h3>
+                    <p>Checkout runs on Stripe's own page. Wordeth never sees or stores your card number.</p>
+                </div>
+            </div>
+        </section>
+
         <div class="pricing-faq">
-            <h2>Frequently Asked Questions</h2>
+            <h2>Fair questions</h2>
             <div class="faq-grid">
                 <div class="faq-item">
-                    <h3><i class="fas fa-credit-card"></i> How does billing work?</h3>
-                    <p>Plans are billed monthly or yearly. Yearly plans include a discount. You can switch between billing cycles or upgrade/downgrade anytime.</p>
+                    <h3><i class="fas fa-hand-holding-heart"></i> Do I have to pay to use Wordeth?</h3>
+                    <p>No. Every free room, the lyric search and the merch shop are open to you on the free plan, and you can open free rooms of your own.</p>
                 </div>
                 <div class="faq-item">
-                    <h3><i class="fas fa-door-open"></i> What changes with User+?</h3>
-                    <p>User+ lets you enter and create paid rooms. Entering a paid room still costs the token price set by its creator.</p>
+                    <h3><i class="fas fa-door-open"></i> So what does User+ change?</h3>
+                    <p>Two things. You can go into rooms that charge at the door, and you can open one yourself and set its price. The plan also adds 50 tokens to your balance when you join and each time it renews.</p>
+                </div>
+                <div class="faq-item">
+                    <h3><i class="fas fa-coins"></i> What is a token?</h3>
+                    <p>Tokens are what a paid room charges at the door. The host sets the price and the tokens you pay go to them. Packs are 25 for $1.99, 50 for $3.49 and 100 for $5.99.</p>
                 </div>
                 <div class="faq-item">
                     <h3><i class="fas fa-bolt"></i> What is a Wildcard?</h3>
-                    <p>After 8 accumulated active hours, a User receives one lifetime Wildcard for a free 3-minute peek into one paid room.</p>
+                    <p>A look inside before you decide. After 8 active hours on the free plan you get one Wildcard: three free minutes in one paid room of your choosing.</p>
+                </div>
+                <div class="faq-item">
+                    <h3><i class="fas fa-times-circle"></i> What if I stop using it?</h3>
+                    <p>Then cancel. It takes a moment, there is no exit interview, and the plan stays on until the end of the period you already paid for.</p>
                 </div>
                 <div class="faq-item">
                     <h3><i class="fas fa-sync-alt"></i> Can I switch plans?</h3>
-                    <p>Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately and billing adjusts accordingly.</p>
+                    <p>Yes. Choose the new one and it starts straight away. The old one ends at the same moment, so you are never billed for two.</p>
                 </div>
                 <div class="faq-item">
-                    <h3><i class="fas fa-times-circle"></i> Can I cancel anytime?</h3>
-                    <p>Absolutely. Cancel at any time and your plan stays active until the end of your billing period. No hidden fees.</p>
+                    <h3><i class="fas fa-calendar-alt"></i> Monthly or yearly?</h3>
+                    <p>User+ is $3.99 a month or $39 a year. Yearly costs less in dollars. The 50 tokens come with each renewal, so monthly adds them twelve times a year and yearly adds them once. Other plans are billed monthly.</p>
                 </div>
                 <div class="faq-item">
-                    <h3><i class="fas fa-users"></i> What's the Designer free tier?</h3>
-                    <p>Designers can start free with the Explore tier. You'll need to upgrade after $100 in earnings, 10 sales, or 3 active months.</p>
+                    <h3><i class="fas fa-palette"></i> How long can a designer stay free?</h3>
+                    <p>Until it is working. Explore is free until you reach $100 in earnings, 10 sales or 3 active months, whichever comes first. After that you pick a paid plan to keep selling.</p>
                 </div>
             </div>
         </div>
+
+        <section class="pricing-close" aria-labelledby="closeTitle">
+            <h2 id="closeTitle">The door is open either way.</h2>
+            <p>Join free tonight, find a room, and see whether Wordeth is your kind of place. If it is, the rest of this page will make more sense tomorrow.</p>
+            <a href="/signup.html" class="close-btn" id="closeBtn">Join free</a>
+            <p class="close-ps"><strong>P.S.</strong> Not ready to choose a plan? There is nothing to choose. Free does not run out, and this page will still be here.</p>
+        </section>
     </div>
 
     </main>

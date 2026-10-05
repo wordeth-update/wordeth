@@ -10,6 +10,7 @@ const TokenLedger = require('../models/TokenLedger');
 
 const MerchOrder = require('../models/MerchOrder');
 const { grantTokensForPlan } = require('./subscriptions');
+const { priceFor } = require('../services/planPrice');
 
 const TOKEN_PACKS = [
     { id: 'pack_25', tokens: 25, price: 199 },
@@ -93,7 +94,15 @@ router.post('/create-checkout-session', auth, async (req, res) => {
         }
 
         const cycle = billingCycle === 'yearly' ? 'yearly' : 'monthly';
-        const amount = cycle === 'yearly' ? plan.priceYearly : plan.priceMonthly;
+        const amount = priceFor(plan, cycle);
+        // A plan with no price for this cycle is not sold this way. Charging
+        // its stored figure would have started a yearly subscription at $0.
+        if (!amount) {
+            return res.status(400).json({
+                message: cycle === 'yearly' ? `${plan.name} is billed monthly. Choose monthly to continue.` : 'This plan cannot be bought online. Contact us to set it up.',
+                code: 'CYCLE_UNAVAILABLE'
+            });
+        }
         const interval = cycle === 'yearly' ? 'year' : 'month';
 
         const session = await stripe.checkout.sessions.create({
@@ -352,6 +361,19 @@ async function handleCheckoutComplete(session) {
             const existingSub = await Subscription.findById(user.subscriptionId);
             if (existingSub && existingSub.isActive()) {
                 const oldPlan = await Plan.findById(existingSub.planId);
+                // Switching plans is a new subscription at Stripe. The one it
+                // replaces has to be ended there, or the card is charged for
+                // both from then on.
+                const replaced = existingSub.stripeSubscriptionId;
+                if (replaced && session.subscription && replaced !== session.subscription) {
+                    try {
+                        await getStripeClient().subscriptions.cancel(replaced);
+                    } catch (cancelErr) {
+                        if (cancelErr?.code !== 'resource_missing') {
+                            console.error('[Stripe] Could not end the replaced subscription', replaced, cancelErr.message);
+                        }
+                    }
+                }
                 existingSub.planId = plan._id;
                 existingSub.billingCycle = cycle;
                 existingSub.currentPeriodStart = now;
