@@ -5,12 +5,8 @@
     const monthlyLabel = document.getElementById('monthlyLabel');
     const yearlyLabel = document.getElementById('yearlyLabel');
     const saveBadge = document.getElementById('saveBadge');
-    const categoryDesc = document.getElementById('categoryDescription');
     const categoryLead = document.getElementById('categoryLead');
     const categoryTabs = document.querySelectorAll('.cat-tab');
-    const stepsSection = document.getElementById('pricingSteps');
-    const stepsTitle = document.getElementById('stepsTitle');
-    const stepsList = document.getElementById('stepsList');
     const payNote = document.getElementById('payNote');
     const closeBtn = document.getElementById('closeBtn');
 
@@ -31,37 +27,12 @@
      * the cards describe only what the product does today: every figure in
      * them is one the server enforces.
      */
+    /** One question per kind of visitor, in their own terms. */
     const AUDIENCES = {
-        fan: {
-            lead: 'Here to listen, or here to host?',
-            text: 'Listening is free. User+ is for the rooms that charge at the door: yours, or somebody else\'s.',
-            stepsTitle: 'How most people come to User+',
-            steps: [
-                ['Walk in free', 'Join, find a room, raise a hand, take the stage. Open a free room of your own whenever you like.'],
-                ['Look before you pay', 'After 8 active hours you earn a Wildcard: three free minutes inside one paid room, so you know what is behind the door.'],
-                ['Go User+ when it is worth it', 'The day there is a paid room you want to be in, or one you want to run, it is $3.99 and you are through.']
-            ]
-        },
-        designer: {
-            lead: 'Got designs a music fan would wear?',
-            text: 'Put them where the fans already are. Start on Explore for nothing, and move up only once your work is selling.',
-            stepsTitle: 'How a designer starts',
-            steps: [
-                ['Start on Explore, free', 'Up to 5 templates in the marketplace, with your name on every one.'],
-                ['Sell', 'Explore earns on the standard revenue share, with no monthly fee while you find out what sells.'],
-                ['Move up when it is working', 'After $100 in earnings, 10 sales or 3 active months, pick the paid plan that fits what you have built.']
-            ]
-        },
-        artist: {
-            lead: 'What could your lyrics be doing between releases?',
-            text: 'An official home on Wordeth for your words and your merch, with the tools to see what your listeners respond to.',
-            ask: 'Not sure which one fits where you are? Tell us about your music and we will say which we would pick.'
-        },
-        label: {
-            lead: 'How many artists are you carrying?',
-            text: 'One dashboard for the roster: who is selling, what is earning, and where to put the next push.',
-            ask: 'A label rarely fits a box. Tell us about your roster and we will work out the plan with you.'
-        }
+        fan: { lead: 'Here to listen, or here to host?' },
+        designer: { lead: 'Got designs a music fan would wear? Start free, move up when they sell.' },
+        artist: { lead: 'What could your lyrics be doing between releases?', ask: 'Not sure which fits? Tell us about your music:' },
+        label: { lead: 'How many artists are you carrying?', ask: 'Tell us about your roster and we will work it out with you:' }
     };
 
     /** What the two listener plans really do, said as what you get to do. */
@@ -69,11 +40,11 @@
         if (plan.slug === 'fan-free') {
             return {
                 name: 'User',
-                description: 'For listening, talking and opening rooms of your own. Free, with no end date.',
+                description: 'Listen, talk, open your own free rooms.',
                 features: [
-                    ['Every free room', 'listen, chat, raise a hand, take the stage'],
-                    ['Your own free rooms', 'open one whenever you have something to say'],
-                    ['Lyric search and merch', 'find the words, then wear them'],
+                    ['Every free room', ''],
+                    ['Free rooms of your own', ''],
+                    ['Lyric search and merch', ''],
                     ['One Wildcard', 'three free minutes in a paid room, after 8 active hours']
                 ],
                 button: signedIn ? 'Go to the rooms' : 'Join free',
@@ -84,19 +55,14 @@
         if (plan.slug === 'fan-plus') {
             return {
                 name: 'User+',
-                description: 'For the rooms that charge at the door: going into them, and running your own.',
+                description: 'Rooms that charge at the door: theirs, and yours.',
                 features: [
-                    ['Go into paid rooms', 'each room shows its token price before you enter'],
-                    ['Charge at your own door', 'open a paid room, set its price, and the tokens people pay go to you'],
-                    ['50 tokens with the plan', cycle === 'yearly'
-                        ? 'added when you join and at each yearly renewal'
-                        : 'added when you join and every month it renews'],
-                    ['Everything in User', 'nothing is taken away']
+                    ['Go into paid rooms', ''],
+                    ['Charge at your own door', 'the tokens people pay go to you'],
+                    ['50 tokens with the plan', cycle === 'yearly' ? 'each year it renews' : 'every month it renews'],
+                    ['Everything in User', '']
                 ],
-                // The same 50 tokens cost $3.49 as a pack: said plainly, so the price is weighed against something real.
-                aside: cycle === 'yearly'
-                    ? 'Monthly adds the 50 tokens every month; yearly adds them once a year and costs less in dollars.'
-                    : 'Bought on their own, 50 tokens are $3.49. The plan is $3.99.',
+                aside: cycle === 'yearly' ? null : '50 tokens alone are $3.49. The plan is $3.99.',
                 button: 'Get User+',
                 flag: 'Paid rooms'
             };
@@ -205,8 +171,6 @@
     function render() {
         const audience = AUDIENCES[currentCategory] || AUDIENCES.fan;
         if (categoryLead) categoryLead.textContent = audience.lead;
-        const p = categoryDesc.querySelector('p');
-        if (p) p.textContent = audience.text;
 
         const filtered = plansFor(currentCategory);
 
@@ -222,8 +186,6 @@
             saveBadge.textContent = best > 0 ? `$${money(Math.round(best * 100) / 100)} less a year` : '';
             saveBadge.classList.toggle('visible', best > 0);
         }
-
-        renderSteps(audience);
 
         if (allPlans.length === 0) return;   // the load failed and said so
         if (filtered.length === 0) {
@@ -244,16 +206,6 @@
             ask.innerHTML = `${escapeHtml(audience.ask)} <a href="mailto:partnerships@wordeth.com">partnerships@wordeth.com</a>`;
             plansContainer.appendChild(ask);
         }
-    }
-
-    function renderSteps(audience) {
-        if (!stepsSection) return;
-        if (!audience.steps) { stepsSection.hidden = true; return; }
-        stepsTitle.textContent = audience.stepsTitle;
-        stepsList.innerHTML = audience.steps.map(([title, text]) =>
-            `<li><h3>${escapeHtml(title)}</h3><p>${escapeHtml(text)}</p></li>`
-        ).join('');
-        stepsSection.hidden = false;
     }
 
     function createPlanCard(plan, cycle) {
@@ -287,7 +239,7 @@
 
         const features = copy
             ? copy.features.map(([what, detail]) =>
-                `<li><i class="fas fa-check"></i> <span><strong>${escapeHtml(what)}</strong> <span class="feature-detail">${escapeHtml(detail)}</span></span></li>`).join('')
+                `<li><i class="fas fa-check"></i> <span><strong>${escapeHtml(what)}</strong>${detail ? ` <span class="feature-detail">${escapeHtml(detail)}</span>` : ''}</span></li>`).join('')
             : (plan.features || []).map(f => `<li><i class="fas fa-check"></i> <span>${escapeHtml(f)}</span></li>`).join('');
 
         let btnHTML;
@@ -296,7 +248,7 @@
             btnHTML = `<div class="card-btn btn-current">Your plan today</div>`;
         } else if (isContactSales) {
             btnHTML = `<a href="mailto:partnerships@wordeth.com?subject=${encodeURIComponent(name + ' plan for our label')}" class="card-btn btn-contact">Talk to us</a>`;
-            reassure = 'A conversation, not a contract.';
+            reassure = '';
         } else if (isFree) {
             const href = copy ? copy.href : '/signup.html';
             const label = copy ? copy.button : (signedIn ? 'Start with ' + name : 'Start free');
@@ -305,7 +257,7 @@
         } else {
             const label = copy ? copy.button : 'Choose ' + name;
             btnHTML = `<button class="card-btn btn-primary" data-slug="${plan.slug}" data-label="${escapeHtml(label)}">${escapeHtml(label)}</button>`;
-            reassure = 'Cancel whenever you like. You keep it until the period you paid for ends.';
+            reassure = 'Cancel any time.';
         }
 
         card.innerHTML = `

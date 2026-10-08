@@ -531,6 +531,19 @@
 }
 .pay-note-ok { border-color: rgba(0, 229, 168, 0.45); background: rgba(0, 229, 168, 0.1); }
 
+.pricing-terms {
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 0.86rem;
+    line-height: 1.6;
+    text-align: center;
+    max-width: 44rem;
+    margin: -1.5rem auto 3rem;
+}
+.pricing-terms a { color: var(--mint, #00E5A8); text-decoration: underline; text-underline-offset: 3px; }
+.feature-detail { display: inline; font-size: 0.92em; margin-left: 0.2rem; }
+#categoryLead { color: #fff; font-size: 1.05rem; font-weight: 600; }
+.close-ps { text-align: center; color: rgba(255, 255, 255, 0.62); font-size: 0.9rem; margin: 2.5rem auto 0; }
+.close-ps a { color: var(--mint, #00E5A8); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .pricing-steps, .pricing-promises { margin: 0 0 3.5rem; }
 .pricing-steps h2, .pricing-promises h2, .pricing-close h2 {
     font-family: var(--font-display, 'Unbounded', sans-serif);
