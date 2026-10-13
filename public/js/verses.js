@@ -9080,6 +9080,55 @@ class AudioRoomsManager {
         const modal = document.getElementById('buy-tokens-modal');
         if (modal) modal.classList.add('active');
         this.loadTokenBalance();
+        this._drawTokenPacks();
+    }
+
+    /** The packs come from the server, so the website, the app and checkout always agree. */
+    async _drawTokenPacks() {
+        const grid = document.getElementById('token-packs-grid');
+        if (!grid || grid.dataset.drawn) return;
+        try {
+            const res = await fetch(apiUrl('/api/tokens/packs'));
+            const data = await res.json();
+            const packs = Array.isArray(data.packs) ? data.packs : [];
+            if (packs.length === 0) throw new Error('no packs');
+            grid.innerHTML = packs.map((p) => (
+                '<button class="token-pack-option' + (p.featured ? ' featured' : '') + '" data-pack-id="' + escapeHtml(p.id) + '">' +
+                (p.featured ? '<div class="token-pack-best">Most chosen</div>' : '') +
+                '<div class="token-pack-amount">' + Number(p.tokens).toLocaleString() + '</div>' +
+                '<div class="token-pack-label">tokens</div>' +
+                '<div class="token-pack-price">$' + Number(p.price).toFixed(2) + '</div>' +
+                '<div class="token-pack-per">' + Number(p.perToken).toFixed(1) + '¢ each</div>' +
+                '</button>'
+            )).join('');
+            grid.dataset.drawn = '1';
+            grid.querySelectorAll('.token-pack-option').forEach((btn) => {
+                btn.addEventListener('click', () => this.purchaseTokenPack(btn.dataset.packId));
+            });
+        } catch (e) {
+            grid.innerHTML = '<p class="modal-subtitle">The packs did not load. Refresh and try again.</p>';
+        }
+    }
+
+    /** Back from Stripe: say what happened, once. */
+    _tokenPurchaseReturn() {
+        const params = new URLSearchParams(window.location.search);
+        // The app sends people here to buy: open the packs straight away.
+        if (params.get('buy') === 'tokens') {
+            params.delete('buy');
+            const rest = params.toString();
+            try { window.history.replaceState({}, '', window.location.pathname + (rest ? '?' + rest : '')); } catch (e) { /* fine */ }
+            if (localStorage.getItem('authToken')) setTimeout(() => this.showBuyTokensModal(), 300);
+            else this._showAuthPrompt?.();
+            return;
+        }
+        const result = params.get('tokens');
+        if (!result) return;
+        if (result === 'paid') this.showToast?.('Payment received. Your tokens land within a minute.', 'fa-check-circle', 7000);
+        else if (result === 'canceled') this.showToast?.('No charge was made.', 'fa-info-circle');
+        params.delete('tokens'); params.delete('pack');
+        const rest = params.toString();
+        try { window.history.replaceState({}, '', window.location.pathname + (rest ? '?' + rest : '')); } catch (e) { /* the toast still shows */ }
     }
 
     async purchaseTokenPack(packId) {
@@ -9092,28 +9141,23 @@ class AudioRoomsManager {
         const packBtn = document.querySelector('[data-pack-id="' + packId + '"]');
         if (packBtn) packBtn.classList.add('purchasing');
 
+        // Paid on Stripe's page, credited by Stripe's webhook. This used to call
+        // a route only admins may use, so nobody else could buy on the web.
         try {
-            const res = await fetch(apiUrl('/api/tokens/purchase-pack'), {
+            const res = await fetch(apiUrl('/api/stripe/create-checkout-session'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
                 body: JSON.stringify({ packId })
             });
             const data = await res.json();
-            if (!res.ok) {
-                this.showToast?.(data.message || 'Purchase failed', 'fa-exclamation-circle');
+            if (!res.ok || !data.url) {
+                this.showToast?.((data.message || 'Checkout did not open.') + ' You have not been charged.', 'fa-exclamation-circle');
                 return;
             }
-
-            this._cachedTokenBalance = data.newBalance;
-            const amountEl = document.getElementById('token-balance-amount');
-            const modalBalanceEl = document.getElementById('modal-token-balance');
-            if (amountEl) amountEl.textContent = data.newBalance.toLocaleString();
-            if (modalBalanceEl) modalBalanceEl.textContent = data.newBalance.toLocaleString();
-
-            this.showToast?.('Purchased ' + data.pack.tokens + ' tokens!', 'fa-check-circle');
+            window.location.href = data.url;
         } catch (e) {
             console.error('Token purchase error:', e);
-            this.showToast?.('Purchase failed. Please try again.', 'fa-exclamation-circle');
+            this.showToast?.('Checkout did not open. You have not been charged.', 'fa-exclamation-circle');
         } finally {
             if (packBtn) packBtn.classList.remove('purchasing');
         }
@@ -9125,12 +9169,7 @@ class AudioRoomsManager {
             if (gateModal) gateModal.classList.remove('active');
             this.showBuyTokensModal();
         });
-        document.querySelectorAll('.token-pack-option').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const packId = btn.dataset.packId;
-                if (packId) this.purchaseTokenPack(packId);
-            });
-        });
+        this._tokenPurchaseReturn();
     }
 }
 

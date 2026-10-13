@@ -12,11 +12,7 @@ const MerchOrder = require('../models/MerchOrder');
 const { grantTokensForPlan } = require('./subscriptions');
 const { priceFor } = require('../services/planPrice');
 
-const TOKEN_PACKS = [
-    { id: 'pack_25', tokens: 25, price: 199 },
-    { id: 'pack_50', tokens: 50, price: 349 },
-    { id: 'pack_100', tokens: 100, price: 599 }
-];
+const { packById } = require('../services/tokenPacks');
 
 router.get('/config', (req, res) => {
     try {
@@ -50,9 +46,9 @@ router.post('/create-checkout-session', auth, async (req, res) => {
         }
 
         if (packId) {
-            const pack = TOKEN_PACKS.find(p => p.id === packId);
+            const pack = packById(packId);
             if (!pack) {
-                return res.status(400).json({ message: 'Invalid token pack' });
+                return res.status(400).json({ message: 'That pack is not for sale.' });
             }
 
             const session = await stripe.checkout.sessions.create({
@@ -65,7 +61,7 @@ router.post('/create-checkout-session', auth, async (req, res) => {
                             name: `${pack.tokens} Wordeth Tokens`,
                             description: `Token pack — ${pack.tokens} tokens for your Wordeth account`
                         },
-                        unit_amount: pack.price
+                        unit_amount: pack.priceCents
                     },
                     quantity: 1
                 }],
@@ -75,8 +71,8 @@ router.post('/create-checkout-session', auth, async (req, res) => {
                     tokens: pack.tokens.toString(),
                     userId: req.user._id.toString()
                 },
-                success_url: `${domain}/verses.html?payment=success&pack=${pack.id}`,
-                cancel_url: `${domain}/verses.html?payment=canceled`
+                success_url: `${domain}/verses.html?tokens=paid&pack=${pack.id}`,
+                cancel_url: `${domain}/verses.html?tokens=canceled`
             });
 
             return res.json({ url: session.url, sessionId: session.id });
@@ -234,6 +230,10 @@ function createWebhookHandler(webhookSecret) {
 
                 case 'customer.subscription.deleted':
                     await handleSubscriptionCanceled(event.data.object);
+                    break;
+
+                case 'account.updated':
+                    await require('./payouts').onAccountUpdated(event.data.object);
                     break;
 
                 default:

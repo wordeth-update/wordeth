@@ -5,16 +5,7 @@ const User = require('../models/User');
 const TokenLedger = require('../models/TokenLedger');
 const EventsLedger = require('../models/EventsLedger');
 
-const TOKEN_PACKS = [
-    { id: 'pack_25', tokens: 25, price: 1.99, appleProductId: 'com.wordeth.app.tokens.25' },
-    { id: 'pack_50', tokens: 50, price: 3.49, appleProductId: 'com.wordeth.app.tokens.50' },
-    { id: 'pack_100', tokens: 100, price: 5.99, appleProductId: 'com.wordeth.app.tokens.100' }
-];
-
-/** What the App Store sells, keyed by the product id the phone reports. */
-const APPLE_PRODUCTS = new Map(TOKEN_PACKS.map((p) => [p.appleProductId, p]));
-
-const TOKEN_CASHOUT_RATE = 0.03;
+const { TOKEN_PACKS, CASHOUT_RATE: TOKEN_CASHOUT_RATE, packById, packByProductId, publicPacks, dollarsFor } = require('../services/tokenPacks');
 
 router.get('/balance', auth, async (req, res) => {
     try {
@@ -22,11 +13,10 @@ router.get('/balance', auth, async (req, res) => {
         const response = {
             tokenBalance: user.tokenBalance || 0
         };
-        const creatorTypes = ['artist', 'designer', 'label'];
-        if (creatorTypes.includes(user.accountType)) {
-            response.tokenEarnings = user.tokenEarnings || 0;
-            response.earningsValue = Math.round((user.tokenEarnings || 0) * TOKEN_CASHOUT_RATE * 100) / 100;
-        }
+        // Anyone can earn: a host charging at the door as much as an artist.
+        response.tokenEarnings = user.tokenEarnings || 0;
+        response.earningsValue = dollarsFor(user.tokenEarnings || 0);
+        response.cashoutRate = TOKEN_CASHOUT_RATE;
         res.json(response);
     } catch (error) {
         console.error('Error fetching token balance:', error);
@@ -92,7 +82,7 @@ router.post('/grant', auth, require('../middleware/limits').grant, async (req, r
  * The catalogue, so a client can show prices without hard-coding them.
  */
 router.get('/packs', (req, res) => {
-    res.json({ packs: TOKEN_PACKS.map((p) => ({ id: p.id, tokens: p.tokens, price: p.price, appleProductId: p.appleProductId })) });
+    res.json({ packs: publicPacks() });
 });
 
 /**
@@ -115,7 +105,7 @@ router.post('/apple-purchase', auth, require('../middleware/limits').applePurcha
             return res.status(400).json({ message: e.message || 'That purchase could not be verified.', code: e.code || 'VERIFICATION_FAILED' });
         }
         const { payload, environment } = verified;
-        const pack = APPLE_PRODUCTS.get(payload.productId);
+        const pack = packByProductId(payload.productId);
         if (!pack) {
             return res.status(400).json({ message: 'That product is not a token pack.', code: 'UNKNOWN_PRODUCT' });
         }
@@ -186,7 +176,7 @@ router.post('/purchase-pack', auth, async (req, res) => {
             return res.status(403).json({ message: 'Token packs are bought in the app or on the website.', code: 'USE_STORE' });
         }
         const { packId } = req.body;
-        const pack = TOKEN_PACKS.find(p => p.id === packId);
+        const pack = packById(packId);
         if (!pack) {
             return res.status(400).json({ message: 'Invalid pack. Available packs: ' + TOKEN_PACKS.map(p => p.id).join(', ') });
         }
@@ -335,10 +325,6 @@ router.post('/payout', auth, async (req, res) => {
         console.error('Error processing payouts:', error);
         res.status(500).json({ message: 'Server error' });
     }
-});
-
-router.get('/packs', (req, res) => {
-    res.json({ packs: TOKEN_PACKS });
 });
 
 module.exports = router;

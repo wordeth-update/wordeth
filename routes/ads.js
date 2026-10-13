@@ -1418,3 +1418,5 @@ router.put('/admin/reject-application/:id', authenticateAdvertiser, requireAdmin
 });
 
 module.exports = router;
+module.exports.authenticateAdvertiser = authenticateAdvertiser;
+module.exports.requireAdmin = requireAdmin;

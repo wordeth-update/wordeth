@@ -231,6 +231,18 @@ const userSchema = new mongoose.Schema({
         default: null,
         index: true
     },
+    // Where payouts go: a Stripe connected account the creator set up on
+    // Stripe's own pages. Bank details never pass through Wordeth.
+    stripeConnectId: {
+        type: String,
+        default: null,
+        index: true
+    },
+    // Stripe has finished checking the account and will accept transfers to it.
+    payoutsEnabled: {
+        type: Boolean,
+        default: false
+    },
     // Shareable collab ID (format WRD-XXXXXX), auto-assigned
     collabId: {
         type: String,

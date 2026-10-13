@@ -72,6 +72,7 @@
                 <li data-tab="create-ad"><i class="fas fa-plus-circle"></i> Create Ad</li>
                 <li data-tab="apliiq-products"><i class="fas fa-shirt"></i> Apliiq Products</li>
                 <li data-tab="warehouse-issues"><i class="fas fa-triangle-exclamation"></i> Warehouse Issues</li>
+                <li data-tab="payouts"><i class="fas fa-money-bill-wave"></i> Payouts <span id="payoutCount" class="badge">0</span></li>
                 <li data-tab="settings"><i class="fas fa-cog"></i> Settings</li>
             </ul>
             <div class="sidebar-help">
@@ -367,6 +368,19 @@
                 <h2>Warehouse Discrepancies</h2>
                 <p class="ops-meta">Review shortages, overages, damage, and receiving errors reported by Apliiq.</p>
                 <div id="warehouseIssuesList"></div>
+            </section>
+
+            <section id="payouts-tab" class="tab-content">
+                <h2>Creator payouts</h2>
+                <p style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:1rem;">A creator asked for their token earnings as money. Paying sends a Stripe transfer from Wordeth's Stripe balance to their connected account; Stripe pays their bank from there. Declining puts the tokens back in their earnings.</p>
+                <div class="filter-tabs" id="payoutFilters">
+                    <button class="filter-tab active" data-admin-action="payouts" data-status="requested">Waiting</button>
+                    <button class="filter-tab" data-admin-action="payouts" data-status="paid">Paid</button>
+                    <button class="filter-tab" data-admin-action="payouts" data-status="failed">Failed</button>
+                    <button class="filter-tab" data-admin-action="payouts" data-status="rejected">Declined</button>
+                </div>
+                <p id="payoutStatus" role="status" aria-live="polite" style="display:none; margin:0.75rem 0; font-weight:600;"></p>
+                <div id="payoutList" class="list"></div>
             </section>
 
             <section id="settings-tab" class="tab-content">

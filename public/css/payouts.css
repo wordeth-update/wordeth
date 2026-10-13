@@ -1,0 +1,39 @@
+/* Your earnings: tokens becoming money */
+.payouts-page { max-width: 760px; margin: 0 auto; padding: 5.5rem 1.5rem 4rem; font-family: var(--font-body, 'Outfit', sans-serif); }
+.payouts-page [hidden] { display: none !important; }
+.payouts-page .eyebrow { color: var(--mint, #00E5A8); font-size: 0.74rem; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; margin-bottom: 0.6rem; }
+.payouts-page h1 { font-family: var(--font-display, 'Unbounded', sans-serif); font-size: 2.2rem; font-weight: 800; letter-spacing: -0.03em; color: #fff; margin-bottom: 0.6rem; }
+.payouts-page .lede { color: rgba(255,255,255,0.72); line-height: 1.6; margin-bottom: 1.5rem; }
+.pay-note { margin: 0 0 1.5rem; padding: 0.9rem 1.2rem; border-radius: 14px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.05); color: #fff; line-height: 1.5; }
+.pay-note.ok { border-color: rgba(0,229,168,0.45); background: rgba(0,229,168,0.1); }
+.pay-note.bad { border-color: rgba(239,68,68,0.5); background: rgba(239,68,68,0.1); }
+.earn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.75rem; }
+.earn-card { padding: 1.4rem; border-radius: 18px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); display: flex; flex-direction: column; gap: 0.3rem; }
+.earn-card.primary { border-color: rgba(0,229,168,0.3); background: linear-gradient(to bottom, rgba(0,229,168,0.08), rgba(139,47,255,0.06)); }
+.earn-label { color: rgba(255,255,255,0.6); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; }
+.earn-big { font-family: var(--font-display, 'Unbounded', sans-serif); font-size: 2rem; font-weight: 800; color: #fff; letter-spacing: -0.02em; }
+.earn-card.primary .earn-big { color: var(--mint, #00E5A8); }
+.earn-sub { color: rgba(255,255,255,0.66); font-size: 0.86rem; }
+.earn-sub strong { color: #fff; }
+.steps { display: grid; gap: 1rem; margin-bottom: 2rem; }
+.step { padding: 1.4rem; border-radius: 18px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); }
+.step.done { border-color: rgba(0,229,168,0.3); }
+.step-head { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+.step-num { width: 1.7rem; height: 1.7rem; border-radius: 50%; background: var(--mint, #00E5A8); color: #060409; font-weight: 800; font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center; }
+.step h2 { font-family: var(--font-display, 'Unbounded', sans-serif); font-size: 1.05rem; color: #fff; margin: 0; }
+.step-state { margin-left: auto; font-size: 0.76rem; font-weight: 700; color: rgba(255,255,255,0.55); }
+.step.done .step-state { color: var(--mint, #00E5A8); }
+.step p { color: rgba(255,255,255,0.7); line-height: 1.55; font-size: 0.92rem; margin-bottom: 1rem; }
+.btn { display: inline-block; min-width: 11rem; padding: 0.8rem 1.5rem; border-radius: 50px; border: 0; cursor: pointer; font-weight: 800; font-size: 0.95rem; background: linear-gradient(135deg, var(--mint, #00E5A8), #00A87D); color: #060409; }
+.btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+.btn.ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.25); min-width: 0; padding: 0.6rem 1.2rem; font-size: 0.85rem; }
+.open-request { margin-top: 1rem; padding: 1rem; border-radius: 12px; background: rgba(0,229,168,0.08); border: 1px solid rgba(0,229,168,0.3); }
+.open-request p { margin-bottom: 0.75rem; color: #fff; }
+.history h2 { font-family: var(--font-display, 'Unbounded', sans-serif); font-size: 1.1rem; color: #fff; margin-bottom: 0.75rem; }
+.history table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.history th, .history td { text-align: left; padding: 0.6rem 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); }
+.history th { color: rgba(255,255,255,0.5); font-weight: 700; font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.status-paid { color: var(--mint, #00E5A8); font-weight: 700; }
+.status-rejected, .status-failed { color: #fca5a5; font-weight: 700; }
+.fine { margin-top: 2rem; color: rgba(255,255,255,0.5); font-size: 0.8rem; line-height: 1.55; }
+@media (max-width: 560px) { .earn-grid { grid-template-columns: 1fr; } .payouts-page h1 { font-size: 1.7rem; } .step-state { margin-left: 0; } }

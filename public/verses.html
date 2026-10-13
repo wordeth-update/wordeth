@@ -144,12 +144,12 @@
                             <span class="token-balance-amount" id="token-balance-amount">0</span>
                             <span class="token-balance-label">tokens</span>
                         </div>
-                        <div class="token-earnings-display" id="token-earnings-display" style="display:none;">
+                        <a class="token-earnings-display" id="token-earnings-display" href="/payouts.html" style="display:none;" title="Cash out your earnings">
                             <i class="fas fa-hand-holding-usd"></i>
                             <span class="token-earnings-amount" id="token-earnings-amount">0</span>
                             <span class="token-earnings-label">earned</span>
                             <span class="token-earnings-value" id="token-earnings-value">($0.00)</span>
-                        </div>
+                        </a>
                     </div>
                     <div class="hero-actions">
                         <button class="create-room-btn" id="create-room">
@@ -617,24 +617,9 @@
                 <h3><i class="fas fa-coins"></i> Buy Tokens</h3>
                 <button class="close-modal">&times;</button>
             </div>
-            <p class="modal-subtitle">Get extra tokens to access gated rooms.</p>
-            <div class="token-packs-grid">
-                <button class="token-pack-option" data-pack-id="pack_25">
-                    <div class="token-pack-amount">25</div>
-                    <div class="token-pack-label">tokens</div>
-                    <div class="token-pack-price">$1.99</div>
-                </button>
-                <button class="token-pack-option" data-pack-id="pack_50">
-                    <div class="token-pack-amount">50</div>
-                    <div class="token-pack-label">tokens</div>
-                    <div class="token-pack-price">$3.49</div>
-                </button>
-                <button class="token-pack-option featured" data-pack-id="pack_100">
-                    <div class="token-pack-best">Best Value</div>
-                    <div class="token-pack-amount">100</div>
-                    <div class="token-pack-label">tokens</div>
-                    <div class="token-pack-price">$5.99</div>
-                </button>
+            <p class="modal-subtitle">Tokens open paid rooms and replays. Bigger packs cost less per token. Checkout is on Stripe's secure page.</p>
+            <div class="token-packs-grid" id="token-packs-grid" aria-live="polite">
+                <p class="modal-subtitle">Loading packs…</p>
             </div>
             <div class="token-current-balance">
                 Your balance: <strong id="modal-token-balance">0</strong> tokens

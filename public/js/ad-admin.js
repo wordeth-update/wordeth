@@ -163,6 +163,9 @@ class AdAdmin {
             case 'warehouse-issues':
                 this.loadWarehouseIssues();
                 break;
+            case 'payouts':
+                this.loadPayouts('requested');
+                break;
         }
     }
 
@@ -879,6 +882,73 @@ class AdAdmin {
         }
     }
 
+    /** Payout requests by status. */
+    async loadPayouts(status, button) {
+        const list = document.getElementById('payoutList');
+        if (!list) return;
+        if (button) {
+            document.querySelectorAll('#payoutFilters .filter-tab').forEach((b) => b.classList.toggle('active', b === button));
+        }
+        list.innerHTML = '<p style="color:var(--text-secondary);">Loading…</p>';
+        try {
+            const res = await fetch(apiUrl('/api/payouts/admin/requests?status=' + encodeURIComponent(status || 'requested')), {
+                headers: { 'Authorization': `Bearer ${this.token}` }
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Could not load payouts');
+            const rows = data.requests || [];
+            const count = document.getElementById('payoutCount');
+            if (count && status === 'requested') count.textContent = String(rows.length);
+            if (rows.length === 0) { list.innerHTML = '<p style="color:var(--text-secondary);">Nothing here.</p>'; return; }
+            list.innerHTML = rows.map((r) => {
+                const who = r.user ? `${escapeHtml(r.user.name || '')} &lt;${escapeHtml(r.user.email || '')}&gt;` : 'Unknown account';
+                const when = new Date(r.requestedAt).toLocaleString();
+                const open = r.status === 'requested' || r.status === 'failed';
+                const ready = r.user && r.user.payoutsEnabled;
+                return `
+                    <div class="list-item">
+                        <div>
+                            <strong>$${Number(r.amountUsd).toFixed(2)}</strong> for ${Number(r.tokens).toLocaleString()} tokens — ${who}
+                            <div style="color:var(--text-secondary); font-size:0.82rem;">Asked ${when}${r.paidAt ? ` · sent ${new Date(r.paidAt).toLocaleString()}` : ''}${r.error ? ` · <span style="color:#f85149;">${escapeHtml(r.error)}</span>` : ''}${r.note ? ` · ${escapeHtml(r.note)}` : ''}${open && !ready ? ' · <span style="color:#f0a040;">Stripe has not enabled their account yet</span>' : ''}</div>
+                        </div>
+                        ${open ? `<div class="list-actions">
+                            <button class="action-btn" data-admin-action="pay-payout" data-id="${r.id}">Pay $${Number(r.amountUsd).toFixed(2)}</button>
+                            <button class="action-btn btn-danger" data-admin-action="reject-payout" data-id="${r.id}">Decline</button>
+                        </div>` : ''}
+                    </div>`;
+            }).join('');
+        } catch (error) {
+            list.innerHTML = `<p style="color:#f85149;">${escapeHtml(error.message)}</p>`;
+        }
+    }
+
+    async decidePayout(id, action) {
+        const status = document.getElementById('payoutStatus');
+        const say = (text, ok) => { status.textContent = text; status.style.color = ok ? '#3EB489' : '#f85149'; status.style.display = 'block'; };
+        let note = '';
+        if (action === 'reject') {
+            note = window.prompt('Tell the creator why (they will see this):', '') ;
+            if (note === null) return;
+        } else if (!window.confirm('Send this payout now? Stripe transfers cannot be taken back.')) {
+            return;
+        }
+        document.querySelectorAll(`[data-id="${id}"][data-admin-action$="-payout"]`).forEach((b) => { b.disabled = true; });
+        try {
+            const res = await fetch(apiUrl(`/api/payouts/admin/requests/${id}/${action}`), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}` },
+                body: JSON.stringify({ note })
+            });
+            let data = {};
+            try { data = await res.json(); } catch (parseError) { data = {}; }
+            say(res.ok ? data.message : (data.message || `The server refused that (${res.status}).`), res.ok);
+        } catch (error) {
+            say('That did not get through. Check the connection and try again.', false);
+        }
+        const active = document.querySelector('#payoutFilters .filter-tab.active');
+        this.loadPayouts(active ? active.dataset.status : 'requested');
+    }
+
     async handleUserPlus(e) {
         e.preventDefault();
         const form = e.target;
@@ -1104,6 +1174,9 @@ document.addEventListener('click', (e) => {
         case 'resume-ad': adAdmin.setAdStatus(id, 'active'); break;
         case 'edit-ad': adAdmin.editAd(id); break;
         case 'delete-ad': adAdmin.deleteAd(id); break;
+        case 'payouts': adAdmin.loadPayouts(button.dataset.status, button); break;
+        case 'pay-payout': adAdmin.decidePayout(id, 'pay'); break;
+        case 'reject-payout': adAdmin.decidePayout(id, 'reject'); break;
         default: break;
     }
 });

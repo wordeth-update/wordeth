@@ -62,7 +62,7 @@
                     ['50 tokens with the plan', cycle === 'yearly' ? 'each year it renews' : 'every month it renews'],
                     ['Everything in User', '']
                 ],
-                aside: cycle === 'yearly' ? null : '50 tokens alone are $3.49. The plan is $3.99.',
+                aside: cycle === 'yearly' ? null : 'Bought as a pack, 50 tokens would be about $3.75. The plan is $3.99.',
                 button: 'Get User+',
                 flag: 'Paid rooms'
             };

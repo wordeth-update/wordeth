@@ -4139,3 +4139,8 @@ body.in-room * {
 }
 .invite-price-tag.paid { color: #fbbf24; background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.35); }
 .invite-price-tag.free-pass { color: #34d399; background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.35); }
+
+/* Pack price per token, under the pack price */
+.token-pack-per { font-size: 0.7rem; color: rgba(255, 255, 255, 0.5); margin-top: 0.2rem; }
+a.token-earnings-display { text-decoration: none; color: inherit; }
+a.token-earnings-display:hover .token-earnings-value { text-decoration: underline; }

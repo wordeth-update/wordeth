@@ -50,7 +50,7 @@ async function loadEarningsData(token, profile, accountType) {
     var tokenEarnings = 0;
     var tokenValue = 0;
 
-    var supportsTokenEarnings = ['artist', 'designer', 'label', 'creator'].includes(accountType);
+    var supportsTokenEarnings = true; // anyone can earn: a host charging at the door as much as an artist
 
     var fetches = [];
     fetches.push(

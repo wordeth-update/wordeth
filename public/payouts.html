@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Earnings | Wordeth</title>
+    <meta name="description" content="Cash out the tokens you have earned on Wordeth.">
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/enhanced.css">
+    <link rel="stylesheet" href="css/payouts.css">
+    <link rel="stylesheet" href="css/cookie-consent.css">
+    <link rel="stylesheet" href="css/mini-player.css">
+    <link rel="stylesheet" href="css/tournaments.css">
+</head>
+<body>
+    <nav class="main-nav">
+        <div class="nav-logo">
+            <a href="/"><img src="images/logo.png" alt="Wordeth Logo" class="logo"></a>
+        </div>
+        <div class="nav-links">
+            <a href="verses.html">Verses</a>
+            <a href="verses-tournaments.html" class="nav-link-tournament tournament-nav-item" style="display:none;"><i class="fas fa-trophy trophy-icon"></i> Tournaments</a>
+            <a href="lyrics.html">Lyrics</a>
+            <a href="merch.html">Merch</a>
+            <a href="pricing.html">Pricing</a>
+        </div>
+        <div class="search-container">
+            <input type="text" placeholder="Search a song..." class="search-input">
+            <button class="search-button">
+                <img src="assets/mic-icon.svg" alt="Search" class="mic-icon">
+            </button>
+        </div>
+        <div class="nav-auth">
+            <a href="/signin.html" class="nav-signin-btn">Sign In</a>
+        </div>
+        <button class="menu-toggle" id="menuToggle">
+            <span></span><span></span><span></span>
+        </button>
+    </nav>
+
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-content">
+            <div class="mobile-menu-header">
+                <img src="images/logo.png" alt="Wordeth Logo" class="mobile-logo">
+                <button class="mobile-menu-close" id="mobileMenuClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mobile-menu-links">
+                <a href="verses.html" class="mobile-menu-link"><i class="fas fa-headphones"></i><span>Verses</span></a>
+                <a href="verses-tournaments.html" class="mobile-menu-link tournament-nav-item" style="display:none;"><i class="fas fa-trophy"></i><span>Tournaments</span></a>
+                <a href="lyrics.html" class="mobile-menu-link"><i class="fas fa-music"></i><span>Lyrics</span></a>
+                <a href="merch.html" class="mobile-menu-link"><i class="fas fa-tshirt"></i><span>Merch</span></a>
+                <a href="pricing.html" class="mobile-menu-link"><i class="fas fa-tags"></i><span>Pricing</span></a>
+            </div>
+            <div class="mobile-menu-auth">
+                <a href="/signin.html" class="mobile-signin-btn"><i class="fas fa-user"></i><span>Sign In</span></a>
+            </div>
+        </div>
+    </div>
+
+    <main>
+    <div class="payouts-page">
+        <p class="eyebrow">Your earnings</p>
+        <h1>Tokens in, money out.</h1>
+        <p class="lede">Every token a fan spends on your room or replay is credited to you. When you have enough, ask for it as money and it goes to your bank through Stripe.</p>
+
+        <div class="pay-note" id="payoutNote" role="status" hidden></div>
+
+        <div class="earn-grid">
+            <div class="earn-card primary">
+                <span class="earn-label">Earned so far</span>
+                <span class="earn-big" id="earnTokens">—</span>
+                <span class="earn-sub">tokens · worth <strong id="earnValue">—</strong></span>
+            </div>
+            <div class="earn-card">
+                <span class="earn-label">Payouts start at</span>
+                <span class="earn-big" id="earnMinimum">—</span>
+                <span class="earn-sub"><span id="earnMinTokens">—</span> tokens at <span id="earnRate">—</span> a token</span>
+            </div>
+        </div>
+
+        <div class="steps">
+            <div class="step" id="stepConnect">
+                <div class="step-head"><span class="step-num">1</span><h2>Where the money goes</h2><span class="step-state" id="connectState"></span></div>
+                <p id="connectText">Set this up once. Stripe takes your identity, bank account and tax details on its own pages; Wordeth never sees them.</p>
+                <button class="btn" id="connectBtn" data-call="payouts.connect">Set up payouts</button>
+            </div>
+            <div class="step" id="stepRequest">
+                <div class="step-head"><span class="step-num">2</span><h2>Ask for a payout</h2><span class="step-state" id="requestState"></span></div>
+                <p id="requestText">Everything you have earned, as one payment. The tokens leave your earnings when you ask and come back if the payout is declined.</p>
+                <button class="btn" id="requestBtn" data-call="payouts.request" disabled>Request payout</button>
+                <div class="open-request" id="openRequest" hidden>
+                    <p><strong id="openAmount"></strong> requested on <span id="openDate"></span>. It is reviewed and sent within a few days; Stripe then pays your bank on its schedule.</p>
+                    <button class="btn ghost" id="cancelBtn" data-call="payouts.cancel">Cancel this request</button>
+                </div>
+            </div>
+        </div>
+
+        <section class="history" id="history" hidden>
+            <h2>Past payouts</h2>
+            <table>
+                <thead><tr><th>Asked</th><th>Tokens</th><th>Amount</th><th>Status</th></tr></thead>
+                <tbody id="historyBody"></tbody>
+            </table>
+        </section>
+
+        <p class="fine">Payouts are reviewed by Wordeth and sent as Stripe transfers. Stripe handles bank details and, where required, tax forms. The rate is 3¢ a token.</p>
+    </div>
+
+    </main>
+    <script src="js/tournament-nav.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/nav-auth.js?v=20260904"></script>
+    <script src="js/main.js"></script>
+    <script src="js/cookie-consent.js"></script>
+    <script src="js/payouts.js"></script>
+        <footer class="site-footer">
+          <div class="footer-inner">
+              <div class="footer-top-row">
+                  <a href="/" class="footer-logo-link"><img src="images/logo.png" alt="Wordeth"></a>
+                  <nav class="footer-nav">
+                      <div class="footer-group">
+                          <button class="footer-heading" aria-expanded="false">Explore <i class="fas fa-chevron-down"></i></button>
+                          <div class="footer-links">
+                              <a href="/verses.html">Verses</a>
+                              <a href="/lyrics.html">Lyrics</a>
+                              <a href="/merch.html">Merch</a>
+                              <a href="/pricing.html">Pricing</a>
+                          </div>
+                      </div>
+                      <div class="footer-group">
+                          <button class="footer-heading" aria-expanded="false">Account <i class="fas fa-chevron-down"></i></button>
+                          <div class="footer-links">
+                              <a href="/signin.html">Sign In</a>
+                              <a href="/signup.html">Sign Up</a>
+                              <a href="/profile.html">Profile</a>
+                              <a href="/creator-register.html">Creator Hub</a>
+                          </div>
+                      </div>
+                      <div class="footer-group">
+                          <button class="footer-heading" aria-expanded="false">Legal <i class="fas fa-chevron-down"></i></button>
+                          <div class="footer-links">
+                              <a href="/terms.html">Terms</a>
+                              <a href="/privacy.html">Privacy</a>
+                              <a href="/ad-admin.html">Advertise</a>
+                          </div>
+                      </div>
+                  </nav>
+                  <div class="footer-social">
+                      <a href="javascript:void(0)" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                      <a href="javascript:void(0)" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                      <a href="javascript:void(0)" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                      <a href="javascript:void(0)" aria-label="Spotify"><i class="fab fa-spotify"></i></a>
+                  </div>
+              </div>
+              <div class="footer-bottom-row">
+                  <span>&copy; 2025 Wordeth</span>
+                  <a href="#" data-consent-revoke>Cookie Preferences</a>
+              </div>
+          </div>
+      </footer>
+    <script src="js/verse-mini-player.js"></script>
+    <script src="js/spa-router.js"></script>
+</body>
+</html>

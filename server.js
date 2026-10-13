@@ -627,6 +627,7 @@ app.use('/api/creator', creatorRoutes); // Independent artist/designer
 app.use('/api/tournaments', tournamentRoutes); // Verses Tournaments
 app.use('/api/agora', agoraRoutes); // Agora RTC tokens
 app.use('/api/tokens', tokenRoutes); // Token economy
+app.use('/api/payouts', require('./routes/payouts')); // Token earnings paid out
 app.use('/api/boost', boostRoutes); // Token boost for replays
 app.use('/api/ratings', ratingsRoutes); // Room ratings
 app.use('/api/replays', replayRoutes); // Replay system
