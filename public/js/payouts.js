@@ -33,6 +33,7 @@
     async function load() {
         try {
             const s = await call('/api/payouts/status');
+            if (typeof s.tokenEarnings !== 'number') throw new Error('Your earnings could not be read right now. Try again in a minute.');
             $('earnTokens').textContent = Number(s.tokenEarnings).toLocaleString();
             $('earnValue').textContent = money(s.earningsValue);
             $('earnMinimum').textContent = '$' + s.minimumUsd;
