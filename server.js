@@ -880,21 +880,25 @@ app.get('/room/:roomId', ogCrawlerHeaders, async (req, res) => {
         ? `${req.get('x-forwarded-proto')}://${req.get('host')}`
         : `${req.protocol}://${req.get('host')}`;
     const ogImageUrl = `${baseUrl}/og-image/${encodeURIComponent(roomId)}?name=${encodeURIComponent(queryName)}&host=${encodeURIComponent(queryHost)}`;
-    const joinUrl = `${baseUrl}/verses.html?room=${encodeURIComponent(roomId)}`;
 
-    const ua = (req.get('user-agent') || '').toLowerCase();
-    const isCrawler = /bot|crawl|spider|preview|fetch|facebookexternalhit|twitterbot|whatsapp|telegram|slack|discord|imessagebot|applebot|linkedinbot|skype|viber|line\/|cfnetwork|dataprovider|urlpreview|embedly|quora|outbrain|pinterest|tumblr|vkshare|w3c_validator/i.test(ua);
-
-    if (!isCrawler) {
-        res.setHeader('Cache-Control', 'no-store, no-cache');
-        res.setHeader('CDN-Cache-Control', 'no-store');
-        res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
-        const qs = new URLSearchParams();
-        qs.set('room', roomId);
-        if (req.query.name) qs.set('name', req.query.name);
-        if (req.query.host) qs.set('host', req.query.host);
-        return res.redirect(302, `/verses.html?${qs.toString()}`);
-    }
+    /*
+     * One page for everyone. It used to send browsers straight on to the
+     * room with a 302 and keep the card for link crawlers only. Facebook
+     * checks for exactly that: after its crawler reads the card it fetches
+     * the link again as an ordinary browser, follows the redirect, and
+     * takes the title and picture from where it lands, which was the
+     * generic Verses page. Now a person and a crawler get the same page;
+     * the person is moved on by the page itself a moment later.
+     */
+    const joinQs = new URLSearchParams();
+    joinQs.set('room', roomId);
+    if (req.query.name) joinQs.set('name', req.query.name);
+    if (req.query.host) joinQs.set('host', req.query.host);
+    const humanJoinUrl = `/verses.html?${joinQs.toString()}`;
+    const inviteQs = new URLSearchParams();
+    if (queryName) inviteQs.set('name', queryName);
+    if (queryHost) inviteQs.set('host', queryHost);
+    const canonicalUrl = `${baseUrl}/room/${encodeURIComponent(roomId)}${inviteQs.toString() ? `?${inviteQs.toString()}` : ''}`;
 
     // Price badge HTML — shown only for paid rooms
     const priceBadgeHtml = tokenPrice > 0
@@ -917,18 +921,20 @@ app.get('/room/:roomId', ogCrawlerHeaders, async (req, res) => {
     <meta property="og:image:type" content="image/jpeg">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:url" content="${baseUrl}/room/${encodeURIComponent(roomId)}">
+    <meta property="og:url" content="${canonicalUrl}">
     <meta property="og:site_name" content="Wordeth">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="${roomName}">
     <meta name="twitter:description" content="${description}">
     <meta name="twitter:image" content="${ogImageUrl}">
-    <meta http-equiv="refresh" content="2;url=${joinUrl}">
+    <meta http-equiv="refresh" content="1;url=${humanJoinUrl}">
+    <script>setTimeout(function(){ window.location.replace(${JSON.stringify(humanJoinUrl)}); }, 150);</script>
 </head>
 <body style="background:#1a1033;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
     <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;">
         <p style="margin:0;font-size:1.1rem;opacity:0.85;">Joining <strong>${roomName}</strong>…</p>
         ${priceBadgeHtml}
+        <a href="${humanJoinUrl}" style="margin-top:14px;color:#00E5A8;font-weight:600;">Tap here if nothing happens</a>
     </div>
 </body>
 </html>`);
