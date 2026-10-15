@@ -1112,7 +1112,7 @@
                 var joined = user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : '';
                 var safeAvatar = (user.avatar && (user.avatar.startsWith('data:image/') || user.avatar.startsWith('assets/') || user.avatar.startsWith('http') || user.avatar.startsWith('/api/'))) ? user.avatar : 'assets/default-avatar.png';
                 var isSelf = curId && curId === user._id;
-                var followHtml = (!isSelf && tkn) ? '<button class="vpv-follow-btn" id="vpv-follow-btn"><i class="fas fa-user-plus"></i> Follow</button>' : '';
+                var followHtml = (!isSelf && tkn) ? '<button class="vpv-follow-btn" id="vpv-follow-btn"><i class="fas fa-eye"></i> Watch</button>' : '';
                 var roomHtml = '';
                 if (user.showRoomHistory && user.roomHistory && user.roomHistory.length > 0) {
                     var items = user.roomHistory.slice(0,10).map(function(r) {
@@ -1122,7 +1122,7 @@
                     }).join('');
                     roomHtml = '<div class="vpv-rooms-section"><h4><i class="fas fa-headphones"></i> Recent Rooms</h4>' + items + '</div>';
                 }
-                body.innerHTML = '<div class="user-profile-view"><div class="user-profile-view-avatar"><img id="vpv-img" src="assets/default-avatar.png" alt="Profile"></div><h2 id="vpv-name"></h2><p class="user-profile-view-bio" id="vpv-bio"></p>' + followHtml + '<div class="user-profile-view-stats"><div class="stat"><span class="stat-value">' + (parseInt(user.followingCount)||0) + '</span><span class="stat-label">Following</span></div><div class="stat"><span class="stat-value">' + (parseInt(user.followersCount)||0) + '</span><span class="stat-label">Followers</span></div><div class="stat"><span class="stat-value">' + (parseInt(user.searchCount)||0) + '</span><span class="stat-label">Searches</span></div></div>' + (joined ? '<p class="user-profile-view-joined">Joined ' + joined + '</p>' : '') + roomHtml + '</div>';
+                body.innerHTML = '<div class="user-profile-view"><div class="user-profile-view-avatar"><img id="vpv-img" src="assets/default-avatar.png" alt="Profile"></div><h2 id="vpv-name"></h2><p class="user-profile-view-bio" id="vpv-bio"></p>' + followHtml + '<div class="user-profile-view-stats"><div class="stat"><span class="stat-value">' + (parseInt(user.followingCount)||0) + '</span><span class="stat-label">Watching</span></div><div class="stat"><span class="stat-value">' + (parseInt(user.followersCount)||0) + '</span><span class="stat-label">Watchers</span></div><div class="stat"><span class="stat-value">' + (parseInt(user.searchCount)||0) + '</span><span class="stat-label">Searches</span></div></div>' + (joined ? '<p class="user-profile-view-joined">Joined ' + joined + '</p>' : '') + roomHtml + '</div>';
                 var n = document.getElementById('vpv-name'); if(n) n.textContent = user.name || 'Unknown';
                 var b = document.getElementById('vpv-bio'); if(b) b.textContent = user.bio || 'No bio yet';
                 var i = document.getElementById('vpv-img'); if(i) { i.src = safeAvatar; i.onerror = function(){ this.src='assets/default-avatar.png'; }; }
@@ -1137,10 +1137,10 @@
                             if (!r.ok) throw new Error('fail');
                             return r.json();
                         }).then(function(d) {
-                            fb.innerHTML = '<i class="fas fa-check"></i> Following';
+                            fb.innerHTML = '<i class="fas fa-check"></i> Watching';
                             fb.classList.add('following');
                         }).catch(function() {
-                            fb.innerHTML = '<i class="fas fa-user-plus"></i> Follow';
+                            fb.innerHTML = '<i class="fas fa-eye"></i> Watch';
                             fb.disabled = false;
                         });
                     });

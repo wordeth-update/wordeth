@@ -93,7 +93,7 @@ router.get('/profile', auth, async (req, res) => {
 router.get('/profile/:id', async (req, res) => {
     try {
         const user = await User.findById(req.params.id)
-            .select('name bio avatar createdAt following followers searchHistory showRoomHistory roomHistory extendedBio profilePhotos musicSnippet favoriteLyric accountType');
+            .select('name bio avatar createdAt following followers searchHistory showRoomHistory roomHistory extendedBio profilePhotos musicSnippet favoriteLyric accountType customerAccess');
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -108,6 +108,8 @@ router.get('/profile/:id', async (req, res) => {
             // One number for the profile: everyone connected in either direction.
             connectionsCount: new Set([...(user.following || []), ...(user.followers || [])].map(String)).size,
             searchCount: user.searchHistory?.length || 0,
+            // How long they have been in the cipher: time spent in the app, in seconds.
+            cipherSeconds: Math.max(0, Number(user.customerAccess?.activeUserSeconds) || 0),
             showRoomHistory: user.showRoomHistory || false
         };
         if (user.showRoomHistory) {

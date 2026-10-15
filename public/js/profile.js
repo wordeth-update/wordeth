@@ -505,7 +505,7 @@ function _initProfile() {
                                     <p>${escHtml(u.bio || 'No bio')}</p>
                                 </div>
                                 <button class="follow-btn" data-user-id="${u._id}">
-                                    <i class="fas fa-user-plus"></i> Follow
+                                    <i class="fas fa-eye"></i> Watch
                                 </button>
                             </div>
                         `).join('');
@@ -522,9 +522,9 @@ function _initProfile() {
                                 if (!res) return;
                                 const data = await res.json();
                                 if (res.ok) {
-                                    btn.innerHTML = '<i class="fas fa-check"></i> Following';
+                                    btn.innerHTML = '<i class="fas fa-check"></i> Watching';
                                     btn.classList.add('following');
-                                    showToast('Following!');
+                                    showToast('Watching.');
                                     const profileRes = await apiFetch('/api/user/profile');
                                     if (profileRes && profileRes.ok) {
                                         currentUser = await profileRes.json();
@@ -533,13 +533,13 @@ function _initProfile() {
                                 } else {
                                     showToast(data.message || 'Could not follow', true);
                                     btn.disabled = false;
-                                    btn.innerHTML = '<i class="fas fa-user-plus"></i> Follow';
+                                    btn.innerHTML = '<i class="fas fa-eye"></i> Watch';
                                 }
                             } catch (err) {
                                 console.error('Follow error:', err);
                                 showToast('Network error. Please check your connection.', true);
                                 btn.disabled = false;
-                                btn.innerHTML = '<i class="fas fa-user-plus"></i> Follow';
+                                btn.innerHTML = '<i class="fas fa-eye"></i> Watch';
                             }
                         });
                     });
@@ -1024,7 +1024,7 @@ function viewUserProfile(userId) {
             const safeAvatar = (user.avatar && (user.avatar.startsWith('data:image/') || user.avatar.startsWith('assets/') || user.avatar.startsWith('http') || user.avatar.startsWith('/api/'))) ? user.avatar : 'assets/default-avatar.png';
 
             const isSelf = currentUserId && currentUserId === user._id;
-            const followBtnHtml = (!isSelf && token) ? `<button class="vpv-follow-btn" id="vpv-follow-btn" data-uid="${esc(user._id)}"><i class="fas fa-user-plus"></i> Follow</button>` : '';
+            const followBtnHtml = (!isSelf && token) ? `<button class="vpv-follow-btn" id="vpv-follow-btn" data-uid="${esc(user._id)}"><i class="fas fa-eye"></i> Watch</button>` : '';
 
             let roomHistoryHtml = '';
             if (user.showRoomHistory && user.roomHistory && user.roomHistory.length > 0) {
@@ -1045,8 +1045,8 @@ function viewUserProfile(userId) {
                     <p class="user-profile-view-bio" id="user-profile-view-bio"></p>
                     ${followBtnHtml}
                     <div class="user-profile-view-stats">
-                        <div class="stat"><span class="stat-value">${parseInt(user.followingCount) || 0}</span><span class="stat-label">Following</span></div>
-                        <div class="stat"><span class="stat-value">${parseInt(user.followersCount) || 0}</span><span class="stat-label">Followers</span></div>
+                        <div class="stat"><span class="stat-value">${parseInt(user.followingCount) || 0}</span><span class="stat-label">Watching</span></div>
+                        <div class="stat"><span class="stat-value">${parseInt(user.followersCount) || 0}</span><span class="stat-label">Watchers</span></div>
                         <div class="stat"><span class="stat-value">${parseInt(user.searchCount) || 0}</span><span class="stat-label">Searches</span></div>
                     </div>
                     ${joined ? `<p class="user-profile-view-joined">Joined ${esc(joined)}</p>` : ''}
@@ -1073,14 +1073,14 @@ function viewUserProfile(userId) {
                         });
                         const data = await res.json();
                         if (res.ok) {
-                            followBtn.innerHTML = '<i class="fas fa-check"></i> Following';
+                            followBtn.innerHTML = '<i class="fas fa-check"></i> Watching';
                             followBtn.classList.add('following');
                         } else {
                             followBtn.innerHTML = data.message || 'Error';
                             followBtn.disabled = false;
                         }
                     } catch(e) {
-                        followBtn.innerHTML = '<i class="fas fa-user-plus"></i> Follow';
+                        followBtn.innerHTML = '<i class="fas fa-eye"></i> Watch';
                         followBtn.disabled = false;
                     }
                 });
