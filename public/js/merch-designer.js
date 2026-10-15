@@ -29,10 +29,14 @@ var MerchDesigner = (function() {
 
     var TEXT_COLORS = ['#ffffff', '#000000', '#00ffa3', '#ff4444', '#ffd700', '#3b82f6', '#a855f7', '#ec4899', '#f97316', '#14b8a6'];
 
-    var FONTS = [
-        'Inter', 'Arial', 'Georgia', 'Courier New', 'Impact', 'Comic Sans MS',
-        'Trebuchet MS', 'Verdana', 'Palatino', 'Garamond'
-    ];
+    // The same families the app carries (css/fonts.css); 'Inter' is the plain default.
+    var FONTS = ['Inter'].concat(["Anton", "Bebas Neue", "Bungee", "Black Ops One", "Rubik Mono One", "Monoton", "Shrikhand", "Permanent Marker", "Rubik Glitch", "Abril Fatface", "Pacifico", "Playfair Display", "Fraunces", "Instrument Serif", "Unbounded", "Space Grotesk", "Syne", "Caveat", "Space Mono"]);
+
+    /** Fonts drawn on a canvas must be loaded first, or the first word lands in the fallback face. */
+    function loadDesignFonts() {
+        if (!document.fonts || !document.fonts.load) return Promise.resolve();
+        return Promise.all(FONTS.map(function(f) { return document.fonts.load('24px "' + f + '"').catch(function() {}); }));
+    }
 
     var state = {
         product: PRODUCTS[0],
@@ -222,6 +226,8 @@ var MerchDesigner = (function() {
             selection: true,
             preserveObjectStacking: true
         });
+        // Draw again once the faces have arrived, so saved text is not in the fallback font.
+        loadDesignFonts().then(function() { if (state.canvas) state.canvas.requestRenderAll(); });
 
         state.canvas.on('selection:created', onSelectionChange);
         state.canvas.on('selection:updated', onSelectionChange);
@@ -348,7 +354,7 @@ var MerchDesigner = (function() {
 
         var fontSelect = document.getElementById('fontSelect');
         if (fontSelect) {
-            fontSelect.innerHTML = FONTS.map(function(f) { return '<option value="' + f + '">' + f + '</option>'; }).join('');
+            fontSelect.innerHTML = FONTS.map(function(f) { return '<option value="' + f + '" style="font-family:\'' + f + '\'">' + f + '</option>'; }).join('');
         }
 
         var sizeRange = document.getElementById('fontSizeRange');
