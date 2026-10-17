@@ -940,6 +940,11 @@ app.get('/room/:roomId', ogCrawlerHeaders, async (req, res) => {
 </html>`);
 });
 
+// The app and the stores link to these without the extension.
+app.get(['/terms', '/privacy', '/support'], (req, res) => {
+    res.redirect(301, `${req.path}.html`);
+});
+
 app.get('/join/:roomId', (req, res) => {
     const roomId = req.params.roomId;
     const name = req.query.name || '';
