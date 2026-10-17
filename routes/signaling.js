@@ -1559,6 +1559,9 @@ function setupSignaling(io) {
             if (imageData.length > 2 * 1024 * 1024 || !/^data:image\/(jpeg|png|webp);base64,/.test(imageData)) return reply({ ok: false, error: 'That photo is too large to share here.' });
             const room = inRoom(roomId);
             if (!room) return reply({ ok: false, error: 'You are not in this room any more.' });
+            // Sharing is for the stage. The crowd listens, chats, raises a hand and votes.
+            const who = room.participants.get(socket.id);
+            if (!who || !(who.isHost || who.isSpeaker || who.isCoHost)) return reply({ ok: false, error: 'Sharing a photo is for the stage. Raise a hand first.' });
             socket.to(roomId).emit('room-image', {
                 sender: socket.userName || 'Someone',
                 imageData
@@ -1570,6 +1573,8 @@ function setupSignaling(io) {
             if (!inRoom(roomId)) return;
             const room = rooms.get(roomId);
             if (!room || !room.participants.has(socket.id)) return;
+            const who = room.participants.get(socket.id);
+            if (!(who.isHost || who.isSpeaker || who.isCoHost)) return;
             socket.to(roomId).emit('music-stream-status', {
                 sender: socket.userName || 'Someone',
                 senderId: socket.userId,
