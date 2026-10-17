@@ -44,7 +44,8 @@ router.post('/token', auth, require('../middleware/limits').agoraToken, async (r
       const isCreator = String(room.creatorUserId || '') === String(req.user._id);
       const hasFreePass = Array.isArray(room.freeEntryUserIds) &&
         room.freeEntryUserIds.includes(String(req.user._id));
-      if (!isCreator && !hasFreePass) {
+      const alreadyPaid = await require('../services/paidEntry').alreadyPaid(room, channelName, req.user._id);
+      if (!isCreator && !hasFreePass && !alreadyPaid) {
         const access = await authorizePaidRoomEntry({
           userId: req.user._id,
           roomId: channelName

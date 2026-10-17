@@ -141,6 +141,90 @@ router.post('/subscribe', auth, async (req, res) => {
     });
 });
 
+/**
+ * User+ bought through Apple.
+ *
+ * The phone sends the signed transaction StoreKit gave it for the
+ * subscription. Apple's signature is checked, and the subscription record
+ * follows the transaction: its period end is Apple's expiry date, and each
+ * new transaction id (first purchase, then each renewal) adds the plan's
+ * tokens once. The phone sends the latest transaction again whenever it
+ * opens, which is how renewals reach us without a callback from Apple.
+ */
+const APPLE_USER_PLUS = {
+    'com.wordeth.app.userplus.monthly': 'monthly',
+    'com.wordeth.app.userplus.yearly': 'yearly'
+};
+router.post('/apple', auth, async (req, res) => {
+    try {
+        const { verifyTransaction } = require('../services/appleIap');
+        const ApplePurchase = require('../models/ApplePurchase');
+        let verified;
+        try {
+            verified = await verifyTransaction(req.body && req.body.transaction);
+        } catch (e) {
+            return res.status(400).json({ message: e.message || 'That purchase could not be verified.', code: e.code || 'VERIFICATION_FAILED' });
+        }
+        const { payload, environment } = verified;
+        const cycle = APPLE_USER_PLUS[payload.productId];
+        if (!cycle) return res.status(400).json({ message: 'That product is not a Wordeth plan.', code: 'UNKNOWN_PRODUCT' });
+        const plan = await Plan.findOne({ slug: 'fan-plus', active: true });
+        if (!plan) return res.status(500).json({ message: 'The plan is not set up.' });
+
+        const original = String(payload.originalTransactionId || payload.transactionId);
+        const expiresAt = payload.expiresDate ? new Date(Number(payload.expiresDate)) : null;
+        const startedAt = payload.purchaseDate ? new Date(Number(payload.purchaseDate)) : new Date();
+        const revoked = !!payload.revocationDate;
+        const live = !!expiresAt && expiresAt.getTime() > Date.now() && !revoked;
+
+        let sub = await Subscription.findOne({ appleOriginalTransactionId: original });
+        if (!sub) sub = await Subscription.findOne({ userId: req.user._id, provider: 'apple' });
+        if (sub && String(sub.userId) !== String(req.user._id)) {
+            return res.status(409).json({ message: 'This subscription belongs to another Wordeth account.', code: 'OTHER_ACCOUNT' });
+        }
+        if (!sub) sub = new Subscription({ userId: req.user._id, planId: plan._id, provider: 'apple', appleOriginalTransactionId: original });
+        sub.planId = plan._id;
+        sub.billingCycle = cycle;
+        sub.currentPeriodStart = startedAt;
+        sub.currentPeriodEnd = expiresAt;
+        sub.status = live ? 'active' : 'expired';
+        sub.cancelAtPeriodEnd = false;
+        sub.appleOriginalTransactionId = original;
+        sub.metadata = { ...(sub.metadata || {}), environment, productId: payload.productId };
+        await sub.save();
+
+        const user = await User.findById(req.user._id);
+        if (user && String(user.subscriptionId || '') !== String(sub._id)) {
+            user.subscriptionId = sub._id;
+            await user.save();
+        }
+
+        // Each transaction id once: the first purchase and every renewal bring the plan's tokens.
+        let granted = 0;
+        if (live) {
+            const transactionId = String(payload.transactionId);
+            const already = await ApplePurchase.findOne({ transactionId }).select('_id');
+            if (!already) {
+                try {
+                    await ApplePurchase.create({
+                        transactionId, originalTransactionId: original, userId: req.user._id,
+                        productId: payload.productId, tokens: PLAN_TOKEN_GRANTS['fan-plus'] || 0, environment
+                    });
+                    await grantTokensForPlan(user, 'fan-plus');
+                    granted = PLAN_TOKEN_GRANTS['fan-plus'] || 0;
+                } catch (e) {
+                    if (!(e && e.code === 11000)) throw e;
+                }
+            }
+        }
+        const { getUserAccess } = require('../services/userAccess');
+        res.json({ message: live ? 'User+ is on.' : 'This subscription has ended.', active: live, periodEnd: expiresAt, tokensGranted: granted, access: await getUserAccess(req.user._id) });
+    } catch (error) {
+        console.error('[Subscriptions] apple:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 router.post('/cancel', auth, async (req, res) => {
     try {
         if (!req.user.subscriptionId) {
@@ -150,6 +234,9 @@ router.post('/cancel', auth, async (req, res) => {
         const subscription = await Subscription.findById(req.user.subscriptionId);
         if (!subscription) {
             return res.status(404).json({ message: 'Subscription not found' });
+        }
+        if (subscription.provider === 'apple') {
+            return res.status(400).json({ message: 'This plan is billed by Apple. Cancel it in your iPhone Settings → Apple Account → Subscriptions.', code: 'APPLE_MANAGED' });
         }
 
         // The pricing page promises that cancelling stops the next charge and

@@ -17,6 +17,7 @@ const { agoraUidFor } = require('../services/agoraUid');
 
 const { runsRoom, nextHost, managersOf } = require('../services/roomHosts');
 const battles = require('../services/battles');
+const paidEntry = require('../services/paidEntry');
 /** How long a dropped speaker's place on the stage is held for them. */
 const SPEAKER_RETURN_MS = 5 * 60 * 1000;
 /** A person joining the same room again inside this window is not announced to their connections twice. */
@@ -674,7 +675,10 @@ function setupSignaling(io) {
             const hasFreePass = Array.isArray(room.freeEntryUserIds) && socket.userId &&
                 room.freeEntryUserIds.includes(String(socket.userId));
             let paidEntryAccess = null;
-            if (room.tokenPrice > 0 && !isCreatorOfRoom && !hasFreePass) {
+            // A ticket is bought once: anyone who has paid at this door walks back in.
+            const alreadyPaid = room.tokenPrice > 0 && !!socket.userId && socket.userId !== socket.id
+                && await paidEntry.alreadyPaid(room, roomId, socket.userId);
+            if (room.tokenPrice > 0 && !isCreatorOfRoom && !hasFreePass && !alreadyPaid) {
                 if (!verifiedUser) {
                     const message = 'Paid rooms are available to signed-in User+ members.';
                     socket.emit('room-error', { message, code: 'USER_PLUS_REQUIRED' });
@@ -720,6 +724,7 @@ function setupSignaling(io) {
                     const balanceAfter = deductResult.tokenBalance;
                     const balanceBefore = balanceAfter + room.tokenPrice;
 
+                    paidEntry.remember(room, deductResult._id);
                     await TokenLedger.create({
                         userId: deductResult._id,
                         type: 'room_entry',

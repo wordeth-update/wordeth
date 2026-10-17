@@ -71,6 +71,7 @@ function serializeRoom(room) {
     freeEntryUserIds: Array.isArray(room.freeEntryUserIds) ? room.freeEntryUserIds : [],
     coHostUserIds: Array.isArray(room.coHostUserIds) ? room.coHostUserIds : [],
     battle: room.battle || null,
+    paidUserIds: Array.isArray(room.paidUserIds) ? room.paidUserIds : [],
   });
 }
 
@@ -104,6 +105,7 @@ function deserializeRoom(json) {
     freeEntryUserIds: Array.isArray(data.freeEntryUserIds) ? data.freeEntryUserIds : [],
     coHostUserIds: Array.isArray(data.coHostUserIds) ? data.coHostUserIds : [],
     battle: data.battle || null,
+    paidUserIds: Array.isArray(data.paidUserIds) ? data.paidUserIds : [],
   };
 }
 

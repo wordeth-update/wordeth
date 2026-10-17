@@ -72,7 +72,9 @@ router.get('/:roomId/info', optionalAuth, async (req, res) => {
         const uid = req.user ? String(req.user._id) : null;
         const freeEntry = !!(uid && (
             (room.creatorUserId && String(room.creatorUserId) === uid) ||
-            (Array.isArray(room.freeEntryUserIds) && room.freeEntryUserIds.includes(uid))
+            (Array.isArray(room.freeEntryUserIds) && room.freeEntryUserIds.includes(uid)) ||
+            // Already paid at this door: the ticket still stands.
+            (room.tokenPrice > 0 && await require('../services/paidEntry').alreadyPaid(room, req.params.roomId, uid))
         ));
         res.json({
             roomId: req.params.roomId,

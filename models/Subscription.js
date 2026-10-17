@@ -35,6 +35,17 @@ const subscriptionSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
+    // Who bills it: Stripe on the website, Apple in the app, or Wordeth by hand.
+    provider: {
+        type: String,
+        enum: ['stripe', 'apple', 'manual'],
+        default: 'stripe'
+    },
+    appleOriginalTransactionId: {
+        type: String,
+        default: null,
+        index: true
+    },
     cancelAtPeriodEnd: {
         type: Boolean,
         default: false
