@@ -240,8 +240,16 @@ router.post('/:id/play', auth, async (req, res) => {
             return res.status(404).json({ message: 'Replay not found or unavailable' });
         }
 
-        const price = replay.tokenPrice || 0;
+        let price = replay.tokenPrice || 0;
         let userBalance;
+
+        // Bought once. The creator never pays for their own, and anyone who
+        // has paid for this replay before plays it again for nothing.
+        if (price > 0) {
+            const mine = String(replay.creatorUserId || '') === String(req.user._id);
+            const bought = mine || await TokenLedger.exists({ userId: req.user._id, type: 'replay_play', 'metadata.replayId': replay._id.toString() });
+            if (bought) price = 0;
+        }
 
         if (price > 0) {
             const deductResult = await User.findOneAndUpdate(
