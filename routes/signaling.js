@@ -16,6 +16,7 @@ const { avatarRef } = require('../services/avatarRef');
 const { agoraUidFor } = require('../services/agoraUid');
 
 const { runsRoom, nextHost, managersOf } = require('../services/roomHosts');
+const battles = require('../services/battles');
 /** How long a dropped speaker's place on the stage is held for them. */
 const SPEAKER_RETURN_MS = 5 * 60 * 1000;
 /** A person joining the same room again inside this window is not announced to their connections twice. */
@@ -294,10 +295,22 @@ function setupSignaling(io) {
     });
 
     const CLIENT_ROOM_EVENTS = new Set([
-        'annotate', 'poll', 'poll-close', 'poll-vote', 'battle', 'battle-vote',
+        'annotate', 'poll', 'poll-close', 'poll-vote',
         'karaoke-queue', 'karaoke-queue-request', 'karaoke-start', 'karaoke-stop', 'karaoke-song', 'youtube-embed',
         'permission-request', 'permission-approved', 'permission-denied', 'hand-raise', 'mute-status', 'topic-change'
     ]);
+
+    /** Battle clocks, by room. */
+    const battleTimers = new Map();
+    /** Count it up, tell the room who won, and put the battle away. */
+    function settleBattle(roomId, room, why) {
+        const result = battles.settle(room.battle);
+        const t = battleTimers.get(roomId);
+        if (t) { clearTimeout(t); battleTimers.delete(roomId); }
+        room.battle = null;
+        if (result) io.to(roomId).emit('room-event', { event: 'battle-result', data: { ...result, why } });
+        saveRoom(roomId, room);
+    }
 
     io.on('connection', (socket) => {
         console.log(`Socket connected: ${socket.id}`);
@@ -906,6 +919,7 @@ function setupSignaling(io) {
                 tokenPrice: room.tokenPrice || 0,
                 roomType: room.roomType || 'conversation',
                 recording: !!room.recording,
+                battle: battles.publicView(room.battle),
                 wildcardExpiresAt: paidEntryAccess?.wildcard ? paidEntryAccess.expiresAt : null
             };
             socket.emit('room-joined', joinData);
@@ -1300,6 +1314,36 @@ function setupSignaling(io) {
                         socket.to(roomId).emit('room-event', { event, data });
                     }
                     break;
+
+                case 'battle': {
+                    // The room keeps the battle; phones only see tallies and the result.
+                    if (!runsRoom(room, socket)) break;
+                    if (data && data.battle === null) { settleBattle(roomId, room, 'ended by the host'); break; }
+                    const started = battles.start(data);
+                    if (!started) break;
+                    if (room.battle && !room.battle.settled) settleBattle(roomId, room, 'replaced');
+                    room.battle = started;
+                    io.to(roomId).emit('room-event', { event: 'battle', data: { battle: battles.publicView(started) } });
+                    if (started.endsAt) {
+                        const t = setTimeout(() => {
+                            const r = rooms.get(roomId);
+                            if (r && r.battle && r.battle.id === started.id) settleBattle(roomId, r, 'time');
+                        }, started.endsAt - Date.now() + 50);
+                        t.unref?.();
+                        battleTimers.set(roomId, t);
+                    }
+                    saveRoom(roomId, room);
+                    break;
+                }
+
+                case 'battle-vote': {
+                    const voterKey = socket.userId && socket.userId !== socket.id ? `u:${socket.userId}` : `s:${socket.id}`;
+                    const why = battles.vote(room.battle, { voterKey, socketId: socket.id, battleId: String(data?.battleId || ''), side: data?.side });
+                    if (why) { socket.emit('room-event', { event: 'battle-refused', data: { reason: why } }); break; }
+                    io.to(roomId).emit('room-event', { event: 'battle-tally', data: { battleId: room.battle.id, votes: battles.tally(room.battle) } });
+                    saveRoom(roomId, room);
+                    break;
+                }
 
                 case 'sponsor-takeover': {
                     // A sponsor break. The host starts it, in a paid room, with an

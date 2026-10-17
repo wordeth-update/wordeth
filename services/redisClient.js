@@ -70,6 +70,7 @@ function serializeRoom(room) {
     genre: room.genre || '',
     freeEntryUserIds: Array.isArray(room.freeEntryUserIds) ? room.freeEntryUserIds : [],
     coHostUserIds: Array.isArray(room.coHostUserIds) ? room.coHostUserIds : [],
+    battle: room.battle || null,
   });
 }
 
@@ -102,6 +103,7 @@ function deserializeRoom(json) {
     genre: data.genre || '',
     freeEntryUserIds: Array.isArray(data.freeEntryUserIds) ? data.freeEntryUserIds : [],
     coHostUserIds: Array.isArray(data.coHostUserIds) ? data.coHostUserIds : [],
+    battle: data.battle || null,
   };
 }
 
