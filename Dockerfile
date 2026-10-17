@@ -6,7 +6,7 @@ FROM node:20-slim
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        chromium fonts-liberation ca-certificates \
+        chromium fonts-liberation fonts-noto-color-emoji ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production \

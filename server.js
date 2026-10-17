@@ -1026,7 +1026,7 @@ app.get('/og-image/:roomId', ogCrawlerHeaders, async (req, res) => {
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
     width: 1200px; height: 630px;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', 'Noto Color Emoji', sans-serif;
     background: #060409;
     overflow: hidden;
 }
@@ -1156,7 +1156,7 @@ body {
     border-radius: 22px;
     font-size: 28px;
     font-weight: 700;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', 'Noto Color Emoji', sans-serif;
     border: none;
     display: flex;
     align-items: center;
