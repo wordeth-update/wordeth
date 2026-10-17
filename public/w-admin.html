@@ -73,6 +73,7 @@
                 <li data-tab="apliiq-products"><i class="fas fa-shirt"></i> Apliiq Products</li>
                 <li data-tab="warehouse-issues"><i class="fas fa-triangle-exclamation"></i> Warehouse Issues</li>
                 <li data-tab="payouts"><i class="fas fa-money-bill-wave"></i> Payouts <span id="payoutCount" class="badge">0</span></li>
+                <li data-tab="reports"><i class="fas fa-flag"></i> Reports <span id="reportCount" class="badge">0</span></li>
                 <li data-tab="settings"><i class="fas fa-cog"></i> Settings</li>
             </ul>
             <div class="sidebar-help">
@@ -368,6 +369,18 @@
                 <h2>Warehouse Discrepancies</h2>
                 <p class="ops-meta">Review shortages, overages, damage, and receiving errors reported by Apliiq.</p>
                 <div id="warehouseIssuesList"></div>
+            </section>
+
+            <section id="reports-tab" class="tab-content">
+                <h2>Reports</h2>
+                <p style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:1rem;">Every report is answered within a day: dismiss it, mark the person warned, suspend them for 7 or 30 days, or close the account. A suspended account cannot sign in and is told why.</p>
+                <div class="filter-tabs" id="reportFilters">
+                    <button class="filter-tab active" data-admin-action="reports" data-status="open">Open</button>
+                    <button class="filter-tab" data-admin-action="reports" data-status="actioned">Actioned</button>
+                    <button class="filter-tab" data-admin-action="reports" data-status="dismissed">Dismissed</button>
+                </div>
+                <p id="reportStatus" role="status" aria-live="polite" style="display:none; margin:0.75rem 0; font-weight:600;"></p>
+                <div id="reportList" class="list"></div>
             </section>
 
             <section id="payouts-tab" class="tab-content">

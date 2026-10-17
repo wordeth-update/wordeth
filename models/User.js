@@ -226,6 +226,19 @@ const userSchema = new mongoose.Schema({
         }],
         default: []
     },
+    // People this account has blocked: neither can message, dap, join or see the other.
+    blockedUserIds: {
+        type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+        default: []
+    },
+    // Set by an admin acting on a report. Year 9999 means closed for good.
+    suspendedUntil: { type: Date, default: null },
+    suspendedReason: { type: String, default: '' },
+    // A password reset in progress: the hash of the emailed token and when it dies.
+    passwordReset: {
+        tokenHash: { type: String, default: null },
+        expiresAt: { type: Date, default: null }
+    },
     stripeCustomerId: {
         type: String,
         default: null,

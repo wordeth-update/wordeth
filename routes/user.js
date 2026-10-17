@@ -43,14 +43,16 @@ const audioUpload = multer({
     }
 });
 
-router.get('/search', limits.search, async (req, res) => {
+router.get('/search', limits.search, require('../middleware/optionalAuth'), async (req, res) => {
     try {
         const { q } = req.query;
         if (!q || q.trim().length < 2) {
             return res.json([]);
         }
         const searchTerm = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const hidden = req.user ? Array.from(await require('../services/moderation').hiddenFrom(req.user._id)) : [];
         const users = await User.find({
+            _id: { $nin: hidden },
             name: { $regex: searchTerm, $options: 'i' }
         })
         .select('name bio avatar createdAt')
@@ -90,8 +92,12 @@ router.get('/profile', auth, async (req, res) => {
     }
 });
 
-router.get('/profile/:id', async (req, res) => {
+router.get('/profile/:id', require('../middleware/optionalAuth'), async (req, res) => {
     try {
+        // A profile is not there for someone it has blocked, or who has blocked it.
+        if (req.user && await require('../services/moderation').blockedBetween(req.user._id, req.params.id)) {
+            return res.status(404).json({ message: 'This profile is not available.', code: 'BLOCKED' });
+        }
         const user = await User.findById(req.params.id)
             .select('name bio avatar createdAt following followers searchHistory showRoomHistory roomHistory extendedBio profilePhotos musicSnippet favoriteLyric accountType customerAccess');
         if (!user) {
@@ -404,6 +410,9 @@ router.post('/friends/:id', auth, async (req, res) => {
             return res.status(400).json({ message: 'You cannot dap yourself up' });
         }
 
+        if (await require('../services/moderation').blockedBetween(req.user._id, targetId)) {
+            return res.status(403).json({ message: 'You cannot connect with this person.', code: 'BLOCKED' });
+        }
         const userToFollow = await User.findById(targetId);
         if (!userToFollow) {
             return res.status(404).json({ message: 'User not found' });
@@ -772,7 +781,34 @@ router.delete('/account', auth, async (req, res) => {
 
         await User.updateMany({ following: userId }, { $pull: { following: userId } });
         await User.updateMany({ followers: userId }, { $pull: { followers: userId } });
+        await User.updateMany({ blockedUserIds: userId }, { $pull: { blockedUserIds: userId } });
 
+        // What the alert promises goes too: messages, notifications, pounds,
+        // ratings, replays. Orders and payouts stay, with the name removed,
+        // because money changed hands and the books must still add up.
+        const Message = require('../models/Message');
+        const Pound = require('../models/Pound');
+        const Replay = require('../models/Replay');
+        flushed.messages = (await Message.deleteMany({ $or: [{ senderId: userId }, { receiverId: userId }] })).deletedCount;
+        flushed.notifications = (await Notification.deleteMany({ userId })).deletedCount;
+        flushed.pounds = (await Pound.deleteMany({ $or: [{ userId }, { retailerUserId: userId }] })).deletedCount;
+        flushed.replays = (await Replay.deleteMany({ creatorUserId: userId })).deletedCount;
+        try { flushed.ratings = (await require('../models/RoomRating').deleteMany({ userId })).deletedCount; } catch (e) { /* no ratings model field */ }
+        try {
+            await require('../models/MerchOrder').updateMany({ userId }, { $set: { customerName: 'Deleted account' } });
+        } catch (e) { /* orders keep their shape */ }
+
+        // A plan billed by Stripe is ended there; one billed by Apple ends on its own, and cannot be reached from here.
+        try {
+            const Subscription = require('../models/Subscription');
+            const subs = await Subscription.find({ userId, status: { $in: ['active', 'trialing', 'past_due'] } });
+            for (const sub of subs) {
+                if (sub.stripeSubscriptionId) {
+                    try { await require('../services/stripeClient').getStripeClient().subscriptions.cancel(sub.stripeSubscriptionId); } catch (e) { /* already gone, or billing off */ }
+                }
+                sub.status = 'canceled'; sub.canceledAt = new Date(); await sub.save();
+            }
+        } catch (e) { console.error('[Delete] subscriptions:', e.message); }
 
         await User.findByIdAndDelete(userId);
 

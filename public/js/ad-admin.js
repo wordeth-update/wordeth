@@ -166,6 +166,9 @@ class AdAdmin {
             case 'payouts':
                 this.loadPayouts('requested');
                 break;
+            case 'reports':
+                this.loadReports('open');
+                break;
         }
     }
 
@@ -922,6 +925,72 @@ class AdAdmin {
         }
     }
 
+    async loadReports(status, button) {
+        const list = document.getElementById('reportList');
+        if (!list) return;
+        if (button) document.querySelectorAll('#reportFilters .filter-tab').forEach((b) => b.classList.toggle('active', b === button));
+        list.innerHTML = '<p style="color:var(--text-secondary);">Loading…</p>';
+        try {
+            const res = await fetch(apiUrl('/api/moderation/admin/reports?status=' + encodeURIComponent(status || 'open')), { headers: { 'Authorization': `Bearer ${this.token}` } });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Could not load reports');
+            const rows = data.reports || [];
+            const count = document.getElementById('reportCount');
+            if (count && status === 'open') count.textContent = String(rows.length);
+            if (rows.length === 0) { list.innerHTML = '<p style="color:var(--text-secondary);">Nothing here.</p>'; return; }
+            list.innerHTML = rows.map((r) => {
+                const who = r.accused ? `${escapeHtml(r.accused.name || '')} &lt;${escapeHtml(r.accused.email || '')}&gt;` : `${escapeHtml(r.targetType)} ${escapeHtml(r.targetId)}`;
+                const by = r.reporter ? `${escapeHtml(r.reporter.name || '')}` : 'unknown';
+                const suspended = r.accused && r.accused.suspendedUntil && new Date(r.accused.suspendedUntil) > new Date();
+                return `
+                    <div class="list-item">
+                        <div>
+                            <strong>${escapeHtml(r.reason)}</strong> · ${escapeHtml(r.targetType)} · about ${who} · by ${by} · ${new Date(r.createdAt).toLocaleString()}
+                            ${r.details ? `<div style="margin-top:0.3rem;">${escapeHtml(r.details)}</div>` : ''}
+                            ${r.excerpt ? `<div style="margin-top:0.3rem;color:var(--text-secondary);font-style:italic;">“${escapeHtml(r.excerpt)}”</div>` : ''}
+                            ${r.status !== 'open' ? `<div style="color:var(--text-secondary);font-size:0.82rem;">${escapeHtml(r.action)}${r.note ? ' · ' + escapeHtml(r.note) : ''} · ${new Date(r.decidedAt).toLocaleString()}</div>` : ''}
+                            ${suspended ? `<div style="color:#f0a040;font-size:0.82rem;">Suspended until ${new Date(r.accused.suspendedUntil).getFullYear() > 2500 ? 'closed' : new Date(r.accused.suspendedUntil).toLocaleDateString()} <button class="action-btn" data-admin-action="unsuspend" data-id="${r.accused.id}">Lift</button></div>` : ''}
+                        </div>
+                        ${r.status === 'open' ? `<div class="list-actions">
+                            <button class="action-btn" data-admin-action="decide-report" data-id="${r.id}" data-decision="dismiss">Dismiss</button>
+                            <button class="action-btn" data-admin-action="decide-report" data-id="${r.id}" data-decision="warn">Warned</button>
+                            ${r.accused ? `<button class="action-btn btn-danger" data-admin-action="decide-report" data-id="${r.id}" data-decision="suspend7">Suspend 7d</button>
+                            <button class="action-btn btn-danger" data-admin-action="decide-report" data-id="${r.id}" data-decision="suspend30">Suspend 30d</button>
+                            <button class="action-btn btn-danger" data-admin-action="decide-report" data-id="${r.id}" data-decision="close">Close account</button>` : ''}
+                        </div>` : ''}
+                    </div>`;
+            }).join('');
+        } catch (error) {
+            list.innerHTML = `<p style="color:#f85149;">${escapeHtml(error.message)}</p>`;
+        }
+    }
+
+    async decideReport(id, decision) {
+        const status = document.getElementById('reportStatus');
+        const say = (text, ok) => { status.textContent = text; status.style.color = ok ? '#3EB489' : '#f85149'; status.style.display = 'block'; };
+        const note = window.prompt('A note for the record (the person does not see it):', '');
+        if (note === null) return;
+        if ((decision === 'close') && !window.confirm('Close this account for good?')) return;
+        try {
+            const res = await fetch(apiUrl(`/api/moderation/admin/reports/${id}/decide`), {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}` },
+                body: JSON.stringify({ action: decision, note })
+            });
+            let data = {}; try { data = await res.json(); } catch (e) { data = {}; }
+            say(res.ok ? data.message : (data.message || `The server refused that (${res.status}).`), res.ok);
+        } catch (error) { say('That did not get through.', false); }
+        const active = document.querySelector('#reportFilters .filter-tab.active');
+        this.loadReports(active ? active.dataset.status : 'open');
+    }
+
+    async unsuspend(userId) {
+        try {
+            await fetch(apiUrl(`/api/moderation/admin/users/${userId}/unsuspend`), { method: 'POST', headers: { 'Authorization': `Bearer ${this.token}` } });
+        } catch (e) { /* the list below says what stands */ }
+        const active = document.querySelector('#reportFilters .filter-tab.active');
+        this.loadReports(active ? active.dataset.status : 'open');
+    }
+
     async decidePayout(id, action) {
         const status = document.getElementById('payoutStatus');
         const say = (text, ok) => { status.textContent = text; status.style.color = ok ? '#3EB489' : '#f85149'; status.style.display = 'block'; };
@@ -1177,6 +1246,9 @@ document.addEventListener('click', (e) => {
         case 'payouts': adAdmin.loadPayouts(button.dataset.status, button); break;
         case 'pay-payout': adAdmin.decidePayout(id, 'pay'); break;
         case 'reject-payout': adAdmin.decidePayout(id, 'reject'); break;
+        case 'reports': adAdmin.loadReports(button.dataset.status, button); break;
+        case 'decide-report': adAdmin.decideReport(id, button.dataset.decision); break;
+        case 'unsuspend': adAdmin.unsuspend(id); break;
         default: break;
     }
 });

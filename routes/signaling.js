@@ -18,6 +18,7 @@ const { agoraUidFor } = require('../services/agoraUid');
 const { runsRoom, nextHost, managersOf } = require('../services/roomHosts');
 const battles = require('../services/battles');
 const paidEntry = require('../services/paidEntry');
+const moderation = require('../services/moderation');
 /** How long a dropped speaker's place on the stage is held for them. */
 const SPEAKER_RETURN_MS = 5 * 60 * 1000;
 /** A person joining the same room again inside this window is not announced to their connections twice. */
@@ -645,7 +646,7 @@ function setupSignaling(io) {
                     }
                     rooms.set(roomId, {
                         id: roomId,
-                        name: roomName,
+                        name: moderation.cleanText(roomName.trim()).text,
                         hostId: socket.id,
                         creatorUserId: socket.userId,
                         participants: new Map(),
@@ -674,6 +675,16 @@ function setupSignaling(io) {
             // have no recorded creator.
             const hasFreePass = Array.isArray(room.freeEntryUserIds) && socket.userId &&
                 room.freeEntryUserIds.includes(String(socket.userId));
+            // The host's door is the host's: anyone they have blocked (or who blocked them) stays out.
+            if (room.creatorUserId && socket.userId && socket.userId !== socket.id && !isCreatorOfRoom
+                && await moderation.blockedBetween(room.creatorUserId, socket.userId)) {
+                const message = 'You cannot join this room.';
+                socket.emit('room-error', { message, code: 'BLOCKED' });
+                if (typeof ackCallback === 'function') ackCallback({ success: false, message, code: 'BLOCKED' });
+                socket.leave(roomId);
+                socket.roomId = null;
+                return;
+            }
             let paidEntryAccess = null;
             // A ticket is bought once: anyone who has paid at this door walks back in.
             const alreadyPaid = room.tokenPrice > 0 && !!socket.userId && socket.userId !== socket.id
@@ -1079,7 +1090,7 @@ function setupSignaling(io) {
             if (typeof message !== 'string' || message.trim().length === 0 || message.length > 1000) return;
             socket.to(roomId).emit('chat-message', {
                 sender: socket.userName,
-                message,
+                message: moderation.cleanText(message).text,
                 timestamp: Date.now()
             });
         });

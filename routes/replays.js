@@ -121,7 +121,7 @@ router.post('/', auth, async (req, res) => {
     }
 });
 
-router.get('/', async (req, res) => {
+router.get('/', require('../middleware/optionalAuth'), async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page) || 1);
         const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
@@ -171,6 +171,13 @@ router.get('/', async (req, res) => {
         ]);
 
         const replays = page === 1 ? [...boosted, ...regular] : regular;
+
+        // Bought once: say which of these the viewer has already paid for.
+        if (req.user && replays.some((r) => r.tokenPrice > 0)) {
+            const rows = await TokenLedger.find({ userId: req.user._id, type: 'replay_play' }).select('metadata.replayId').lean();
+            const bought = new Set(rows.map((r) => r.metadata && r.metadata.replayId).filter(Boolean));
+            for (const r of replays) r.purchased = bought.has(String(r._id));
+        }
 
         res.json({
             replays,

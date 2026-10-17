@@ -75,6 +75,57 @@ router.post('/signup', [
 });
 
 // Traditional sign in
+/**
+ * Forgot password. The answer is the same whether or not the address is
+ * known, so the form cannot be used to find out who has an account. The
+ * emailed link carries a one-hour token; only its hash is kept.
+ */
+router.post('/forgot-password', async (req, res) => {
+    try {
+        const email = String(req.body && req.body.email || '').trim().toLowerCase();
+        if (!email) return res.status(400).json({ message: 'Enter your email.' });
+        const mailer = require('../services/mailer');
+        const user = await User.findOne({ email });
+        if (user && mailer.configured()) {
+            const crypto = require('crypto');
+            const token = crypto.randomBytes(32).toString('hex');
+            user.passwordReset = { tokenHash: crypto.createHash('sha256').update(token).digest('hex'), expiresAt: new Date(Date.now() + 60 * 60 * 1000) };
+            await user.save();
+            const site = process.env.CLIENT_URL || 'https://www.wordeth.com';
+            const link = `${site}/reset-password.html?id=${user._id}&token=${token}`;
+            mailer.send({
+                to: user.email,
+                subject: 'Reset your Wordeth password',
+                text: `Somebody asked to reset the password for this Wordeth account. If it was you, open this link within the hour:\n\n${link}\n\nIf it was not you, nothing changes; you can ignore this.`,
+                html: `<p>Somebody asked to reset the password for this Wordeth account. If it was you, open this link within the hour:</p><p><a href="${link}">${link}</a></p><p>If it was not you, nothing changes; you can ignore this.</p>`
+            }).catch((e) => console.error('[Auth] reset mail:', e.message));
+        }
+        res.json({ message: 'If that address has an account, a reset link is on its way. Check your inbox and spam.' });
+    } catch (error) {
+        console.error('[Auth] forgot:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.post('/reset-password', async (req, res) => {
+    try {
+        const { id, token, password } = req.body || {};
+        if (!id || !token || typeof password !== 'string') return res.status(400).json({ message: 'That link is incomplete.' });
+        if (password.length < 6) return res.status(400).json({ message: 'Use at least 6 characters.' });
+        const crypto = require('crypto');
+        const hash = crypto.createHash('sha256').update(String(token)).digest('hex');
+        const user = await User.findOne({ _id: id, 'passwordReset.tokenHash': hash, 'passwordReset.expiresAt': { $gt: new Date() } });
+        if (!user) return res.status(400).json({ message: 'That link has expired or was already used. Ask for a new one.' });
+        user.password = password;
+        user.passwordReset = { tokenHash: null, expiresAt: null };
+        await user.save();
+        res.json({ message: 'Your password is changed. Sign in with the new one.' });
+    } catch (error) {
+        console.error('[Auth] reset:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 router.post('/signin', [
     body('email').isEmail().normalizeEmail(),
     body('password').isLength({ min: 6 })

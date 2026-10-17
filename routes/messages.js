@@ -23,8 +23,11 @@ const upload = multer({
 router.get('/conversations', auth, async (req, res) => {
     try {
         const userId = req.user._id;
+        // Threads with anyone blocked, either way, are not listed.
+        const hidden = await require('../services/moderation').hiddenFrom(userId);
+        const hiddenIds = Array.from(hidden).map((id) => new (require('mongoose').Types.ObjectId)(id));
         const messages = await Message.aggregate([
-            { $match: { $or: [{ senderId: userId }, { receiverId: userId }] } },
+            { $match: { $or: [{ senderId: userId }, { receiverId: userId }], senderId: { $nin: hiddenIds }, receiverId: { $nin: hiddenIds } } },
             { $sort: { createdAt: -1 } },
             {
                 $group: {
@@ -148,6 +151,11 @@ router.post('/:userId', auth, limits.messages, limits.messagesDaily, upload.sing
             return res.status(404).json({ message: 'User not found' });
         }
 
+        // Blocked, either way: no message passes.
+        if (await require('../services/moderation').blockedBetween(myId, otherId)) {
+            return res.status(403).json({ message: 'You cannot message this person.', code: 'BLOCKED' });
+        }
+
         // A thread with a retailer exists only inside a pound, in both directions.
         if ((req.user.retailerFor || otherUser.retailerFor) && !(await Pound.between(myId, otherId))) {
             return res.status(403).json({ message: 'This pound has ended. Pound them again from their ad to keep talking.', code: 'POUND_ENDED' });
@@ -156,7 +164,7 @@ router.post('/:userId', auth, limits.messages, limits.messagesDaily, upload.sing
         const msgData = {
             senderId: myId,
             receiverId: otherId,
-            text: (req.body.text || '').trim().substring(0, 2000)
+            text: require('../services/moderation').cleanText((req.body.text || '').trim().substring(0, 2000)).text
         };
 
         if (req.file) {

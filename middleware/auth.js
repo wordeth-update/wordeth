@@ -19,6 +19,12 @@ const auth = async (req, res, next) => {
             throw new Error('User not found');
         }
 
+        const { suspension } = require('../services/moderation');
+        const closed = suspension(user);
+        if (closed) {
+            return res.status(403).json({ message: `${closed} Write to support@wordeth.com if you think this is a mistake.`, code: 'SUSPENDED' });
+        }
+
         req.token = token;
         req.user = user;
         next();
