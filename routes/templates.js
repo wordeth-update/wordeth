@@ -260,6 +260,23 @@ router.post('/publish', auth, async (req, res) => {
     try {
         const { title, description, genre, artistName, albumName, songTitle, lyricsSnippet, products, defaultProduct, defaultColor, frontDesign, backDesign, leftDesign, rightDesign, tags, previewDataUrl } = req.body;
 
+        // Publishing is for designer accounts (artists and creators too), within their plan's template allowance.
+        const kind = req.user.accountType || 'fan';
+        if (!['designer', 'artist', 'creator'].includes(kind) && req.user.role !== 'ADMIN') {
+            return res.status(403).json({ success: false, message: 'Publishing templates is for designer accounts. Register as a designer at wordeth.com/creator-register.html.', code: 'NOT_A_DESIGNER' });
+        }
+        if (req.user.role !== 'ADMIN') {
+            const { getUserEntitlements } = require('../services/entitlements');
+            const ents = await getUserEntitlements(req.user);
+            const limit = Number(ents.TEMPLATE_LIMIT);
+            if (Number.isFinite(limit) && limit > 0) {
+                const have = await DesignTemplate.countDocuments({ designerUserId: req.user._id, status: { $ne: 'rejected' } });
+                if (have >= limit) {
+                    return res.status(403).json({ success: false, message: `Your plan allows ${limit} templates and you have ${have}. Upgrade at wordeth.com/pricing.html to publish more.`, code: 'TEMPLATE_LIMIT' });
+                }
+            }
+        }
+
         if (!title || String(title).trim().length < 2 || String(title).trim().length > 120) {
             return res.status(400).json({ success: false, message: 'Title must be between 2 and 120 characters' });
         }

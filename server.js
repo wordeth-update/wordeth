@@ -1016,7 +1016,11 @@ app.get('/og-image/:roomId', ogCrawlerHeaders, async (req, res) => {
         const inviteLine = hostName
             ? `<strong>${escapeHtml(hostName)}</strong> invited you`
             : `You're invited`;
-        const displayName = escapeHtml(roomName.length > 28 ? roomName.substring(0, 28) + '...' : roomName);
+        // The name wears a gradient, painted through the letters. An emoji
+        // painted that way is a silhouette, so each one is set apart and
+        // left in its own colours.
+        const displayName = escapeHtml(roomName.length > 28 ? roomName.substring(0, 28) + '...' : roomName)
+            .replace(/(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic}|[\u{1F3FB}-\u{1F3FF}])*)/gu, '<span class="emoji">$1</span>');
         const logoSrc = ogLogoBase64 ? `data:image/png;base64,${ogLogoBase64}` : '';
         const listenerText = participantCount > 0 ? `${participantCount} listening now` : 'Be the first to join';
         const miniAvatars = participants.slice(0, 3).map(p => {
@@ -1095,6 +1099,12 @@ body {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+}
+.room-name .emoji {
+    background: none;
+    -webkit-text-fill-color: initial;
+    color: #fff;
+    font-family: 'Noto Color Emoji', sans-serif;
 }
 .invite-from {
     display: flex;
