@@ -4,9 +4,13 @@
 # (system chromium is installed for the OG-image generator instead).
 FROM node:20-slim
 
+# tini is the init process: without one, every Chromium the card renderer
+# spawns and closes stays behind as a zombie holding a process id, and after
+# a few days the container cannot fork at all ("Resource temporarily
+# unavailable") and no card can be drawn.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        chromium fonts-liberation fonts-noto-color-emoji ca-certificates \
+        chromium fonts-liberation fonts-noto-color-emoji ca-certificates tini \
     && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production \
@@ -30,4 +34,5 @@ RUN npm config set fetch-retries 5 \
 COPY . .
 
 EXPOSE 5000
+ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["node", "server.js"]

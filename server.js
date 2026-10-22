@@ -968,7 +968,7 @@ async function ensureOgBrowser() {
         } catch(e) {}
         const launchOpts = {
             headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--font-render-hinting=none']
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--disable-crashpad', '--font-render-hinting=none']
         };
         if (process.env.PUPPETEER_EXECUTABLE_PATH) {
             launchOpts.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
