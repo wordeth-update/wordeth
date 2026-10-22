@@ -957,6 +957,8 @@ app.get('/join/:roomId', (req, res) => {
     res.redirect(302, `/verses.html?${qs.toString()}`);
 });
 
+let ogFallbackCard = null;
+
 async function ensureOgBrowser() {
     if (ogBrowser && ogBrowser.isConnected()) return ogBrowser;
     if (ogBrowserLaunching) return ogBrowserLaunching;
@@ -1256,7 +1258,18 @@ body {
         }
     } catch (err) {
         console.error('OG image generation error:', err);
-        res.status(500).send('Image generation failed');
+        // Never a blank where a card should be: the generic card goes out
+        // instead, and the reason rides in a header so it can be read from
+        // outside without the log.
+        try {
+            if (!ogFallbackCard) ogFallbackCard = require('fs').readFileSync(path.join(__dirname, 'public', 'images', 'og-fallback.jpg'));
+            res.setHeader('X-OG-Error', String((err && err.message) || err).replace(/[\r\n]+/g, ' ').slice(0, 300));
+            res.setHeader('Content-Type', 'image/jpeg');
+            res.setHeader('Cache-Control', 'no-store');
+            res.status(200).send(ogFallbackCard);
+        } catch (e2) {
+            res.status(500).send('Image generation failed');
+        }
     } finally {
         scheduleOgBrowserClose();
     }
