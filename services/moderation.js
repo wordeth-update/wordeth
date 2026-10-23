@@ -34,18 +34,22 @@ async function hiddenFrom(userId) {
 }
 
 /**
- * Words that are never acceptable here. Kept short on purpose: this is
- * not a swear filter, and a list that is too wide masks ordinary talk.
- * Each entry matches as a whole word, letters only, any case.
+ * Wordeth does not censor. What people say in a room or a message goes
+ * through as they said it; the room, the block button and the report
+ * button are the answer to speech that goes too far, and a reviewed report
+ * can end in a warning or a suspension. The word filter is kept here but
+ * off, for the day a store reviewer asks to see one: WORD_FILTER=on masks
+ * the handful of slurs and threats below, and nothing else.
  */
+const FILTER_ON = /^(1|true|on|yes)$/i.test(String(process.env.WORD_FILTER || ''));
 const BLOCKED_WORDS = [
     'nigger', 'nigga', 'faggot', 'fag', 'kike', 'spic', 'chink', 'wetback', 'tranny', 'retard',
     'kill yourself', 'kys', 'rape you', 'raping you'
 ].map((w) => new RegExp('\\b' + w.replace(/\s+/g, '\\s+') + '\\b', 'gi'));
 
-/** Mask what is never acceptable. Says whether anything was masked. */
+/** The text as said, unless the filter is switched on. Says whether anything was masked. */
 function cleanText(text) {
-    if (typeof text !== 'string' || !text) return { text, flagged: false };
+    if (typeof text !== 'string' || !text || !FILTER_ON) return { text, flagged: false };
     let flagged = false;
     let out = text;
     for (const re of BLOCKED_WORDS) {

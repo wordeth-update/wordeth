@@ -17,6 +17,7 @@ const { agoraUidFor } = require('../services/agoraUid');
 
 const { runsRoom, nextHost, managersOf } = require('../services/roomHosts');
 const battles = require('../services/battles');
+const boardState = require('../services/board');
 const paidEntry = require('../services/paidEntry');
 const moderation = require('../services/moderation');
 /** How long a dropped speaker's place on the stage is held for them. */
@@ -936,6 +937,8 @@ function setupSignaling(io) {
                 roomType: room.roomType || 'conversation',
                 recording: !!room.recording,
                 battle: battles.publicView(room.battle),
+                board: room.board || null,
+                boardFull: !!room.boardFull,
                 wildcardExpiresAt: paidEntryAccess?.wildcard ? paidEntryAccess.expiresAt : null
             };
             socket.emit('room-joined', joinData);
@@ -1537,6 +1540,28 @@ function setupSignaling(io) {
                 case 'hand-raise':
                     socket.to(roomId).emit('room-event', { event, data: { ...data, userId: socket.userId, userName: socket.userName } });
                     break;
+
+                case 'annotate': {
+                    // The board: only the stage marks it, and the room remembers
+                    // it for whoever comes in late. The pointer is relayed and
+                    // forgotten; everything else is kept.
+                    const p = room.participants.get(socket.id);
+                    if (!(runsRoom(room, socket) || (p && p.isSpeaker))) break;
+                    const next = boardState.apply(room.board, data);
+                    if (data.op !== 'pointer' && !next) break;
+                    if (next) { room.board = next; saveRoom(roomId, room); }
+                    socket.to(roomId).emit('room-event', { event, data });
+                    break;
+                }
+
+                case 'board': {
+                    const p = room.participants.get(socket.id);
+                    if (!(runsRoom(room, socket) || (p && p.isSpeaker))) break;
+                    room.boardFull = !!data.full;
+                    socket.to(roomId).emit('room-event', { event, data: { full: room.boardFull } });
+                    saveRoom(roomId, room);
+                    break;
+                }
 
                 case 'mute-status':
                     const participant = room.participants.get(socket.id);
