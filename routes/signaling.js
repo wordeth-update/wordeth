@@ -297,7 +297,7 @@ function setupSignaling(io) {
     });
 
     const CLIENT_ROOM_EVENTS = new Set([
-        'annotate', 'poll', 'poll-close', 'poll-vote',
+        'annotate', 'board', 'poll', 'poll-close', 'poll-vote',
         'karaoke-queue', 'karaoke-queue-request', 'karaoke-start', 'karaoke-stop', 'karaoke-song', 'youtube-embed',
         'permission-request', 'permission-approved', 'permission-denied', 'hand-raise', 'mute-status', 'topic-change'
     ]);
