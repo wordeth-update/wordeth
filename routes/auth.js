@@ -86,6 +86,8 @@ router.post('/forgot-password', async (req, res) => {
         if (!email) return res.status(400).json({ message: 'Enter your email.' });
         const mailer = require('../services/mailer');
         const user = await User.findOne({ email });
+        // A line for support, with the address masked: "nobody got a link" is otherwise invisible.
+        if (!user) console.log(`[Auth] forgot: no account for ${email.replace(/^(.).*?(@.*)$/, '$1***$2')}`);
         if (user && mailer.configured()) {
             const crypto = require('crypto');
             const token = crypto.randomBytes(32).toString('hex');
