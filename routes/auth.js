@@ -82,7 +82,9 @@ router.post('/signup', [
  */
 router.post('/forgot-password', async (req, res) => {
     try {
-        const email = String(req.body && req.body.email || '').trim().toLowerCase();
+        // Phone keyboards add a space after a full stop and a full stop after
+        // a word; neither belongs in an address, so neither is held against it.
+        const email = String(req.body && req.body.email || '').toLowerCase().replace(/\s+/g, '').replace(/\.+$/, '');
         if (!email) return res.status(400).json({ message: 'Enter your email.' });
         const mailer = require('../services/mailer');
         const user = await User.findOne({ email });
