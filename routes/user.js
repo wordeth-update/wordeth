@@ -789,6 +789,14 @@ router.delete('/account', auth, async (req, res) => {
         const Message = require('../models/Message');
         const Pound = require('../models/Pound');
         const Replay = require('../models/Replay');
+        // The files behind the records, listed before the records go.
+        const fileUrls = [];
+        try {
+            const voiced = await Message.find({ $or: [{ senderId: userId }, { receiverId: userId }], audioUrl: { $nin: [null, ''] } }).select('audioUrl').lean();
+            for (const m of voiced) fileUrls.push(m.audioUrl);
+            const recorded = await Replay.find({ creatorUserId: userId }).select('audioUrl').lean();
+            for (const r of recorded) fileUrls.push(r.audioUrl);
+        } catch (e) { console.error('[Delete] listing files:', e.message); }
         flushed.messages = (await Message.deleteMany({ $or: [{ senderId: userId }, { receiverId: userId }] })).deletedCount;
         flushed.notifications = (await Notification.deleteMany({ userId })).deletedCount;
         flushed.pounds = (await Pound.deleteMany({ $or: [{ userId }, { retailerUserId: userId }] })).deletedCount;
@@ -811,6 +819,10 @@ router.delete('/account', auth, async (req, res) => {
         } catch (e) { console.error('[Delete] subscriptions:', e.message); }
 
         await User.findByIdAndDelete(userId);
+
+        // Photos, voice notes, snippets, board pictures and replay audio go with the account.
+        flushed.files = await require('../services/accountFiles').flushAccountFiles({ userId, urls: fileUrls });
+        console.log('[Delete] account flushed:', JSON.stringify(flushed));
 
         res.json({ success: true, message: 'Your account and all associated data have been permanently deleted' });
     } catch (error) {

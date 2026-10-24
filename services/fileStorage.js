@@ -76,4 +76,16 @@ async function deleteByKey(key) {
     return files.length > 0;
 }
 
-module.exports = { uploadBytes, downloadStream, downloadBytes, deleteByKey, findFile, publicUrl, openStreamById };
+/** Delete every stored file whose key starts with the prefix. Returns how many went. */
+async function deleteByPrefix(prefix) {
+    if (!prefix) return 0;
+    const bucket = getBucket();
+    const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const files = await bucket.find({ filename: { $regex: '^' + escaped } }).toArray();
+    for (const f of files) {
+        await bucket.delete(f._id);
+    }
+    return files.length;
+}
+
+module.exports = { uploadBytes, downloadStream, downloadBytes, deleteByKey, deleteByPrefix, findFile, publicUrl, openStreamById };
