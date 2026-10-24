@@ -946,6 +946,10 @@ app.get('/room/:roomId', ogCrawlerHeaders, async (req, res) => {
 app.get(['/terms', '/privacy', '/support'], (req, res) => {
     res.redirect(301, `${req.path}.html`);
 });
+// The account-deletion address the app stores ask for: the support page, at that section.
+app.get(['/delete-account', '/delete-account.html'], (req, res) => {
+    res.redirect(301, '/support.html#delete-account');
+});
 
 app.get('/join/:roomId', (req, res) => {
     const roomId = req.params.roomId;
