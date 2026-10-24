@@ -950,6 +950,9 @@ app.get(['/terms', '/privacy', '/support'], (req, res) => {
 app.get(['/delete-account', '/delete-account.html'], (req, res) => {
     res.redirect(301, '/support.html#delete-account');
 });
+app.get(['/delete-data', '/delete-data.html'], (req, res) => {
+    res.redirect(301, '/support.html#delete-data');
+});
 
 app.get('/join/:roomId', (req, res) => {
     const roomId = req.params.roomId;
