@@ -801,6 +801,7 @@ router.delete('/account', auth, async (req, res) => {
         flushed.notifications = (await Notification.deleteMany({ userId })).deletedCount;
         flushed.pounds = (await Pound.deleteMany({ $or: [{ userId }, { retailerUserId: userId }] })).deletedCount;
         flushed.replays = (await Replay.deleteMany({ creatorUserId: userId })).deletedCount;
+        try { flushed.designs = (await require('../models/MerchDesign').deleteMany({ userId })).deletedCount; } catch (e) { /* none */ }
         try { flushed.ratings = (await require('../models/RoomRating').deleteMany({ userId })).deletedCount; } catch (e) { /* no ratings model field */ }
         try {
             await require('../models/MerchOrder').updateMany({ userId }, { $set: { customerName: 'Deleted account' } });

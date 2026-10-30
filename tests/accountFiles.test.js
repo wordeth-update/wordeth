@@ -4,7 +4,7 @@ const { prefixesFor, keyFromUrl, flushAccountFiles } = require('../services/acco
 
 describe('the files an account leaves behind', () => {
     test('are found by the account id in their key', () => {
-        expect(prefixesFor('64abc')).toEqual(['avatars/64abc.', 'profile-photos/64abc-', 'music-snippets/64abc-', 'audio-messages/64abc-', 'board/64abc/']);
+        expect(prefixesFor('64abc')).toEqual(['avatars/64abc.', 'profile-photos/64abc-', 'music-snippets/64abc-', 'audio-messages/64abc-', 'board/64abc/', 'designs/64abc/']);
     });
     test('or by the URL a record kept', () => {
         expect(keyFromUrl('/api/files/replays/room1-17.m4a')).toBe('replays/room1-17.m4a');
@@ -15,8 +15,8 @@ describe('the files an account leaves behind', () => {
     });
     test('all go, and one that will not does not stop the rest', async () => {
         const out = await flushAccountFiles({ userId: '64abc', urls: ['/api/files/replays/room1-17.m4a', '/api/files/replays/missing.m4a', '/api/files/replays/room1-17.m4a', null] });
-        expect(fileStorage.deleteByPrefix).toHaveBeenCalledTimes(5);
+        expect(fileStorage.deleteByPrefix).toHaveBeenCalledTimes(6);
         expect(fileStorage.deleteByKey).toHaveBeenCalledTimes(2);
-        expect(out).toEqual({ byPrefix: 10, byUrl: 1, failed: 0 });
+        expect(out).toEqual({ byPrefix: 12, byUrl: 1, failed: 0 });
     });
 });

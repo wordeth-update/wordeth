@@ -4,6 +4,11 @@ const auth = require('../middleware/auth');
 const MerchOrder = require('../models/MerchOrder');
 const { reconcilePendingFulfillmentsForOrder } = require('../services/apliiqFulfillment');
 const { getStripeClient } = require('../services/stripeClient');
+const press = require('../services/press');
+const MerchDesign = require('../models/MerchDesign');
+const User = require('../models/User');
+const optionalAuth = require('../middleware/optionalAuth');
+const fileStorage = require('../services/fileStorage');
 
 const VIEWS_BY_PRODUCT = {
     tshirt: ['front','back','left','right'],
@@ -47,8 +52,73 @@ function checkoutDomain() {
         : process.env.CLIENT_URL || 'http://localhost:5000';
 }
 
+/**
+ * The press. Whether ordering is open, how many people asked to be told,
+ * and whether this account is one of them.
+ */
+async function pressStatus(user) {
+    const waiting = await User.countDocuments({ merchNotifyAt: { $ne: null } });
+    return { open: press.isOpen(), waiting, mine: !!(user && user.merchNotifyAt) };
+}
+router.get('/press', optionalAuth, async (req, res) => {
+    try { res.json({ success: true, data: await pressStatus(req.user) }); }
+    catch (e) { res.status(500).json({ success: false, message: 'Could not read the press.' }); }
+});
+router.post('/press/notify', auth, async (req, res) => {
+    try {
+        if (!req.user.merchNotifyAt) { req.user.merchNotifyAt = new Date(); await req.user.save(); }
+        res.json({ success: true, data: await pressStatus(req.user) });
+    } catch (e) { res.status(500).json({ success: false, message: 'Could not save that. Try again.' }); }
+});
+
+const DESIGN_VIEWS = ['frontDesign', 'backDesign', 'leftDesign', 'rightDesign'];
+const MAX_VIEW_CHARS = 400000;
+/** Save a design, before or after the press opens. The preview goes to storage; the views stay as JSON. */
+router.post('/designs', auth, async (req, res) => {
+    try {
+        const { product, color, size, templateId, artistName, designPreview } = req.body || {};
+        if (!PRODUCT_CATALOG[product]) return res.status(400).json({ success: false, message: 'Invalid product type' });
+        if (!VALID_COLORS.includes(color)) return res.status(400).json({ success: false, message: 'Invalid color' });
+        const views = {};
+        for (const v of DESIGN_VIEWS) {
+            const val = req.body[v];
+            if (val == null || val === '') continue;
+            if (typeof val !== 'string' || val.length > MAX_VIEW_CHARS) return res.status(400).json({ success: false, message: 'That design is too large.' });
+            views[v] = val;
+        }
+        if (Object.keys(views).length === 0) return res.status(400).json({ success: false, message: 'Put something on it first.' });
+        let previewUrl = '';
+        const m = typeof designPreview === 'string' && designPreview.length < 3 * 1024 * 1024 ? /^data:(image\/(png|jpeg|webp));base64,(.+)$/.exec(designPreview) : null;
+        if (m) {
+            const key = `designs/${req.user._id}/${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.${m[2] === 'jpeg' ? 'jpg' : m[2]}`;
+            try { previewUrl = (await fileStorage.uploadBytes(key, Buffer.from(m[3], 'base64'), m[1])).url; } catch (e) { previewUrl = ''; }
+        }
+        const d = await MerchDesign.create({
+            userId: req.user._id, product, color, size: typeof size === 'string' ? size.slice(0, 8) : 'M',
+            templateId: typeof templateId === 'string' ? templateId.slice(0, 64) : null,
+            artistName: typeof artistName === 'string' ? artistName.slice(0, 100) : null,
+            ...views, previewUrl,
+        });
+        const count = await MerchDesign.countDocuments({ userId: req.user._id });
+        res.status(201).json({ success: true, data: { id: String(d._id), previewUrl, saved: count } });
+    } catch (e) {
+        console.error('[Merch] save design:', e.message);
+        res.status(500).json({ success: false, message: 'Could not save the design. Try again.' });
+    }
+});
+router.get('/designs', auth, async (req, res) => {
+    try {
+        const list = await MerchDesign.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(100)
+            .select('product color size templateId artistName previewUrl createdAt').lean();
+        res.json({ success: true, data: list.map((d) => ({ ...d, _id: String(d._id) })) });
+    } catch (e) { res.status(500).json({ success: false, message: 'Could not load your designs.' }); }
+});
+
 router.post('/orders', auth, async (req, res) => {
     try {
+        if (!press.isOpen()) {
+            return res.status(403).json({ success: false, code: 'PRESS_CLOSED', message: 'Printing has not opened yet. Save the design and we will tell you the day it does.' });
+        }
         const { product, color, size, quantity, artistName, artistId, frontDesign, backDesign, leftDesign, rightDesign, designPreview, templateId } = req.body;
 
         const catalogItem = PRODUCT_CATALOG[product];

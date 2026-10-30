@@ -157,6 +157,8 @@ const userSchema = new mongoose.Schema({
     // When this account last had a live connection; sorts a person's
     // connections by who was around most recently.
     lastSeenAt: { type: Date, default: null },
+    // Asked to be told the day the press opens. The date is when they asked.
+    merchNotifyAt: { type: Date, default: null },
     customMerch: [{
         name: String,
         type: String,

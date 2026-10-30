@@ -19,6 +19,7 @@ function prefixesFor(userId) {
         `music-snippets/${id}-`,
         `audio-messages/${id}-`,
         `board/${id}/`,
+        `designs/${id}/`,
     ];
 }
 
