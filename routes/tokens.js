@@ -112,6 +112,15 @@ router.post('/apple-purchase', auth, require('../middleware/limits').applePurcha
         const transactionId = String(payload.transactionId);
         const quantity = Math.max(1, Math.min(10, Number(payload.quantity) || 1));
         const tokens = pack.tokens * quantity;
+        // What was actually charged. Apple's store price need not equal the
+        // website's (the 60 pack is $4.99 in the App Store and $4.49 on the
+        // web), and StoreKit 2 transactions carry the price in thousandths
+        // of the currency unit. Fall back to the website price only when a
+        // transaction predates that field.
+        const paid = typeof payload.price === 'number' && payload.price > 0
+            ? Math.round(payload.price / 10) / 100
+            : pack.price * quantity;
+        const currency = typeof payload.currency === 'string' ? payload.currency : 'USD';
 
         // Claim the transaction first: the unique index makes a replay a no-op.
         try {
@@ -143,16 +152,16 @@ router.post('/apple-purchase', auth, require('../middleware/limits').applePurcha
             amount: tokens,
             balanceBefore,
             balanceAfter: user.tokenBalance,
-            metadata: { packId: pack.id, price: pack.price * quantity, tokensReceived: tokens, source: 'apple', transactionId, environment }
+            metadata: { packId: pack.id, price: paid, currency, tokensReceived: tokens, source: 'apple', transactionId, environment }
         });
         await EventsLedger.create({
             actorId: user._id,
             actorType: 'user',
             eventType: 'token_pack_purchase',
             resourceType: 'token_pack',
-            amount: pack.price * quantity,
+            amount: paid,
             description: `Purchased ${tokens} tokens via Apple`,
-            metadata: { packId: pack.id, tokens, price: pack.price * quantity, source: 'apple', environment }
+            metadata: { packId: pack.id, tokens, price: paid, currency, source: 'apple', environment }
         });
 
         try {
